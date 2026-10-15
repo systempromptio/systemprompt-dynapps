@@ -43,7 +43,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && cp target/release/systemprompt /out/bin/ \
     && cp target/release/systemprompt-mcp-agent /out/bin/ \
     && cp target/release/systemprompt-mcp-agent-farm /out/bin/ \
-    && cp target/release/systemprompt-mcp-odoo /out/bin/ \
     && cp target/release/systemprompt-farm-worker /out/bin/
 
 # Binaries only — `docker build --target artifacts --output type=local,dest=…`

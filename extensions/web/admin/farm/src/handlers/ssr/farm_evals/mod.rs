@@ -3,7 +3,6 @@
 //! (per suite and per agent per day), the recent eval runs with their
 //! triggers, and a Run now form per suite. Filterable by farm and window
 //! (`?days=`).
-//! Admins also get the Run Odoo demo form, which the composition root serves.
 
 mod context;
 pub(crate) mod matrix;
@@ -61,7 +60,6 @@ struct EvalsPage {
     pass_chart: SvgLineChartView,
     suites: Vec<EvalSuiteRowView>,
     has_suites: bool,
-    can_run_demo: bool,
     history_rows: Vec<EvalTrendRowView>,
     recent_runs: Vec<EvalRunItemView>,
 }
@@ -124,7 +122,6 @@ pub(crate) async fn evals_page(
         pass_chart: trends::pass_rate_chart(&runs, days),
         suites: context::suite_views(&suites, &runs),
         has_suites: !suites.is_empty(),
-        can_run_demo: shell.user.is_admin,
         history_rows: eval_trend_rows(&history),
         recent_runs: eval_run_items(&runs[..runs.len().min(RECENT_EVAL_RUNS)]),
     };

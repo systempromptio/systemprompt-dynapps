@@ -73,21 +73,13 @@ Two consequences worth holding onto:
 
 ### Worked examples from this instance
 
-`mcp_server/dynapps-odoo` is closed and allows: role `admin, platform_admin, super_admin` · group `staff`.
+`mcp_server/dynapps-odoo` is closed and allows: role `admin, platform_admin, super_admin, odoo_writer` · group `staff, service-accounts`.
 
 | Person | Walk | Result |
 |---|---|---|
 | role `user`, group `staff` | person: nothing · project: nothing · **group: matches allow** | **allowed** (decided by group) |
 | role `admin`, no group | person · project · group · connected server: nothing · **role: matches allow** | **allowed** (decided by role) |
 | role `user`, no group | no band names them | **refused** — the entity is closed |
-
-`mcp_server/odoo` is closed and allows: role `user, platform_admin, admin, super_admin, odoo_destructive` · group `service-accounts`.
-
-| Person | Walk | Result |
-|---|---|---|
-| role `user`, group `staff` | group: nothing (`staff` is not named) · **role: matches allow** | **allowed** (decided by role) |
-| service account, group `service-accounts` | **group: matches allow** | **allowed** (decided by group) — it still needs an `odoo_api_key` machine credential to get a token |
-| role `project_manager` only, no group | no band names them | **refused** |
 
 The **Audience grid** tab of `/admin/access-control` runs exactly these walks, for every role, group and project, against every entity; the word in each cell is the band that decided. To check one real person, use the **Check a person** tab (or open their user page and choose **Access** — the same view): the same resolver, with their actual roles, groups, projects and links. The **Rules** tab is the ledger by entity, grouped by kind, and model routes there carry the name and "pattern → provider" line their gateway declaration gives them rather than the generated id alone.
 

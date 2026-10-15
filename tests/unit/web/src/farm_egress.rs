@@ -25,7 +25,7 @@ fn request(mcp_url: &str) -> RunRequest {
         workspace: "/w".into(),
         add_dirs: Vec::new(),
         mcp_servers: BTreeMap::from([(
-            "odoo".to_owned(),
+            "dynapps-odoo".to_owned(),
             McpServerSpec::Http {
                 url: mcp_url.to_owned(),
                 headers: BTreeMap::new(),
@@ -65,7 +65,7 @@ fn policy_adds_run_hosts_to_configured_entries() {
     let configured = vec!["api.anthropic.com".to_owned(), " 10.0.0.0/8 ".to_owned()];
     let policy = EgressPolicy::for_run(
         &configured,
-        &request("http://mcp.internal:8080/api/v1/mcp/odoo/mcp"),
+        &request("http://mcp.internal:8080/api/v1/mcp/dynapps-odoo/mcp"),
         &["http://app.internal:8080"],
     );
     assert_eq!(

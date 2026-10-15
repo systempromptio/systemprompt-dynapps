@@ -3832,7 +3832,6 @@ dependencies = [
  "systemprompt",
  "systemprompt-mcp-agent",
  "systemprompt-mcp-agent-farm",
- "systemprompt-mcp-odoo",
  "systemprompt-mcp-shared",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-platform",
@@ -7867,34 +7866,6 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "systemprompt-mcp-odoo"
-version = "0.69.0"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "chrono",
- "reqwest",
- "rmcp",
- "rustls",
- "schemars",
- "serde",
- "serde_json",
- "sqlx",
- "systemprompt",
- "systemprompt-mcp-shared",
- "systemprompt-secrets-onepassword",
- "systemprompt-web-admin-core",
- "systemprompt-web-admin-governance",
- "systemprompt-web-admin-identity",
- "systemprompt-web-admin-platform",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
- "uuid",
 ]
 
 [[package]]

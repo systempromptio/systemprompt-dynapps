@@ -400,13 +400,10 @@ mod farm_eval_resume;
 mod farm_run_as;
 
 #[cfg(test)]
-mod farm_odoo_demo;
-
-#[cfg(test)]
 mod farm_mcp_tools;
 
 #[cfg(test)]
-mod governance_odoo_gate;
+mod governance_dynapps_odoo_gate;
 
 #[cfg(test)]
 mod farm_assertions;

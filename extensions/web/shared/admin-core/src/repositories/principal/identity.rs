@@ -53,7 +53,7 @@ struct EnvelopeRow {
 
 // Why: `users.roles` keeps an expired manual grant until the hourly
 // access_expiry sweep rewrites it, and the govern hook reads roles through
-// here, so a lapsed time-boxed role (odoo_destructive) is dropped at read time.
+// here, so a lapsed time-boxed role (odoo_writer) is dropped at read time.
 //
 // Why: Postgres `LEFT JOIN LATERAL … LIMIT 1` — a plain LEFT JOIN would repeat
 // the user once per IdP mapping; the bridge wants only the most recently seen

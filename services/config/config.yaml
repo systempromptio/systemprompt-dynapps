@@ -7,13 +7,12 @@
 
 includes:
   # MCP servers
-  # The internal `systemprompt` control plane, the internal `agent-farm` run
-  # server and the internal `odoo` server.
+  # The internal `systemprompt` control plane and the internal `agent-farm` run
+  # server.
   # `dynapps-odoo` and `dynbrain` are the Dynapps portal's hosted servers,
   # each connected per user through the generic OAuth connector.
   - ../mcp/systemprompt.yaml
   - ../mcp/agent-farm.yaml
-  - ../mcp/odoo.yaml
   - ../mcp/dynapps-odoo.yaml
   - ../mcp/dynbrain.yaml
 

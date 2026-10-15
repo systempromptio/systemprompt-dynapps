@@ -11,17 +11,15 @@ use super::grant::endpoint_allowed;
 #[serde(rename_all = "snake_case")]
 pub enum MachineKind {
     GithubApp,
-    OdooApiKey,
 }
 
 impl MachineKind {
-    pub const ALL: [Self; 2] = [Self::GithubApp, Self::OdooApiKey];
+    pub const ALL: [Self; 1] = [Self::GithubApp];
 
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::GithubApp => "github_app",
-            Self::OdooApiKey => "odoo_api_key",
         }
     }
 
@@ -29,7 +27,6 @@ impl MachineKind {
     pub const fn label(self) -> &'static str {
         match self {
             Self::GithubApp => "GitHub App installation",
-            Self::OdooApiKey => "Odoo API key",
         }
     }
 
@@ -51,12 +48,6 @@ pub struct AttachCredential {
     pub installation_id: String,
     #[serde(default)]
     pub api_url: String,
-    #[serde(default)]
-    pub url: String,
-    #[serde(default)]
-    pub db: String,
-    #[serde(default)]
-    pub login: String,
     #[serde(default)]
     pub secret: String,
 }
@@ -113,11 +104,6 @@ impl AttachCredential {
                 }
                 config
             },
-            MachineKind::OdooApiKey => json!({
-                "url": endpoint(&self.url, "Odoo URL")?,
-                "db": plain(&self.db, "Database")?,
-                "login": plain(&self.login, "Login")?,
-            }),
         };
         Ok((self.kind, config, self.secret))
     }

@@ -1,8 +1,10 @@
-//! The shipped chain on the Odoo plane: a destructive or erasure Odoo tool is
-//! flagged for a plain caller and passes for `odoo_destructive` or admin, and
-//! the role unlocks nothing outside `mcp__odoo__`. The tool plane runs in warn
-//! mode (services/governance/config.yaml, 2026-10-15), so a would-be refusal
-//! is recorded as `Warn`; restoring `mode: enforce` turns these back to `Deny`.
+//! The shipped chain on the hosted Odoo plane: a `dynapps-odoo` write tool
+//! (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`) is flagged for
+//! a plain caller and passes for `odoo_writer` or admin, its read tools pass,
+//! and the role unlocks nothing outside `mcp__dynapps-odoo__`. The tool plane
+//! runs in warn mode (services/governance/config.yaml, 2026-10-15), so a
+//! would-be refusal is recorded as `Warn`; restoring `mode: enforce` turns
+//! these back to `Deny`.
 
 use systemprompt::identifiers::{CallId, McpToolName, SessionId, UserId};
 use systemprompt_security::authz::types::{Decision, DecisionTag};
@@ -17,7 +19,7 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
         .unwrap();
     let engine = GovernanceEngine::from_config(&cfg).unwrap();
     let roles: Vec<String> = roles.iter().map(|r| (*r).to_owned()).collect();
-    let user = UserId::new("svc-odoo-farm");
+    let user = UserId::new("odoo-farm-user");
     let session = SessionId::generate();
     let call = CallId::generate();
     let input = GovernedInput::tool_arguments(McpToolInput::new(serde_json::json!({})));
@@ -39,13 +41,16 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
         .decision
 }
 
+const WRITES: [&str; 4] = [
+    "mcp__dynapps-odoo__orm_write",
+    "mcp__dynapps-odoo__orm_create",
+    "mcp__dynapps-odoo__orm_unlink",
+    "mcp__dynapps-odoo__orm_execute_kw",
+];
+
 #[test]
-fn destructive_odoo_tools_are_flagged_without_the_role() {
-    for tool in [
-        "mcp__odoo__lead_delete",
-        "mcp__odoo__partner_anonymise",
-        "mcp__odoo__gdpr_erase",
-    ] {
+fn write_tools_are_flagged_without_the_role() {
+    for tool in WRITES {
         let decision = decide(tool, AccessScope::User, &["user"]);
         assert_eq!(decision.tag(), DecisionTag::Warn, "{tool}");
     }
@@ -53,8 +58,8 @@ fn destructive_odoo_tools_are_flagged_without_the_role() {
 
 #[test]
 fn the_role_or_admin_lets_them_through() {
-    for tool in ["mcp__odoo__lead_delete", "mcp__odoo__gdpr_erase"] {
-        let granted = decide(tool, AccessScope::User, &["user", "odoo_destructive"]);
+    for tool in WRITES {
+        let granted = decide(tool, AccessScope::User, &["user", "odoo_writer"]);
         assert!(granted.permits(), "{tool}: {granted:?}");
         let admin = decide(tool, AccessScope::Admin, &["admin"]);
         assert!(admin.permits(), "{tool}: {admin:?}");
@@ -63,11 +68,14 @@ fn the_role_or_admin_lets_them_through() {
 
 #[test]
 fn reads_pass_and_the_role_unlocks_nothing_elsewhere() {
-    assert!(decide("mcp__odoo__lead_list", AccessScope::User, &["user"]).permits());
-    let elsewhere = decide(
-        "mcp__crm__lead_delete",
-        AccessScope::User,
-        &["odoo_destructive"],
-    );
+    for tool in [
+        "mcp__dynapps-odoo__orm_search_read",
+        "mcp__dynapps-odoo__odoo_describe_model",
+        "mcp__dynapps-odoo__odoo_aggregate",
+    ] {
+        let decision = decide(tool, AccessScope::User, &["user"]);
+        assert!(decision.permits(), "{tool}: {decision:?}");
+    }
+    let elsewhere = decide("mcp__crm__lead_delete", AccessScope::User, &["odoo_writer"]);
     assert_eq!(elsewhere.tag(), DecisionTag::Warn);
 }

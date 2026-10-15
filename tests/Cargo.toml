@@ -151,7 +151,6 @@ dynapps-test-common = { path = "common" }
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
 systemprompt-mcp-agent-farm = { path = "../extensions/mcp/agent-farm" }
-systemprompt-mcp-odoo = { path = "../extensions/mcp/odoo" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }
 systemprompt-web-admin-core = { path = "../extensions/web/shared/admin-core" }
 systemprompt-web-admin-analytics = { path = "../extensions/web/admin/analytics" }

@@ -1,13 +1,12 @@
 //! Service layer between the platform handlers and the repositories.
 //!
 //! The connector OAuth broker and the connection snapshot, device credential
-//! issuance, identity tokens, the jobs listing, the machine credentials service
-//! accounts hold, and the Odoo demo seeder that spends one.
+//! issuance, identity tokens, the jobs listing, and the machine credentials
+//! service accounts hold.
 
 pub mod connector_oauth;
 pub mod identity_token;
 pub mod machine_credentials;
-pub mod odoo_demo;
 pub mod service_accounts;
 
 pub(crate) mod connector_accounts;

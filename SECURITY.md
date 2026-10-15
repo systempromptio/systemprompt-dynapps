@@ -83,8 +83,8 @@ waiting count as `unsealed_rows`. See `extensions/web/schema/51_audit_integrity.
 ## Service-account credentials
 
 Workflow write-backs and farm runs act as service accounts that core refuses
-for every interactive login. Their machine credentials (GitHub App keys,
-Odoo API keys) are sealed with the master
+for every interactive login. Their machine credentials (GitHub App keys) are
+sealed with the master
 key, bound to one account and provider, never returned by any endpoint, and
 issued as a bearer only to a `workflow:<id>:write` or `farm:<id>` caller. Dynapps stores and
 gates them; every token is minted by core's `connector_grant`, the one

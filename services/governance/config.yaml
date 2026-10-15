@@ -28,10 +28,11 @@
 #
 # BACK TO WARN ON THE TOOL PLANE (Ed, 2026-10-15). `scope_check` and
 # `tool_blocklist` were enforced on 2026-10-14; every stage now inherits the
-# top-level warn mode again, so nothing is refused, only recorded. The Odoo MCP
-# server's destructive and erasure tools (`mcp__odoo__*delete*`, `*anonymise*`,
-# `*erase*`) pass only for admin or a caller holding the `odoo_destructive`
-# role — authority is a role grant on the account, revoked the same way, with
+# top-level warn mode again, so nothing is refused, only recorded. The hosted
+# Dynapps Odoo server's write tools (`mcp__dynapps-odoo__*write*`, `*create*`,
+# `*unlink*`, `*execute*`) pass only for admin or a caller holding the
+# `odoo_writer` role; its read tools pass for everyone entitled to the
+# server. Authority is a role grant on the account, revoked the same way, with
 # no restart. The role is declared in services/access-control/rules.yaml.
 #
 # Warn mode is NOT the same as `enabled: false`. A disabled stage does not run
@@ -133,9 +134,9 @@ governance:
     admin_only_prefixes:
     - mcp__systemprompt__
     role_gated:
-    - prefix: mcp__odoo__
-      contains: [delete, anonymise, erase]
-      roles: [odoo_destructive]
+    - prefix: mcp__dynapps-odoo__
+      contains: [write, create, unlink, execute]
+      roles: [odoo_writer]
   - id: tool_blocklist
     enabled: true
     patterns:
@@ -145,8 +146,8 @@ governance:
     - anonymise
     - erase
     role_exemptions:
-    - prefix: mcp__odoo__
-      roles: [odoo_destructive]
+    - prefix: mcp__dynapps-odoo__
+      roles: [odoo_writer]
   - id: rate_limit
     enabled: true
     requests_per_window: 300

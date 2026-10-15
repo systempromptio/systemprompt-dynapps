@@ -1,7 +1,7 @@
 //! One service account: its credentials by provider, the attach and rotate
 //! forms (secret fields write-only), the portal OAuth grants an admin
 //! connects on its behalf (what `client` / `service_account` mode farm runs
-//! spend on Odoo and `DynBrain`), and the delete action.
+//! spend on the Dynapps portal servers), and the delete action.
 
 use std::sync::Arc;
 

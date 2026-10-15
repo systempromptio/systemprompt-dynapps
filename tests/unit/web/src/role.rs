@@ -29,7 +29,7 @@ fn every_role_round_trips_through_its_wire_string() {
     assert_eq!(
         Role::ALL.len(),
         8,
-        "odoo_destructive joined the set (2026-10-14)"
+        "odoo_writer replaced odoo_destructive (2026-10-15)"
     );
 }
 

@@ -20,6 +20,14 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Changed
+
+- **Odoo write-gating moved to `dynapps-odoo`.** `services/governance/config.yaml` now gates `mcp__dynapps-odoo__*` tools whose name contains `write`, `create`, `unlink` or `execute` (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`) on admin or the new `odoo_writer` role, which replaces `odoo_destructive`; read tools pass. Under the current warn mode a write by anyone else is recorded as `warn`, and the server's `tool_policy: prompt` still asks before each call. `mcp_server/dynapps-odoo` in `services/access-control/rules.yaml` admits `odoo_writer` holders.
+
+### Removed
+
+- **The custom Odoo MCP server and its credential plumbing.** `extensions/mcp/odoo` (`systemprompt-mcp-odoo`), `services/mcp/odoo.yaml`, the per-person Odoo account link on `/admin/connectors` (`/api/public/admin/user/odoo-link`), the `odoo_api_key` machine-credential kind, the console's Run Odoo demo (`/admin/farm/demos/odoo`, `/api/public/admin/agent-farm/demos/odoo`) and `demo/agent-farm/odoo-seed.sh` are gone. Odoo is reached only through the hosted `dynapps-odoo` server, as each caller's own portal OAuth grant, which made the in-house server and its sealed API keys redundant. Migration `016_retire_odoo_mcp.sql` drops `odoo_user_links`, deletes `odoo_api_key` credentials and `odoo_destructive` grants, and narrows both CHECKs; `connector_credential_audit` stays (`schema/54_connector_credential_audit.sql`). The Dockerfile, `release.yml` smoke step and `deploy/self-host/preflight.sh` no longer expect the binary.
+
 ## 0.69.0 — 2026-10-15
 
 ### Added

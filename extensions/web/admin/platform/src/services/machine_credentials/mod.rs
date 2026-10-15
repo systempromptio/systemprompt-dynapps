@@ -13,9 +13,6 @@
 pub mod caller;
 mod grant;
 pub mod input;
-mod odoo;
-mod odoo_link;
-mod odoo_rpc;
 mod seal;
 
 use crate::repositories::connectors::machine_credentials::{
@@ -28,14 +25,6 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub use grant::endpoint_allowed;
 pub use input::{AttachCredential, MachineKind};
-pub use odoo::{
-    ODOO_PROVIDER, OdooCredentialLookup, OdooMachineCredential, odoo_credential_for,
-    resolve_odoo_credential,
-};
-pub use odoo_link::{
-    ODOO_LINK_PROVIDER, OdooLinkRequest, link_odoo_account, odoo_user_credential_for,
-    unlink_odoo_account,
-};
 
 // Why: attaching to a provider the account already holds rotates it in place
 // (`set_machine_credential`), so there is no separate rotate path.

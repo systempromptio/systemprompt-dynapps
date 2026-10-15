@@ -45,9 +45,9 @@ fn request() -> RunRequest {
         workspace: root.join("workspace"),
         add_dirs: Vec::new(),
         mcp_servers: BTreeMap::from([(
-            "odoo".to_owned(),
+            "dynapps-odoo".to_owned(),
             McpServerSpec::Http {
-                url: "http://localhost:8080/api/v1/mcp/odoo/mcp".to_owned(),
+                url: "http://localhost:8080/api/v1/mcp/dynapps-odoo/mcp".to_owned(),
                 headers: BTreeMap::new(),
             },
         )]),
@@ -152,9 +152,9 @@ fn mcp_endpoints_move_to_the_worker_base() {
         "http://localhost:8080",
         "http://m1.vm.a.internal:8080",
     );
-    match &moved.mcp_servers["odoo"] {
+    match &moved.mcp_servers["dynapps-odoo"] {
         McpServerSpec::Http { url, .. } => {
-            assert_eq!(url, "http://m1.vm.a.internal:8080/api/v1/mcp/odoo/mcp");
+            assert_eq!(url, "http://m1.vm.a.internal:8080/api/v1/mcp/dynapps-odoo/mcp");
         },
         other @ McpServerSpec::Stdio { .. } => panic!("unexpected spec {other:?}"),
     }

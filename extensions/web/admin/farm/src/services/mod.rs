@@ -1,8 +1,6 @@
 //! Farm behaviour behind the routes: syncing a farm from its Git source,
-//! queueing runs onto core's `agent_runs` executor, and scoring
-//! eval suites, and the Odoo demo's suite list.
+//! queueing runs onto core's `agent_runs` executor, and scoring eval suites.
 
-pub mod demo;
 pub mod entitlement;
 pub mod evals;
 pub mod farm_sync;

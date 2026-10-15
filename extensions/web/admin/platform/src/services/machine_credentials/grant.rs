@@ -1,7 +1,7 @@
 //! A held machine credential as core's [`MachineGrant`].
 //!
 //! Core owns every minting step: the GitHub App JWT and installation-token
-//! exchange, the Basic pair for an Odoo API key, and the expiry cache. This
+//! exchange and the expiry cache. This
 //! module only maps a stored row's non-secret `config` and its opened secret
 //! onto the grant.
 
@@ -16,7 +16,7 @@ use super::MachineKind;
 const GITHUB_API: &str = "https://api.github.com";
 
 // Why: plain HTTP is allowed only to a loopback host, which is how the test
-// workspace stands in for GitHub and Odoo.
+// workspace stands in for GitHub.
 #[must_use]
 pub fn endpoint_allowed(value: &str) -> bool {
     let Ok(url) = reqwest::Url::parse(value) else {
@@ -52,14 +52,6 @@ fn origin(config: &Value, name: &str, default: Option<&str>) -> AdminResult<Stri
     Ok(value.trim_end_matches('/').to_owned())
 }
 
-pub(super) fn odoo_fields(config: &Value) -> AdminResult<(String, String, String)> {
-    Ok((
-        origin(config, "url", None)?,
-        field(config, "db")?,
-        field(config, "login")?,
-    ))
-}
-
 pub(super) fn grant(
     kind: MachineKind,
     config: &Value,
@@ -74,13 +66,6 @@ pub(super) fn grant(
             ),
             app_id: field(config, "app_id")?,
             private_key_pem: secret,
-        },
-        MachineKind::OdooApiKey => {
-            origin(config, "url", None)?;
-            MachineGrant::ApiToken {
-                email: field(config, "login")?,
-                api_token: secret,
-            }
         },
     })
 }

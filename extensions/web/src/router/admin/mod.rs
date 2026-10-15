@@ -10,8 +10,6 @@
 //!   dashboard and the desktop-bridge sign-in flow.
 //! - [`hooks_webhook_router`] — the governance webhooks called by gateway / MCP
 //!   / Claude Code (`/hooks/track`, `/hooks/govern`, `/govern/authz`).
-//! - `odoo_demo` — the Run Odoo demo action, which spans platform, identity and
-//!   farm and so can only be composed here.
 //! - [`secrets_router`], [`share_manifest_router`] — per-plugin secret
 //!   resolution and public manifest sharing.
 //!
@@ -24,7 +22,6 @@ mod api;
 mod login;
 mod marketplace_context;
 mod middleware;
-mod odoo_demo;
 mod pat;
 mod redirects;
 mod ssr;

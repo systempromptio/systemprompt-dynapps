@@ -8,7 +8,6 @@ pub(crate) mod bridge_whoami;
 pub(crate) mod connector_auth;
 pub(crate) mod devices;
 mod jobs;
-pub(crate) mod odoo_link;
 pub(crate) mod service_accounts;
 pub(crate) mod ssr;
 pub(crate) mod sync;

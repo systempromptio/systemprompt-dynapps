@@ -167,7 +167,7 @@ pub(super) fn demo_help_user_pages(page: &str) -> Option<(&'static str, &'static
             "users",
         )),
         "service-accounts" => Some((
-            "<strong>Service accounts</strong> are the non-interactive identities farm runs and workflow definitions act as when they call Odoo. Each holds at most one machine credential per provider &mdash; an Odoo API key &mdash; sealed at rest and never shown again. The broker issues a token from it only to a workflow write-back or farm caller, so no person and no interactive session can borrow it.",
+            "<strong>Service accounts</strong> are the non-interactive identities farm runs and workflow definitions act as when they call a provider. Each holds at most one machine credential per provider &mdash; a GitHub App key &mdash; sealed at rest and never shown again. The broker issues a token from it only to a workflow write-back or farm caller, so no person and no interactive session can borrow it.",
             "users",
         )),
         "sessions" => Some((

@@ -1,8 +1,8 @@
-//! `repositories::users::role_grants` — one time-boxed manual role, as the
-//! console's Odoo demo grants `odoo_destructive` to the farm service account —
-//! and the read the govern hook takes roles through.
+//! `repositories::users::role_grants` — one time-boxed manual role, such as an
+//! `odoo_writer` grant for one approved fix — and the read the govern hook
+//! takes roles through.
 //!
-//! The demo must never erase a grant an admin made by hand, and the govern
+//! A timed grant must never erase a grant an admin made by hand, and the govern
 //! hook must stop seeing a lapsed grant before the hourly sweep rewrites
 //! `users.roles`; these tests pin both.
 
@@ -18,7 +18,7 @@ use systemprompt_web_admin_identity::repositories::users::roles::{
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
-const ROLE: &str = "odoo_destructive";
+const ROLE: &str = "odoo_writer";
 
 #[tokio::test]
 async fn a_timed_grant_is_added_beside_existing_manual_roles_and_revoked_alone() {

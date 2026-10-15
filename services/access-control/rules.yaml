@@ -263,29 +263,6 @@ entities:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
   # ─── Delivery connectors ──────────────────────────────────────────────────
-  # Closed by default, open to every signed-in person and to service accounts.
-  # A person acts as the Odoo account they linked on the connectors page; a
-  # farm service account acts as its sealed odoo_api_key, opened only for a
-  # farm or workflow caller. Nobody without a credential reaches Odoo at all.
-  - entity: mcp_server/odoo
-    default: closed
-    why: >-
-      Odoo CRM/accounting tools. People use them as their own linked Odoo
-      account; governed farm runs use a service account holding an
-      odoo_api_key machine credential. Destructive and erasure tools are
-      refused a second time by scope_check and tool_blocklist
-      (services/governance/config.yaml) for every caller kind unless the
-      caller is admin or holds odoo_destructive.
-    allow:
-      role:
-        values: [user, platform_admin, admin, super_admin, odoo_destructive]
-        why: >-
-          Every signed-in person may use Odoo as themselves. odoo_destructive
-          is the role an admin grants a person or service account so its
-          delete, anonymise and erase tools pass governance; it is revoked
-          afterwards, and holding it implies seeing the server it unlocks.
-      group: [service-accounts]
-
   # Closed to everyone but staff, administrators and service accounts: the
   # portal refuses anyone without a portal.dynapps.es account, so offering the
   # Connect row more widely only produces failed consents. Service accounts are
@@ -298,9 +275,16 @@ entities:
     why: >-
       Dynapps' Odoo control MCP on portal.dynapps.es, used as the staff
       member's own Odoo account through a per-user OAuth grant; Odoo's record
-      rules scope what each person sees and changes.
+      rules scope what each person sees and changes. Its write, create, unlink
+      and execute tools pass governance only for admin or a caller holding
+      odoo_writer (services/governance/config.yaml).
     allow:
-      role: [admin, platform_admin, super_admin]
+      role:
+        values: [admin, platform_admin, super_admin, odoo_writer]
+        why: >-
+          odoo_writer is the role an admin grants a person so their
+          dynapps-odoo write tools pass governance; holding it implies seeing
+          the server it unlocks.
       group: [staff, service-accounts]
 
   - entity: mcp_server/dynbrain

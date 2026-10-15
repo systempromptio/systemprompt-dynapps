@@ -15,8 +15,6 @@
 //! - [`machine_credentials`], [`service_accounts`] — the non-interactive
 //!   accounts workflow write-backs act as, and the provider credential each
 //!   holds.
-//! - [`odoo_demo`] — restores the demo-* Odoo records the console's Odoo demo
-//!   runs over, as the farm service account.
 //! - [`test_support`] — the pure helpers the test workspace exercises.
 //!
 //! The connector accounts register as core's connection snapshot source
@@ -29,9 +27,7 @@ pub mod routes;
 pub(crate) mod services;
 
 pub use routes::public::{bridge_identity_router, connector_api_router};
-pub use services::{
-    connector_oauth, identity_token, machine_credentials, odoo_demo, service_accounts,
-};
+pub use services::{connector_oauth, identity_token, machine_credentials, service_accounts};
 
 pub mod test_support {
     pub use crate::handlers::ssr::ssr_connectors_cards::{

@@ -237,9 +237,8 @@ async fn service_account_token(
     oauth::verified_token(pool, user, provider, false).await
 }
 
-// Why: core's machine grant for an Odoo API key is a Basic pair, so the
-// descriptor's scheme is empty and the trusted adapter supplies the complete
-// header.
+// Why: core's machine grants mint the complete Authorization header, so the
+// descriptor's scheme is empty and the trusted adapter supplies it whole.
 fn bearer_response(access_token: &str) -> Response {
     (
         [(CACHE_CONTROL, "no-store")],
