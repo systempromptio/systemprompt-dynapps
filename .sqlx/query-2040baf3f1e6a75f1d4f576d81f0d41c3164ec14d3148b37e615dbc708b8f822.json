@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Farms agent-farms.yaml no longer declares, so their agents stop being\n-- listed and nothing launches them. Their agents, fixtures, suites and run\n-- rows go with them (ON DELETE CASCADE); core's agent_runs rows stay. A farm\n-- with a run still in flight is kept until the next seed.\nDELETE FROM agent_farms f\nWHERE f.id <> ALL($1::text[])\n  AND NOT EXISTS (\n      SELECT 1 FROM agent_farm_runs r\n      WHERE r.farm_id = f.id AND r.status IN ('queued', 'preparing', 'running'))\nRETURNING f.id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2040baf3f1e6a75f1d4f576d81f0d41c3164ec14d3148b37e615dbc708b8f822"
+}

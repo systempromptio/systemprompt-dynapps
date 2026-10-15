@@ -6,7 +6,9 @@
 //! sync never writes those columns; [`apply_agent_run_as`] sets them for every
 //! agent of a farm (clearing an override the file no longer names) after a
 //! seed and after each sync. Only `service_account` mode names an account to
-//! resolve here; `user` and `client` are resolved per launch.
+//! resolve here; `user` and `client` are resolved per launch. A farm the file
+//! no longer declares is deleted at seed, so a reshaped config leaves no stale
+//! farm listed.
 
 use std::path::Path;
 
@@ -122,6 +124,10 @@ pub async fn seed_farms_from_yaml(pool: &PgPool, services_path: &Path) -> FarmRe
         let run_as_user_id = resolve_run_as(pool, &owner, def.run_as.as_ref()).await?;
         farms::upsert_farm(pool, &new_farm(def, run_as_user_id)).await?;
         apply_agent_run_as(pool, def).await?;
+    }
+    let declared: Vec<String> = doc.farms.iter().map(|f| f.id.clone()).collect();
+    for retired in farms::delete_undeclared_farms(pool, &declared).await? {
+        tracing::info!(farm = %retired, "farm no longer declared in agent-farms.yaml; removed");
     }
     Ok(doc.farms.len())
 }

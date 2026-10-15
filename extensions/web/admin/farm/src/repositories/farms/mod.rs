@@ -1,5 +1,6 @@
 //! Queries over the farms declared in agent-farms.yaml and their sync record.
-//! The YAML is the source of a farm row, so a sync upserts and never deletes.
+//! The YAML is the source of a farm row: a seed upserts every declared farm
+//! and deletes the ones it no longer declares.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{MarketplaceId, UserId};
@@ -41,6 +42,18 @@ pub async fn find_launcher(
     sqlx::query_file_scalar!("src/repositories/farms/find_launcher.sql", id_or_email)
         .fetch_optional(pool)
         .await
+}
+
+pub async fn delete_undeclared_farms(
+    pool: &PgPool,
+    declared: &[String],
+) -> Result<Vec<String>, sqlx::Error> {
+    sqlx::query_file_scalar!(
+        "src/repositories/farms/delete_undeclared_farms.sql",
+        declared
+    )
+    .fetch_all(pool)
+    .await
 }
 
 pub async fn upsert_farm(pool: &PgPool, farm: &NewFarm) -> Result<(), sqlx::Error> {
