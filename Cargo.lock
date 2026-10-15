@@ -5434,6 +5434,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
+ "nix",
  "reqwest",
  "serde",
  "serde_json",

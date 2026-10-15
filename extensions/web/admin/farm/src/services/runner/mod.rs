@@ -14,6 +14,6 @@ pub mod plugin;
 pub mod prepare;
 pub mod report;
 mod service;
-mod tool_policy;
+pub mod tool_policy;
 
 pub use service::{FarmRunnerService, ORIGIN_KIND};

@@ -4,7 +4,7 @@
 //! failures to a denied [`Decision`] plus a recorded auth-denial audit row.
 
 use axum::http::HeaderMap;
-use systemprompt::identifiers::{ClientId, UserId};
+use systemprompt::identifiers::{ClientId, SessionId, UserId};
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::OauthError;
 use systemprompt_security::authz::{Decision, DenyReason};
@@ -18,6 +18,7 @@ use super::spawn_auth_denial;
 pub(super) struct Principal {
     pub user_id: UserId,
     pub client_id: Option<ClientId>,
+    pub gateway_session: Option<SessionId>,
 }
 
 pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
@@ -80,6 +81,7 @@ pub(super) fn authenticate_request(
     Ok(Principal {
         user_id: UserId::new(&claims.sub),
         client_id: claims.client_id,
+        gateway_session: claims.session_id,
     })
 }
 

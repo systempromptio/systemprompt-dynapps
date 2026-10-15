@@ -1,6 +1,9 @@
 //! One farm run on this machine, from spec to reported result.
 //!
-//! The worker fetches the run's spec and its materialised run directory,
+//! The worker fetches the run's spec, confines itself (the egress allowlist
+//! installed as root, then every id dropped to the agent user; a failure
+//! there fails the run before the agent exists), fetches the materialised
+//! run directory,
 //! writes the governance hooks file against the API's hook endpoints, and
 //! runs core's executor with an [`HttpEventSink`]. A heartbeat task keeps
 //! the API's watchdog fed and turns a cancel the API relays into the run's
@@ -23,10 +26,12 @@ use systemprompt_web_admin_farm::types::{AgentRunStatus, ErrorClass};
 use tokio_util::sync::CancellationToken;
 
 use crate::client::{HttpEventSink, WorkerClient};
+use crate::{egress, privilege};
 
 pub(crate) async fn run(client: &WorkerClient, root: Option<PathBuf>) -> Result<WorkerResult> {
     let spec: WorkerSpec = client.get("spec").await?;
     let root = root.unwrap_or_else(|| spec.server_root.clone());
+    confine(&spec, &root).await?;
     let layout = RunLayout::new(&root);
     layout.create().await.context("run directory")?;
     let bundle: Bundle = client.get("bundle").await?;
@@ -68,6 +73,14 @@ pub(crate) async fn run(client: &WorkerClient, root: Option<PathBuf>) -> Result<
         },
         Err(error) => crashed(&error.to_string()),
     })
+}
+
+async fn confine(spec: &WorkerSpec, root: &Path) -> Result<()> {
+    privilege::become_root()?;
+    egress::install(&spec.egress)
+        .await
+        .context("egress allowlist not installed")?;
+    privilege::drop_to_agent(root)
 }
 
 #[must_use]

@@ -7,6 +7,8 @@
 //! worker token and the API base it reports back to, and waits for the
 //! worker's terminal result. Every `fly:` field has a default read from the
 //! Fly runtime environment, so `mode: fly_machine` alone is enough on Fly.
+//! `fly.egress_allow` adds hosts, IPs or CIDRs a runner may reach beyond
+//! Fly's private network and the run's own URLs (see `runner::fly::egress`).
 //!
 //! The services tree is shared by every profile, so the mode can also be set
 //! per environment with [`RUNNER_MODE_ENV`], which wins over the file.
@@ -75,6 +77,8 @@ pub struct FlyRunnerConfig {
     pub heartbeat_timeout_seconds: u64,
     #[serde(default = "default_start_timeout")]
     pub start_timeout_seconds: u64,
+    #[serde(default)]
+    pub egress_allow: Vec<String>,
 }
 
 impl Default for FlyRunnerConfig {
@@ -93,6 +97,7 @@ impl Default for FlyRunnerConfig {
             worker_bin: default_worker_bin(),
             heartbeat_timeout_seconds: default_heartbeat_timeout(),
             start_timeout_seconds: default_start_timeout(),
+            egress_allow: Vec::new(),
         }
     }
 }

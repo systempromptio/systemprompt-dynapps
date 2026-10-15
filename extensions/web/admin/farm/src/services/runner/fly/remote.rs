@@ -19,6 +19,7 @@ use systemprompt::agent_runs::{RunCredentials, RunLayout, RunOutcome, RunRequest
 use uuid::Uuid;
 
 use super::api::MachineLaunch;
+use super::egress::EgressPolicy;
 use super::pool::{FlyTarget, RunnerPool, resolve_target, run_env};
 use super::protocol::{WorkerCredentials, WorkerResult, WorkerSpec};
 use super::registry::{Registration, register};
@@ -61,26 +62,29 @@ pub fn request_for_worker(request: &RunRequest, internal_base: &str, api_base: &
     request
 }
 
-fn worker_spec(job: &RemoteJob<'_>, target: &FlyTarget) -> WorkerSpec {
+fn worker_spec(job: &RemoteJob<'_>, target: &FlyTarget, egress_allow: &[String]) -> WorkerSpec {
     let bases = GatewayEndpoints {
         internal_base: target.api_base.clone(),
         external_base: target.api_base.clone(),
     };
+    let request = request_for_worker(
+        job.request,
+        &job.state.gateway.internal_base,
+        &target.api_base,
+    );
+    let egress = EgressPolicy::for_run(egress_allow, &request, &[target.api_base.as_str()]);
     WorkerSpec {
         agent_run_id: job.claimed.row.id.as_str().to_owned(),
         farm_run_id: job.farm_run_id.as_str().to_owned(),
         server_root: job.layout.root.clone(),
-        request: request_for_worker(
-            job.request,
-            &job.state.gateway.internal_base,
-            &target.api_base,
-        ),
+        request,
         credentials: WorkerCredentials::from_run(job.credentials),
         gateway_base_url: target.api_base.clone(),
         govern_url: bases.govern_url(),
         track_url: bases.track_url(),
         seq_after: job.seq_after,
         heartbeat_seconds: HEARTBEAT_SECONDS,
+        egress,
     }
 }
 
@@ -94,7 +98,7 @@ pub async fn run_remote(fly: &FlyRunnerConfig, job: RemoteJob<'_>) -> FarmResult
     let id = &job.claimed.row.id;
     let token = worker_token();
     let registration = register(
-        worker_spec(&job, &target),
+        worker_spec(&job, &target, &fly.egress_allow),
         job.layout.root.clone(),
         job.sink.clone(),
         &token,

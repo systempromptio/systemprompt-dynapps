@@ -11,6 +11,8 @@
 //! waiting out its watchdog.
 
 mod client;
+mod egress;
+mod privilege;
 mod run;
 
 use std::path::PathBuf;

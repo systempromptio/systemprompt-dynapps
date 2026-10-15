@@ -1,6 +1,7 @@
 //! Farm runs on Fly Machines (`runner.mode: fly_machine`).
 //!
 //! - [`api`] — the Machines REST calls.
+//! - [`egress`] — the runner's outbound allowlist and its nftables ruleset.
 //! - [`pool`] — taking, launching and returning pooled runner machines.
 //! - [`registry`] — the runs this API process is waiting on a worker for.
 //! - [`remote`] — the handler's side: launch, record, wait, finish.
@@ -8,6 +9,7 @@
 //!   `systemprompt-farm-worker` binary.
 
 pub mod api;
+pub mod egress;
 pub mod pool;
 pub mod protocol;
 pub mod registry;
