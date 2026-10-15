@@ -63,16 +63,21 @@ pub fn request_for_worker(request: &RunRequest, internal_base: &str, api_base: &
 }
 
 fn worker_spec(job: &RemoteJob<'_>, target: &FlyTarget, egress_allow: &[String]) -> WorkerSpec {
+    let hooks_base = hooks_base(&job.state.gateway.external_base, &target.api_base);
     let bases = GatewayEndpoints {
-        internal_base: target.api_base.clone(),
-        external_base: target.api_base.clone(),
+        internal_base: hooks_base.clone(),
+        external_base: hooks_base.clone(),
     };
     let request = request_for_worker(
         job.request,
         &job.state.gateway.internal_base,
         &target.api_base,
     );
-    let egress = EgressPolicy::for_run(egress_allow, &request, &[target.api_base.as_str()]);
+    let egress = EgressPolicy::for_run(
+        egress_allow,
+        &request,
+        &[target.api_base.as_str(), hooks_base.as_str()],
+    );
     WorkerSpec {
         agent_run_id: job.claimed.row.id.as_str().to_owned(),
         farm_run_id: job.farm_run_id.as_str().to_owned(),
@@ -85,6 +90,17 @@ fn worker_spec(job: &RemoteJob<'_>, target: &FlyTarget, egress_allow: &[String])
         seq_after: job.seq_after,
         heartbeat_seconds: HEARTBEAT_SECONDS,
         egress,
+    }
+}
+
+// Why: Claude Code refuses HTTP hooks whose host resolves to a private address,
+// so a runner VM posts its governance hooks to the API's public URL, not 6PN.
+#[must_use]
+pub fn hooks_base(external_base: &str, api_base: &str) -> String {
+    if external_base.is_empty() {
+        api_base.to_owned()
+    } else {
+        external_base.to_owned()
     }
 }
 

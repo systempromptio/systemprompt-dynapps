@@ -137,3 +137,19 @@ fn the_ruleset_keeps_ipv6_neighbour_discovery_open() {
         "icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit } accept"
     ));
 }
+
+#[test]
+fn runner_hooks_go_to_the_public_base_when_one_is_configured() {
+    use systemprompt_web_admin_farm::services::runner::fly::remote::hooks_base;
+    assert_eq!(
+        hooks_base(
+            "https://dynapps.systemprompt.io",
+            "http://m.vm.app.internal:8080"
+        ),
+        "https://dynapps.systemprompt.io"
+    );
+    assert_eq!(
+        hooks_base("", "http://m.vm.app.internal:8080"),
+        "http://m.vm.app.internal:8080"
+    );
+}
