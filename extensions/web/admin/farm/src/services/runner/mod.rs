@@ -8,6 +8,7 @@
 //! Machine instead of a local child when `runner.mode` is `fly_machine`.
 
 pub mod fly;
+pub mod cost_window;
 mod handler;
 pub mod observer;
 pub mod plugin;

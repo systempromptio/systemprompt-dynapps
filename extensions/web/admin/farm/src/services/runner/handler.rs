@@ -35,7 +35,7 @@ use systemprompt::agent_runs::{
 use systemprompt::identifiers::AgentRunId;
 
 use super::fly::remote::{RemoteJob, run_remote};
-use super::{observer, prepare};
+use super::{cost_window, observer, prepare};
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::{agents, runs};
@@ -122,7 +122,10 @@ impl FarmRunHandler {
                 scopes: Vec::new(),
                 plugin_id: request.plugin_id.clone(),
                 limits: RunCredentialLimits {
-                    max_budget_usd: request.max_budget_usd,
+                    max_budget_usd: cost_window::run_cost_window_usd(
+                        request.max_budget_usd,
+                        request.model.as_deref(),
+                    ),
                     max_requests: None,
                 },
                 purpose: Some(prepare::credential_purpose(&run.id)),
