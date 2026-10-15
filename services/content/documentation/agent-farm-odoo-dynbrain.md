@@ -97,7 +97,7 @@ launch. `deny` is appended to every run's `--disallowedTools`, so Claude Code
 refuses those tools before a call leaves the runner. The nightly audit farm
 allows only `dynapps-odoo` and `dynbrain` and denies every dynapps-odoo write
 tool (`orm_create`, `orm_write`, `orm_unlink`, `orm_execute_kw`,
-`odoo_request_upload`): an unattended run can read Odoo but never change it.
+`odoo_request_upload`, `odoo_attachment_link`): an unattended run can read Odoo but never change it.
 In an attended session the same writes pass governance only for admin or a
 holder of the `odoo_writer` role.
 

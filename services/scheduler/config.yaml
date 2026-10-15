@@ -221,7 +221,8 @@ scheduler:
     # core's agent_runs, launched as `launcher`; the farm runs in `user`
     # mode, so the run spends that person's own dynapps-odoo and dynbrain
     # grants. The run records `triggered_via = scheduler` and the job only
-    # queues it. A launcher who is not an active person fails the tick.
+    # queues it. Where the launcher is not an active person (every
+    # environment but production) the tick logs that and queues nothing.
     # Manual run: `systemprompt infra jobs run farm_scheduled_run`.
     - name: farm_scheduled_run
       extension: web

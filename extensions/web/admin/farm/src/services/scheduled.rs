@@ -4,11 +4,13 @@
 //! A farm in `run_as: {mode: user}` then spends that person's own connector
 //! grants (dynapps-odoo, dynbrain) exactly as a console launch by them would;
 //! the run records `triggered_via = scheduler`, which is how its report and
-//! the farm page tell it from a manual run.
+//! the farm page tell it from a manual run. An instance where the launcher
+//! does not exist queues nothing: the services tree is shared by every
+//! environment, and only production holds that person.
 
 use std::sync::Arc;
 
-use crate::error::{FarmError, FarmResult};
+use crate::error::FarmResult;
 use crate::repositories::farms;
 use crate::repositories::rows::RunRow;
 use crate::services::runs::{LaunchRequest, launch};
@@ -25,15 +27,12 @@ pub struct ScheduledLaunch {
 pub async fn launch_scheduled(
     state: &Arc<FarmState>,
     scheduled: ScheduledLaunch,
-) -> FarmResult<RunRow> {
-    let user_id = farms::find_launcher(state.pool.as_ref(), scheduled.launcher.trim())
-        .await?
-        .ok_or_else(|| {
-            FarmError::Config(format!(
-                "scheduled launcher {:?} is not an active person",
-                scheduled.launcher
-            ))
-        })?;
+) -> FarmResult<Option<RunRow>> {
+    let Some(user_id) =
+        farms::find_launcher(state.pool.as_ref(), scheduled.launcher.trim()).await?
+    else {
+        return Ok(None);
+    };
     let request = LaunchRequest {
         farm_id: scheduled.farm_id,
         agent_id: scheduled.agent_id,
@@ -49,5 +48,5 @@ pub async fn launch_scheduled(
         eval_result_id: None,
         client_id: None,
     };
-    launch(state, request).await
+    launch(state, request).await.map(Some)
 }

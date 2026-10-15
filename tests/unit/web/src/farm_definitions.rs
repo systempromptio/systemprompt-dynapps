@@ -80,7 +80,7 @@ fn every_kit_eval_suite_parses() {
     )
     .unwrap_or_else(|e| panic!("{e}"));
     let full = &audit.cases[0];
-    assert_eq!(full.id, "month_end_audit");
+    assert_eq!(full.id, "nightly_previous_month");
     assert_eq!(full.effective_judge_threshold(), Some(70));
     assert!(
         full.assertions

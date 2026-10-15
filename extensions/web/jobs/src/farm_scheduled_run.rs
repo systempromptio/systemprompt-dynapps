@@ -5,6 +5,8 @@
 //! launches as (`farm`, `agent`, `launcher` parameters). The run is recorded
 //! with `triggered_via = scheduler`; the farm's runner service claims it like
 //! any other queued run. The job only queues: it never waits for the run.
+//! Where the launcher is not an active person (every environment but
+//! production) the tick logs that and queues nothing.
 
 use std::sync::Arc;
 
@@ -37,9 +39,16 @@ impl FarmScheduledRunJob {
         let db = ctx.get::<DbPool>()?;
         let paths = ctx.get::<Arc<AppPaths>>().ok().map(Arc::clone);
         let state = build_farm_state_from_app(db.write_pool(), paths.as_deref());
-        let run = launch_scheduled(&state, scheduled)
+        let launcher = scheduled.launcher.clone();
+        let Some(run) = launch_scheduled(&state, scheduled)
             .await
-            .map_err(|error| JobError::other(error.to_string()))?;
+            .map_err(|error| JobError::other(error.to_string()))?
+        else {
+            tracing::info!(launcher = %launcher, "Scheduled farm run skipped: launcher is not an active person here");
+            return Ok(JobResult::success().with_stats(0, 0).with_message(format!(
+                "skipped: launcher {launcher} is not an active person"
+            )));
+        };
         tracing::info!(actor = %ctx.actor().user_id, run = run.id.as_str(),
             farm = run.farm_id.as_str(), agent = run.agent_id.as_str(),
             "Scheduled farm run queued");

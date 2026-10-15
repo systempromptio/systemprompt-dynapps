@@ -74,6 +74,7 @@ farms:
         - mcp__dynapps-odoo__orm_unlink
         - mcp__dynapps-odoo__orm_execute_kw
         - mcp__dynapps-odoo__odoo_request_upload
+        - mcp__dynapps-odoo__odoo_attachment_link
     source:
       github: systempromptio/systemprompt-agent-farm
       ref: main
