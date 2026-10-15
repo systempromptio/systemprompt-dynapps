@@ -123,6 +123,7 @@ pub async fn start_eval_run(
             agent_id: &suite.agent_id,
             user_id: &user_id,
             triggered_via,
+            client_id: None,
         },
     )
     .await?;

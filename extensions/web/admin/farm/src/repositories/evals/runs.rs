@@ -1,11 +1,14 @@
 //! Eval runs: one per launch of a suite, with the tally the orchestrator
-//! keeps written back as each case finishes.
+//! keeps written back as each case finishes. An eval run takes the client of
+//! the run it scores when given one, else its farm's.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories::rows::EvalRunRow;
-use crate::types::{EvalRunId, EvalRunStatus, EvalSuiteId, FarmAgentId, FarmId, TriggeredVia};
+use crate::types::{
+    ClientId, EvalRunId, EvalRunStatus, EvalSuiteId, FarmAgentId, FarmId, TriggeredVia,
+};
 
 /// The identity of an eval run about to start.
 #[derive(Debug, Clone, Copy)]
@@ -16,6 +19,7 @@ pub struct NewEvalRun<'a> {
     pub agent_id: &'a FarmAgentId,
     pub user_id: &'a UserId,
     pub triggered_via: TriggeredVia,
+    pub client_id: Option<&'a ClientId>,
 }
 
 pub async fn insert_eval_run(
@@ -31,6 +35,7 @@ pub async fn insert_eval_run(
         run.agent_id.as_str(),
         run.user_id.as_str(),
         run.triggered_via.as_str(),
+        run.client_id.map(ClientId::as_str),
     )
     .fetch_one(pool)
     .await

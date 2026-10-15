@@ -187,6 +187,8 @@ pub(crate) async fn client_detail_page(
     let window = format!("{days} days");
     let mut totals = OutcomeTotals::from_days(&daily);
     totals.eval_mean = summary.eval_mean;
+    totals.eval_scored = summary.eval_scored;
+    totals.infra_failures = summary.infra_failures;
     totals.completed = Some((summary.completed, summary.reported));
     let base = format!("/admin/farm/clients/{id}");
     let ctx = ClientPage {

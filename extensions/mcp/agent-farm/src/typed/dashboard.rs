@@ -61,7 +61,7 @@ async fn dashboard(
     use super::outputs_dashboard::DashboardTotals;
     use systemprompt_web_admin_farm::repositories::clients::{
         ReportScope, list_agent_outcomes, list_client_summaries, list_daily_outcomes,
-        list_report_runs,
+        list_report_runs, pooled_eval_mean,
     };
     use systemprompt_web_admin_farm::types::ClientId;
 
@@ -84,13 +84,14 @@ async fn dashboard(
         list_report_runs(pool, report.client, report.user, limit),
     );
     let (clients, agents, daily, runs) = (clients?, agents?, daily?, runs?);
-    let scores: Vec<f64> = daily.iter().filter_map(|d| d.eval_mean).collect();
     let mut totals = DashboardTotals {
         runs: daily.iter().map(|d| d.runs).sum(),
         succeeded: daily.iter().map(|d| d.succeeded).sum(),
         finished: daily.iter().map(|d| d.finished).sum(),
         cost_microdollars: daily.iter().map(|d| d.cost_microdollars).sum(),
-        eval_mean: (!scores.is_empty()).then(|| scores.iter().sum::<f64>() / scores.len() as f64),
+        eval_mean: pooled_eval_mean(&daily),
+        eval_scored: daily.iter().map(|d| d.eval_scored).sum(),
+        infra_failures: daily.iter().map(|d| d.infra_failures).sum(),
         completed: clients.iter().map(|c| c.completed).sum(),
         reported: clients.iter().map(|c| c.reported).sum(),
         success_pct: None,
@@ -156,6 +157,8 @@ mod convert {
             completed: r.completed,
             reported: r.reported,
             eval_mean: r.eval_mean,
+            eval_scored: r.eval_scored,
+            infra_failures: r.infra_failures,
             cost_microdollars: r.cost_microdollars,
             last_run_at: r.last_run_at.map(|t| t.to_rfc3339()),
         }
@@ -171,6 +174,8 @@ mod convert {
             success_pct: pct(r.succeeded, r.finished),
             completed: r.completed,
             eval_mean: r.eval_mean,
+            eval_scored: r.eval_scored,
+            infra_failures: r.infra_failures,
             cost_microdollars: r.cost_microdollars,
             last_run_at: r.last_run_at.to_rfc3339(),
         }
@@ -184,6 +189,8 @@ mod convert {
             finished: r.finished,
             cost_microdollars: r.cost_microdollars,
             eval_mean: r.eval_mean,
+            eval_scored: r.eval_scored,
+            infra_failures: r.infra_failures,
         }
     }
 

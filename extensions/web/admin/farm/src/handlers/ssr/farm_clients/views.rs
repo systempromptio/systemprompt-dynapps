@@ -26,6 +26,7 @@ pub(crate) struct ClientRowView {
     pub success_tone: &'static str,
     pub completion: String,
     pub eval: String,
+    pub infra_failures: i64,
     pub cost: String,
     pub last_run: String,
     pub last_run_local: String,
@@ -56,6 +57,7 @@ pub(crate) fn client_rows(rows: &[ClientSummaryRow]) -> Vec<ClientRowView> {
                 success_tone: badge_tone(success),
                 completion: pct_display(ratio(r.completed, r.reported)),
                 eval: score_display(r.eval_mean),
+                infra_failures: r.infra_failures,
                 cost: format_cost(r.cost_microdollars),
                 last_run: r.last_run_at.map(relative_time).unwrap_or_default(),
                 last_run_local: r.last_run_at.map(local_time).unwrap_or_default(),
@@ -74,6 +76,7 @@ pub(crate) struct AgentOutcomeView {
     pub share_pct: String,
     pub completed: i64,
     pub eval: String,
+    pub infra_failures: i64,
     pub cost: String,
     pub last_run: String,
 }
@@ -91,6 +94,7 @@ pub(crate) fn agent_rows(rows: &[AgentOutcomeRow]) -> Vec<AgentOutcomeView> {
                 share_pct: format!("{:.1}", success.unwrap_or(0.0)),
                 completed: r.completed,
                 eval: score_display(r.eval_mean),
+                infra_failures: r.infra_failures,
                 cost: format_cost(r.cost_microdollars),
                 last_run: relative_time(r.last_run_at),
             }

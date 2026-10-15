@@ -140,6 +140,7 @@ async fn finished_eval_run(seeded: &Seeded, passed: i32, failed: i32, score: Opt
             agent_id: &seeded.agent,
             user_id: &seeded.user,
             triggered_via: TriggeredVia::Api,
+            client_id: None,
         },
     )
     .await

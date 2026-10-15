@@ -75,6 +75,7 @@ pub async fn start_case_eval(
             agent_id: &request.agent_id,
             user_id: &request.user_id,
             triggered_via: request.triggered_via,
+            client_id: request.client_id.as_ref(),
         },
     )
     .await?;

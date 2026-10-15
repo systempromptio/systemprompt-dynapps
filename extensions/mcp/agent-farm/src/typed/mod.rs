@@ -43,7 +43,10 @@ pub use outputs::{
 pub use outputs_analytics::{
     AnalyticsCostsOutput, AnalyticsRequestsOutput, AnalyticsSkillsOutput, AnalyticsToolsOutput,
 };
-pub use outputs_dashboard::FarmDashboardOutput;
+pub use outputs_dashboard::{
+    DashboardAgent, DashboardClient, DashboardDay, DashboardRun, DashboardTotals,
+    FarmDashboardOutput,
+};
 pub use outputs_report::{FarmRunReportOutput, RunReportOutput};
 pub use runs_read::{RunEventsHandler, RunFactsHandler, RunListHandler};
 pub use runs_stats::{RunStatsHandler, facts_scope};
