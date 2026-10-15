@@ -43,6 +43,7 @@ Conventions (strict — hold every entry to them):
 
 ### Fixed
 
+- Farm sync removes the farms `agent-farms.yaml` no longer declares when it seeds, so a farm dropped from the file no longer lingers in the database.
 - The farm eval mean is taken from each run's own verdict, with infrastructure failures counted apart; run clients and reports are backfilled.
 - A run credential's cost window admits one worst-case request.
 - The macOS release smoke logs in to `https://dynapps.systemprompt.io` again, the bridge's default gateway. A later commit had reverted it to `https://dynapps.es`.
