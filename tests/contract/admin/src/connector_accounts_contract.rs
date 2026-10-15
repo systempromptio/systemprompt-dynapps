@@ -92,7 +92,12 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
     let state = "contract-consent-state";
     let grant = Grant {
         user: admin_user.as_str().to_owned(),
-        configuration_binding: String::new(),
+        // Bound to the loaded dynbrain configuration, so the callback reaches
+        // the denial rather than stopping at the stale-configuration check.
+        configuration_binding: connector_oauth::generic::binding(&Provider::Generic(
+            "dynbrain".to_owned(),
+        ))
+        .unwrap_or_default(),
         authorization_issuer: String::new(),
         token_auth_method: String::new(),
         provider: Provider::Generic("dynbrain".to_owned()),
@@ -102,7 +107,7 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
         access_token: String::new(),
         refresh_token: None,
         expires_at: 0,
-        token_endpoint: String::new(),
+        token_endpoint: "https://portal.dynapps.es/oauth/token".to_owned(),
         generation: 0,
         session: Some(session.to_owned()),
         auth_method: String::new(),
@@ -138,7 +143,10 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
         )
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "callback: {body}");
-    assert!(body.contains("Connector consent denied"));
+    assert!(
+        body.contains("Connector consent denied"),
+        "callback: {body}"
+    );
     assert!(
         connector_credentials::consume_state(&db.pool, &admin_user, "dynbrain", state)
             .await
