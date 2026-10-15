@@ -135,7 +135,7 @@ phases AS (
     GROUP BY s.session_id
 )
 SELECT p.context_id AS "context_id!: ContextId", p.session_id AS "session_id!", p.skill AS "skill!",
-       p.marketplace_id, v.content_hash AS kit_hash, v.version AS kit_version,
+       p.marketplace_id, v.content_hash AS "kit_hash?", v.version AS "kit_version?",
        p.started_at AS "started_at!", b.ended_at AS "ended_at!",
        EXTRACT(EPOCH FROM b.ended_at - p.started_at)::float8 AS "wall_s!",
        COALESCE(pw.wait_s, 0)::float8 AS "prompt_wait_s!",

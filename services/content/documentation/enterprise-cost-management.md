@@ -117,7 +117,7 @@ A window names a **subject** (whose usage it counts) and a **period**.
 
 The subjects this instance resolves are:
 - `user` (core's own);
-- `group`, `project` and `role`, whose providers are in `extensions/web/admin/identity/src/authz/`, and `salesforce` (the linked account), in `extensions/web/admin/platform/src/authz/`;
+- `group`, `project` and `role`, whose providers are in `extensions/web/admin/identity/src/authz/`;
 - `organization` (the whole installation, subject id `default`), whose provider is in `extensions/web/shared/admin-core/src/authz/organization.rs`.
 
 A window can also key on `api_key` or on any scope dimension, in which case it counts the request's attributed value. A person on several groups or projects is otherwise counted against their primary one. `quota_fault_mode: closed` means a window whose subject cannot be resolved refuses the request rather than passing it uncounted.
@@ -137,7 +137,7 @@ An API key can carry its own limits, set at issuance:
 
 ```bash
 systemprompt admin users api-key issue --user <user-id> --name ci-runner \
-  --model claude-sonnet-5 --model claude-haiku-4-5 \
+  --model claude-sonnet-5-5 --model claude-haiku-5-5 \
   --budget-microdollars 50000000 --max-requests 2000 --window-seconds 86400 \
   --scope project=<project-id>
 ```

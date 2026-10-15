@@ -3,7 +3,7 @@
 //! [`generate_report`] on a background task; the report page polls the row
 //! until it is `generated` or `failed`. There is no queue and no scheduler:
 //! a report exists because someone asked for it, and it is written by one
-//! structured-output call to the judge's model, audited under a job actor
+//! JSON-answer call to the judge's model, audited under a job actor
 //! (`analysis_report`) so the call is never counted as a conversation.
 
 mod prompt;
@@ -11,7 +11,7 @@ mod prompt;
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::ai::{AiMessage, AiRequest, AiService, StructuredOutputOptions};
+use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::loader::ConfigLoader;
 use systemprompt::models::execution::context::RequestContext;
@@ -106,7 +106,11 @@ async fn call_model(
 ) -> AdminResult<()> {
     let request = AiRequest::builder(
         vec![
-            AiMessage::system(prompt::SYSTEM_PROMPT),
+            AiMessage::system(format!(
+                "{}\nReply with one JSON object and nothing else, matching this schema:\n{}",
+                prompt::SYSTEM_PROMPT,
+                findings_schema()
+            )),
             AiMessage::user(digest_text(row)),
         ],
         model.provider.as_str(),
@@ -114,7 +118,6 @@ async fn call_model(
         MAX_OUTPUT_TOKENS,
         request_context(Actor::job(grant.requested_by.clone(), ACTOR_JOB_NAME))?,
     )
-    .with_structured_output(StructuredOutputOptions::with_schema(findings_schema()))
     .build();
     let response = ai.generate(&request).await.map_err(AdminError::internal)?;
     let findings = parse_findings(&response.content).map_err(AdminError::internal)?;

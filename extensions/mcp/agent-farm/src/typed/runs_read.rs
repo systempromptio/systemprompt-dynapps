@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use rmcp::ErrorData;
-use systemprompt::agent_runs::{AgentRunRepository, AgentRunRow, RunStatus};
+use systemprompt::agent_runs::{AgentRunRepository, AgentRunRow};
 use systemprompt::identifiers::{AgentRunId, McpExecutionId};
 use systemprompt::mcp::McpToolHandler;
 use systemprompt::models::execution::context::RequestContext;
@@ -16,8 +16,7 @@ use systemprompt_web_admin_core::repositories::agent_run_facts::{
 use super::outputs::RunEventOutput;
 use super::{
     MAX_EVENTS, MAX_LIST, RunEventsInput, RunEventsOutput, RunExtras, RunFactsOutput, RunIdInput,
-    RunListInput, RunListOutput, RunStatusOutput, ToolCtx, ToolError, ToolResult, bounded,
-    facts_scope, run_id,
+    RunListInput, RunListOutput, ToolCtx, ToolError, ToolResult, bounded, facts_scope, run_id,
 };
 use crate::server::{RunOrigin, authorize_run};
 
@@ -54,70 +53,6 @@ pub(crate) async fn load_authorized(ctx: &ToolCtx<'_>, id: &AgentRunId) -> ToolR
     let origin = origin_of(ctx, &run).await?;
     authorize_run(&ctx.viewer, &run, &origin)?;
     Ok(run)
-}
-
-fn status_output(run: AgentRunRow) -> RunStatusOutput {
-    let terminal = run
-        .status
-        .parse::<RunStatus>()
-        .is_ok_and(RunStatus::is_terminal);
-    RunStatusOutput {
-        run_id: run.id.as_str().to_owned(),
-        origin_kind: run.origin_kind,
-        origin_id: run.origin_id,
-        user_id: run.user_id,
-        host: run.host,
-        status: run.status,
-        terminal,
-        error_class: run.error_class,
-        error: run.error,
-        attempt: run.attempt,
-        created_at: run.created_at,
-        started_at: run.started_at,
-        finished_at: run.finished_at,
-        duration_ms: run.duration_ms,
-        turns: run.turns,
-        input_tokens: run.input_tokens,
-        output_tokens: run.output_tokens,
-        cost_microdollars: run.cost_microdollars,
-        exit_code: run.exit_code,
-        cancel_requested: run.cancel_requested_at.is_some(),
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct RunStatusHandler<'a> {
-    pub ctx: &'a ToolCtx<'a>,
-}
-
-impl McpToolHandler for RunStatusHandler<'_> {
-    type Input = RunIdInput;
-    type Output = RunStatusOutput;
-    fn tool_name(&self) -> &'static str {
-        "run_status"
-    }
-    fn description(&self) -> &'static str {
-        "One run's lifecycle state: status, timings, tokens, cost, error class. Poll this after `run_start` until `terminal` is true. Only your own runs, your projects' runs, or (as an administrator) any run."
-    }
-    fn read_only(&self) -> bool {
-        true
-    }
-    async fn handle(
-        &self,
-        input: RunIdInput,
-        _context: &RequestContext,
-        _execution: &McpExecutionId,
-    ) -> Result<(RunStatusOutput, String), ErrorData> {
-        status(self.ctx, &input).await.map_err(ErrorData::from)
-    }
-}
-
-async fn status(ctx: &ToolCtx<'_>, input: &RunIdInput) -> ToolResult<(RunStatusOutput, String)> {
-    let id = run_id(&input.run_id)?;
-    let run = load_authorized(ctx, &id).await?;
-    let output = status_output(run);
-    let summary = format!("run {} is {}", output.run_id, output.status);
-    Ok((output, summary))
 }
 
 #[derive(Debug, Clone, Copy)]

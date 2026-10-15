@@ -19,7 +19,7 @@ The `systemprompt` MCP server (admin-only) has typed tools for the common questi
 | Who is registered, with which role | `users` |
 | The dashboard | `admin_report` (`{"report":"costs","days":7}`) |
 
-For people and usage questions use the skills `admin_person_activity` (one person) and `admin_ai_usage` (spend, adoption). Rows are named `<user_id> (<display name>)`; the id is what other tools take as `user`. Map ids to emails with `users`.
+For people and usage questions use `usage_by_user` and `request_log`. Rows are named `<user_id> (<display name>)`; the id is what other tools take as `user`. Map ids to emails with `users`.
 
 **Paging.** `limit` is clamped to 200. `request_log`: non-empty `next_cursor` means older rows - pass it as `cursor`. `conversation_audit`: `has_more` means pass `next_offset` as `offset`; `message_count`/`tool_call_count` are totals. `users`: `next_cursor` is the next `offset`. `usage_by_user`: `truncated` means raise `limit` or narrow the window. To reach an earlier window set `since`/`until`; do not page back to it.
 

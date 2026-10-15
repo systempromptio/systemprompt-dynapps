@@ -1,0 +1,898 @@
+{
+  "dims": [
+    {
+      "dimension": "Content & E-E-A-T 2026 — helpful content, autoridad topical, thin content, señales de autor, frescura y patrones de contenido B2B (partner Odoo / consultoría ERP)",
+      "summary": "En 2026 Google recompensa contenido people-first con experiencia de primera mano demostrable (E-E-A-T), y la autoridad topical vía clusters pilar-satélite pesa más que la optimización página a página; además, las citas en AI Overviews/AI Mode salen del mismo índice, así que el contenido útil y con datos propios es también la vía de entrada a la búsqueda generativa. www.dynapps.es tiene una base sólida de MOFU/BOFU (posts comparativos ES bien server-rendered, 9+ casos de éxito con métricas cuantificadas, 10 páginas de industria) pero la ejecución E-E-A-T es débil: cero autores nombrados en el blog, sin fechas visibles ni schema, páginas hub críticas thin (/es/contact 35 palabras, /es/events 17, /es/international 23, /es/industries 203, /es/integrations 295), listados de blog/cases client-side rendered (~23 palabras renderizadas, solo 9 enlaces a posts), y la señal de autoridad heredada de indaws.es se está perdiendo con redirecciones 302 y ~87% de 404 en URLs legacy (incluidos blog y casos-de-exito antiguos). La oportunidad principal es convertir activos existentes (casos, industrias, comparativas) en clusters enlazados con autores reales, y rescatar el contenido legacy de Indaws antes de que su equity desaparezca.",
+      "best_practices": [
+        {
+          "title": "Contenido people-first con experiencia de primera mano (E-E-A-T)",
+          "detail": "Google evalúa quién creó el contenido, cómo y por qué; la 'Experience' añadida al framework premia contenido que demuestra interacción real con el producto o servicio (implantaciones reales, datos de cliente, pantallazos propios). Trust es el componente más crítico. Para un partner Odoo esto significa firmar el contenido con consultores reales y anclar afirmaciones en proyectos verificables.",
+          "source": "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
+          "title_en": "People-first content with first-hand experience (E-E-A-T)",
+          "detail_en": "Google evaluates who created the content, how, and why; the 'Experience' added to the framework rewards content that demonstrates real interaction with the product or service (actual implementations, customer data, original screenshots). Trust is the most critical component. For an Odoo partner this means signing content with real consultants and anchoring claims in verifiable projects."
+        },
+        {
+          "title": "Autoridad topical mediante clusters pilar-satélite",
+          "detail": "En B2B 2026 la autoridad topical (cubrir un tema en profundidad con una página pilar + 4-8 piezas satélite interenlazadas) es la señal dominante, por delante de la autoridad de dominio o la optimización de páginas sueltas. Los sitios que 'poseen' un tema son los que rankean y los que las IAs citan.",
+          "source": "https://thesmarketers.com/blogs/b2b-topical-authority-depth-first/ y https://delante.co/b2b-seo-content-in-2026-best-practices/",
+          "title_en": "Topical authority through pillar-satellite clusters",
+          "detail_en": "In B2B 2026, topical authority (covering a topic in depth with a pillar page + 4-8 interlinked satellite pieces) is the dominant signal, ahead of domain authority or the optimization of standalone pages. The sites that 'own' a topic are the ones that rank and the ones AI systems cite."
+        },
+        {
+          "title": "Señales de autor visibles y verificables",
+          "detail": "Bios de autor con años de experiencia, especialización, certificaciones (p. ej. certificaciones Odoo) y enlace a perfiles verificados (LinkedIn) son la forma práctica de demostrar Expertise. Contenido B2B sin autor nombrado es hoy indistinguible del contenido generado en masa y pierde frente a competidores que sí firman.",
+          "source": "https://delante.co/b2b-seo-content-in-2026-best-practices/",
+          "title_en": "Visible and verifiable author signals",
+          "detail_en": "Author bios with years of experience, specialization, certifications (e.g. Odoo certifications) and links to verified profiles (LinkedIn) are the practical way to demonstrate Expertise. B2B content without a named author is now indistinguishable from mass-generated content and loses out to competitors who do sign their work."
+        },
+        {
+          "title": "Casos de éxito con resultados medibles como activo E-E-A-T central",
+          "detail": "En consultoría/ERP, los case studies optimizados para búsqueda con resultados reales cuantificados son la prueba de Experience más potente y el contenido de decisión que más convierte. Deben ser indexables, enlazados desde páginas de industria y servicio, y con datos concretos (plazos, usuarios, volúmenes).",
+          "source": "https://www.madisonmarketing.com/seo-for-b2b-consulting-firms",
+          "title_en": "Success stories with measurable results as the core E-E-A-T asset",
+          "detail_en": "In consulting/ERP, search-optimized case studies with quantified real results are the most powerful proof of Experience and the decision-stage content that converts best. They must be indexable, linked from industry and service pages, and include concrete data (timelines, users, volumes)."
+        },
+        {
+          "title": "Thin content en páginas hub daña la percepción global de calidad",
+          "detail": "El sistema helpful content evalúa a nivel de sitio: páginas con <100 palabras que ocupan posiciones clave de la arquitectura (contact, hubs de sección) diluyen la señal de utilidad. Cada página indexable debe responder de forma completa a la intención por la que existe, o consolidarse.",
+          "source": "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
+          "title_en": "Thin content on hub pages damages the site-wide quality perception",
+          "detail_en": "The helpful content system evaluates at the site level: pages with <100 words occupying key positions in the architecture (contact, section hubs) dilute the usefulness signal. Every indexable page must fully answer the intent it exists for, or be consolidated."
+        },
+        {
+          "title": "El contenido clave debe estar en el HTML servidor-renderizado",
+          "detail": "Aunque Google renderiza JS, los listados client-side con casi cero contenido inicial debilitan el descubrimiento de enlaces, la frescura percibida y la elegibilidad para citación en AI Overviews (44% de las citas IA provienen del primer 30% del texto). Listados de blog/casos deben servir títulos, extractos y enlaces en HTML.",
+          "source": "https://developers.google.com/search/docs/appearance/ai-features y Growth Memo feb-2026 (vía https://delante.co/b2b-seo-content-in-2026-best-practices/)",
+          "title_en": "Key content must be in the server-rendered HTML",
+          "detail_en": "Although Google renders JS, client-side listings with almost zero initial content weaken link discovery, perceived freshness, and eligibility for citation in AI Overviews (44% of AI citations come from the first 30% of the text). Blog/cases listings must serve titles, excerpts, and links in HTML."
+        },
+        {
+          "title": "Frescura y mantenimiento del contenido evergreen",
+          "detail": "En un mercado versionado como Odoo (v18→v19), actualizar comparativas y guías con fecha de revisión visible ('actualizado para Odoo 19') supera a publicar piezas nuevas equivalentes; Google y los usuarios penalizan guías obsoletas de software. Auditoría semestral de las piezas top y refresh con fecha visible.",
+          "source": "https://www.theimpulsedigital.com/blog/b2b-seo-strategy-guide-2026/",
+          "title_en": "Freshness and maintenance of evergreen content",
+          "detail_en": "In a versioned market like Odoo (v18→v19), updating comparisons and guides with a visible review date ('updated for Odoo 19') outperforms publishing equivalent new pieces; Google and users penalize outdated software guides. Run a semi-annual audit of the top pieces and refresh them with a visible date."
+        },
+        {
+          "title": "Optimizar para búsqueda generativa = mismo contenido útil, sin requisitos extra",
+          "detail": "AI Overviews y AI Mode citan desde el índice orgánico normal; no hay optimización especial, pero ganan las páginas con respuestas directas al inicio, datos originales y estructura clara. El contenido único y útil (benchmarks propios, datos de implantaciones) es lo que más influye en la presencia en IA a largo plazo.",
+          "source": "https://developers.google.com/search/docs/fundamentals/ai-optimization-guide",
+          "title_en": "Optimizing for generative search = the same helpful content, no extra requirements",
+          "detail_en": "AI Overviews and AI Mode cite from the normal organic index; there is no special optimization, but pages with direct answers up front, original data, and clear structure win. Unique, helpful content (proprietary benchmarks, implementation data) is what most influences AI presence over the long term."
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Rescatar el contenido legacy de indaws.es y mapear redirecciones al contenido equivalente",
+          "detail": "Inventariar las ~829 URLs del sitemap antiguo de indaws.es, identificar los posts de blog y casos-de-exito con tráfico/enlaces históricos, y para cada uno: (a) si existe equivalente en dynapps.es, redirigir 301 path-to-path a esa URL exacta; (b) si no existe pero el contenido era valioso, republicarlo actualizado en /es/blog o /es/cases y redirigir ahí; (c) solo lo irrelevante (shop, slides muertos) a la home de sección. Cambiar además las 302 actuales a 301 y eliminar el parámetro ?ref=indaws-redirect de la URL destino (o gestionarlo server-side). Es la mayor fuga de autoridad de contenido del sitio.",
+          "priority": "P1",
+          "impact": 9,
+          "effort": 6,
+          "evidence": "Verificado: indaws.es redirige 302 (no 301) con ?ref=indaws-redirect y ~87% de las URLs legacy muestreadas acaban en 404 (blog antiguo, casos-de-exito, slides, shop). El equity de años de contenido Indaws se está perdiendo.",
+          "pages": "www.indaws.es/* → www.dynapps.es/es/blog, /es/cases y páginas de servicio"
+        },
+        {
+          "title": "Añadir autores reales con bio a todos los posts del blog",
+          "detail": "Firmar cada post con un consultor/experto real de Dynapps España: nombre, foto, cargo, años de experiencia con Odoo, certificaciones y enlace a LinkedIn. Crear páginas de autor (/es/blog/author/{nombre}) que listen sus artículos. Acompañar con schema Article + author Person (coordinar con la dimensión técnica, hoy hay 0 JSON-LD). Aplicar primero a los 10-15 posts con más tráfico y a todo lo nuevo.",
+          "priority": "P1",
+          "impact": 8,
+          "effort": 4,
+          "evidence": "Verificado en /es/blog: ningún post muestra autor. Las guías E-E-A-T 2026 (Google creating-helpful-content; Delante B2B 2026) sitúan las señales de autor verificables como requisito básico de Expertise en B2B.",
+          "pages": "/es/blog y todos los posts individuales"
+        },
+        {
+          "title": "Reconstruir los listados de blog y casos como páginas server-rendered con extractos",
+          "detail": "Actual: HTML crudo con 0 palabras; incluso renderizado, /es/blog muestra ~23 palabras y solo 9 enlaces. Propuesto: listado paginado servidor-side con título, extracto de 2-3 líneas, autor, fecha y categoría por post, más un párrafo introductorio del hub (150-250 palabras describiendo las temáticas). En Odoo website esto es configurable sin cambiar URLs. Mismo tratamiento para /es/cases con sector y resultado clave por tarjeta.",
+          "priority": "P1",
+          "impact": 8,
+          "effort": 5,
+          "evidence": "Verificado: listados client-side rendered con contenido casi nulo; los posts individuales SÍ están server-rendered. Google ai-optimization-guide y el dato Growth Memo (44% de citas IA del primer 30% del texto) exigen contenido y enlaces en el HTML inicial.",
+          "pages": "/es/blog, /es/cases (listados)"
+        },
+        {
+          "title": "Convertir las 10 páginas de industria en pilares de cluster con casos y contenido de profundidad",
+          "detail": "Cada página de industria (construcción, fabricación, retail, laboratorios, etc.) debe ser una página pilar: pain points del sector, módulos Odoo relevantes, 1-2 casos de éxito embebidos con métricas (ya existen: Puratos→alimentación, Lone Star→laboratorios, Prima Protección→distribución), FAQ del sector y enlaces a 3-5 posts satélite del blog sobre ese vertical. Ampliar el hub /es/industries (hoy 203 palabras) con un párrafo por sector. Plan editorial: 1 cluster de industria por mes empezando por los verticales con más pipeline en España.",
+          "priority": "P1",
+          "impact": 9,
+          "effort": 7,
+          "evidence": "Verificado: /es/industries 203 palabras, tarjetas de una línea, sin casos ni testimonios en las páginas de sector; los 9 casos con métricas cuantificadas existen pero no están enlazados desde industrias. La autoridad topical vía clusters es la señal B2B dominante en 2026 (thesmarketers.com, delante.co).",
+          "pages": "/es/industries y /es/industries/* + posts de blog satélite"
+        },
+        {
+          "title": "Engordar o consolidar las páginas thin: contact, events, international, integrations",
+          "detail": "/es/contact (35 palabras, sin H1): añadir H1, datos de la oficina de Valencia, equipo, qué esperar tras contactar, NAP completo. /es/events (17 palabras): si no hay eventos activos, mostrar próximos + archivo de eventos pasados con resúmenes; si no se va a mantener, noindex temporal. /es/international (23 palabras): convertir en página de valor sobre el grupo (5 países, ~280 expertos, capacidad multi-país para filiales) — es un diferenciador real frente a processcontrol, studio73 o nanobytes. /es/integrations (295 palabras): ficha por integración (WhatsApp, etc.) con qué resuelve y enlace al post relacionado.",
+          "priority": "P2",
+          "impact": 6,
+          "effort": 4,
+          "evidence": "Verificado: thin pages con 17-295 palabras y /es/contact sin H1. El sistema helpful content evalúa la utilidad a nivel de sitio; páginas hub vacías diluyen la señal (Google creating-helpful-content).",
+          "pages": "/es/contact, /es/events, /es/international, /es/integrations"
+        },
+        {
+          "title": "Añadir fechas de publicación/actualización visibles y programa de refresh para Odoo 19",
+          "detail": "Mostrar 'Publicado' y 'Última actualización' en cada post (y en schema Article dateModified cuando exista JSON-LD). Auditar los posts evergreen (comparativas Odoo vs Exact/AFAS, '7 ventajas', WhatsApp, control horario) y actualizarlos a Odoo 19 con mención explícita de versión en título o intro. Calendario: revisión semestral de las 15 piezas top. En software versionado, la frescura visible es señal de Trust y factor de CTR.",
+          "priority": "P2",
+          "impact": 6,
+          "effort": 3,
+          "evidence": "Verificado en /es/blog: no se muestran fechas en los posts listados; ya existe un post de 'IA en Odoo 19', señal de que el resto de piezas puede quedar desfasado frente a él. Best practice de freshness B2B 2026 (theimpulsedigital.com).",
+          "pages": "Todos los posts de /es/blog"
+        },
+        {
+          "title": "Escalar el programa de casos de éxito: 2 casos/mes España + interlinking sistemático",
+          "detail": "Los 9 casos actuales son buenos (métricas: 36.000 bicis Cyclis, 65.000 muestras/año Lone Star, 95% pedidos e-commerce Prima) pero mayoritariamente del grupo BE/NL. Priorizar casos de clientes españoles (base ex-Indaws, Valencia) para relevancia local frente a competidores españoles. Plantilla fija: contexto, reto, solución (módulos), resultados numéricos, cita del cliente con nombre y cargo (Experience de primera mano), CTA sectorial. Enlazar cada caso desde su página de industria y desde los posts relacionados; los casos-de-exito legacy de indaws.es son la cantera inmediata (ver tarea de migración).",
+          "priority": "P2",
+          "impact": 7,
+          "effort": 6,
+          "evidence": "Verificado: 9 casos ricos con métricas pero desconectados de las páginas de industria; los casos-de-exito de indaws.es hoy dan 404. Los case studies con resultados reales son el contenido de decisión que más convierte en consultoría ERP (madisonmarketing.com).",
+          "pages": "/es/cases y /es/industries/*"
+        },
+        {
+          "title": "Crear el cluster pilar 'Implantar Odoo en España' + comparativas locales",
+          "detail": "Página pilar TOFU-MOFU: qué es implantar Odoo, fases, plazos y rangos de coste orientativos, errores comunes, cómo elegir partner (criterios verificables: nº certificaciones, casos, cobertura), con datos propios de las implantaciones Dynapps (plazos reales tipo '5 meses Sensorfact'). Satélites: los posts comparativos existentes (Odoo vs Exact, ERP vs CRM) + nuevas piezas 'Odoo vs SAP Business One', 'Odoo vs Sage', 'precio implantación Odoo'. Es el cluster con mayor intención comercial del nicho y donde los competidores (tecnativa, studio73, factorlibre) ya publican; los datos de primera mano de ~280 expertos y 5 países son el diferenciador E-E-A-T que ellos no pueden replicar.",
+          "priority": "P3",
+          "impact": 8,
+          "effort": 8,
+          "evidence": "El blog ya tiene piezas comparativas sueltas sin página pilar que las agrupe; el modelo pilar-satélite es la práctica de autoridad topical B2B 2026 (delante.co, thesmarketers.com) y las respuestas directas con datos propios son lo que citan AI Overviews (Google ai-optimization-guide).",
+          "pages": "Nueva página pilar en /es/ + posts satélite en /es/blog"
+        }
+      ],
+      "dimension_en": "Content & E-E-A-T 2026 — helpful content, topical authority, thin content, author signals, freshness, and B2B content patterns (Odoo partner / ERP consulting)",
+      "summary_en": "In 2026 Google rewards people-first content with demonstrable first-hand experience (E-E-A-T), and topical authority via pillar-satellite clusters carries more weight than page-by-page optimization; moreover, citations in AI Overviews/AI Mode come from the same index, so helpful content backed by proprietary data is also the entry point to generative search. www.dynapps.es has a solid MOFU/BOFU foundation (well server-rendered Spanish comparison posts, 9+ success stories with quantified metrics, 10 industry pages) but E-E-A-T execution is weak: zero named authors on the blog, no visible dates or schema, critical hub pages that are thin (/es/contact 35 words, /es/events 17, /es/international 23, /es/industries 203, /es/integrations 295), client-side rendered blog/cases listings (~23 rendered words, only 9 links to posts), and the authority signal inherited from indaws.es is being lost through 302 redirects and ~87% of legacy URLs returning 404 (including old blog and casos-de-exito pages). The main opportunity is to turn existing assets (cases, industries, comparisons) into interlinked clusters with real authors, and to rescue the legacy Indaws content before its equity disappears."
+    },
+    {
+      "dimension": "Technical SEO 2026 — canonicals, structured data, CWV/INP, rendering, sitemaps, redirects, crawl budget",
+      "summary": "En 2026 el SEO técnico se juega en tres frentes: señales de indexación explícitas (canonical + hreflang coherentes), datos estructurados JSON-LD como puerta de entrada a AI Overviews y buscadores generativos (cuyos crawlers — GPTBot, ClaudeBot, PerplexityBot — NO ejecutan JavaScript), y Core Web Vitals con INP<200ms como tie-breaker de ranking. www.dynapps.es está sano en infraestructura (545ms medio, 0 errores HTTP, robots.txt y sitemap correctos, hreflang vía sitemap que es un método válido para Google) pero tiene tres agujeros graves: 0 canonicals en 94 páginas, 0 schema en todo el sitio, y listados blog/cases 100% client-side (0 palabras en HTML crudo). El problema más urgente es la migración desde indaws.es: 302 en vez de 301 y ~87% de URLs legacy acabando en 404 — está perdiendo activamente la autoridad acumulada durante años por el dominio antiguo.",
+      "best_practices": [
+        {
+          "title": "Migraciones de dominio: 301 permanentes + mapeo URL a URL durante ≥1 año",
+          "detail": "Un 301 transfiere la autoridad (PageRank) al destino; un 302 la deja en el origen y mantiene la URL antigua indexada. Google recomienda mantener los redirects de migración al menos un año. Un estudio de Moz sobre 30.000 dominios muestra que las migraciones hechas con 302 pierden de media el doble de tráfico orgánico. Además, cada URL legacy debe apuntar a su equivalente real, no a un patrón genérico que acabe en 404 (un redirect a 404 = equity perdida igualmente).",
+          "source": "https://www.captaindns.com/en/blog/301-vs-302-redirect-seo-domain-migration-guide y https://seranking.com/blog/301-vs-302-redirects/",
+          "title_en": "Domain migrations: permanent 301s + URL-to-URL mapping for ≥1 year",
+          "detail_en": "A 301 transfers authority (PageRank) to the destination; a 302 leaves it at the origin and keeps the old URL indexed. Google recommends keeping migration redirects for at least one year. A Moz study of 30,000 domains shows that migrations done with 302s lose on average twice as much organic traffic. In addition, each legacy URL must point to its real equivalent, not to a generic pattern that ends in a 404 (a redirect to a 404 = equity lost all the same)."
+        },
+        {
+          "title": "Canonical autorreferente en cada página, obligatorio en setups multilingües",
+          "detail": "En sitios multi-región canonical y hreflang trabajan juntos y ninguno es opcional: cada página de cada locale debe llevar un rel=canonical apuntándose a sí misma (nunca a otra versión de idioma). Sin canonicals, Google elige la URL canónica por su cuenta — con parámetros como ?ref=indaws-redirect entrando al sitio, el riesgo de que indexe variantes con query string es real. El conflicto canonical/hreflang es uno de los errores más comunes en sitios internacionales (>65% tienen errores de implementación).",
+          "source": "https://www.clickrank.ai/hreflang-canonical-setup-guide/ y https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls",
+          "title_en": "Self-referencing canonical on every page, mandatory in multilingual setups",
+          "detail_en": "On multi-region sites, canonical and hreflang work together and neither is optional: every page in every locale must carry a rel=canonical pointing to itself (never to another language version). Without canonicals, Google picks the canonical URL on its own — with parameters like ?ref=indaws-redirect entering the site, the risk of it indexing query-string variants is real. The canonical/hreflang conflict is one of the most common errors on international sites (>65% have implementation errors)."
+        },
+        {
+          "title": "Hreflang vía sitemap XML es válido y escalable, pero exige reciprocidad y coherencia",
+          "detail": "Google acepta tres métodos (HTML head, cabeceras HTTP, sitemap XML) y para sitios con muchas variantes idioma/región el sitemap es el enfoque recomendado por ser centralizado y menos propenso a errores — no hace falta duplicarlo in-page. Lo crítico es que cada clúster tenga return tags recíprocos (incluida la autorreferencia y un x-default) y que no contradiga a los canonicals una vez existan.",
+          "source": "https://developers.google.com/search/docs/specialty/international/localized-versions y https://www.linkgraph.com/blog/hreflang-implementation-guide/",
+          "title_en": "Hreflang via XML sitemap is valid and scalable, but requires reciprocity and consistency",
+          "detail_en": "Google accepts three methods (HTML head, HTTP headers, XML sitemap) and for sites with many language/region variants the sitemap is the recommended approach because it is centralized and less error-prone — there is no need to duplicate it in-page. What is critical is that each cluster has reciprocal return tags (including the self-reference and an x-default) and that it does not contradict the canonicals once they exist."
+        },
+        {
+          "title": "Contenido crítico en el HTML inicial: SSR/prerender frente a CSR",
+          "detail": "Aunque Googlebot renderiza JavaScript (Chromium evergreen), lo hace en una segunda ola diferida que consume crawl budget y retrasa el descubrimiento de enlaces. La guía 2026 es servir el contenido y los enlaces importantes en el HTML inicial (SSR, SSG o prerendering). Factor nuevo decisivo: los crawlers de IA (GPTBot, ClaudeBot, PerplexityBot) no ejecutan JavaScript — una página CSR es invisible para AI search. Los listados que solo existen tras JS también debilitan el interlinking hacia los posts.",
+          "source": "https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics y https://whitebunnie.com/blog/javascript-seo-checklist/",
+          "title_en": "Critical content in the initial HTML: SSR/prerender versus CSR",
+          "detail_en": "Although Googlebot renders JavaScript (evergreen Chromium), it does so in a deferred second wave that consumes crawl budget and delays link discovery. The 2026 guidance is to serve important content and links in the initial HTML (SSR, SSG, or prerendering). A decisive new factor: AI crawlers (GPTBot, ClaudeBot, PerplexityBot) do not execute JavaScript — a CSR page is invisible to AI search. Listings that only exist after JS also weaken the interlinking toward the posts."
+        },
+        {
+          "title": "JSON-LD como capa de entidad para Google y buscadores generativos",
+          "detail": "JSON-LD es el formato recomendado por Google. Para un sitio B2B corporativo, cinco tipos cubren ~90% del valor: Organization (home/about), WebSite, BreadcrumbList, Article/BlogPosting y FAQPage. En 2026 el schema desbloquea además citación en AI Overviews y reconocimiento de entidad en Knowledge Graph — las páginas con datos estructurados válidos aparecen un 20-30% más en resúmenes generados por IA. Validar siempre con la prueba de resultados enriquecidos.",
+          "source": "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data y https://lattseo.com/resources/technical-seo/schema-markup/",
+          "title_en": "JSON-LD as the entity layer for Google and generative search engines",
+          "detail_en": "JSON-LD is the format recommended by Google. For a corporate B2B site, five types cover ~90% of the value: Organization (home/about), WebSite, BreadcrumbList, Article/BlogPosting, and FAQPage. In 2026 schema also unlocks citation in AI Overviews and entity recognition in the Knowledge Graph — pages with valid structured data appear 20-30% more often in AI-generated summaries. Always validate with the rich results test."
+        },
+        {
+          "title": "Core Web Vitals 2026: INP < 200ms al percentil 75 (sustituyó a FID)",
+          "detail": "Los umbrales vigentes son LCP < 2,5s, INP < 200ms y CLS < 0,1 medidos en campo (CrUX) al percentil 75. INP reemplazó a FID en marzo de 2024 y es el vital que más sitios suspenden (~43%). Es un tie-breaker de ranking, no un factor dominante, pero en un mercado competido (partners Odoo España) los empates son frecuentes. Se monitoriza en Search Console > Experiencia y PageSpeed Insights, no solo con datos de laboratorio.",
+          "source": "https://developers.google.com/search/docs/appearance/core-web-vitals",
+          "title_en": "Core Web Vitals 2026: INP < 200ms at the 75th percentile (replaced FID)",
+          "detail_en": "The current thresholds are LCP < 2.5s, INP < 200ms, and CLS < 0.1 measured in the field (CrUX) at the 75th percentile. INP replaced FID in March 2024 and is the vital that most sites fail (~43%). It is a ranking tie-breaker, not a dominant factor, but in a competitive market (Odoo partners in Spain) ties are frequent. It is monitored in Search Console > Experience and PageSpeed Insights, not just with lab data."
+        },
+        {
+          "title": "Higiene de redirecciones internas: una sola redirección, siempre 301 para URLs permanentes",
+          "detail": "Las redirecciones canónicas del propio sitio (http→https, non-www→www, /→/es) deben ser 301 permanentes y de un solo salto: los 302/307 en la cadena de entrada diluyen la consolidación de señales y hacen que Google reevalúe la URL en cada rastreo. Las cadenas de redirects además consumen crawl budget en sitios con muchas URLs entrantes legacy.",
+          "source": "https://developers.google.com/search/docs/crawling-indexing/301-redirects",
+          "title_en": "Internal redirect hygiene: a single redirect, always 301 for permanent URLs",
+          "detail_en": "The site's own canonical redirects (http→https, non-www→www, /→/es) must be permanent 301s and single-hop: 302/307s in the entry chain dilute signal consolidation and make Google re-evaluate the URL on every crawl. Redirect chains also consume crawl budget on sites with many incoming legacy URLs."
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Rehacer la migración indaws.es → dynapps.es: 301 + mapa de redirecciones URL a URL",
+          "detail": "Situación actual: www.indaws.es (≈829 URLs en el sitemap antiguo) redirige con 302 path-to-path añadiendo ?ref=indaws-redirect, y ~87% de las URLs legacy muestreadas acaban en 404 en dynapps.es. Propuesto: (1) cambiar todos los redirects de indaws.es a 301; (2) construir un mapa de redirecciones explícito: cada URL legacy (blog, casos-de-exito, slides, páginas de servicio) → su equivalente temático más cercano en dynapps.es; si no existe equivalente, redirigir a la página de sección relevante (nunca dejar 404 masivos ni redirigir todo a la home); (3) eliminar el parámetro ?ref=indaws-redirect o al menos asegurar que las páginas destino tengan canonical limpio; (4) mantener los 301 ≥12 meses y verificar en Search Console (propiedad de indaws.es) que los errores 404 bajan. Es el punto con mayor pérdida activa de equity de todo el sitio.",
+          "priority": "P1",
+          "impact": 9,
+          "effort": 6,
+          "pages": "www.indaws.es (todas las URLs legacy) → www.dynapps.es",
+          "evidence": "Verificado en crawl 2026-07-21: redirect 302 (no 301) con ?ref=indaws-redirect y ~87% de URLs legacy muestreadas terminan en 404. Moz (30k dominios): migraciones con 302 pierden el doble de tráfico; Google recomienda 301 ≥1 año."
+        },
+        {
+          "title": "Añadir rel=canonical autorreferente en las 94 páginas (plantilla global)",
+          "detail": "Situación actual: 0/94 páginas tienen rel=canonical (confirmado también en DOM renderizado). Propuesto: añadir en la plantilla base <link rel=\"canonical\" href=\"URL absoluta sin parámetros\"> autorreferente en todas las páginas de www.dynapps.es (y de los demás dominios del grupo si comparten plantilla). Crítico porque (a) el tráfico entrante desde indaws.es llega con ?ref=indaws-redirect y sin canonical Google puede indexar la variante con parámetro, y (b) en un setup multi-dominio con hreflang, el canonical autorreferente por locale es obligatorio para que el clúster hreflang funcione sin conflictos. Verificar coherencia: el canonical de cada página debe coincidir exactamente con la URL declarada en el sitemap/hreflang.",
+          "priority": "P1",
+          "impact": 8,
+          "effort": 3,
+          "pages": "Todas (94 páginas, plantilla global)",
+          "evidence": "Verificado: 0/94 canonicals. Best practice 2026: canonical autorreferente por locale es no-opcional en sitios internacionales con hreflang (clickrank.ai, Google Search Central consolidate-duplicate-urls)."
+        },
+        {
+          "title": "Renderizar en servidor (SSR/prerender) los listados de blog y casos",
+          "detail": "Situación actual: /es/blog y /es/cases se renderizan 100% en cliente: HTML crudo con 0 palabras; incluso tras ejecutar JS, /es/blog muestra ~23 palabras y solo 9 enlaces a posts. Los posts individuales SÍ están server-rendered. Propuesto: servir los listados con el contenido y TODOS los enlaces a posts/casos en el HTML inicial (SSR, generación estática o prerendering en build). Como mínimo intermedio, incluir un bloque <noscript>/HTML estático con los enlaces al listado completo y paginación rastreable con href reales. Beneficios: descubrimiento de posts sin depender de la cola de rendering de Google, interlinking real hacia el contenido, y visibilidad ante crawlers de IA (GPTBot/ClaudeBot/PerplexityBot no ejecutan JS — hoy esos listados no existen para AI search).",
+          "priority": "P1",
+          "impact": 8,
+          "effort": 6,
+          "pages": "/es/blog, /es/cases (y equivalentes /en)",
+          "evidence": "Verificado: listados con 0 palabras en HTML crudo y solo 9 enlaces tras render. Google Search Central: contenido crítico en HTML inicial; los AI crawlers no ejecutan JavaScript (whitebunnie.com checklist 2026)."
+        },
+        {
+          "title": "Implementar JSON-LD: Organization, WebSite, BreadcrumbList, BlogPosting y FAQPage",
+          "detail": "Situación actual: 0/94 páginas con datos estructurados. Propuesto por fases: (1) Home: Organization (name Dynapps, url, logo, sameAs a LinkedIn/YouTube, address Valencia, areaServed) + WebSite; (2) plantilla global: BreadcrumbList; (3) posts de blog: BlogPosting/Article con headline, datePublished, author; (4) casos de éxito: Article (o CaseStudy vía Article); (5) páginas de servicio con FAQs visibles: FAQPage. Todo en JSON-LD en <script type=\"application/ld+json\">, validado con la prueba de resultados enriquecidos de Google. En 2026 esto no es solo rich snippets: es la señal de entidad que usan AI Overviews y los buscadores generativos para citar — relevante compitiendo contra tecnativa.com, factorlibre.com, etc. por 'partner Odoo España'.",
+          "priority": "P2",
+          "impact": 7,
+          "effort": 4,
+          "pages": "Home, plantilla global, /es/blog/*, /es/cases/*, páginas de servicios",
+          "evidence": "Verificado: 0 schema en 94 páginas. Google recomienda JSON-LD; páginas con structured data válido aparecen 20-30% más en resúmenes IA (spaceandstory.co, lattseo.com); 5 tipos cubren ~90% del valor B2B."
+        },
+        {
+          "title": "Convertir a 301 las redirecciones canónicas internas (non-www y raíz)",
+          "detail": "Situación actual: http→https es 301 (correcto), pero non-www→www responde 302 y / → /es responde 307. Propuesto: (1) non-www → www: cambiar a 301 (es una decisión permanente de host canónico); (2) / → /es: si la raíz siempre envía a /es (no hay geo/language detection dinámica), cambiar a 301; si se planea detección de idioma, mantener redirect pero declarar x-default en el hreflang del sitemap apuntando a la raíz o a /es de forma consistente. Objetivo: que toda la equity entrante (incluida la futura ola de 301 desde indaws.es) consolide en un solo salto hacia la URL canónica definitiva.",
+          "priority": "P2",
+          "impact": 5,
+          "effort": 2,
+          "pages": "https://dynapps.es/ (raíz y variantes de host)",
+          "evidence": "Verificado: non-www→www 302 y /→/es 307. Google Search Central (301-redirects): usar redirects permanentes para movimientos permanentes; los temporales no consolidan señales de forma estable."
+        },
+        {
+          "title": "Auditar el hreflang del sitemap: reciprocidad, x-default y coherencia futura con canonicals",
+          "detail": "Situación actual: hreflang existe solo vía sitemap (método válido y recomendado para grupos multi-dominio; no hace falta duplicarlo in-page). Propuesto: auditoría del sitemap de 182 URLs verificando (1) que cada clúster es recíproco — cada alternate declarado en dynapps.es está también declarado de vuelta en los sitemaps de .be/.nl/.fr/.ch (el error 'no return tag' invalida el clúster); (2) que existe x-default por clúster; (3) que los códigos idioma-región son correctos (es-ES, en-*, etc.); (4) tras implementar canonicals (tarea P1), que cada URL del sitemap coincide byte a byte con su canonical. Herramienta: informe de Segmentación internacional / validadores hreflang sobre los 5 sitemaps del grupo.",
+          "priority": "P2",
+          "impact": 5,
+          "effort": 3,
+          "pages": "/sitemap.xml de los 5 dominios del grupo",
+          "evidence": "Verificado: hreflang solo en sitemap, 0 in-page (patrón válido según Google localized-versions). >65% de sitios internacionales tienen errores hreflang, sobre todo return tags ausentes (linkgraph.com)."
+        },
+        {
+          "title": "Medir Core Web Vitals de campo (CrUX) con foco en INP",
+          "detail": "Situación actual: solo tenemos datos de servidor (respuesta media 545ms, máx 1,4s — buen punto de partida para LCP), pero ninguna medición de campo de LCP/INP/CLS. Propuesto: (1) revisar Search Console > Experiencia > Métricas web principales y PageSpeed Insights (datos CrUX) para home, /es/blog y 2-3 páginas de servicio; (2) prioridad en INP < 200ms — es el vital que más sitios suspenden (~43%) y las páginas con render cliente pesado (listados blog/cases) son las candidatas típicas a fallar por long tasks de JS; (3) verificar CLS < 0,1 en páginas con imágenes/embeds sin dimensiones declaradas. Solo actuar sobre lo que falle en campo; no optimizar a ciegas.",
+          "priority": "P3",
+          "impact": 4,
+          "effort": 3,
+          "pages": "Home, /es/blog, páginas de servicio principales",
+          "evidence": "Umbrales 2026: LCP<2,5s, INP<200ms (sustituyó a FID en 2024), CLS<0,1 al p75 de usuarios reales (developers.google.com/search/docs/appearance/core-web-vitals); ~43% de sitios fallan INP."
+        },
+        {
+          "title": "Vigilar crawl budget tras la migración: 404 legacy y URLs con parámetro en GSC",
+          "detail": "Situación actual: la ola de URLs legacy de indaws.es (≈829) que acaban en 404 y las variantes con ?ref=indaws-redirect generan rastreo desperdiciado y posibles URLs indexadas duplicadas. Propuesto (después de las tareas P1): (1) en Search Console de dynapps.es, revisar mensualmente Indexación > Páginas: vigilar 'No encontrada (404)', 'Página con redirección' y 'Duplicada sin canonical seleccionado por el usuario'; (2) en los informes de estadísticas de rastreo, confirmar que el crawl a URLs con ?ref= cae tras implantar canonicals; (3) mantener el sitemap limpio: solo URLs 200 canónicas, sin redirects. Es la tarea de verificación que cierra el ciclo de la migración.",
+          "priority": "P3",
+          "impact": 4,
+          "effort": 2,
+          "pages": "Search Console (dynapps.es e indaws.es)",
+          "evidence": "Verificado: ~87% de URLs legacy en 404 + parámetro ?ref= inyectado en todo el tráfico migrado; sin canonicals actualmente para consolidar las variantes. Google: los sitemaps deben contener solo URLs canónicas 200."
+        }
+      ],
+      "dimension_en": "Technical SEO 2026 — canonicals, structured data, CWV/INP, rendering, sitemaps, redirects, crawl budget",
+      "summary_en": "In 2026 technical SEO plays out on three fronts: explicit indexing signals (coherent canonical + hreflang), JSON-LD structured data as the gateway to AI Overviews and generative search engines (whose crawlers — GPTBot, ClaudeBot, PerplexityBot — do NOT execute JavaScript), and Core Web Vitals with INP<200ms as a ranking tie-breaker. www.dynapps.es is healthy in infrastructure (545ms average, 0 HTTP errors, correct robots.txt and sitemap, hreflang via sitemap which is a valid method for Google) but has three serious gaps: 0 canonicals across 94 pages, 0 schema on the entire site, and 100% client-side blog/cases listings (0 words in raw HTML). The most urgent problem is the migration from indaws.es: 302 instead of 301 and ~87% of legacy URLs ending in 404 — it is actively losing the authority the old domain accumulated over years."
+    },
+    {
+      "dimension": "Generative Engine Optimization / visibilidad en búsqueda con IA 2026",
+      "summary": "En 2026 la visibilidad en AI Overviews/AI Mode de Google y en las citas de ChatGPT/Perplexity se ha convertido en un canal de demanda propio: los estudios de citaciones (680M analizadas) muestran que ~60% de las fuentes citadas por IA no están en el top 10 orgánico, que ~44% de las citas salen del primer tercio de la página, y que las marcas con datos originales se citan casi 3x más. Google confirma (doc \"AI features and your website\", 2025) que no hay requisitos especiales: mismo índice, mismos fundamentos E-E-A-T y datos estructurados estándar; llms.txt en cambio NO lo usa Google (Mueller lo compara con la meta keywords) aunque los crawlers de OpenAI/Microsoft sí lo descargan. dynapps.es parte con una base técnica correcta (velocidad, enlazado interno) pero está mal posicionada para GEO: 0 páginas con JSON-LD (los motores no pueden resolver la entidad Dynapps), sin canonicals, sin página FAQ, contenido corporativo ultra-fino (/es/international 23 palabras — justo la página que debería afirmar \"partner Odoo líder en Europa\"), listados de blog/casos renderizados en cliente (invisibles para la mayoría de crawlers de LLM, que no ejecutan JS), y la pérdida del legado indaws.es (~87% de 829 URLs en 404 vía 302) destruye precisamente las menciones y enlaces históricos de los que se alimentan los LLM para asociar la entidad con \"partner Odoo en España\".",
+      "best_practices": [
+        {
+          "title": "Los fundamentos SEO siguen siendo el requisito de entrada a AI Overviews/AI Mode",
+          "detail": "Google publicó en 2025 la guía oficial \"AI features and your website\": no existe markup especial ni índice separado para AI Overviews/AI Mode; se nutre del mismo índice y de los mismos criterios E-E-A-T y datos estructurados estándar que la búsqueda orgánica. Si una página no es rastreable, indexable y con contenido útil (canonical, contenido server-rendered, sin thin content), nunca entra en la fase de retrieval y por tanto nunca puede ser citada.",
+          "source": "https://developers.google.com/search/docs/appearance/ai-features",
+          "title_en": "SEO fundamentals remain the entry requirement for AI Overviews/AI Mode",
+          "detail_en": "Google published the official guide \"AI features and your website\" in 2025: there is no special markup or separate index for AI Overviews/AI Mode; it draws on the same index and the same standard E-E-A-T criteria and structured data as organic search. If a page is not crawlable, indexable, and filled with helpful content (canonical, server-rendered content, no thin content), it never enters the retrieval phase and therefore can never be cited."
+        },
+        {
+          "title": "Datos estructurados (JSON-LD) para consolidar la entidad y ser extraíble",
+          "detail": "Aunque el schema no es un requisito formal de AI Overviews, los estudios 2026 de citaciones en ChatGPT/Perplexity/AIO señalan la fortaleza de entidad y los datos estructurados como factores recurrentes de las páginas citadas: Organization con sameAs, Service/LocalBusiness, FAQPage, Article con author. Un sitio con 0 JSON-LD obliga a los motores a inferir quién es la marca solo del texto, y dynapps.es (marca reciente tras el rebrand desde Indaws) necesita especialmente que la entidad quede desambiguada y conectada a sus perfiles (odoo.com/partners, LinkedIn, sedes por país).",
+          "source": "https://llmrefs.com/generative-engine-optimization ; https://ailabsaudit.com/blog/en/perplexity-guide-maximize-citations",
+          "title_en": "Structured data (JSON-LD) to consolidate the entity and be extractable",
+          "detail_en": "Although schema is not a formal requirement for AI Overviews, 2026 citation studies of ChatGPT/Perplexity/AIO point to entity strength and structured data as recurring factors in cited pages: Organization with sameAs, Service/LocalBusiness, FAQPage, Article with author. A site with 0 JSON-LD forces engines to infer who the brand is from text alone, and dynapps.es (a recent brand after the rebrand from Indaws) especially needs the entity to be disambiguated and connected to its profiles (odoo.com/partners, LinkedIn, offices per country)."
+        },
+        {
+          "title": "Ser \"citable\": respuestas al principio, definiciones, cifras propias y FAQs",
+          "detail": "El 44,2% de las citas de LLM provienen del primer 30% del contenido de la página, y las marcas que publican datos originales (benchmarks, estadísticas propias) se citan a casi 3x la tasa de las que reciclan estadísticas de terceros. Formato ganador: pregunta como H2, respuesta directa de 2-4 frases debajo, cifras concretas y verificables (\"280 expertos\", \"5 países\", \"+N proyectos Odoo en España\"), definiciones y comparativas estructuradas.",
+          "source": "https://authoritytech.io/blog/how-to-get-cited-by-chatgpt-perplexity-ai-overview-2026 ; https://www.leapd.ai/blog/ai-visibility/how-chatgpt-google-ai-overviews-and-perplexity-source-information-in-2026",
+          "title_en": "Being \"citable\": answers up front, definitions, proprietary figures, and FAQs",
+          "detail_en": "44.2% of LLM citations come from the first 30% of a page's content, and brands that publish original data (benchmarks, proprietary statistics) are cited at almost 3x the rate of those that recycle third-party statistics. The winning format: question as H2, direct 2-4 sentence answer below it, concrete and verifiable figures (\"280 experts\", \"5 countries\", \"+N Odoo projects in Spain\"), definitions, and structured comparisons."
+        },
+        {
+          "title": "El footprint de terceros pesa más que el propio dominio para las citas de LLM",
+          "detail": "Los LLM extraen la mayoría de sus citas de fuentes ajenas al dominio de la marca: directorios y rankings del sector, prensa especializada, Reddit/Quora (peso alto en Perplexity), Wikipedia (peso alto en ChatGPT) y plataformas de reseñas. Para \"mejor partner Odoo España\", los motores citan listículos comparativos y el directorio oficial de partners de odoo.com; estar bien representado (referencias, reseñas, industria cumplimentada) en esas fuentes vale más que cualquier página propia. Además ~60% de las fuentes citadas por IA no están en el top 10 de Google: es una disciplina complementaria al ranking.",
+          "source": "https://gripped.io/geo-agency/how-to-get-cited-in-chatgpt-perplexity/ ; https://www.averi.ai/how-to/chatgpt-vs.-perplexity-vs.-google-ai-mode-the-b2b-saas-citation-benchmarks-report-(2026)",
+          "title_en": "The third-party footprint outweighs your own domain for LLM citations",
+          "detail_en": "LLMs draw most of their citations from sources outside the brand's domain: industry directories and rankings, trade press, Reddit/Quora (high weight in Perplexity), Wikipedia (high weight in ChatGPT), and review platforms. For \"best Odoo partner Spain\", engines cite comparative listicles and the official odoo.com partner directory; being well represented (references, reviews, industry field filled in) in those sources is worth more than any owned page. Furthermore, ~60% of AI-cited sources are not in Google's top 10: it is a discipline complementary to ranking."
+        },
+        {
+          "title": "Contenido server-rendered: los crawlers de LLM no ejecutan JavaScript",
+          "detail": "GPTBot, ClaudeBot, PerplexityBot y la mayoría de crawlers de IA no renderizan JavaScript (a diferencia de Googlebot). Cualquier contenido que solo exista tras ejecución JS —listados de blog/casos client-side— es literalmente invisible para el retrieval de ChatGPT y Perplexity. El contenido clave debe estar en el HTML inicial (SSR o prerender).",
+          "source": "https://www.rzlt.io/blog/llm-visibility-how-to-get-your-brand-cited-by-chatgpt-gemini-perplexity",
+          "title_en": "Server-rendered content: LLM crawlers do not execute JavaScript",
+          "detail_en": "GPTBot, ClaudeBot, PerplexityBot, and most AI crawlers do not render JavaScript (unlike Googlebot). Any content that only exists after JS execution —client-side blog/cases listings— is literally invisible to ChatGPT and Perplexity retrieval. Key content must be in the initial HTML (SSR or prerender)."
+        },
+        {
+          "title": "llms.txt: estado real — no lo usa Google, adopción marginal, coste casi nulo",
+          "detail": "Google confirmó que no usa ni planea usar llms.txt (Mueller lo equipara a la meta keywords); ningún proveedor mayor se ha comprometido a honrarlo, aunque los bots de OpenAI y Microsoft sí lo descargan y lo usan agentes/IDEs. Adopción real ~10% de dominios (SE Ranking, 300k dominios) y Ahrefs midió que el 97% de los llms.txt no recibieron tráfico. Conclusión honesta: nice-to-have de coste bajo, jamás prioridad frente a schema, SSR o contenido citable.",
+          "source": "https://www.searchenginejournal.com/google-says-llms-txt-is-purely-speculative-for-now/577576/ ; https://medium.com/@kaispriestersbach/the-llms-txt-is-dead-more-precisely-a-dud-ab7bee4f469c",
+          "title_en": "llms.txt: the real state — not used by Google, marginal adoption, near-zero cost",
+          "detail_en": "Google confirmed it does not use and does not plan to use llms.txt (Mueller equates it to the meta keywords tag); no major provider has committed to honoring it, although OpenAI and Microsoft bots do download it and agents/IDEs use it. Real adoption is ~10% of domains (SE Ranking, 300k domains) and Ahrefs measured that 97% of llms.txt files received no traffic. Honest conclusion: a low-cost nice-to-have, never a priority over schema, SSR, or citable content."
+        },
+        {
+          "title": "Frescura y consistencia de la entidad multi-país",
+          "detail": "Perplexity y AI Mode premian contenido fresco y datos de entidad consistentes (mismo nombre, cifras y descripción en todos los touchpoints). Para un grupo con 5 ccTLDs, la descripción de la entidad (\"Dynapps, partner Odoo Gold/Platinum europeo, ~280 expertos, oficinas en BE/NL/FR/CH/ES, operación española ex-Indaws en Valencia\") debe ser idéntica y verificable en cada sitio, en el schema Organization, en odoo.com y en LinkedIn; las incoherencias diluyen la confianza del modelo. Resultados en herramientas de retrieval (Perplexity) llegan en 2-3 meses; en ChatGPT dependen de refrescos de entrenamiento y tardan más.",
+          "source": "https://ailabsaudit.com/blog/en/perplexity-guide-maximize-citations ; https://www.rzlt.io/blog/llm-visibility-how-to-get-your-brand-cited-by-chatgpt-gemini-perplexity",
+          "title_en": "Freshness and multi-country entity consistency",
+          "detail_en": "Perplexity and AI Mode reward fresh content and consistent entity data (same name, figures, and description across all touchpoints). For a group with 5 ccTLDs, the entity description (\"Dynapps, European Odoo Gold/Platinum partner, ~280 experts, offices in BE/NL/FR/CH/ES, Spanish operation ex-Indaws in Valencia\") must be identical and verifiable on every site, in the Organization schema, on odoo.com, and on LinkedIn; inconsistencies dilute the model's confidence. Results in retrieval tools (Perplexity) arrive in 2-3 months; in ChatGPT they depend on training refreshes and take longer."
+        },
+        {
+          "title": "Medir la visibilidad en IA como KPI propio",
+          "detail": "El sector 2026 mide \"answer-level mention rate\": porcentaje de respuestas de los principales motores (AIO, AI Mode, ChatGPT, Perplexity, Copilot, Gemini, Claude) que mencionan la marca ante un set fijo de prompts comerciales; un 10%+ se considera línea base sólida para marcas comerciales. Sin medición no se puede priorizar: basta un set de 20-30 prompts (\"mejor partner Odoo España\", \"implantar Odoo Valencia\", \"Odoo partner Europa\") revisado mensualmente, manual o con herramienta.",
+          "source": "https://www.gen-optima.com/geo/generative-engine-optimization-best-practices-2026/",
+          "title_en": "Measuring AI visibility as a KPI in its own right",
+          "detail_en": "The industry in 2026 measures the \"answer-level mention rate\": the percentage of answers from the main engines (AIO, AI Mode, ChatGPT, Perplexity, Copilot, Gemini, Claude) that mention the brand against a fixed set of commercial prompts; 10%+ is considered a solid baseline for commercial brands. Without measurement you cannot prioritize: a set of 20-30 prompts (\"best Odoo partner Spain\", \"implement Odoo Valencia\", \"Odoo partner Europe\") reviewed monthly, manually or with a tool, is enough."
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Implementar JSON-LD Organization con sameAs en todo el sitio (0 páginas lo tienen hoy)",
+          "detail": "Añadir en el layout global un bloque JSON-LD schema.org/Organization: name \"Dynapps\", alternateName \"Dynapps Spain (antes Indaws)\", url, logo, description con cifras (~280 expertos, 5 países, partner Odoo), address de la sede de Valencia, y sameAs apuntando a la ficha oficial de partner en odoo.com, LinkedIn, YouTube (@dynapps-es) y los dominios hermanos (.be/.nl/.fr/.ch). Complementar por plantilla: Service en páginas de servicios, Article (author, datePublished) en posts de blog, y CollectionPage/ItemList en casos. Es la vía número uno para que Google y los LLM resuelvan la entidad Dynapps y la conecten con \"partner Odoo\".",
+          "priority": "P1",
+          "impact": 9,
+          "effort": 4,
+          "evidence": "Verificado: 0/94 páginas con JSON-LD. Guía oficial de Google (developers.google.com/search/docs/appearance/ai-features): los datos estructurados estándar son lo que alimenta las AI features; estudios de citaciones 2026 señalan entity strength + structured data como factores recurrentes.",
+          "pages": "Todo el sitio (layout global) + plantillas de blog, casos y servicios"
+        },
+        {
+          "title": "Servir los listados de blog y casos server-rendered (hoy invisibles para los crawlers de IA)",
+          "detail": "Los listados /es/blog y /es/cases se renderizan en cliente: HTML crudo con 0 palabras, e incluso tras JS solo ~23 palabras y 9 enlaces. GPTBot, PerplexityBot y ClaudeBot no ejecutan JavaScript, así que el corpus más citable del sitio (posts y casos, que SÍ están server-rendered individualmente) queda huérfano de descubrimiento para los LLM. Pasar los listados a SSR/prerender con títulos, extractos de 2-3 frases y enlaces a TODOS los posts/casos, con paginación rastreable.",
+          "priority": "P1",
+          "impact": 8,
+          "effort": 6,
+          "evidence": "Verificado: raw HTML 0 palabras en listados; posts individuales server-rendered. Best practice 2026: la mayoría de crawlers de LLM no renderizan JS (rzlt.io, leapd.ai) — sin retrieval no hay cita.",
+          "pages": "/es/blog, /es/cases (y equivalentes /en)"
+        },
+        {
+          "title": "Reconstruir la redirección de indaws.es: 301 path-to-path y rescatar el contenido legado",
+          "detail": "Cambiar los 302 de www.indaws.es a 301 permanentes, mapear las ~829 URLs del sitemap antiguo a sus equivalentes en dynapps.es (hoy ~87% acaba en 404, con ?ref=indaws-redirect que además fragmenta señales) y migrar/redirigir los posts y casos-de-exito antiguos a contenido vivo. Los años de menciones, enlaces y contenido de Indaws son exactamente el corpus con el que los LLM aprendieron \"Indaws = partner Odoo en España\"; si esas URLs mueren, la asociación no se transfiere a Dynapps ni en Google ni en los datos de entrenamiento/retrieval. Nunca eliminar: redirigir cada URL legada a su equivalente más cercano.",
+          "priority": "P1",
+          "impact": 9,
+          "effort": 7,
+          "evidence": "Verificado: indaws.es redirige 302 (no 301) y ~87% de URLs legadas muestreadas terminan en 404. Los LLM citan mayoritariamente fuentes/menciones históricas de terceros; perder el legado rompe la continuidad de entidad Indaws→Dynapps.",
+          "pages": "www.indaws.es (config de redirecciones) → www.dynapps.es"
+        },
+        {
+          "title": "Crear una página 'quotable' de empresa + FAQ con respuestas directas y cifras",
+          "detail": "Hoy /es/international tiene 23 palabras y no existe /es/faq: no hay ninguna página que un LLM pueda citar para \"¿quién es el mayor partner de Odoo en España/Europa?\". Crear (o engordar /es/about y /es/international) con: definición en 2-3 frases al inicio (\"Dynapps es el partner de Odoo líder en Europa: ~280 expertos, oficinas en 5 países...\"), bloque de cifras verificables, historia Indaws→Dynapps, y una sección/página FAQ con preguntas reales (\"¿Cuánto cuesta implantar Odoo?\", \"¿Qué es un partner Gold de Odoo?\", \"¿Odoo o SAP para pyme?\") con respuesta directa de 2-4 frases bajo cada H2 + markup FAQPage. Respuesta primero, detalle después: 44% de las citas de LLM salen del primer tercio de la página.",
+          "priority": "P1",
+          "impact": 8,
+          "effort": 5,
+          "evidence": "Verificado: /es/international 23 palabras, /es/faq 404, /es/about existe pero el sitio tiene 5 páginas thin. Estudios 2026: front-loaded answers + cifras concretas = formato más citado (authoritytech.io, leapd.ai).",
+          "pages": "/es/about, /es/international, nueva /es/faq"
+        },
+        {
+          "title": "Fortalecer el footprint de terceros: ficha odoo.com, reseñas y listículos 'mejores partners Odoo España'",
+          "detail": "Los LLM citan sobre todo fuentes ajenas al dominio. Acciones: (1) completar al 100% la ficha de partner en odoo.com — referencias con industria cumplimentada (ya hay skill y cron mensual para esto), descripción con las cifras del grupo; (2) conseguir/actualizar presencia en los artículos comparativos que ChatGPT/Perplexity ya citan para \"mejor partner Odoo España\" (donde hoy aparecen tecnativa, studio73, factorlibre...); (3) reseñas recientes en Google Business Profile y plataformas B2B; (4) publicar 1-2 estudios con datos originales al año (p.ej. datos del scraper: \"estado del mercado Odoo en España 2026\") — los datos propios se citan ~3x más y generan menciones de prensa que los LLM recogen.",
+          "priority": "P2",
+          "impact": 9,
+          "effort": 7,
+          "evidence": "Estudios 2026 (gripped.io, averi.ai): la mayoría de citas de LLM provienen de fuentes de terceros; 60% de fuentes citadas por IA no están en el top 10 orgánico. Dynapps dispone de datos propios únicos (scraper de partners/clientes Odoo) para contenido original.",
+          "pages": "odoo.com/partners (ficha), prensa/directorios externos, /es/blog (estudios de datos)"
+        },
+        {
+          "title": "Añadir rel=canonical y sanear señales base que condicionan el retrieval",
+          "detail": "Sin canonical (0/94 páginas) y con la home en 307 y non-www en 302, los motores pueden fragmentar señales entre variantes, lo que reduce la probabilidad de que la versión correcta entre en el retrieval de AI Overviews (mismo índice que la búsqueda clásica). Añadir self-canonical en todas las páginas, pasar non-www→www a 301 y valorar 301 estable para /→/es. Coordinar con la dimensión técnica del audit (tarea compartida, se lista aquí por su efecto directo en elegibilidad para AI features).",
+          "priority": "P2",
+          "impact": 6,
+          "effort": 3,
+          "evidence": "Verificado: 0/94 canonicals, non-www 302, / → /es 307. Google (ai-features doc): AI Overviews/AI Mode usan el índice estándar; los fundamentos de indexación son el requisito de entrada.",
+          "pages": "Todo el sitio"
+        },
+        {
+          "title": "Publicar llms.txt (coste bajo, expectativas honestas) y verificar acceso de bots de IA",
+          "detail": "Hoy /llms.txt devuelve 307 (no existe). Crear un llms.txt sencillo en markdown: quién es Dynapps, cifras clave, enlaces a las 15-20 URLs canónicas (about, servicios, casos estrella, FAQ). Expectativa honesta: Google NO lo usa (Mueller lo compara con la meta keywords) y el 97% de los llms.txt no reciben tráfico (Ahrefs), pero los bots de OpenAI/Microsoft sí lo descargan y lo usan agentes IDE/MCP; con 1-2 horas de coste es razonable. A la vez, verificar en robots.txt y en el firewall/CDN que GPTBot, ClaudeBot, PerplexityBot, Google-Extended y bingbot NO están bloqueados (robots.txt actual Allow /, correcto — mantenerlo así).",
+          "priority": "P3",
+          "impact": 3,
+          "effort": 1,
+          "evidence": "Verificado: /llms.txt → 307. Search Engine Journal: Google confirma que llms.txt es especulativo y no lo implementa; SE Ranking: ~10% adopción; Ahrefs: 97% sin tráfico. Bots de OpenAI/Microsoft sí lo descargan.",
+          "pages": "/llms.txt (nuevo), robots.txt"
+        },
+        {
+          "title": "Instaurar medición mensual de visibilidad en motores de IA (answer-level mention rate)",
+          "detail": "Definir un set fijo de 20-30 prompts comerciales en español e inglés (\"mejor partner Odoo España\", \"implantar Odoo en Valencia\", \"Odoo partner Europa\", \"Odoo vs SAP pyme\", \"cuánto cuesta implantar Odoo\") y comprobar mensualmente en AI Overviews/AI Mode, ChatGPT, Perplexity, Copilot y Gemini si Dynapps aparece mencionada/citada y qué fuentes se citan (esas fuentes son la diana de la tarea de terceros). Registrar el % de respuestas con mención; objetivo inicial >10%. Sin coste de herramienta puede hacerse manual o con un cron de Claude; si se quiere escala, evaluar una herramienta de AI-visibility tracking.",
+          "priority": "P2",
+          "impact": 6,
+          "effort": 3,
+          "evidence": "GenOptima 2026: 10%+ answer-level mention rate en 8 motores como línea base comercial; sin baseline no se puede evaluar el retorno del resto de tareas GEO. No hay datos DataForSEO en este run — esta medición cubre el hueco para IA.",
+          "pages": "N/A (proceso de marketing, no página)"
+        }
+      ],
+      "dimension_en": "Generative Engine Optimization / AI search visibility 2026",
+      "summary_en": "In 2026, visibility in Google's AI Overviews/AI Mode and in ChatGPT/Perplexity citations has become a demand channel in its own right: citation studies (680M analyzed) show that ~60% of the sources cited by AI are not in the organic top 10, that ~44% of citations come from the first third of the page, and that brands with original data are cited almost 3x more. Google confirms (doc \"AI features and your website\", 2025) that there are no special requirements: same index, same E-E-A-T fundamentals and standard structured data; llms.txt, on the other hand, is NOT used by Google (Mueller compares it to the meta keywords tag) although OpenAI/Microsoft crawlers do download it. dynapps.es starts from a correct technical base (speed, internal linking) but is poorly positioned for GEO: 0 pages with JSON-LD (engines cannot resolve the Dynapps entity), no canonicals, no FAQ page, ultra-thin corporate content (/es/international 23 words — precisely the page that should assert \"leading Odoo partner in Europe\"), client-side rendered blog/cases listings (invisible to most LLM crawlers, which do not execute JS), and the loss of the indaws.es legacy (~87% of 829 URLs in 404 via 302) destroys precisely the historical mentions and links that LLMs feed on to associate the entity with \"Odoo partner in Spain\"."
+    },
+    {
+      "dimension": "International/multi-regional SEO 2026 (hreflang, ccTLDs, canonical, duplicidad entre dominios del grupo)",
+      "best_practices": [
+        {
+          "title": "Hreflang vía sitemap es un método plenamente válido (uno de los tres oficiales)",
+          "detail": "Google acepta tres métodos equivalentes: tags <link> en el <head>, cabeceras HTTP y anotaciones xhtml:link en el sitemap XML. Para grupos con 5+ variantes de idioma/país, el método sitemap es de hecho el recomendado por escalabilidad (11 tags por página inflarían cada HTML). Lo importante es usar UN solo método de forma consistente y no mezclar señales parciales. Dynapps usa sitemap-only correctamente y no necesita migrar a tags in-page.",
+          "source": "https://developers.google.com/search/docs/specialty/international/localized-versions",
+          "title_en": "Hreflang via sitemap is a fully valid method (one of the three official ones)",
+          "detail_en": "Google accepts three equivalent methods: <link> tags in the <head>, HTTP headers, and xhtml:link annotations in the XML sitemap. For groups with 5+ language/country variants, the sitemap method is in fact the recommended one for scalability (11 tags per page would bloat every HTML document). What matters is using ONE single method consistently and not mixing partial signals. Dynapps uses sitemap-only correctly and does not need to migrate to in-page tags."
+        },
+        {
+          "title": "Bidireccionalidad obligatoria de los clusters hreflang",
+          "detail": "Cada URL del cluster debe referenciar a todas las demás (incluida ella misma); si falta el enlace de retorno, Google ignora ambas anotaciones. En sitios multi-dominio esto exige que los 5 sitemaps (.es/.be/.nl/.fr/.ch) declaren clusters idénticos. Verificado en vivo: dynapps.be devuelve 223 referencias es-ES y los clusters coinciden — está bien hoy, pero es frágil ante publicaciones descoordinadas y debe monitorizarse.",
+          "source": "https://developers.google.com/search/docs/specialty/international/localized-versions",
+          "title_en": "Mandatory bidirectionality of hreflang clusters",
+          "detail_en": "Each URL in the cluster must reference all the others (including itself); if the return link is missing, Google ignores both annotations. On multi-domain sites this requires the 5 sitemaps (.es/.be/.nl/.fr/.ch) to declare identical clusters. Verified live: dynapps.be returns 223 es-ES references and the clusters match — it is fine today, but it is fragile against uncoordinated publishing and must be monitored."
+        },
+        {
+          "title": "x-default para usuarios sin coincidencia de idioma/país",
+          "detail": "Google recomienda declarar hreflang=\"x-default\" apuntando a la versión de reserva (normalmente la global en inglés o el selector de idioma). Sin x-default, un usuario de fuera de los 5 países cubiertos (p.ej. LATAM, un mercado natural para un partner Odoo en español) no tiene versión asignada y Google elige arbitrariamente. En 2026 sigue siendo la carencia más común en setups multi-ccTLD.",
+          "source": "https://developers.google.com/search/docs/specialty/international/localized-versions",
+          "title_en": "x-default for users with no language/country match",
+          "detail_en": "Google recommends declaring hreflang=\"x-default\" pointing to the fallback version (usually the global English one or the language selector). Without x-default, a user from outside the 5 covered countries (e.g. LATAM, a natural market for a Spanish-speaking Odoo partner) has no assigned version and Google chooses arbitrarily. In 2026 it remains the most common gap in multi-ccTLD setups."
+        },
+        {
+          "title": "Canonical autorreferente + hreflang deben apuntar al mismo URL",
+          "detail": "Cada página debe llevar rel=canonical autorreferente y los hreflang deben apuntar siempre a URLs canónicas. Nunca canonicalizar entre versiones de país (p.ej. en-ES → en-BE): eso saca la página del cluster y anula el hreflang. Sin canonical, en un grupo con 5 ccTLDs con plantillas casi idénticas en inglés, Google puede consolidar por su cuenta y mostrar el dominio equivocado en cada país.",
+          "source": "https://www.searchviu.com/en/hreflang-canonical/ y https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls",
+          "title_en": "Self-referencing canonical + hreflang must point to the same URL",
+          "detail_en": "Every page must carry a self-referencing rel=canonical, and the hreflang tags must always point to canonical URLs. Never canonicalize between country versions (e.g. en-ES → en-BE): that removes the page from the cluster and voids the hreflang. Without a canonical, in a group with 5 ccTLDs using nearly identical English templates, Google may consolidate on its own and show the wrong domain in each country."
+        },
+        {
+          "title": "Contenido duplicado entre ccTLDs: hreflang lo gestiona, pero solo si las señales son completas",
+          "detail": "Tener el mismo contenido en inglés en .es y .be no es penalización, pero Google trata las páginas casi idénticas como duplicados y elige una canónica única si el hreflang/canonical no está impecable; el resto puede quedar 'Duplicate, Google chose different canonical'. Diferenciar títulos, H1 y contenido local por país (equipo, casos, datos de contacto) reduce el riesgo y mejora el CTR local. Dynapps ya lo hace en /en/about pero NO en las homepages /en.",
+          "source": "https://developers.google.com/search/docs/specialty/international/managing-multi-regional-sites",
+          "title_en": "Duplicate content across ccTLDs: hreflang handles it, but only if the signals are complete",
+          "detail_en": "Having the same English content on .es and .be is not a penalty, but Google treats nearly identical pages as duplicates and picks a single canonical if the hreflang/canonical setup is not flawless; the rest may end up as 'Duplicate, Google chose different canonical'. Differentiating titles, H1s, and local content per country (team, cases, contact details) reduces the risk and improves local CTR. Dynapps already does this on /en/about but NOT on the /en homepages."
+        },
+        {
+          "title": "ccTLDs como señal de geotargeting fuerte para grupos multi-país",
+          "detail": "La estrategia de un ccTLD por país (.es/.be/.nl/.fr/.ch) es la señal de segmentación geográfica más fuerte y la adecuada para un grupo con entidades locales; el coste es que la autoridad de enlaces no se comparte entre dominios, por lo que cada país necesita su propio perfil de enlaces y sus redirecciones de migración bien hechas (crítico para .es tras absorber indaws.es). No se recomienda cambiar de estrategia; sí protegerla.",
+          "source": "https://developers.google.com/search/docs/specialty/international/managing-multi-regional-sites",
+          "title_en": "ccTLDs as a strong geotargeting signal for multi-country groups",
+          "detail_en": "The strategy of one ccTLD per country (.es/.be/.nl/.fr/.ch) is the strongest geographic segmentation signal and the right one for a group with local entities; the cost is that link authority is not shared between domains, so each country needs its own link profile and well-executed migration redirects (critical for .es after absorbing indaws.es). Changing the strategy is not recommended; protecting it is."
+        },
+        {
+          "title": "Señales de idioma para buscadores no-Google y AI search: html lang consistente",
+          "detail": "Bing no procesa hreflang de sitemap de forma fiable y se apoya en el atributo <html lang>, la meta content-language y señales on-page; los motores de AI search (respuestas generativas) también usan el lang declarado. Con la cuota creciente de descubrimiento vía asistentes en 2026, cada versión debe declarar el atributo lang correcto (es, en) en el HTML.",
+          "source": "https://www.bing.com/webmasters/help/how-to-target-your-audience-8ee0d9c9 y guías 2025-2026 (linkgraph.com/blog/hreflang-implementation-guide)",
+          "title_en": "Language signals for non-Google search engines and AI search: consistent html lang",
+          "detail_en": "Bing does not reliably process sitemap hreflang and relies on the <html lang> attribute, the content-language meta tag, and on-page signals; AI search engines (generative answers) also use the declared lang. With the growing share of discovery via assistants in 2026, each version must declare the correct lang attribute (es, en) in the HTML."
+        },
+        {
+          "title": "Validación continua del hreflang multi-dominio en Search Console",
+          "detail": "Los clusters cross-domain se rompen silenciosamente (una URL renombrada en un país deja alternates 404 o sin retorno en los otros cuatro sitemaps). La práctica 2026 es verificar los 5 dominios en la misma cuenta de GSC, revisar el informe de segmentación internacional y pasar un validador de hreflang (p.ej. Ahrefs/Screaming Frog en modo lista con los 5 sitemaps) tras cada release de contenido.",
+          "source": "https://www.gtechme.com/insights/best-practices-for-multi-language-and-multi-region-xml-sitemaps-hreflang-support/",
+          "title_en": "Continuous validation of multi-domain hreflang in Search Console",
+          "detail_en": "Cross-domain clusters break silently (a URL renamed in one country leaves alternates in 404 or without return tags in the other four sitemaps). The 2026 practice is to verify all 5 domains in the same GSC account, review the international targeting report, and run an hreflang validator (e.g. Ahrefs/Screaming Frog in list mode with the 5 sitemaps) after every content release."
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Añadir rel=canonical autorreferente a todas las páginas",
+          "detail": "Ninguna de las 94 páginas auditadas tiene rel=canonical (confirmado también en DOM renderizado). Implementar en plantilla un <link rel=\"canonical\"> autorreferente con el URL absoluto del propio locale (p.ej. en https://www.dynapps.es/en/about → canonical a sí misma, NUNCA a la versión .be). Regla: canonical siempre dentro del mismo país/idioma; el hreflang del sitemap debe seguir apuntando a esos mismos URLs canónicos. Aplicar la misma plantilla en los 5 dominios del grupo para no crear asimetrías.",
+          "priority": "P1",
+          "impact": 5,
+          "effort": 2,
+          "evidence": "Hecho verificado: 0/94 páginas con canonical. Google (consolidate-duplicate-urls + localized-versions): hreflang debe apuntar a URLs canónicas; sin canonical y con plantillas en inglés casi idénticas en 5 ccTLDs, Google puede elegir canónica de otro dominio (informe 'Duplicate, Google chose different canonical').",
+          "pages": "Todas (plantilla global de los 5 dominios)"
+        },
+        {
+          "title": "Añadir hreflang x-default a los clusters del sitemap",
+          "detail": "Los sitemaps de los 5 dominios declaran 11 variantes (es-ES, en-ES, en-BE, nl-BE, fr-BE, nl-NL, en-NL, fr-FR, en-FR, fr-CH, en-CH) pero 0 x-default (verificado en .es y .be). Añadir a cada cluster una línea <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"...\"/> apuntando a la versión de reserva acordada por el grupo (recomendado: la homepage/página en inglés del dominio 'principal' del grupo, o la propia raíz si actúa de selector). Debe ser el MISMO URL x-default en los 5 sitemaps para cada cluster.",
+          "priority": "P1",
+          "impact": 4,
+          "effort": 2,
+          "evidence": "Verificado en vivo 2026-07-21: grep x-default = 0 en sitemap .es y .be. Google localized-versions recomienda x-default para usuarios sin match; sin él, hispanohablantes de LATAM u usuarios de países no cubiertos reciben una versión arbitraria.",
+          "pages": "sitemap.xml de los 5 dominios"
+        },
+        {
+          "title": "Diferenciar title y contenido de las homepages /en por país",
+          "detail": "Verificado: dynapps.es/en y dynapps.be/en comparten título idéntico ('Dynapps - Europe's leading Odoo implementation partner'); solo cambia el H1. Localizar la homepage inglesa de España como ya se hace en /en/about ('About Dynapps Spain'): propuesta de title → 'Dynapps Spain - Odoo Gold Partner in Spain | European Odoo group', H1 y bloques con equipo de Valencia, casos españoles y datos locales. Replicar el criterio en el resto de páginas /en de plantilla compartida (services, industries).",
+          "priority": "P2",
+          "impact": 4,
+          "effort": 3,
+          "evidence": "Check en vivo 2026-07-21: titles idénticos en /en de .es y .be; en cambio /en/about sí está localizado por país en .es/.be/.nl. Google managing-multi-regional-sites: las versiones casi idénticas entre ccTLDs se consolidan como duplicados y puede mostrarse el dominio equivocado.",
+          "pages": "https://www.dynapps.es/en y páginas /en de plantilla compartida"
+        },
+        {
+          "title": "Verificar el atributo html lang y señales de idioma para Bing/AI search",
+          "detail": "Bing no lee hreflang del sitemap de forma fiable: comprobar que cada versión declara <html lang=\"es\"> / <html lang=\"en\"> correcto en todas las plantillas (incluidas las páginas de listado renderizadas en cliente) y valorar añadir meta content-language. Dar de alta www.dynapps.es en Bing Webmaster Tools con geotargeting España si no está. Esto también alimenta a los buscadores generativos, canal creciente en 2026.",
+          "priority": "P2",
+          "impact": 3,
+          "effort": 1,
+          "evidence": "El hreflang del sitio existe SOLO vía sitemap (0 tags in-page), método que Bing procesa mal; Bing se apoya en <html lang>/content-language según su documentación para webmasters.",
+          "pages": "Plantilla global; Bing Webmaster Tools"
+        },
+        {
+          "title": "Instaurar validación periódica del hreflang cross-domain (5 sitemaps)",
+          "detail": "Los clusters bidireccionales están correctos hoy (verificado: .be devuelve retornos es-ES; alternates muestreados responden 200), pero el sistema es frágil: un slug cambiado o un post publicado solo en un país puede dejar alternates rotos en los otros 4 sitemaps. Proceso propuesto: (1) verificar los 5 dominios en la misma cuenta de Google Search Console; (2) tras cada release de contenido, pasar Screaming Frog en modo lista con los 5 sitemaps y revisar 'Hreflang: Missing Return Links' y alternates non-200; (3) revisar en GSC la cobertura de duplicados. Nota: los recuentos ya son desiguales (es-ES 182 vs en-FR 128), lo que indica clusters condicionales que hay que vigilar especialmente en blog/cases.",
+          "priority": "P2",
+          "impact": 3,
+          "effort": 2,
+          "evidence": "Verificado en vivo: retornos bidireccionales OK y 4/4 alternates cross-domain muestreados = 200, pero los recuentos por locale difieren (182 vs 128), señal de clusters generados condicionalmente que pueden desincronizarse. Regla de Google: sin enlace de retorno, ambas anotaciones se ignoran.",
+          "pages": "sitemap.xml de los 5 dominios; GSC"
+        },
+        {
+          "title": "Decidir la estrategia para hispanohablantes fuera de España (es genérico vs x-default)",
+          "detail": "El sitio solo declara es-ES: un usuario en México o Argentina buscando en español no tiene match y compite sin señal. Opciones: (a) cambiar es-ES por 'es' genérico si Dynapps Spain quiere captar LATAM (recomendado si hay negocio internacional desde Valencia, dado que /es/international existe); (b) mantener es-ES y cubrir el resto con x-default (tarea P1). Decisión de negocio a tomar con dirección comercial antes de tocar el sitemap; documentar la elección para todo el grupo.",
+          "priority": "P3",
+          "impact": 3,
+          "effort": 1,
+          "evidence": "Sitemap verificado: única variante en español = es-ES (182 URLs); no existe 'es' genérico ni x-default. Google permite hreflang solo-idioma ('es') para cubrir todos los países de ese idioma.",
+          "pages": "sitemap.xml (clusters con es-ES)"
+        },
+        {
+          "title": "Reforzar /es/international como hub del grupo con enlaces a los dominios hermanos",
+          "detail": "La página /es/international tiene solo 23 palabras pese a ser la pieza que explica la propuesta multi-país del grupo (280 expertos, 5 países). Ampliarla con: presencia por país con enlace directo a cada dominio hermano (.be/.nl/.fr/.ch), casos de proyectos multi-país, y propuesta de valor 'un solo partner Odoo en 5 países'. Los enlaces cruzados visibles entre dominios del grupo refuerzan la entidad Dynapps ante Google (y son legítimos al ser el mismo grupo).",
+          "priority": "P3",
+          "impact": 2,
+          "effort": 2,
+          "evidence": "Hecho verificado del crawl: /es/international = 23 palabras (thin content). Best practice multi-regional: los ccTLDs no comparten autoridad; la interconexión visible y el contenido de entidad de grupo compensan parcialmente.",
+          "pages": "https://www.dynapps.es/es/international"
+        },
+        {
+          "title": "No introducir tags hreflang in-page parciales: mantener el sitemap como método único",
+          "detail": "Recomendación de gobernanza para el equipo web: si en algún rediseño se añaden tags <link hreflang> en el head, deben cubrir el 100% de los clusters y coincidir exactamente con el sitemap, o no añadirse en absoluto. Señales hreflang contradictorias entre métodos (in-page vs sitemap) hacen que Google descarte las anotaciones. Documentarlo en la guía interna de desarrollo web del grupo.",
+          "priority": "P3",
+          "impact": 2,
+          "effort": 1,
+          "evidence": "Situación actual verificada: hreflang existe SOLO vía sitemap (0 in-page), lo cual es válido; el riesgo documentado en las guías 2025-2026 es la mezcla parcial de métodos, no el método sitemap en sí.",
+          "pages": "Guía interna / plantillas de los 5 dominios"
+        }
+      ],
+      "summary": "En 2026 el estándar para grupos multi-país sigue siendo: un método hreflang único y completo (el sitemap es plenamente válido y el recomendado a esta escala), clusters bidireccionales con x-default, canonical autorreferente alineado con el hreflang, y diferenciación real del contenido entre ccTLDs para que Google no consolide versiones. Dynapps tiene una base sorprendentemente sólida: hreflang vía sitemap con 11 variantes, retornos bidireccionales correctos entre los 5 dominios y alternates que resuelven 200 (verificado en vivo). Los tres huecos críticos son la ausencia total de rel=canonical (0/94 páginas), la ausencia total de x-default en los 5 sitemaps, y homepages /en con título idéntico entre .es y .be (aunque páginas interiores como /en/about sí están localizadas). Con dos arreglos de plantilla/sitemap (canonical + x-default) y la localización de las homepages inglesas, la arquitectura internacional quedaría alineada con las mejores prácticas 2026; el resto es gobernanza y monitorización para que los clusters cross-domain no se rompan con el tiempo.",
+      "dimension_en": "International/multi-regional SEO 2026 (hreflang, ccTLDs, canonical, duplication across the group's domains)",
+      "summary_en": "In 2026 the standard for multi-country groups remains: a single, complete hreflang method (the sitemap is fully valid and the recommended one at this scale), bidirectional clusters with x-default, a self-referencing canonical aligned with hreflang, and genuine content differentiation between ccTLDs so Google does not consolidate versions. Dynapps has a surprisingly solid foundation: hreflang via sitemap with 11 variants, correct bidirectional return tags across the 5 domains, and alternates that resolve with 200 (verified live). The three critical gaps are the total absence of rel=canonical (0/94 pages), the total absence of x-default across the 5 sitemaps, and /en homepages with identical titles between .es and .be (although interior pages such as /en/about are localized). With two template/sitemap fixes (canonical + x-default) and the localization of the English homepages, the international architecture would be aligned with 2026 best practices; the rest is governance and monitoring so the cross-domain clusters do not break over time."
+    },
+    {
+      "dimension": "Migración de dominio indaws.es → dynapps.es (site move SEO)",
+      "best_practices": [
+        {
+          "title": "Redirects permanentes (301/308) servidor-a-servidor, nunca 302, durante al menos 1 año",
+          "detail": "La documentación de Google Search Central (actualizada jun-2026) pide redirects HTTP permanentes (301/308) de cada URL antigua a su equivalente nueva; los permanentes no pierden PageRank, mientras que un 302 indica movimiento temporal y retiene las señales en el origen. Un estudio de Moz sobre 30.000 dominios midió el doble de pérdida de tráfico orgánico en migraciones hechas con 302. Google pide mantener los redirects al menos 180 días y recomienda en la práctica 1 año o más, mientras siga llegando tráfico desde la búsqueda.",
+          "source": "https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes",
+          "title_en": "Permanent redirects (301/308) server-to-server, never 302, for at least 1 year",
+          "detail_en": "Google Search Central documentation (updated Jun-2026) requires permanent HTTP redirects (301/308) from each old URL to its new equivalent; permanent ones do not lose PageRank, whereas a 302 signals a temporary move and keeps the signals at the origin. A Moz study of 30,000 domains measured double the organic traffic loss in migrations done with 302s. Google asks for redirects to be kept at least 180 days and in practice recommends 1 year or more, as long as traffic keeps arriving from search."
+        },
+        {
+          "title": "Mapping URL-a-URL completo antes que redirects genéricos",
+          "detail": "Google exige preparar un mapa de correspondencia de cada URL actual a su formato nuevo. Redirigir en masa a la home o a una sección se trata como soft-404 y no transfiere señales. Cada URL legacy con equivalente debe apuntar a su contenido equivalente; el contenido sin sucesor debe devolver 410/404 limpio en vez de un redirect engañoso.",
+          "source": "https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes",
+          "title_en": "Complete URL-to-URL mapping rather than generic redirects",
+          "detail_en": "Google requires preparing a correspondence map from each current URL to its new format. Mass-redirecting to the home page or to a section is treated as a soft-404 and does not transfer signals. Each legacy URL with an equivalent must point to its equivalent content; content with no successor should return a clean 410/404 instead of a misleading redirect."
+        },
+        {
+          "title": "Change of Address en Search Console para todas las variantes del dominio antiguo",
+          "detail": "La herramienta Change of Address señala a nivel de dominio la migración y acelera la transferencia de resultados; es complementaria a los redirects. Hay que enviarla para todas las variantes verificadas del dominio antiguo (www y no-www, y subdominios). Requiere que la home antigua redirija con 301 — con 302 la herramienta puede fallar la validación.",
+          "source": "https://support.google.com/webmasters/answer/9370220",
+          "title_en": "Change of Address in Search Console for all variants of the old domain",
+          "detail_en": "The Change of Address tool signals the migration at the domain level and speeds up the transfer of results; it is complementary to the redirects. It must be submitted for all verified variants of the old domain (www and non-www, and subdomains). It requires the old home page to redirect with a 301 — with a 302 the tool may fail validation."
+        },
+        {
+          "title": "Mantener el sitemap antiguo accesible y enviado durante la transición",
+          "detail": "Google recomienda mantener enviados AMBOS sitemaps: el nuevo (URLs de destino) y el antiguo (URLs que ahora redirigen), para acelerar que Googlebot recrawlee el inventario legacy y procese los redirects. Los avisos de 'URLs con redirect' en el sitemap antiguo son normales e ignorables. Con el tiempo la indexación del antiguo cae a cero y sube la del nuevo — esa curva es la métrica de progreso de la migración.",
+          "source": "https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes",
+          "title_en": "Keep the old sitemap accessible and submitted during the transition",
+          "detail_en": "Google recommends keeping BOTH sitemaps submitted: the new one (destination URLs) and the old one (URLs that now redirect), to speed up Googlebot recrawling the legacy inventory and processing the redirects. The 'URLs with redirect' warnings in the old sitemap are normal and can be ignored. Over time the old site's indexation drops to zero and the new one's rises — that curve is the migration's progress metric."
+        },
+        {
+          "title": "Redirigir directo al destino final: sin cadenas ni parámetros añadidos",
+          "detail": "Google sigue hasta 10 saltos pero recomienda redirigir directamente al destino final (idealmente 1 salto, nunca más de 3). Cada salto añade latencia y riesgo de pérdida de señal. Añadir parámetros de tracking (?ref=...) en el destino crea variantes de URL que, sin rel=canonical, Google puede indexar como duplicados y diluye la consolidación de señales; el tracking de la migración debe hacerse vía logs/referrer o neutralizarse con canonicals autorreferentes.",
+          "source": "https://developers.google.com/search/docs/crawling-indexing/301-redirects",
+          "title_en": "Redirect straight to the final destination: no chains or added parameters",
+          "detail_en": "Google follows up to 10 hops but recommends redirecting directly to the final destination (ideally 1 hop, never more than 3). Each hop adds latency and risk of signal loss. Adding tracking parameters (?ref=...) at the destination creates URL variants that, without rel=canonical, Google may index as duplicates, diluting signal consolidation; migration tracking should be done via logs/referrer or neutralized with self-referencing canonicals."
+        },
+        {
+          "title": "Priorizar el mapping por valor: backlinks y tráfico primero",
+          "detail": "Las guías de migración 2025-2026 (BrightEdge, Sitebulb) coinciden: con inventarios grandes, se prioriza el mapping de las URLs con más backlinks externos y más tráfico orgánico histórico, porque concentran la equity a rescatar. El long-tail sin enlaces ni tráfico puede resolverse con redirects a sección o 410 sin apenas coste.",
+          "source": "https://www.brightedge.com/blog/2025-guide-successful-site-migration-how-protect-your-seo-and-grow-era-ai-search",
+          "title_en": "Prioritize the mapping by value: backlinks and traffic first",
+          "detail_en": "The 2025-2026 migration guides (BrightEdge, Sitebulb) agree: with large inventories, prioritize mapping the URLs with the most external backlinks and the most historical organic traffic, because they concentrate the equity to be rescued. The long tail with no links or traffic can be resolved with redirects to a section or a 410 at almost no cost."
+        },
+        {
+          "title": "Ventana de monitorización activa de 6-12 meses en ambas propiedades",
+          "detail": "Google pide monitorizar tráfico y estado de indexación en Search Console de las DOS propiedades (antigua y nueva) durante toda la transición: informe de cobertura/páginas, errores 404, estadísticas de rastreo y rendimiento. Las migraciones bien ejecutadas estabilizan en semanas; los problemas (404 masivos, 302) solo se detectan mirando la propiedad antigua, que la mayoría deja de vigilar.",
+          "source": "https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes",
+          "title_en": "Active monitoring window of 6-12 months across both properties",
+          "detail_en": "Google asks for traffic and indexation status to be monitored in Search Console for BOTH properties (old and new) throughout the transition: coverage/pages report, 404 errors, crawl stats, and performance. Well-executed migrations stabilize in weeks; problems (mass 404s, 302s) are only detected by watching the old property, which most people stop monitoring."
+        }
+      ],
+      "summary": "En 2026 la doctrina de Google para site moves sigue siendo estable y explícita: mapping URL-a-URL, redirects 301/308 directos mantenidos ≥1 año, Change of Address en Search Console, ambos sitemaps enviados y monitorización en las dos propiedades. La migración indaws.es → dynapps.es incumple hoy los tres pilares a la vez: todos los redirects son 302 (verificado en vivo 2026-07-21 sobre /, /blog, /casos-de-exito y /sitemap.xml), el redirect es path-to-path ciego que termina en 404 en ~87% de las 829 URLs legacy, y encadena 2-3 saltos con códigos mixtos (302→307) añadiendo ?ref=indaws-redirect a un sitio destino que no tiene ni un solo rel=canonical. El resultado neto es que la equity de ~15 años de indaws.es (353 posts de blog, 333 slides, landings) se está evaporando en lugar de transferirse; es el problema SEO más grave y a la vez más barato de reparar del sitio, porque el inventario completo ya existe en data/archive-indaws/sitemap_urls.json.",
+      "tasks": [
+        {
+          "title": "Cambiar todos los redirects de indaws.es a 301 (ahora son 302)",
+          "detail": "Actual: www.indaws.es/* → 302 → www.dynapps.es/*?ref=indaws-redirect (verificado en /, /blog, /casos-de-exito, /sitemap.xml, y también en indaws.es sin www). Propuesto: 301 en TODOS los redirects salientes de indaws.es y de indaws.es→www.indaws.es, a nivel de servidor/edge. Es un cambio de configuración de una línea (código de estado) con el mayor impacto individual de toda la auditoría: sin 301 no se transfiere la equity y la herramienta Change of Address no valida.",
+          "priority": "P1",
+          "impact": 10,
+          "effort": 2,
+          "evidence": "Live check 2026-07-21: curl -I devuelve 302 en las 4 rutas probadas. Google Search Central: los redirects permanentes (301/308) no pierden PageRank; estudio Moz: migraciones con 302 pierden 2x más tráfico.",
+          "pages": "Todo www.indaws.es e indaws.es (829 URLs legacy)"
+        },
+        {
+          "title": "Construir el mapping URL-a-URL de las 829 URLs legacy (hoy ~87% acaba en 404)",
+          "detail": "El redirect actual es path-to-path ciego: conserva el path de indaws.es sobre dynapps.es, y como la estructura nueva es /es/{section}, ~87% de las URLs muestreadas termina en 404. Propuesto: usar el inventario completo en data/archive-indaws/sitemap_urls.json (829 URLs: 353 /blog, 333 /slides, ~140 landings/otros) para generar una tabla de redirects explícita. Reglas: (1) posts de blog migrados → su URL nueva en /es/blog/...; (2) posts no migrados → redirect al post temáticamente equivalente o a /es/blog como último recurso solo si no hay equivalente; (3) landings de producto/industria (construccion-odoo, apps-odoo, etc.) → página de industria/servicio equivalente en /es/...; (4) casos-de-exito/* → caso equivalente en /es/cases/...; (5) contenido sin sucesor real (shop, forum, profile, groups) → 410. Nunca redirigir en masa a la home (Google lo trata como soft-404).",
+          "priority": "P1",
+          "impact": 10,
+          "effort": 6,
+          "evidence": "Crawl verificado: ~87% de URLs legacy muestreadas → 404 en dynapps.es. Google Search Central exige preparar un mapping de URLs actuales a nuevas; redirects irrelevantes se tratan como soft-404 y no transfieren señales. Inventario disponible: ai-claude-marketing/skills/seo-manager/data/archive-indaws/sitemap_urls.json (829 URLs).",
+          "pages": "829 URLs de www.indaws.es → destinos en www.dynapps.es/es/*"
+        },
+        {
+          "title": "Eliminar el parámetro ?ref=indaws-redirect del destino de los redirects",
+          "detail": "Actual: cada redirect añade ?ref=indaws-redirect a la URL de destino (p. ej. www.dynapps.es/es/blog?ref=indaws-redirect). Como dynapps.es tiene 0 rel=canonical en 94/94 páginas, Google puede indexar estas variantes parametrizadas como duplicados y la consolidación de señales se diluye. Propuesto: quitar el parámetro por completo y medir el tráfico de migración vía referrer/logs del servidor de indaws.es (o, si Marketing necesita segmentarlo en analytics, mantenerlo SOLO tras implantar canonicals autorreferentes en todo dynapps.es — tarea de otra dimensión). El destino del redirect debe ser la URL canónica limpia.",
+          "priority": "P1",
+          "impact": 7,
+          "effort": 2,
+          "evidence": "Verificado: los 302 apuntan a URLs con ?ref=indaws-redirect y el sitio destino tiene 0/94 canonicals (confirmado en DOM renderizado). Google (doc Redirects): redirigir a la URL final canónica; las variantes con parámetros sin canonical generan duplicación.",
+          "pages": "Configuración de redirects en indaws.es; afecta a todas las URLs de destino en www.dynapps.es"
+        },
+        {
+          "title": "Aplanar las cadenas de redirect: 1 salto directo al destino final /es/...",
+          "detail": "Actual: www.indaws.es/blog → 302 → www.dynapps.es/blog?ref=... → 307 → www.dynapps.es/es/blog?ref=... (2 saltos, códigos mixtos); /casos-de-exito llega a 3 saltos. Propuesto: la tabla de mapping (tarea 2) debe apuntar directamente a la URL final con prefijo /es/ (301 único), sin pasar por la raíz sin idioma de dynapps.es. Combinar con las tareas 1-3 en un único despliegue de la capa de redirects.",
+          "priority": "P1",
+          "impact": 6,
+          "effort": 3,
+          "evidence": "Live check: curl -IL muestra hops:2 en /blog y hops:3 en /casos-de-exito con mezcla 302→307. Google recomienda redirigir directo al destino final; cada salto añade latencia y riesgo de pérdida de señal (máximo aconsejado: 3).",
+          "pages": "Toda la capa de redirects indaws.es → dynapps.es"
+        },
+        {
+          "title": "Ejecutar Change of Address en Search Console para www.indaws.es e indaws.es",
+          "detail": "Tras desplegar los 301 (tareas 1-4): en Search Console, con las propiedades del dominio antiguo verificadas (idealmente propiedad de Dominio que cubre www y no-www; si no, ambas propiedades URL-prefix), usar Ajustes → Cambio de dirección apuntando a la propiedad de www.dynapps.es. Hacerlo para TODAS las variantes del dominio antiguo. Prerequisito: la home de indaws.es debe responder 301 (con el 302 actual la validación falla). Mantener la verificación de las propiedades antiguas activa durante al menos 12 meses.",
+          "priority": "P1",
+          "impact": 8,
+          "effort": 2,
+          "evidence": "Google Search Console Help (Change of Address tool): enviar la solicitud para todas las variantes www/no-www del dominio antiguo; la herramienta acelera la migración de resultados y requiere redirect 301 de la home. Estado actual desconocido en GSC pero los 302 vigentes implican que o no se ha hecho o no pudo validar.",
+          "pages": "Search Console: propiedades indaws.es, www.indaws.es y www.dynapps.es"
+        },
+        {
+          "title": "Volver a servir y enviar el sitemap antiguo de indaws.es durante la transición",
+          "detail": "Actual: www.indaws.es/sitemap.xml redirige (302) al sitemap de dynapps.es, de modo que Google ya no puede recuperar el listado de las 829 URLs legacy para recrawlearlas y procesar sus redirects. Propuesto: crear una excepción en la capa de redirects para /sitemap.xml de indaws.es que sirva un sitemap estático con las 829 URLs antiguas (regenerable desde data/archive-indaws/sitemap_urls.json), y mantenerlo enviado en la propiedad GSC antigua junto al sitemap nuevo en la propiedad de dynapps.es. Ignorar los avisos de 'URLs con redirect' — son la señal de que la migración se está procesando. Retirarlo cuando la indexación de URLs antiguas caiga a ~0 (típicamente 6-12 meses).",
+          "priority": "P2",
+          "impact": 7,
+          "effort": 3,
+          "evidence": "Live check: /sitemap.xml de indaws.es responde 302 hacia dynapps.es. Google Search Central recomienda mantener enviados ambos sitemaps (antiguo y nuevo) para acelerar el reprocesado; los warnings sobre URLs que redirigen son esperables e ignorables.",
+          "pages": "www.indaws.es/sitemap.xml + GSC propiedad antigua"
+        },
+        {
+          "title": "Priorizar el mapping por backlinks: rescatar primero las URLs legacy más enlazadas",
+          "detail": "En esta ejecución no hay datos de backlinks (sin credenciales DataForSEO). Propuesto: antes o en paralelo a la tarea 2, extraer las URLs de indaws.es con backlinks externos (DataForSEO/Ahrefs/Semrush, o como mínimo el informe de 'Enlaces' de la propiedad GSC antigua, que es gratuito) y garantizar que el top ~50 por dominios de referencia tiene un redirect 301 a un equivalente real, no a sección ni 410. Estas URLs concentran la equity transferible; el resto del long-tail puede resolverse con reglas por sección.",
+          "priority": "P2",
+          "impact": 8,
+          "effort": 4,
+          "evidence": "Best practice de migración 2025-2026 (BrightEdge, Sitebulb): priorizar mapping por backlinks/tráfico en inventarios grandes. Hecho verificado: sin datos de keywords/backlinks en esta auditoría; el informe de Enlaces de GSC de la propiedad indaws.es es la fuente de coste cero.",
+          "pages": "Subconjunto priorizado de las 829 URLs legacy"
+        },
+        {
+          "title": "Definir política para /slides (333 URLs) y secciones muertas (shop, forum, profile, groups)",
+          "detail": "El inventario legacy incluye 333 URLs de /slides (cursos/presentaciones del eLearning de Odoo), 3 de /shop, 6 de /forum, 5 de /helpdesk y varias de /profile-/groups. Propuesto: decidir explícitamente — (a) si existe contenido formativo equivalente en dynapps.es o en el canal de YouTube @dynapps-es, redirigir /slides/* a la página de recursos/academia equivalente; (b) si no hay sucesor, devolver 410 (Gone) en vez de redirect a home: el 410 saca las URLs del índice limpiamente y evita meses de soft-404 en GSC. /jobs/* → página de empleo de dynapps si existe; /forum, /helpdesk, /profile, /groups → 410.",
+          "priority": "P2",
+          "impact": 5,
+          "effort": 3,
+          "evidence": "Inventario verificado: sitemap_urls.json contiene 333 /slides, 353 /blog, 7 /jobs, 6 /forum, 5 /helpdesk, 3 /shop, 2 /profile, 2 /groups. Google trata los redirects a contenido no equivalente como soft-404; un 410 explícito es la señal limpia para contenido retirado.",
+          "pages": "www.indaws.es/slides/*, /shop/*, /forum/*, /helpdesk/*, /profile/*, /groups/*, /jobs/*"
+        },
+        {
+          "title": "Corregir también los redirects internos de dynapps.es: no-www 302→301",
+          "detail": "Actual: dynapps.es (sin www) → www.dynapps.es responde 302. Propuesto: 301, porque la canonicalización www es permanente. El redirect / → /es (307) puede mantenerse si es una decisión de idioma por defecto, pero debe ser consistente (recomendado: 301 a /es como x-default estable, coherente con los hreflang del sitemap). Es higiene del dominio destino que refuerza la consolidación de señales que llegan desde indaws.es.",
+          "priority": "P2",
+          "impact": 4,
+          "effort": 2,
+          "evidence": "Crawl verificado: http→https 301 OK, pero non-www→www 302 y /→/es 307. Google: usar redirects permanentes para canonicalizaciones permanentes de host.",
+          "pages": "dynapps.es (raíz y variante sin www)"
+        },
+        {
+          "title": "Plan de monitorización de la migración: 12 meses, ambas propiedades",
+          "detail": "Propuesto: calendario fijo tras el despliegue de las tareas 1-6. Semanas 1-4 (semanal): en GSC de indaws.es, informe de Páginas (la indexación debe empezar a caer) y de sitemap antiguo; en GSC de dynapps.es, cobertura de 404 provenientes de indaws (deben tender a 0 tras el mapping) y rendimiento por página de destino. Meses 2-12 (mensual): curva de traspaso (índice antiguo ↓ / nuevo ↑), tráfico orgánico total combinado vs. baseline pre-migración, y muestreo curl de 20 URLs legacy para verificar que siguen en 301 de 1 salto. Los redirects NO se retiran antes de 12 meses, y solo cuando el tráfico desde Google a indaws.es sea ~0.",
+          "priority": "P3",
+          "impact": 6,
+          "effort": 3,
+          "evidence": "Google Search Central: monitorizar tráfico en ambos sitios vía Search Console y analytics; mantener redirects ≥180 días y en la práctica ≥1 año mientras llegue tráfico. La curva sitemap-antiguo-a-cero es el indicador de progreso recomendado por Google.",
+          "pages": "GSC indaws.es + GSC www.dynapps.es"
+        }
+      ],
+      "dimension_en": "Domain migration indaws.es → dynapps.es (SEO site move)",
+      "summary_en": "In 2026 Google's doctrine for site moves remains stable and explicit: URL-to-URL mapping, direct 301/308 redirects kept for ≥1 year, Change of Address in Search Console, both sitemaps submitted, and monitoring across the two properties. The indaws.es → dynapps.es migration currently violates all three pillars at once: all redirects are 302 (verified live 2026-07-21 on /, /blog, /casos-de-exito, and /sitemap.xml), the redirect is a blind path-to-path one that ends in 404 for ~87% of the 829 legacy URLs, and it chains 2-3 hops with mixed status codes (302→307) while appending ?ref=indaws-redirect to a destination site that does not have a single rel=canonical. The net result is that the equity of ~15 years of indaws.es (353 blog posts, 333 slides, landing pages) is evaporating instead of being transferred; it is the site's most serious SEO problem and at the same time the cheapest to repair, because the complete inventory already exists in data/archive-indaws/sitemap_urls.json."
+    },
+    {
+      "dimension": "Authority & links 2026 — digital PR, link reclamation, local citations/GBP, partner ecosystem, brand search demand",
+      "summary": "En 2026 la autoridad ya no se mide solo en backlinks: los sistemas de IA (AI Overviews, ChatGPT, Perplexity) citan marcas según la consistencia de sus menciones en la web abierta, y el digital PR basado en datos es la táctica de link building dominante. Para dynapps.es el problema número uno no es conseguir enlaces nuevos sino dejar de perder los que ya tiene: las ~829 URLs del legado indaws.es redirigen con 302 (temporal, verificado en vivo hoy: openresty devuelve \"302 Moved Temporarily\") y ~87% de las rutas profundas acaban en 404 en dynapps.es, con lo que prácticamente toda la equity de enlaces acumulada por Indaws desde 2014 se está evaporando. En el lado positivo, la página de partner de odoo.com (Gold, 155 referencias) ya enlaza a dynapps.es con dirección de Valencia correcta, y las cabeceras de dominio (indaws.com también 302→dynapps.es) confirman que el grupo controla los dominios legacy: la reclamación es 100% ejecutable internamente. La demanda de búsqueda de marca sigue repartida entre \"indaws\" y \"dynapps\" (indaws.es/en aún aparece en SERPs con título INDAWS), lo que exige gestionar activamente la transición de marca en buscadores y citaciones locales.",
+      "best_practices": [
+        {
+          "title": "Migraciones con 301 permanentes, mantenidos ≥1 año",
+          "detail": "Google confirma que un 301 transfiere la práctica totalidad de las señales de ranking y trata la URL destino como canónica, mientras que un 302 indica movimiento temporal: Google mantiene indexada la URL antigua y retiene la equity. Los redirects deben mantenerse al menos un año (idealmente para siempre en dominios legacy) y apuntar a la página viva más relevante temáticamente, nunca genéricamente a la home.",
+          "source": "https://www.searchenginejournal.com/google-keep-301-redirects-in-place-for-a-year/428998/",
+          "title_en": "Migrations with permanent 301s, kept for ≥1 year",
+          "detail_en": "Google confirms that a 301 transfers virtually all ranking signals and treats the destination URL as canonical, whereas a 302 signals a temporary move: Google keeps the old URL indexed and retains the equity. Redirects must be kept for at least one year (ideally forever on legacy domains) and point to the most topically relevant live page, never generically to the home page."
+        },
+        {
+          "title": "Mapeo URL a URL, sin cadenas ni destinos irrelevantes",
+          "detail": "La base de una migración es un inventario completo de URLs legacy priorizado por backlinks/tráfico, mapeando cada una al equivalente nuevo más relevante (post→post, caso→caso). Redirigir a destinos irrelevantes o dejar 404 anula la transferencia de autoridad; las cadenas de redirects añaden latencia y desperdician crawl budget.",
+          "source": "https://www.bruceclay.com/blog/url-redirects-best-practices-during-a-site-migration/",
+          "title_en": "URL-to-URL mapping, with no chains or irrelevant destinations",
+          "detail_en": "The foundation of a migration is a complete inventory of legacy URLs prioritized by backlinks/traffic, mapping each one to the most relevant new equivalent (post→post, case→case). Redirecting to irrelevant destinations or leaving 404s voids the authority transfer; redirect chains add latency and waste crawl budget."
+        },
+        {
+          "title": "Link reclamation: recuperar enlaces que apuntan a 404",
+          "detail": "Identificar los dominios externos que enlazan a URLs muertas del dominio antiguo (vía GSC de la propiedad legacy y herramientas de backlinks) y, además del redirect, contactar a los sitios de mayor autoridad para que actualicen el enlace al destino nuevo. Es la vía de 'link building' con mejor ratio esfuerzo/resultado porque el enlace ya existe.",
+          "source": "https://trydecoding.com/blog/seo-migration-strategy/",
+          "title_en": "Link reclamation: recovering links that point to 404s",
+          "detail_en": "Identify the external domains linking to dead URLs on the old domain (via GSC on the legacy property and backlink tools) and, in addition to the redirect, contact the highest-authority sites so they update the link to the new destination. It is the 'link building' avenue with the best effort-to-result ratio because the link already exists."
+        },
+        {
+          "title": "Digital PR con datos propios como táctica dominante",
+          "detail": "El 48,6% de los profesionales SEO señala el digital PR como el método más eficaz para conseguir backlinks de autoridad, y más del 90% de las campañas usan contenido basado en datos o comentario experto. Para B2B, los artículos firmados por directivos en prensa sectorial construyen autoridad personal y de dominio a la vez.",
+          "source": "https://digitaloft.co.uk/insights/digital-pr-link-building-statistics",
+          "title_en": "Digital PR with proprietary data as the dominant tactic",
+          "detail_en": "48.6% of SEO professionals identify digital PR as the most effective method for earning authoritative backlinks, and over 90% of campaigns use data-driven content or expert commentary. For B2B, bylined articles by executives in the trade press build personal and domain authority at the same time."
+        },
+        {
+          "title": "Menciones de marca para visibilidad en buscadores IA",
+          "detail": "Los sistemas de IA citan marcas según la consistencia y credibilidad de sus apariciones en la web abierta: las menciones de marca correlacionan hasta 3x más con la visibilidad en AI search que los backlinks tradicionales. El objetivo se amplía de 'conseguir enlaces' a 'construir presencia de marca consistente' y medir la frecuencia de citación en IA.",
+          "source": "https://www.digitalapplied.com/blog/link-building-2026-digital-pr-outreach-guide",
+          "title_en": "Brand mentions for visibility in AI search engines",
+          "detail_en": "AI systems cite brands based on the consistency and credibility of their appearances across the open web: brand mentions correlate up to 3x more with AI search visibility than traditional backlinks. The objective broadens from 'earning links' to 'building a consistent brand presence' and measuring the frequency of AI citation."
+        },
+        {
+          "title": "Google Business Profile completo y con categoría correcta",
+          "detail": "Los perfiles completos reciben ~70% más visitas y aparecen hasta 18x más en resultados; la categoría principal es el factor de ranking local más determinante. Para un partner Odoo B2B en Valencia: categoría de empresa de software/consultoría, fotos reales de oficina/equipo, reseñas de clientes y NAP consistente con la web y las citaciones.",
+          "source": "https://thebrandhopper.com/learning-resources/local-seo-google-business-profile-best-practices-for-2026/",
+          "title_en": "Complete Google Business Profile with the correct category",
+          "detail_en": "Complete profiles receive ~70% more visits and appear up to 18x more often in results; the primary category is the most decisive local ranking factor. For a B2B Odoo partner in Valencia: software company/consulting category, real photos of the office/team, customer reviews, and NAP consistent with the website and citations."
+        },
+        {
+          "title": "Gestión activa del rebranding en citaciones y NAP",
+          "detail": "Tras un cambio de marca (Indaws→Dynapps Spain), la consistencia nombre-dirección-teléfono-web en todas las citaciones (GBP, directorios, LinkedIn, odoo.com, prensa) es señal directa de confianza para Google y para los motores de IA, que buscan 'confianza, consistencia y confirmación' entre fuentes. Citaciones divergentes diluyen la entidad de marca.",
+          "source": "https://www.localmighty.com/blog/google-business-profile-optimization-best-practices/",
+          "title_en": "Active management of the rebranding across citations and NAP",
+          "detail_en": "After a brand change (Indaws→Dynapps Spain), name-address-phone-website consistency across all citations (GBP, directories, LinkedIn, odoo.com, press) is a direct trust signal for Google and for AI engines, which look for 'trust, consistency, and confirmation' across sources. Divergent citations dilute the brand entity."
+        },
+        {
+          "title": "Aprovechar el ecosistema partner como fuente de enlaces de autoridad",
+          "detail": "Para un partner Odoo, la página de partner en odoo.com (dominio de altísima autoridad) y las referencias de clientes publicadas allí son enlaces y menciones de máximo valor; mantener el perfil, las referencias y los casos cruzados actualizados es link building de bajo coste. Complementar con enlaces de asociaciones sectoriales, eventos y clientes (casos de éxito enlazados bidireccionales).",
+          "source": "https://outreachdesk.com/b2b-link-building/",
+          "title_en": "Leveraging the partner ecosystem as a source of authority links",
+          "detail_en": "For an Odoo partner, the partner page on odoo.com (an extremely high-authority domain) and the customer references published there are links and mentions of maximum value; keeping the profile, references, and cross-linked cases up to date is low-cost link building. Complement with links from industry associations, events, and customers (bidirectionally linked success stories)."
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Cambiar los redirects de indaws.es e indaws.com de 302 a 301 y eliminar el parámetro ?ref=indaws-redirect",
+          "detail": "Actual: www.indaws.es y www.indaws.com responden '302 Moved Temporarily' (openresty) hacia dynapps.es añadiendo ?ref=indaws-redirect, y el destino hace otro salto (p.ej. /blog → /es/blog): cadena de 2-3 hops con parámetro y sin canonical en destino. Propuesto: configurar 301 permanente en el proxy openresty, redirigir directamente a la URL final /es/... (un solo salto) y, si se quiere trazar tráfico legacy, medirlo en el servidor o vía UTM solo en enlaces controlados, no en el redirect global. Mantener los 301 al menos 12 meses (recomendado: indefinidamente).",
+          "priority": "P1",
+          "impact": 5,
+          "effort": 1,
+          "pages": "www.indaws.es/* y www.indaws.com/* → www.dynapps.es/es/*",
+          "evidence": "Verificado en vivo 2026-07-21: curl -I devuelve 302 en ambos dominios. Google retiene la equity con 302 y recomienda 301 mantenido ≥1 año para movimientos permanentes (Search Engine Journal / Google Search Central)."
+        },
+        {
+          "title": "Construir el mapa de redirecciones 1:1 para las ~829 URLs legacy de indaws.es (reclamación de link equity)",
+          "detail": "Actual: ~87% de las URLs profundas del sitemap antiguo (posts de blog, /casos-de-exito, slides, shop) acaban en 404 en dynapps.es: la autoridad acumulada por Indaws desde 2014 (Gold Partner #1 en España, 155 referencias) se está perdiendo en ~720 URLs muertas. Propuesto: exportar el sitemap legacy, clasificar por tipo (blog/caso/producto/slide/shop) y mapear cada URL al equivalente más relevante en dynapps.es (post migrado → post; caso → /es/cases/{slug}; sin equivalente → página de categoría o hub temático, nunca genéricamente la home). Priorizar por backlinks externos e impresiones históricas en GSC. Implementar en el mismo proxy openresty como reglas 301 path-to-path.",
+          "priority": "P1",
+          "impact": 5,
+          "effort": 3,
+          "pages": "~829 URLs de www.indaws.es → www.dynapps.es/es/{blog|cases|...}",
+          "evidence": "Crawl verificado 2026-07-21: ~87% de URLs legacy muestreadas terminan en 404. Mejores prácticas de migración: mapeo URL a URL al destino más relevante; los 404 y los destinos irrelevantes anulan la transferencia de autoridad (Bruce Clay, Decoding 2026)."
+        },
+        {
+          "title": "Verificar la propiedad indaws.es en Search Console y usarla para priorizar y monitorizar la reclamación",
+          "detail": "Actual: sin datos de backlinks (no hay API disponible en esta auditoría) ni visibilidad sobre qué URLs legacy reciben enlaces. Propuesto: (1) verificar/recuperar la propiedad www.indaws.es en Google Search Console; (2) exportar el informe 'Enlaces' para obtener la lista real de dominios y páginas más enlazadas del legado; (3) usar esa lista para priorizar el mapa de 301 de la tarea anterior; (4) tras implantar los 301, usar la herramienta de cambio de dirección si aplica y vigilar la caída de 404 en el informe de cobertura de dynapps.es. Complementar con un export gratuito de Ahrefs Webmaster Tools si se desea contraste.",
+          "priority": "P1",
+          "impact": 4,
+          "effort": 2,
+          "pages": "GSC propiedades www.indaws.es y www.dynapps.es",
+          "evidence": "Sin datos DataForSEO en esta ejecución; GSC es la fuente primaria gratuita del perfil de enlaces legacy y la práctica estándar para auditar URLs con ranking power antes de mapear redirects."
+        },
+        {
+          "title": "Campaña de link reclamation manual sobre los 20-50 dominios externos de más autoridad que enlazan a URLs muertas",
+          "detail": "Actual: los enlaces externos hacia indaws.es atraviesan un 302 con parámetro o mueren en 404. Propuesto: con el export de GSC/Ahrefs, identificar los dominios de mayor autoridad (prensa TIC, directorios Odoo, blogs de partners, asociaciones) que enlazan a URLs legacy y contactarles para actualizar el enlace directamente a la URL equivalente de dynapps.es, aprovechando para comunicar el rebranding Indaws→Dynapps. Un enlace directo actualizado vale más que uno redirigido y refuerza la señal de entidad de la nueva marca.",
+          "priority": "P2",
+          "impact": 3,
+          "effort": 3,
+          "pages": "Dominios externos que enlazan a www.indaws.es",
+          "evidence": "La reclamación de enlaces existentes es la táctica de mayor ratio resultado/esfuerzo en migraciones (Decoding 2026); las menciones de marca consistentes correlacionan ~3x más con visibilidad en AI search que los backlinks (Digital Applied 2026)."
+        },
+        {
+          "title": "Auditar y optimizar el Google Business Profile de Dynapps Spain (Valencia) y las citaciones NAP del rebranding",
+          "detail": "Actual: sin verificar en esta auditoría si existe ficha GBP activa como 'Dynapps' o si sigue como 'Indaws'; la dirección oficial es Plaza Bandas Música de la Comunitat Valenciana, Entresuelo 8 y 9, 46013 Valencia (confirmada en odoo.com). Propuesto: (1) reclamar/renombrar la ficha a la marca actual (Dynapps / Dynapps Spain) sin crear ficha duplicada; (2) categoría principal 'Empresa de software' o 'Consultora informática' + secundarias; (3) web = https://www.dynapps.es/es, teléfono y dirección idénticos a la web y a odoo.com; (4) fotos reales de oficina y equipo; (5) plan de reseñas de clientes (los 155 referenciados son el vivero natural); (6) barrer citaciones legacy (directorios españoles, LinkedIn, Páginas Amarillas, listados Odoo de terceros como justdoers.com) y actualizar nombre y URL. Los perfiles completos reciben ~70% más visitas y la consistencia NAP alimenta también a los buscadores IA.",
+          "priority": "P2",
+          "impact": 4,
+          "effort": 2,
+          "pages": "Ficha GBP Valencia + citaciones externas (LinkedIn, directorios, justdoers.com, etc.)",
+          "evidence": "Dirección verificada en odoo.com/partners/dynapps-es-sl-78899 (2026-07-21). Best practices GBP 2026: perfiles completos +70% visitas, categoría principal = factor nº1 local (The Brand Hopper, LocalMighty)."
+        },
+        {
+          "title": "Explotar el perfil de partner de odoo.com como activo de autoridad: referencias, casos cruzados y consistencia",
+          "detail": "Actual: la página odoo.com/partners/dynapps-es-sl-78899 está sana (Gold, 155 referencias, enlaza a https://www.dynapps.es/, dirección Valencia correcta) — es probablemente el backlink de mayor autoridad del dominio. Propuesto: (1) mantener el ritmo de publicación de referencias y completar el campo Industria (ya existe rutina mensual); (2) enlazar desde cada caso de éxito de /es/cases a la referencia correspondiente en odoo.com y viceversa cuando el formulario lo permita, reforzando la entidad; (3) revisar que el perfil hermano dynapps-nv-4155 y las páginas del grupo (.be/.nl/.fr/.ch) enlacen coherentemente al dominio correcto por país; (4) pedir a Odoo la actualización de cualquier listado residual a nombre Indaws.",
+          "priority": "P2",
+          "impact": 3,
+          "effort": 1,
+          "pages": "odoo.com/partners/dynapps-es-sl-78899, /es/cases",
+          "evidence": "Verificado 2026-07-21: perfil Gold con 155 referencias enlazando a dynapps.es. En B2B, los enlaces del ecosistema partner en dominios de máxima autoridad son link building de coste casi nulo (OutreachDesk 2026)."
+        },
+        {
+          "title": "Lanzar un programa trimestral de digital PR basado en datos propios del ecosistema Odoo en España",
+          "detail": "Actual: sin actividad de PR digital detectable orientada a enlaces; los competidores (tecnativa.com, factorlibre.com, studio73.es...) compiten por las mismas menciones sectoriales. Propuesto: 1 pieza trimestral de contenido data-driven usando activos únicos de Dynapps — p.ej. 'radiografía de la adopción de Odoo en España' (el grupo dispone de datos de 800+ implantaciones y de inteligencia del directorio de partners), benchmarks por sector (construcción, distribución) — y distribuirla a prensa TIC española (ComputerWorld, Byte TI, MuyPymes, ITReseller) con comentario experto firmado por dirección. Objetivo: menciones + enlaces de dominios DA alto y presencia citada en respuestas de IA. Medir menciones de marca y frecuencia de citación en AI Overviews/ChatGPT además de backlinks.",
+          "priority": "P3",
+          "impact": 4,
+          "effort": 4,
+          "pages": "/es/blog (piezas de datos), notas de prensa externas",
+          "evidence": "El 48,6% de los SEOs señala digital PR como la táctica más eficaz y >90% de campañas usan contenido data-driven (Digitaloft 2026); las bylines ejecutivas en prensa sectorial B2B construyen autoridad doble (Blue Tree Digital)."
+        },
+        {
+          "title": "Gestionar la transición de demanda de marca 'Indaws' → 'Dynapps' en buscadores",
+          "detail": "Actual: las SERPs aún muestran resultados de www.indaws.es con título 'Partner Odoo Gold España | INDAWS' y existe búsqueda de marca residual sobre 'indaws'; dynapps.es tiene /es/international con solo 23 palabras y no hay página que explique el cambio de marca. Propuesto: (1) crear/reforzar una página 'Indaws ahora es Dynapps' en dynapps.es (historia, mismo equipo Valencia, enlace desde la home) que capture las búsquedas de marca legacy y sirva de destino para redirects legacy sin equivalente; (2) monitorizar en GSC las queries 'indaws' vs 'dynapps' como KPI de transición; (3) mantener mención de 'antes Indaws' en el perfil de LinkedIn, GBP y odoo.com hasta que la query legacy decaiga. La marca es la señal de autoridad más robusta en la era de AI search.",
+          "priority": "P3",
+          "impact": 3,
+          "effort": 2,
+          "pages": "Nueva página /es/indaws-ahora-dynapps (o similar), home /es, GSC",
+          "evidence": "SERP verificada 2026-07-21: indaws.es/en aún posiciona con título INDAWS. Los sistemas de IA citan marcas por consistencia de menciones; una transición de marca sin puente pierde demanda de búsqueda acumulada (Digital Applied 2026)."
+        }
+      ],
+      "dimension_en": "Authority & links 2026 — digital PR, link reclamation, local citations/GBP, partner ecosystem, brand search demand",
+      "summary_en": "In 2026 authority is no longer measured in backlinks alone: AI systems (AI Overviews, ChatGPT, Perplexity) cite brands based on the consistency of their mentions across the open web, and data-driven digital PR is the dominant link building tactic. For dynapps.es the number one problem is not acquiring new links but ceasing to lose the ones it already has: the ~829 URLs of the indaws.es legacy redirect with 302 (temporary, verified live today: openresty returns \"302 Moved Temporarily\") and ~87% of deep paths end in 404 on dynapps.es, meaning virtually all the link equity Indaws accumulated since 2014 is evaporating. On the positive side, the odoo.com partner page (Gold, 155 references) already links to dynapps.es with the correct Valencia address, and the domain headers (indaws.com also 302→dynapps.es) confirm the group controls the legacy domains: reclamation is 100% executable internally. Brand search demand is still split between \"indaws\" and \"dynapps\" (indaws.es/en still appears in SERPs with an INDAWS title), which requires actively managing the brand transition in search engines and local citations."
+    }
+  ],
+  "critic": {
+    "missing_topics": [
+      "Google Search Console 'Cambio de dirección' (Change of Address): ninguna dimensión menciona la herramienta oficial de GSC para migraciones de dominio (indaws.es → dynapps.es), que acelera la transferencia de señales y es complementaria a los 301. Tampoco se cubre la verificación explícita de propiedades GSC de indaws.es/indaws.com ni la configuración de GA4/consent mode tras el rebrand — sin baseline analítico no se puede medir el impacto de ninguna tarea del plan.",
+      "SEO de imágenes: cero cobertura en las 6 dimensiones — alt text (que además es solape directo con accesibilidad WCAG), nombres de archivo descriptivos, formatos modernos (WebP/AVIF), lazy loading, atributos width/height (relevante para la tarea CLS ya propuesta) e ImageObject/imagen destacada en el schema de posts y casos.",
+      "SEO local / Google Business Profile: solo aparece de pasada ('reseñas recientes en GBP' dentro de la tarea de footprint de terceros de GEO). Falta una auditoría dedicada: ficha GBP de la oficina de Valencia con el rebrand Indaws→Dynapps aplicado, categorías, NAP consistente en citaciones (directorios, mapas), y LocalBusiness schema. Para 'partner Odoo Valencia' el local pack es un canal real y la transición de marca puede haber dejado citaciones con el nombre antiguo.",
+      "Vídeo/YouTube SEO: existe el canal @dynapps-es (confirmado en el contexto del proyecto) pero ninguna dimensión trata la optimización del canal, el embebido de vídeos en casos/servicios ni VideoObject schema — canal E-E-A-T y GEO complementario de coste bajo.",
+      "Backlink audit cuantificado: la dimensión de Authority habla de 'dejar de perder' equity pero (en lo visible) no incluye una tarea de inventario de los backlinks concretos que apuntan a indaws.es (Ahrefs/GSC Links) para priorizar el mapa de redirecciones por equity real y hacer outreach a los enlaces top para que actualicen al dominio nuevo. Sin ese inventario, el mapeo de 829 URLs se prioriza a ciegas."
+    ],
+    "contradictions": [
+      "Redirección de la raíz / → /es: la dimensión Técnica propone convertirla en 301 permanente 'si no hay detección de idioma', mientras la dimensión Internacional sugiere que la raíz podría actuar como selector de idioma y ser el destino del x-default ('o la propia raíz si actúa de selector'). Son incompatibles: una raíz que hace 301 permanente a /es no puede ser a la vez el x-default/selector. Hay que tomar una única decisión de grupo antes de tocar nada.",
+      "Prioridad e impacto inconsistentes para la MISMA tarea de canonicals: Técnica la puntúa P1/impacto 8, Internacional P1/impacto 5 y GEO P2/impacto 6. En el plan consolidado debe aparecer una sola vez con una sola prioridad (P1).",
+      "Duplicación masiva de la tarea de migración indaws.es (aparece como tarea independiente en Técnica, Contenido, GEO y Authority con esfuerzos distintos: 6, 6 y 7). No es contradicción de fondo pero sí de estimación; consolidar en una tarea única con un solo owner y esfuerzo.",
+      "x-default: la dimensión Técnica lo formula como punto de auditoría ('verificar que existe x-default por clúster') mientras Internacional ya verificó en vivo que hay 0 x-default en los 5 sitemaps. La tarea de auditoría técnica debería reformularse como implementación, no verificación — riesgo de que en el plan final parezca pendiente de comprobar algo ya comprobado."
+    ],
+    "extra_tasks": [
+      {
+        "title": "Ejecutar 'Cambio de dirección' en GSC y establecer el baseline analítico post-migración",
+        "detail": "Verificar en Google Search Console las propiedades de indaws.es, indaws.com y los 5 dominios Dynapps bajo la misma cuenta; una vez convertidos los redirects a 301 (tarea P1 ya planificada), ejecutar la herramienta 'Cambio de dirección' de GSC desde la propiedad indaws.es hacia dynapps.es — es el mecanismo oficial que acelera la transferencia de señales en migraciones y ninguna dimensión lo contempla. En paralelo: confirmar GA4 correctamente instalado en dynapps.es con el histórico de indaws anotado (annotation de la fecha de migración), enviar el sitemap nuevo y fijar el baseline de KPIs (clics/impresiones por país, top queries de marca 'indaws' vs 'dynapps') contra el que medir todo el plan.",
+        "priority": "P1",
+        "impact": 7,
+        "effort": 2,
+        "pages": "Google Search Console (indaws.es, dynapps.es y dominios del grupo), GA4",
+        "evidence": "Ninguna de las 6 dimensiones menciona la herramienta Change of Address de GSC pese a que toda la auditoría gira en torno a la migración indaws→dynapps; Google la documenta como paso recomendado en migraciones de dominio (developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes). Sin baseline GA4/GSC no se puede medir el retorno de ninguna tarea."
+      },
+      {
+        "title": "Auditoría de SEO de imágenes: alt text, formatos modernos y dimensiones declaradas",
+        "detail": "Auditar las imágenes de las 94 páginas: (1) alt text descriptivo en español/inglés según locale — hoy no auditado y es a la vez requisito de accesibilidad WCAG y señal para Google Imágenes y los modelos multimodales; (2) nombres de archivo descriptivos (logo-cliente-puratos.webp, no img_0234.png); (3) servir WebP/AVIF con compresión adecuada — afecta directamente al LCP de la tarea CWV ya planificada; (4) declarar width/height o aspect-ratio en todas las imágenes — causa típica del CLS que la dimensión técnica pide vigilar; (5) añadir la imagen destacada como propiedad image en el JSON-LD Article/Organization cuando se implemente el schema (tarea P1/P2 existente).",
+        "priority": "P2",
+        "impact": 5,
+        "effort": 3,
+        "pages": "Todas las plantillas (94 páginas), especialmente /es/cases/* y posts de blog",
+        "evidence": "Hueco transversal: ninguna dimensión audita imágenes pese a que dos tareas existentes dependen de ello (CLS<0,1 requiere dimensiones declaradas; el schema Article requiere image). El alt text es además el solape accesibilidad-SEO estándar en auditorías 2026."
+      },
+      {
+        "title": "Actualizar Google Business Profile de Valencia y citaciones locales al rebrand Dynapps",
+        "detail": "Auditar la ficha de Google Business Profile de la oficina de Valencia: nombre actualizado a Dynapps (¿sigue como Indaws?), categoría ('Consultora informática'/'Proveedor de software'), web apuntando a www.dynapps.es (no a indaws.es), horario, fotos, y campaña de reseñas recientes de clientes españoles. Después, barrido de citaciones NAP en directorios locales y sectoriales (Google Maps, Bing Places, directorios TIC, Cámara de Comercio) corrigiendo nombre antiguo/URL antigua. Añadir LocalBusiness (o subtipo) al JSON-LD de /es/contact enlazado con la Organization global. Las búsquedas 'partner Odoo Valencia' activan local pack y las citaciones inconsistentes post-rebrand diluyen tanto el local como la señal de entidad que la dimensión GEO exige coherente.",
+        "priority": "P2",
+        "impact": 6,
+        "effort": 3,
+        "pages": "Google Business Profile, /es/contact, directorios externos",
+        "evidence": "GBP solo aparece como mención de una línea dentro de la tarea de footprint de terceros de GEO; ninguna dimensión audita la ficha ni las citaciones NAP tras el cambio de marca Indaws→Dynapps, el escenario clásico de citaciones rotas. La consistencia de entidad multi-touchpoint es best practice citada por la propia dimensión GEO."
+      },
+      {
+        "title": "Inventariar los backlinks de indaws.es y priorizar el mapa de redirecciones por equity real",
+        "detail": "Antes de mapear a mano las ~829 URLs legacy, extraer el perfil de enlaces de indaws.es (Ahrefs/Majestic + informe de Enlaces de GSC): identificar las 30-50 URLs con más dominios de referencia y asegurar que ESAS tienen redirect 301 uno-a-uno perfecto y contenido equivalente vivo (republicar si hace falta). Complementar con outreach ligero a los 10-15 enlaces más valiosos (prensa, directorios sectoriales, odoo.com, partners tecnológicos) pidiendo actualizar el enlace directamente a dynapps.es — el enlace directo siempre conserva más valor que el redirigido y actualiza la mención de marca para los LLM. Este inventario convierte el mapeo de 829 URLs (esfuerzo 6-7 en tres dimensiones) en un trabajo priorizado por datos.",
+        "priority": "P1",
+        "impact": 7,
+        "effort": 3,
+        "pages": "www.indaws.es (perfil de backlinks) → www.dynapps.es; fuentes externas top",
+        "evidence": "Las 4 dimensiones que tratan la migración proponen mapear URLs pero ninguna (en lo visible) parte de un inventario de backlinks para priorizar por equity, ni incluye link reclamation por outreach directo — táctica estándar 2026 que preserva más valor que el 301 y refresca las menciones Indaws→Dynapps de las que se alimentan los LLM."
+      },
+      {
+        "title": "Optimizar el canal YouTube @dynapps-es y embeber vídeos con VideoObject schema",
+        "detail": "El grupo ya produce vídeo (canal @dynapps-es confirmado): (1) optimizar títulos, descripciones con enlace a la página relevante de dynapps.es y chapters en los vídeos existentes; (2) embeber los vídeos pertinentes en casos de éxito y páginas de servicio/industria (testimonios en vídeo = señal Experience de primera mano que refuerza el plan E-E-A-T ya definido); (3) añadir VideoObject al JSON-LD de las páginas con vídeo embebido cuando se implemente el schema; (4) enlazar el canal en el sameAs de Organization (ya previsto en la tarea GEO). YouTube es además fuente citada por AI Overviews y Gemini — canal GEO complementario de coste marginal dado que el contenido ya existe.",
+        "priority": "P3",
+        "impact": 4,
+        "effort": 2,
+        "pages": "Canal YouTube @dynapps-es, /es/cases/*, páginas de servicio con vídeo",
+        "evidence": "Ninguna dimensión menciona vídeo pese a que el canal @dynapps-es existe (contexto del proyecto content-collection). Los vídeos embebidos con VideoObject son elegibles para resultados enriquecidos de vídeo y AI Overviews cita YouTube con frecuencia creciente en queries how-to/comparativas."
+      }
+    ]
+  }
+}

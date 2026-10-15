@@ -17,12 +17,15 @@ use systemprompt::agent_runs::repository::NewAgentRun;
 use systemprompt::identifiers::{AgentRunId, UserId};
 
 use super::runner::{ORIGIN_KIND, observer, prepare};
+use crate::config::{FarmToolPolicy, RunAsMode, read_farms_doc};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::filters::NewRun;
 use crate::repositories::rows::{AgentRow, FarmRow, RunRow};
-use crate::repositories::{agents, farms, runs};
+use crate::repositories::{agents, clients, farms, runs};
 use crate::state::{FarmState, RunnerLimits};
-use crate::types::{EvalResultId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia};
+use crate::types::{
+    ClientId, EvalResultId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LaunchRequest {
@@ -38,6 +41,7 @@ pub struct LaunchRequest {
     pub max_budget_usd: Option<f64>,
     pub timeout_seconds: Option<i32>,
     pub eval_result_id: Option<EvalResultId>,
+    pub client_id: Option<ClientId>,
 }
 
 pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<RunRow> {
@@ -51,6 +55,14 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
 
     let (max_turns, max_budget_usd, timeout_seconds) =
         resolve_limits(&req, &agent, &farm, state.limits)?;
+    let policy = farm_tool_policy(state, &req.farm_id).await?;
+    if let Some(server) = policy.disallowed_server(&agent.tools) {
+        return Err(FarmError::Validation(format!(
+            "agent {} names MCP server {server}, which farm {} does not allow",
+            agent.id, req.farm_id
+        )));
+    }
+    let credential_user = resolve_credential_user(pool, &req, &agent, &farm).await?;
     let template = req
         .prompt
         .filter(|p| !p.trim().is_empty())
@@ -65,6 +77,7 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         farm_id: &req.farm_id,
         farm_run_id: &farm_run_id,
         layout: &layout,
+        mcp_base: &state.gateway.internal_base,
         prompt_template: &template,
         case_prompt: req.case_prompt.as_deref(),
         model: model.as_deref(),
@@ -72,6 +85,7 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         max_turns,
         max_budget_usd,
         timeout_seconds,
+        deny_tools: &policy.deny,
     })?;
     if request.prompt.trim().is_empty() {
         return Err(FarmError::Validation(
@@ -79,10 +93,9 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         ));
     }
 
-    let credential_user = prepare::credential_user(farm.run_as_user_id.as_ref(), &req.user_id);
     let new_run = NewRun {
-        id: farm_run_id.clone(),
-        agent_run_id: agent_run_id.clone(),
+        id: farm_run_id,
+        agent_run_id,
         farm_id: req.farm_id,
         agent_id: req.agent_id,
         user_id: req.user_id,
@@ -98,24 +111,51 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         timeout_seconds,
         source_commit_sha: farm.synced_commit_sha,
         eval_result_id: req.eval_result_id,
+        client_id: req.client_id,
     };
 
-    let row = insert_pair(
-        pool,
-        &new_run,
-        NewAgentRun {
-            id: &agent_run_id,
-            origin_kind: ORIGIN_KIND,
-            origin_id: farm_run_id.as_str(),
-            user_id: &credential_user,
-            request: &request,
-            not_before: None,
-            task_id: None,
-            context_id: None,
-        },
-    )
-    .await?;
-    Ok(row)
+    insert_pair(pool, &new_run, &credential_user, &request).await
+}
+
+async fn resolve_credential_user(
+    pool: &PgPool,
+    req: &LaunchRequest,
+    agent: &AgentRow,
+    farm: &FarmRow,
+) -> FarmResult<UserId> {
+    let agent_as = prepare::RunAsSetting::from_row(
+        agent.run_as_mode.as_deref(),
+        agent.run_as_user_id.as_ref(),
+    );
+    let farm_as =
+        prepare::RunAsSetting::from_row(farm.run_as_mode.as_deref(), farm.run_as_user_id.as_ref());
+    let client_id = req.client_id.as_ref().or(farm.client_id.as_ref());
+    let client_row = match (prepare::effective_mode(agent_as, farm_as), client_id) {
+        (RunAsMode::Client, Some(id)) => clients::find_client(pool, id.as_str()).await?,
+        _ => None,
+    };
+    let client = client_id.map(|id| prepare::RunAsClient {
+        id,
+        account: client_row
+            .as_ref()
+            .and_then(|row| row.service_account_user_id.as_ref()),
+    });
+    Ok(prepare::credential_user(
+        agent_as,
+        farm_as,
+        client,
+        &req.user_id,
+    )?)
+}
+
+pub async fn resolve_client(pool: &PgPool, slug: Option<&str>) -> FarmResult<Option<ClientId>> {
+    let Some(slug) = slug.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Ok(None);
+    };
+    clients::find_client(pool, slug)
+        .await?
+        .map(|row| Some(row.id))
+        .ok_or_else(|| FarmError::Validation(format!("client {slug:?} is not declared")))
 }
 
 fn resolve_limits(
@@ -149,8 +189,19 @@ fn resolve_limits(
 async fn insert_pair(
     pool: &PgPool,
     new_run: &NewRun,
-    new_agent_run: NewAgentRun<'_>,
+    credential_user: &UserId,
+    request: &systemprompt::agent_runs::RunRequest,
 ) -> FarmResult<RunRow> {
+    let new_agent_run = NewAgentRun {
+        id: &new_run.agent_run_id,
+        origin_kind: ORIGIN_KIND,
+        origin_id: new_run.id.as_str(),
+        user_id: credential_user,
+        request,
+        not_before: None,
+        task_id: None,
+        context_id: None,
+    };
     let mut tx = pool.begin().await?;
     AgentRunRepository::insert_run_in_tx(&mut tx, new_agent_run).await?;
     let row = runs::insert_run(&mut *tx, new_run).await?;
@@ -176,4 +227,14 @@ pub async fn cancel(state: &FarmState, run_id: &FarmRunId, user_id: &UserId) -> 
         repo.update_cancel_requested(&run.agent_run_id).await?;
     }
     Ok(flagged)
+}
+
+// Why: agent-farms.yaml, not the farm's Git source, holds the tool policy,
+// so it is read from the composed services tree at each launch.
+async fn farm_tool_policy(state: &FarmState, farm_id: &FarmId) -> FarmResult<FarmToolPolicy> {
+    let doc = read_farms_doc(&state.paths.composed_services_root).await?;
+    Ok(doc
+        .and_then(|doc| doc.farms.into_iter().find(|f| f.id == farm_id.as_str()))
+        .map(|farm| farm.tool_policy)
+        .unwrap_or_default())
 }

@@ -151,7 +151,7 @@ async fn identity_token_refuses_servers_that_did_not_opt_in() {
     live_session(&db.pool, &admin, &credentials.admin_user_id).await;
     let app = App::new(&db.pool, credentials);
 
-    for server in ["atlassian", "systemprompt", "no_such_server"] {
+    for server in ["dynbrain", "systemprompt", "no_such_server"] {
         let (status, body) = app
             .call_with_headers(
                 Call::get(

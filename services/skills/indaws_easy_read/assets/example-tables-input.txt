@@ -1,0 +1,14 @@
+Asunto: Ampliación de licencias Odoo para Talleres Norte
+
+Hola Víctor:
+
+Talleres Norte quiere pasar de 25 a 40 usuarios en Odoo. Hoy pagan la edición Standard a 19,90 € por usuario y mes. Les ofrecemos la edición Custom a 29,90 € por usuario y mes, porque necesitan Studio y la API. La renovación es anual (12 meses).
+
+La implantación de los módulos nuevos son tres bloques: Fabricación 6.700 €, Calidad 2.900 € y Mantenimiento 3.100 €. En total, 12.700 €.
+
+Riesgos que veo: Fabricación ya lo tenemos validado en dos clientes del sector. La migración de Calidad depende de que el cliente entregue el histórico de inspecciones. Mantenimiento no lo hemos implantado nunca en este sector.
+
+Necesito tu visto bueno antes del 20 de octubre para enviar la propuesta.
+
+Gracias,
+Marta

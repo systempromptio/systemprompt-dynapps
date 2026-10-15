@@ -1,0 +1,29 @@
+{{!--
+  Eval history per agent: eval runs, case pass rate and mean judge score over
+  the window, with one sparkline point per day that had a finished eval run.
+  Usage: {{> farm/eval-trends rows=trends caption="…"}} (EvalTrendRowView[]).
+--}}
+{{#> components/table caption=caption modifier="sp-farm-evals__history" table_mode="scroll"}}
+  <thead><tr>
+    <th scope="col">Farm › agent</th>
+    <th class="sp-table__cell--num" scope="col">Eval runs</th>
+    <th class="sp-table__cell--num" scope="col">Pass rate</th>
+    <th scope="col">Pass rate per day</th>
+    <th class="sp-table__cell--num" scope="col">Judge score</th>
+    <th scope="col">Score per day</th>
+    <th class="sp-table__cell--num" scope="col">Cost</th>
+  </tr></thead>
+  <tbody>
+    {{#each rows}}
+    <tr class="sp-table__row">
+      <td><a class="sp-link" href="/admin/farm/{{this.farm_id}}">{{this.farm_id}}</a> › <a class="sp-link" href="{{this.agent_url}}">{{this.agent_id}}</a></td>
+      <td class="sp-table__cell--num" title="{{this.days}} days with eval runs">{{this.runs}}</td>
+      <td class="sp-table__cell--num"><span class="sp-farm-evals__score sp-farm-evals__score--{{this.pass_tone}}">{{this.pass_display}}</span></td>
+      <td class="sp-farm-evals__spark">{{> components/sparkline this.pass_spark}}</td>
+      <td class="sp-table__cell--num"><span class="sp-farm-evals__score sp-farm-evals__score--{{this.score_tone}}">{{this.score_display}}</span></td>
+      <td class="sp-farm-evals__spark">{{> components/sparkline this.score_spark}}</td>
+      <td class="sp-table__cell--num">{{this.cost}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+{{/components/table}}

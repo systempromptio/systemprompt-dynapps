@@ -1,0 +1,13 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_358_21559)">
+<path d="M240 0H0V240H240V0Z" fill="#FF7759"/>
+<g style="mix-blend-mode:multiply" opacity="0.7">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M120 240C186.274 240 240 186.274 240 120C240 53.7258 186.274 0 120 0C53.7258 0 0 53.7258 0 120C0 186.274 53.7258 240 120 240ZM120 160C142.091 160 160 142.091 160 120C160 97.9086 142.091 80 120 80C97.9086 80 80 97.9086 80 120C80 142.091 97.9086 160 120 160Z" fill="#F13C42"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_358_21559">
+<rect width="240" height="240" rx="8" fill="white"/>
+</clipPath>
+</defs>
+</svg>

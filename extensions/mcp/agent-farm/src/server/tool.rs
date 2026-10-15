@@ -47,9 +47,11 @@ async fn run<H: McpToolHandler>(
     ctx: &Dispatch<'_>,
     handler: &H,
 ) -> Result<CallToolResult, McpError> {
-    ctx.executor
-        .execute(handler, ctx.request, ctx.request_context, ctx.client)
-        .await
+    Box::pin(
+        ctx.executor
+            .execute(handler, ctx.request, ctx.request_context, ctx.client),
+    )
+    .await
 }
 
 pub async fn dispatch_tool(
@@ -65,6 +67,7 @@ pub async fn dispatch_tool(
         "run_list" => run(ctx, &typed::RunListHandler { ctx: t }).await,
         "run_facts" => run(ctx, &typed::RunFactsHandler { ctx: t }).await,
         "run_stats" => run(ctx, &typed::RunStatsHandler { ctx: t }).await,
+        "farm_run_report" => run(ctx, &typed::FarmRunReportHandler { ctx: t }).await,
         "farm_evals_run" => run(ctx, &typed::FarmEvalsRunHandler { ctx: t }).await,
         "farm_eval_results" => run(ctx, &typed::FarmEvalResultsHandler { ctx: t }).await,
         "analytics_costs" => run(ctx, &typed::AnalyticsCostsHandler { ctx: t }).await,
@@ -72,6 +75,7 @@ pub async fn dispatch_tool(
         "analytics_skills" => run(ctx, &typed::AnalyticsSkillsHandler { ctx: t }).await,
         "analytics_tools" => run(ctx, &typed::AnalyticsToolsHandler { ctx: t }).await,
         "catalog_list" => run(ctx, &typed::CatalogListHandler { ctx: t }).await,
+        "farm_dashboard" => run(ctx, &typed::FarmDashboardHandler { ctx: t }).await,
         _ => Err(McpError::invalid_params(
             format!(
                 "Unknown tool: '{tool_name}'. This server exposes: {}.",

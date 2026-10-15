@@ -26,7 +26,11 @@ fn every_role_round_trips_through_its_wire_string() {
         );
         assert!(!role.label().is_empty());
     }
-    assert_eq!(Role::ALL.len(), 7);
+    assert_eq!(
+        Role::ALL.len(),
+        8,
+        "odoo_writer replaced odoo_destructive (2026-10-15)"
+    );
 }
 
 #[test]

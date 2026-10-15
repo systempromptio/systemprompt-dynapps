@@ -241,11 +241,11 @@ fn access_included_content_does_not_claim_client_execution() {
                 "workspaces": [{ "name": "India Development", "status": "Allowed", "tone": "ok",
                     "reason": "Allowed through group india-devs", "plugins": [
                         { "name": "Business Analysis", "skills": 16 },
-                        { "name": "Salesforce Core", "skills": 18 }] }],
+                        { "name": "Dynapps Portal", "skills": 18 }] }],
                 "other_workspaces": [
                 { "name": "Platform workspace", "status": "Explicitly denied", "tone": "err", "reason": "Denied through group india-devs" },
                 { "name": "Cowork", "status": "Not assigned", "tone": "muted", "reason": "No matching grant for this workspace" }],
-            "connections": [{ "name": "Atlassian", "permission": "Allowed",
+            "connections": [{ "name": "dynapps-odoo", "permission": "Allowed",
                     "status": "Sign-in required", "tone": "warn", "verified_at": "Not verified", "next_step": "Sign in through the bridge app" }],
                 "device_activity": "2026-09-01 12:00" },
         }),

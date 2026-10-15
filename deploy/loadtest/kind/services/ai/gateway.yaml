@@ -36,7 +36,7 @@ gateway:
           fallbacks:
           - provider: mock-anthropic-eu
   default_provider: mock-anthropic
-  default_model: claude-sonnet-5
+  default_model: claude-sonnet-5-5
   allow_unlisted_models: false
   quota_fault_mode: closed
   auth_scheme: bearer

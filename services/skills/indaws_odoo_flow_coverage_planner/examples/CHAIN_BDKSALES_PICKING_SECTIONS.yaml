@@ -1,0 +1,100 @@
+# Ejemplo CONCRETO y VALIDADO (0 errores) contra odoo-flow-tester/scripts/validate_flow.py
+# CONTRATO EJECUTABLE REAL (validator + examples/*.json), que PREVALECE sobre flow_schema.md:
+#   - claves requeridas: flow_id, flow_name, steps
+#   - version: odoo_version (NO target_version)
+#   - preconditions: LISTA PLANA de busquedas de maestros {model,domain,fields,save_as}
+#   - create/update usan 'values' (NO 'data')
+#   - acciones validas: create, delete, execute, multi_update, return_picking, scrap, search, update
+#     (NO existen atajos confirm/cancel/deliver/invoice/pay -> usar 'execute' + 'method')
+# Cubre una funcionalidad custom de bdk_sales (secciones en pedido + albaran) generada como "gap".
+flow_id: CHAIN_BDKSALES_PICKING_SECTIONS
+flow_name: "Venta con secciones (bdk_sales)"
+description: "Crea pedido con linea de seccion + producto, confirma y detecta el albaran (logica custom de bdk_sales)"
+odoo_version: "19.0"
+environment: staging
+
+data:
+  qty: 3
+  price_unit: 120.0
+
+preconditions:
+  - model: res.partner
+    domain: [["customer_rank", ">", 0]]
+    fields: ["id", "name"]
+    save_as: partner_id
+    min_records: 1
+  - model: product.product
+    domain: [["sale_ok", "=", true], ["is_storable", "=", true]]
+    fields: ["id", "name"]
+    save_as: product_id
+    min_records: 1
+
+steps:
+  - step: 1
+    name: "Crear pedido con seccion + producto"
+    action: create
+    model: sale.order
+    values:
+      partner_id: "{pre.partner_id}"
+      client_order_ref: "{prefix}"
+      order_line:
+        - [0, 0, {display_type: "line_section", name: "Seccion A"}]
+        - [0, 0, {product_id: "{pre.product_id}", product_uom_qty: "{data.qty}", price_unit: "{data.price_unit}"}]
+    save_as: so_id
+    assertions:
+      - field: state
+        expected: "draft"
+
+  - step: 2
+    name: "Confirmar pedido (action_confirm) y detectar albaran"
+    action: execute
+    model: sale.order
+    method: action_confirm
+    ids: ["{result.so_id}"]
+    detect_cascade:
+      model: stock.picking
+      domain:
+        - ["sale_id", "=", "{result.so_id}"]
+        - ["picking_type_code", "=", "outgoing"]
+      save_as: picking_id
+    assertions:
+      - field: state
+        expected: "sale"
+
+  - step: 3
+    name: "Verificar estado del albaran detectado"
+    action: search
+    model: stock.picking
+    domain:
+      - ["sale_id", "=", "{result.so_id}"]
+      - ["picking_type_code", "=", "outgoing"]
+    fields: ["id", "name", "state"]
+    save_as: picking_check
+    assertions:
+      - field: state
+        expected_any: ["confirmed", "assigned", "waiting"]
+
+assertions:
+  - model: sale.order
+    id: "{result.so_id}"
+    field: invoice_status
+    expected: "to invoice"
+    description: "Pedido confirmado pendiente de facturar"
+
+revert:
+  - step: 2
+    action: execute
+    model: sale.order
+    method: action_cancel
+    ids: ["{result.so_id}"]
+    context:
+      disable_cancel_warning: true
+  - step: 1
+    action: delete
+    model: sale.order
+    ids: ["{result.so_id}"]
+
+cleanup:
+  strategy: auto
+  prefix_field_map:
+    sale.order: client_order_ref

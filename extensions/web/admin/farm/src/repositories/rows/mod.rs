@@ -10,9 +10,9 @@ use serde::Serialize;
 use systemprompt::identifiers::{MarketplaceId, PluginId, UserId};
 use systemprompt_web_shared::ProjectId;
 
-use crate::types::{FarmAgentId, FarmId};
+use crate::types::{ClientId, FarmAgentId, FarmId};
 
-pub use eval::{EvalCaseRow, EvalResultRow, EvalRunRow, EvalSuiteRow};
+pub use eval::{EvalCaseRow, EvalDayRow, EvalResultRow, EvalRunRow, EvalSuiteRow};
 pub use run::RunRow;
 
 #[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
@@ -36,8 +36,10 @@ pub struct FarmRow {
     pub project_id: Option<ProjectId>,
     pub owner_user_id: Option<String>,
     pub run_as_user_id: Option<UserId>,
+    pub run_as_mode: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub client_id: Option<ClientId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
@@ -61,6 +63,8 @@ pub struct AgentRow {
     pub body: String,
     pub synced_commit_sha: String,
     pub updated_at: DateTime<Utc>,
+    pub run_as_user_id: Option<UserId>,
+    pub run_as_mode: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]

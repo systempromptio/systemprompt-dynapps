@@ -1,6 +1,6 @@
 //! Pure decisions behind token resolution: whether a request may use the
-//! saved grant at all, and what the grant needs — re-mint, refresh,
-//! verification, re-sealing — before its header is handed out.
+//! saved grant at all, and what the grant needs — refresh, verification,
+//! re-sealing — before its header is handed out.
 //!
 //! A probe (Test connection) is the user asking, so it bypasses the outage
 //! hold and the verified-at gate; a saved OAuth grant is otherwise unusable
@@ -35,7 +35,6 @@ impl Admission {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AccessMode {
     pub probe: bool,
-    pub preauthorize: bool,
 }
 
 impl AccessMode {
@@ -45,7 +44,7 @@ impl AccessMode {
             Admission::Allowed
         } else if outage_hold {
             Admission::OutageHold
-        } else if self.preauthorize || verified {
+        } else if verified {
             Admission::Allowed
         } else {
             Admission::Unverified
@@ -53,8 +52,8 @@ impl AccessMode {
     }
 
     #[must_use]
-    pub const fn verifies(self, reminted: bool) -> bool {
-        self.probe || self.preauthorize || reminted
+    pub const fn verifies(self) -> bool {
+        self.probe
     }
 }
 
@@ -62,16 +61,14 @@ impl AccessMode {
 pub struct TokenPlan {
     pub refresh: bool,
     pub verify: bool,
-    pub reminted: bool,
 }
 
 impl TokenPlan {
     #[must_use]
-    pub fn for_grant(grant: &Grant, mode: AccessMode, reminted: bool, now: i64) -> Self {
+    pub fn for_grant(grant: &Grant, mode: AccessMode, now: i64) -> Self {
         Self {
             refresh: needs_refresh(grant, now),
-            verify: mode.verifies(reminted),
-            reminted,
+            verify: mode.verifies(),
         }
     }
 
@@ -79,11 +76,6 @@ impl TokenPlan {
     pub const fn reseals(self) -> bool {
         self.refresh || self.verify
     }
-}
-
-#[must_use]
-pub fn needs_remint(grant: &Grant, now: i64) -> bool {
-    grant.auth_method == "jwt_bearer" && grant.expires_at <= now
 }
 
 #[must_use]

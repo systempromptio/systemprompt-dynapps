@@ -10,9 +10,10 @@ use std::net::IpAddr;
 use std::sync::Arc;
 
 use axum::Extension;
-use axum::extract::rejection::{FormRejection, QueryRejection};
-use axum::extract::{Form, Query};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::extract::Query;
+use axum::extract::rejection::QueryRejection;
+use axum::http::header::SET_COOKIE;
+use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -23,7 +24,7 @@ use systemprompt::sso::{
     start_response,
 };
 
-use crate::sso::{entra_oidc, entra_saml};
+use crate::sso::entra_oidc;
 
 const LOGIN_PATH: &str = "/admin/login";
 
@@ -73,16 +74,12 @@ impl SsoDeps {
 #[derive(Debug)]
 pub(crate) enum SsoFlowError {
     Refused(&'static str),
-    MetadataNotFound,
-    MetadataUnavailable,
 }
 
 impl IntoResponse for SsoFlowError {
     fn into_response(self) -> Response {
         match self {
             Self::Refused(reason) => login_redirect(reason),
-            Self::MetadataNotFound => StatusCode::NOT_FOUND.into_response(),
-            Self::MetadataUnavailable => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         }
     }
 }
@@ -144,30 +141,33 @@ async fn finish(
             },
         )
         .await;
-    Ok(into_response(outcome))
+    let mut response = into_response(outcome);
+    relax_session_cookie(&mut response);
+    Ok(response)
 }
 
-pub(crate) async fn saml_start(
-    Extension(deps): Extension<SsoDeps>,
-    params: Result<Query<StartParams>, QueryRejection>,
-) -> SsoFlowResult {
-    start(entra_saml::ID, deps, params.ok().map(|Query(p)| p)).await
-}
-
-pub(crate) async fn saml_acs(
-    Extension(deps): Extension<SsoDeps>,
-    headers: HeaderMap,
-    form: Result<Form<Vec<(String, String)>>, FormRejection>,
-) -> SsoFlowResult {
-    let params = form.map(|Form(p)| p).unwrap_or_default();
-    finish(
-        entra_saml::ID,
-        deps,
-        &headers,
-        SsoReturnBinding::Form,
-        params,
-    )
-    .await
+// Why: core 0.68 sets the session cookie `SameSite=Strict`, which Chrome
+// withholds on the redirect chain started by the IdP's cross-site POST/GET
+// back to us, so the first `/admin` arrives without it. Drop once core's
+// `session_cookie_redirect` ships `SameSite=Lax`.
+fn relax_session_cookie(response: &mut Response) {
+    let relaxed: Vec<HeaderValue> = response
+        .headers()
+        .get_all(SET_COOKIE)
+        .iter()
+        .map(|value| match value.to_str() {
+            Ok(text) if text.starts_with("access_token=") => {
+                HeaderValue::from_str(&text.replace("SameSite=Strict", "SameSite=Lax"))
+                    .unwrap_or_else(|_| value.clone())
+            },
+            _ => value.clone(),
+        })
+        .collect();
+    let headers = response.headers_mut();
+    headers.remove(SET_COOKIE);
+    for value in relaxed {
+        headers.append(SET_COOKIE, value);
+    }
 }
 
 pub(crate) async fn oidc_start(
@@ -191,18 +191,4 @@ pub(crate) async fn oidc_callback(
         params,
     )
     .await
-}
-
-pub(crate) async fn saml_metadata(Extension(deps): Extension<SsoDeps>) -> SsoFlowResult {
-    let Some(driver) = deps.driver.as_ref() else {
-        return Err(SsoFlowError::MetadataUnavailable);
-    };
-    match driver.metadata(entra_saml::ID).await {
-        None => Err(SsoFlowError::MetadataNotFound),
-        Some(Ok(doc)) => Ok(([(header::CONTENT_TYPE, doc.content_type)], doc.body).into_response()),
-        Some(Err(err)) => {
-            tracing::warn!(error = %err, "SSO metadata unavailable");
-            Err(SsoFlowError::MetadataUnavailable)
-        },
-    }
 }

@@ -1,0 +1,79 @@
+{
+  "_comment": "Mechanical rules (DASH/MARCA/IDIOMA/REGISTRO/PRESION/EXCL/PASIVA) and voice avoid-list imported from dynapps-voice draft 2026-07-17 (English master SKILL.md).",
+  "acronyms_extra": [],
+  "brochure": [
+    "innovative", "cutting-edge", "market-leading", "leading", "state-of-the-art",
+    "best-of-breed", "world-class", "end-to-end", "end to end", "360 solution",
+    "360º", "turnkey", "best-in-class", "best in class",
+    "synergy", "holistic", "disruptive", "revolutionary", "industry-leading",
+    "comprehensive ecosystem", "powerful and flexible", "tailored to your every need",
+    "the most advanced", "the complete solution", "the definitive", "next-level",
+    "unprecedented", "unique value proposition", "value-add"
+  ],
+  "jargon": [
+    "pipeline", "lead", "leads", "workflow", "backlog", "dashboard", "deadline",
+    "core business", "partner"
+  ],
+  "slop": [
+    "supercharge", "boost", "maximize", "revolutionize", "radically transform",
+    "a wide range of", "a broad array of", "a whole world of", "the fast-paced world of",
+    "beyond expectations", "take it to the next level",
+    "delve", "leverage", "elevate", "tapestry", "testament", "beacon", "synergize",
+    "groundbreaking", "seamless", "cutting-edge", "unlock", "unleash", "empower",
+    "game-changer", "robust solution",
+    "authentic", "genuine", "passionate", "thrilled", "excited to announce",
+    "proud to share", "transformative", "exciting journey"
+  ],
+  "fluff": [
+    "in an increasingly", "in the digital age", "in today's world", "nowadays",
+    "these days", "it's worth noting", "it's worth mentioning", "it's important to note",
+    "it's important to highlight", "it's important to mention", "without a doubt",
+    "in short", "in summary", "in conclusion", "to conclude", "ultimately"
+  ],
+  "stopwords": [
+    "the", "of", "and", "to", "in", "is", "that", "it", "for", "on", "with", "as",
+    "are", "was", "were", "be", "been", "this", "these", "those", "from", "at", "by",
+    "an", "or", "but", "not", "have", "has", "had", "they", "them", "their", "we",
+    "you", "your", "our", "will", "would", "can", "could", "should", "there", "what",
+    "which", "who", "when", "where", "how", "all", "than", "then", "about", "into"
+  ],
+  "leak_denylist": [
+    "por usuario", "análisis funcional", "salida a producción", "incluido", "incluida",
+    "precio cerrado", "puesta en marcha", "presupuesto", "implantación", "formación",
+    "cronograma", "cuota mensual", "cuota anual", "desde el primer día",
+    "equipo funcional", "sesiones de análisis", "alcance del proyecto",
+    "según tus necesidades", "fase de análisis", "a medida de"
+  ],
+  "register": [],
+  "passive_patterns": [
+    "\\b(?:is|are|was|were|be|been|being)\\s+(?:\\w+ly\\s+)?(?:\\w+ed|built|done|made|given|taken|shown|sent|found|known|kept|held|driven|written|chosen|seen|met|paid|left|set|put|sold|told|understood)\\b"
+  ],
+  "pressure": [
+    "last chance", "only until", "limited time", "act now", "don't miss", "dont miss",
+    "hurry", "before it's too late", "before its too late", "offer expires",
+    "limited seats", "final opportunity", "while it lasts", "only a few left"
+  ],
+  "word_charclass": "A-Za-z0-9./-",
+  "messages": {
+    "ok": "✓ brand_lint: no findings. Tone and capitalization OK.",
+    "warn": "⚠️  brand_lint: {n} warning(s) — review before generating:\n",
+    "finding_line": "  [{kind:7}] {path}: «{token}»  {tip}",
+    "tips": {
+      "CAPS": "→ use sentence case (only 1st letter capitalized)",
+      "SLOP": "→ AI filler: say it in plain words (anti-slop rule)",
+      "FLUFF": "→ intro/outro padding: get to the point, no wrap-up",
+      "FOLLETO": "→ delete the brochure adjective (Golden Rule 10)",
+      "RITMO": "→ vary the length: mix short and long sentences",
+      "JERGA": "→ prefer the industry term (see sector_glossary)",
+      "JERGA!": "→ it's in glossary.evitar: replace with the industry term",
+      "DASH": "→ no dashes: use , . ( ) or ->  (en dash only in numeric ranges)",
+      "MARCA": "→ write \"Dynapps\" (capital D; lowercase only in the wordmark)",
+      "IDIOMA": "→ language leak: write in the pack's language",
+      "REGISTRO": "→ wrong register for this market",
+      "PRESION": "→ sales pressure: present urgency as planning transparency",
+      "EXCL": "→ no exclamation marks in body copy (warn)",
+      "PASIVA": "→ possible passive voice: rewrite in active (warn, heuristic)"
+    },
+    "monotony_finding": "{run} consecutive sentences of ~{avg} words"
+  }
+}

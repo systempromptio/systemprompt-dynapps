@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS project_ad_mappings (
 
 CREATE TABLE IF NOT EXISTS user_manual_roles (
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('platform_admin','admin','developer','user','project_manager','knowledge_worker','super_admin')),
+    role TEXT NOT NULL CHECK (role IN ('platform_admin','admin','developer','user','project_manager','knowledge_worker','super_admin','odoo_writer')),
     granted_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     valid_from TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

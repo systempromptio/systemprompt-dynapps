@@ -55,7 +55,6 @@ pub(super) struct IdentityData {
     pub roles: Vec<String>,
     pub adfs_groups: Vec<String>,
     pub identities: Vec<repositories::users::federated::LinkedIdentityRow>,
-    pub salesforce_identities: Vec<systemprompt_web_admin_core::repositories::principal::salesforce_identity::SalesforceIdentity>,
     pub share_token_version: i32,
     pub manual_roles_valid_until: Option<chrono::DateTime<chrono::Utc>>,
 }
@@ -66,10 +65,9 @@ pub(super) async fn load_identity(
     roles: &[String],
     faults: &mut Faults,
 ) -> IdentityData {
-    let (adfs, identities, salesforce, share, until) = tokio::join!(
+    let (adfs, identities, share, until) = tokio::join!(
         systemprompt_web_admin_core::repositories::principal::group_membership::list_source_ad_groups(pool, user_id),
         repositories::users::federated::list_linked_identities(pool, user_id),
-        systemprompt_web_admin_core::repositories::principal::salesforce_identity::list_identities(pool, user_id),
         systemprompt_web_admin_core::repositories::share_token::find_share_token_version(
             pool, user_id
         ),
@@ -79,7 +77,6 @@ pub(super) async fn load_identity(
         roles: roles.to_vec(),
         adfs_groups: faults.take("AD groups", adfs),
         identities: faults.take("federated identities", identities),
-        salesforce_identities: faults.take("Salesforce identities", salesforce),
         share_token_version: faults.take("share token", share).unwrap_or(0),
         manual_roles_valid_until: faults.take("role expiry", until),
     }

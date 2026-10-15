@@ -1,0 +1,56 @@
+{
+  "odoo_url": "https://portal.dynapps.es",
+  "odoo_db": "master",
+  "impl_template_name": "Implantación Value Based",
+  "impl_template_id": 15,
+  "cases_base_url": "https://www.dynapps.es/es/cases",
+  "_cases_base_url_note": "Páginas de casos en español en dynapps.es/es/cases (verificado HTTP 200, 2026-07). match_cases compone url = cases_base_url + slug.",
+  "industries": {
+    "construction": "Construcción",
+    "manufacturing": "Fabricación",
+    "food-beverage": "Alimentación y bebidas",
+    "pharma-biotech": "Farmacia y biotecnología",
+    "laboratories": "Laboratorios",
+    "logistics": "Logística",
+    "retail-wholesale": "Venta al por menor y al por mayor",
+    "professional-services": "Servicios profesionales",
+    "financial-services": "Servicios financieros",
+    "energy-utilities": "Energía y servicios públicos"
+  },
+  "_industries_note": "Etiquetas EXACTAS de la taxonomía de industrias de dynapps.es (nav + badges de casos, verificado en vivo 2026-07-17). Ids canónicos en shared/industries.json. Las tarjetas de referencia deben mostrar la etiqueta tal cual — nunca traducir/parafrasear.",
+  "sales_url_pattern": "{odoo_url}/odoo/sales/{id}",
+  "team_email_domain": "dynapps.es",
+  "core_module_label": "Dynapps Core",
+  "core_module_set_exists": true,
+  "contact": {
+    "email": "info@dynapps.es",
+    "web": "www.dynapps.es",
+    "tel": "960 202 942"
+  },
+  "odoo_partner_manager": {
+    "source": "verify_from_odoo",
+    "name": "Micaela Gil Rother",
+    "email": "migi@odoo.com"
+  },
+  "legal_entity": {
+    "name": "DYNAPPS BUSINESS SOLUTIONS, S.L.",
+    "vat": "<ES VAT — verify_from_odoo>",
+    "address": "<registered address — verify_from_odoo>",
+    "governing_law": "España"
+  },
+  "offices": [
+    "Bélgica",
+    "Países Bajos",
+    "Francia",
+    "Suiza",
+    "España"
+  ],
+  "local_country": "España",
+  "credibility": {
+    "implementations": 900,
+    "claims_text": "Partner de Odoo a nivel mundial",
+    "experts": 280,
+    "countries": 52,
+    "iso27001": false
+  }
+}

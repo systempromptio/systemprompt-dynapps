@@ -17,6 +17,7 @@ members = [
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",
+    "extensions/cli/farm-worker",
     "extensions/secrets/onepassword",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
@@ -38,7 +39,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.67.0"
+version = "0.69.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -48,9 +49,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.67.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.67.0" }
-systemprompt-extension = { version = "0.67.0" }
+systemprompt = { version = "0.69.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.69.0" }
+systemprompt-extension = { version = "0.69.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -107,6 +108,7 @@ chacha20poly1305 = "0.10"
 schemars = { version = "1.2", features = ["derive"] }
 inventory = "0.3"
 walkdir = "2.0"
+nix = { version = "0.31", default-features = false, features = ["user"] }
 tempfile = "3.0"
 zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
 url = "2.5"
@@ -117,7 +119,6 @@ rand = "0.9"
 sha2 = "0.10"
 flate2 = "1.1"
 futures-util = "0.3"
-saml = { version = "0.0.1-alpha.2", default-features = false, features = ["rsa-sha", "xmlenc"] }
 hex = "0.4"
 # RS256 signing for the Salesforce RFC 7523 JWT-bearer assertion.
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }

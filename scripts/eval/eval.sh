@@ -12,7 +12,7 @@
 # and its proxy running. Docs: /documentation/analysis-evaluate-plugins.
 set -euo pipefail
 
-cmd=${1:?run|export|metrics}; label=${2:?label}; plugin=${3:-dynapps-salesforce}
+cmd=${1:?run|export|metrics}; label=${2:?label}; plugin=${3:-dynapps-super-admin}
 here=$(cd "$(dirname "$0")" && pwd); root=$(cd "$here/../.." && pwd)
 WIN_HOME=${WIN_HOME:-/mnt/c/Users/ejb50}
 GATEWAY=${GATEWAY:-https://dynapps.systemprompt.io}

@@ -71,8 +71,8 @@ fn an_ascending_active_column_reports_ascending() {
 // operator is looking at, which is the one thing a sort must never do.
 #[test]
 fn sort_links_carry_the_active_filter() {
-    let headers = sort_headers("/admin/mcp", &columns(), "calls", "desc", "q=jira");
-    assert!(headers[0].url.starts_with("/admin/mcp?q=jira&sort="));
+    let headers = sort_headers("/admin/mcp", &columns(), "calls", "desc", "q=odoo");
+    assert!(headers[0].url.starts_with("/admin/mcp?q=odoo&sort="));
 }
 
 #[test]
@@ -83,9 +83,9 @@ fn preserved_search_encodes_and_omits_the_empty_filter() {
 
 #[test]
 fn the_filter_is_case_insensitive_and_matches_any_field() {
-    assert!(matches(&["google-workspace", "Atlassian search"], "ATLAS"));
-    assert!(matches(&["jira"], ""));
-    assert!(!matches(&["jira", "issues"], "confluence"));
+    assert!(matches(&["google-workspace", "DynBrain search"], "DYNB"));
+    assert!(matches(&["odoo"], ""));
+    assert!(!matches(&["odoo", "issues"], "dynbrain"));
 }
 
 // Why: the declaration decides the first two answers before the heartbeat is

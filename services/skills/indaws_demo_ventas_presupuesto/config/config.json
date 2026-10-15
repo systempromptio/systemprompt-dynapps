@@ -1,0 +1,65 @@
+{
+  "_doc": "Configuracion del skill de generacion de presupuestos para proyectos de ingenieria tecnica.",
+  "company": {
+    "name": "Lumina Ingeniería",
+    "legal_name": "Lumina Ingeniería S.L.",
+    "vat": "B99999999",
+    "address": "Avenida de Aragón, 30 · 46021 Valencia",
+    "phone": "+34 963 000 000",
+    "email": "comercial@lumina-ingenieria.es",
+    "website": "www.lumina-ingenieria.es"
+  },
+  "financial": {
+    "iva_rate": 21,
+    "payment_terms": "30% a la firma · 40% a la entrega del diseño · 30% tras puesta en marcha",
+    "validity_days": 30,
+    "currency": "EUR"
+  },
+  "phases_default": [
+    {
+      "code": "F1",
+      "name": "Auditoría e ingeniería preliminar",
+      "pct": 12,
+      "weeks": 2,
+      "deliverables": [
+        "Diagnóstico técnico in situ",
+        "Toma de medidas y levantamiento",
+        "Documento de requisitos validado"
+      ]
+    },
+    {
+      "code": "F2",
+      "name": "Diseño y especificación técnica",
+      "pct": 18,
+      "weeks": 3,
+      "deliverables": [
+        "Anteproyecto y planos",
+        "Memoria técnica",
+        "Lista de materiales (BOM)"
+      ]
+    },
+    {
+      "code": "F3",
+      "name": "Instalación y configuración",
+      "pct": 55,
+      "weeks": 6,
+      "deliverables": [
+        "Suministro e instalación de equipos",
+        "Integración con sistemas existentes",
+        "Pruebas FAT y SAT"
+      ]
+    },
+    {
+      "code": "F4",
+      "name": "Puesta en marcha y formación",
+      "pct": 15,
+      "weeks": 2,
+      "deliverables": [
+        "Arranque asistido",
+        "Formación al personal operativo",
+        "Documentación de usuario y garantía 12 meses"
+      ]
+    }
+  ],
+  "pdf_output_dir": "output"
+}

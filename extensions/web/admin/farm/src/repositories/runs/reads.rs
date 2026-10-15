@@ -9,7 +9,7 @@ use systemprompt::identifiers::{AgentRunId, ContextId, UserId};
 
 use crate::repositories::filters::{PageWindow, RunFilter, RunSort};
 use crate::repositories::rows::RunRow;
-use crate::types::{FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia};
+use crate::types::{ClientId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia};
 
 pub async fn find_run(pool: &PgPool, id: &FarmRunId) -> Result<Option<RunRow>, sqlx::Error> {
     sqlx::query_file_as!(RunRow, "src/repositories/runs/find_run.sql", id.as_str())

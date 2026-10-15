@@ -55,6 +55,24 @@
           </tbody>
         {{/components/table}}
       </section>
+
+      <section class="sp-farm-evals__section" aria-labelledby="farm-evals-history-title">
+        <h2 class="sp-farm-evals__title" id="farm-evals-history-title">History per agent</h2>
+        <p class="sp-farm-evals__lede">Every eval run in the window, folded per agent per day: how many cases passed and what the judge scored. Each point is one day with a finished eval run.</p>
+        {{#if history_rows}}
+        {{> farm/eval-trends rows=history_rows caption="Eval history per agent"}}
+        {{else}}
+        {{> components/empty-state heading="No finished eval runs" message="Run a suite, or launch a run with an eval case, to start the history."}}
+        {{/if}}
+      </section>
+
+      {{#if recent_runs}}
+      <section class="sp-farm-evals__section" aria-labelledby="farm-evals-recent-title">
+        <h2 class="sp-farm-evals__title" id="farm-evals-recent-title">Recent eval runs</h2>
+        <p class="sp-farm-evals__lede">Open one for every case's assertions and the judge's rationale.</p>
+        {{> farm/eval-runs-recent rows=recent_runs caption="Recent eval runs"}}
+      </section>
+      {{/if}}
       {{else}}
       {{> components/empty-state heading="No eval suites yet" message="Eval suites are synced from each agent's eval file. Sync a farm to bring its suites in."}}
       {{/if}}

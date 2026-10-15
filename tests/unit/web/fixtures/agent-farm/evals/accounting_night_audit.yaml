@@ -1,0 +1,52 @@
+schema: 1
+agent: accounting_night_audit
+cases:
+  - id: nightly_previous_month
+    timeout_secs: 1800
+    assertions:
+      # The dated report's name is not fixed, so DELIVERY.md names it and the
+      # e2e harness (dynapps demo/agent-farm/30-assert.sh) re-checks the file.
+      - type: file_exists
+        path: out/dashboard.md
+      - type: file_exists
+        path: out/DELIVERY.md
+      - type: regex
+        path: out/DELIVERY.md
+        pattern: "(?m)^status: completed$"
+      - type: regex
+        path: out/DELIVERY.md
+        pattern: "(?m)^report_file: informe_auditoria_Dynapps_20[0-9]{2}_(0[1-9]|1[0-2])\\.md$"
+      - type: regex
+        path: out/DELIVERY.md
+        pattern: "(?m)^sections: 11$"
+      # Zero writes on dynapps-odoo: the allowlist holds only its read tools,
+      # so any write attempt fails this assertion.
+      - type: no_tool_outside_allowlist
+      - type: regex
+        path: out/DELIVERY.md
+        pattern: "(?m)^odoo_write_calls: 0$"
+      - type: regex
+        path: out/DELIVERY.md
+        pattern: "(?m)^dynbrain_status: published$"
+      - type: regex
+        path: out/DELIVERY.md
+        pattern: "(?m)^dynbrain_article_id: [0-9]+$"
+      - type: max_turns
+        value: 40
+      - type: max_cost_usd
+        value: 8.0
+    judge_rubric: |
+      Score 0-100. You see the transcript of an unattended accounting audit,
+      including the Write of out/DELIVERY.md and every dynapps-odoo and
+      dynbrain tool call. 30 points: status completed with a concrete period of
+      one whole previous month, database master and company_id 1. 20 points:
+      a score 0-100 with a classification consistent with it (90-100
+      Excelente, 75-89 Bueno, 50-74 Necesita atención, 25-49 Deficiente,
+      0-24 Crítico). 20 points: report_file follows
+      informe_auditoria_Dynapps_YYYY_MM.md and matches the period. 30 points:
+      dynbrain_status published with a numeric article id and a title naming
+      the period, confirmed by a docs_create result in the transcript. Score 0
+      if any dynapps-odoo tool other than a read (whoami, orm_search_read,
+      odoo_list_models, odoo_describe_model, odoo_get_selection,
+      odoo_aggregate, odoo_resolve) was called or attempted.
+    judge_threshold: 70

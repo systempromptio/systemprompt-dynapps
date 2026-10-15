@@ -73,14 +73,14 @@ What the secret and PII scanners detect on the gateway is covered in
 ## The MCP server registry
 
 Each server is one YAML file under `services/mcp/`. This instance declares
-five:
+four:
 
 | Server | What it reaches |
 |---|---|
 | `systemprompt` | this platform's admin CLI. It cannot be removed and is admin-only |
-| `atlassian` | Jira and Confluence, under each person's own Atlassian account |
-| `salesforce` | Salesforce's hosted MCP, authenticated as the signed-in person |
-| `sfcore_dev` | the SFCore team's development-workflow server, called with a short-lived token this instance signs |
+| `agent-farm` | the agent farm's run server: launch, inspect and cost farm runs |
+| `dynapps-odoo` | the Dynapps portal's hosted Odoo server, as each person's own portal account |
+| `dynbrain` | the Dynapps portal's hosted DynBrain documentation server, as each person's own portal account |
 
 Each server declares:
 
@@ -163,7 +163,7 @@ skills.
 
 - `/admin/governance`: the **Decisions** tab lists each chain stage's rows;
   under warn they are all `warn`.
-- `/admin/mcp`: the five servers, each with its entitlement.
+- `/admin/mcp`: the four servers, each with its entitlement.
 - `/admin/analysis/versions`: marketplace versions by hash, with history and
   compare.
 - `systemprompt infra logs governance report --since 7d --group-by policy`

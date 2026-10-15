@@ -37,7 +37,7 @@ async fn seed(pool: &sqlx::PgPool) -> Scenario {
     insert_request(pool, &seed).await;
 
     let mut seed = RequestSeed::new("r-heavy-2", &heavy, at(2001, 3, 6, 9));
-    seed.model = Some("claude-opus-4-5-20251101");
+    seed.model = Some("claude-opus-5-5");
     seed.input_tokens = 500;
     seed.output_tokens = 100;
     seed.status = "failed";
@@ -159,7 +159,7 @@ async fn list_customer_month_models_groups_by_provider_and_model() {
     assert!(rows.iter().all(|r| r.provider == "anthropic"));
     let sonnet = rows
         .iter()
-        .find(|r| r.model == "claude-sonnet-4-5-20250929")
+        .find(|r| r.model == "claude-sonnet-5-5")
         .expect("sonnet row");
     assert_eq!(sonnet.requests, 2, "both members used the default model");
     assert_eq!(sonnet.cache_read_tokens, 50);

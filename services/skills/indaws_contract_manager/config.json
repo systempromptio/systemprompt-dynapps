@@ -1,0 +1,49 @@
+{
+  "company": {
+    "legal_name": "Dynapps Business Solutions S.L.",
+    "vat": "ESB98619075"
+  },
+  "output_dir": "~/contratos_generados",
+  "templates_dir": "~/Library/CloudStorage/OneDrive-DynappsNV/Contratos Indaws",
+  "dates": {
+    "contract_date": "today",
+    "efectos_date": "order_date"
+  },
+  "payment": {
+    "fecha_pago_offset_days": 7,
+    "milestone_amount_field": "x_studio_price",
+    "transfer": {
+      "iban": "ES49 0049 4302 8320 1002 2588",
+      "bank": "Banco Santander (BSCHESMMXXX)"
+    }
+  },
+  "sign": {
+    "signature_role": "Customer",
+    "dynapps_signer_partner_email": "julio.pons@dynapps.es",
+    "archive_backing_template": true,
+    "auto_send": false
+  },
+  "contract_types": {
+    "marco": {
+      "label": "Contrato Marco (implantación)",
+      "template": "Contrato_Marco_Dynapps_v4_IA.docx",
+      "has_payment_table": true,
+      "signature": { "anchor": "Firma:", "dy": 0.006, "page_anchor": "Nombre: Julio Pons", "posX": 0.141, "posY": 0.475, "width": 0.20, "height": 0.05 },
+      "validated": true
+    },
+    "mantenimiento": {
+      "label": "Contrato de Mantenimiento y Servicios (Anexo 2)",
+      "template": "Contrato_MyS_Standard_Dynapps_PXXXXX.docx",
+      "has_payment_table": false,
+      "signature": { "anchor": "Firma:", "dy": 0.006, "page_anchor": "Nombre: Julio Pons", "posX": 0.120, "posY": 0.500, "width": 0.20, "height": 0.05 },
+      "validated": false
+    },
+    "hosting": {
+      "label": "Contrato de Hosting (Anexo 3)",
+      "template": "Contrato_Hosting_Dynapps_PXXXXX.docx",
+      "has_payment_table": false,
+      "signature": { "anchor": "Firma:", "dy": 0.006, "page_anchor": "Nombre: Julio Pons", "posX": 0.120, "posY": 0.500, "width": 0.20, "height": 0.05 },
+      "validated": false
+    }
+  }
+}

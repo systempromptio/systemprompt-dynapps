@@ -55,7 +55,7 @@ Every plane meets the same rule at boot, in the order groups → access control 
 
 Before the planes run, boot makes the `gateway_route` catalog equal the routes the profile dispatches: it inserts unseen routes with the default `rules.yaml` declares and deletes stale ones, but never rewrites an existing row's `default_included` — that column belongs to the access-control plane, and `scripts/check-plane-ownership.sh` refuses any other plane that writes it.
 
-**People are never declared in code.** Group and project membership, manually granted roles and per-person access overrides live only in the database and the directory; no plane declares them, no drift row names them and no export carries them. The role set itself is closed in code, and the directory → role map is sign-in configuration (`web/config/adfs.yaml`), not a projection.
+**People are never declared in code.** Group and project membership, manually granted roles and per-person access overrides live only in the database and the directory; no plane declares them, no drift row names them and no export carries them. The role set itself is closed in code, and the directory → role map is sign-in configuration (`web/config/entra-oidc.yaml`), not a projection.
 
 `gateway_policies` is the one plane the console edits in place: a save at `/admin/gateway/policies` is enforced on the next request, and shows here as drift until it is exported and committed or overwritten from code. `/admin/governance/quotas` reads the same table's windows against `ai_quota_buckets` to show usage per subject against each ceiling.
 

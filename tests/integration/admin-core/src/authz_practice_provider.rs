@@ -39,7 +39,7 @@ async fn the_primary_projects_practice_leads_and_projects_without_one_add_nothin
         insert_project_member(&db.pool, project, &user, "manual").await;
     }
     set_practice(&db.pool, first.as_str(), "Commerce").await;
-    set_practice(&db.pool, primary.as_str(), "Salesforce").await;
+    set_practice(&db.pool, primary.as_str(), "Odoo").await;
     set_scope_defaults(&db.pool, &user, None, Some(&primary))
         .await
         .expect("set defaults");
@@ -49,7 +49,7 @@ async fn the_primary_projects_practice_leads_and_projects_without_one_add_nothin
     assert_eq!(practice_rule_type().as_str(), "practice");
     assert_eq!(
         provider.values_for(&user).await.expect("practice lookup"),
-        vec!["Salesforce".to_owned(), "Commerce".to_owned()]
+        vec!["Odoo".to_owned(), "Commerce".to_owned()]
     );
     db.cleanup().await;
 }

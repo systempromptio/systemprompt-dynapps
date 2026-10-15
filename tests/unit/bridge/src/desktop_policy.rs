@@ -96,7 +96,7 @@ fn public_web_access_is_explicit_and_tools_are_available() {
 fn deferred_tools_and_server_web_history_survive_anthropic_rebuilds() {
     let tools = json!([
         {"type":"tool_search_tool_regex_20251119","name":"tool_search_tool_regex"},
-        {"name":"salesforce_query","description":"CRM query","defer_loading":true,"input_schema":{"type":"object"}},
+        {"name":"odoo_query","description":"CRM query","defer_loading":true,"input_schema":{"type":"object"}},
         {"type":"web_search_20250305","name":"web_search","max_uses":3}
     ]);
     let messages = json!([
@@ -105,14 +105,14 @@ fn deferred_tools_and_server_web_history_survive_anthropic_rebuilds() {
             {"type":"server_tool_use","id":"srvtoolu_search","name":"web_search","input":{"query":"example news"}},
             {"type":"web_search_tool_result","tool_use_id":"srvtoolu_search","content":[{"type":"web_search_result","url":"https://example.com/news","title":"News","encrypted_content":"opaque"}]}
         ]},
-        {"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_lookup","content":[{"type":"tool_reference","tool_name":"salesforce_query"}]}]}
+        {"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_lookup","content":[{"type":"tool_reference","tool_name":"odoo_query"}]}]}
     ]);
     let request = systemprompt_gateway::protocol::inbound::anthropic_messages::parse::parse(
-        &json!({"model":"claude-sonnet-5","max_tokens":128,"tools":tools,"messages":messages}),
+        &json!({"model":"claude-sonnet-5-5","max_tokens":128,"tools":tools,"messages":messages}),
     )
     .unwrap();
     let rebuilt =
-        systemprompt_wire::anthropic::build_request_body(&request, "claude-sonnet-5", None);
+        systemprompt_wire::anthropic::build_request_body(&request, "claude-sonnet-5-5", None);
     assert_eq!(rebuilt["tools"], tools);
     assert_eq!(rebuilt["messages"][1], messages[1]);
     assert_eq!(
@@ -161,12 +161,15 @@ fn telemetry_keeps_metadata_and_drops_content_and_credentials() {
         ..Default::default()
     };
     let sanitized = systemprompt_api::routes::gateway::otel::convert::attrs_to_json(&[
-        attribute("gen_ai.request.model", "claude-sonnet-5"),
+        attribute("gen_ai.request.model", "claude-sonnet-5-5"),
         attribute("gen_ai.prompt", "private prompt"),
         attribute("http.request.header.authorization", "Bearer secret"),
         attribute("gen_ai.response.model", "sk-secret"),
     ]);
-    assert_eq!(sanitized, json!({"gen_ai.request.model":"claude-sonnet-5"}));
+    assert_eq!(
+        sanitized,
+        json!({"gen_ai.request.model":"claude-sonnet-5-5"})
+    );
 }
 
 #[test]
@@ -194,11 +197,11 @@ fn native_tool_route_does_not_capture_ordinary_inference() {
         serde_json::from_value(json!({"tool_names_any":["web_search","tool_search_tool_regex"]}))
             .unwrap();
     let ordinary = systemprompt_gateway::protocol::inbound::anthropic_messages::parse::parse(
-        &json!({"model":"claude-sonnet-5","max_tokens":16,"messages":[{"role":"user","content":"Hi"}]})
+        &json!({"model":"claude-sonnet-5-5","max_tokens":16,"messages":[{"role":"user","content":"Hi"}]})
     ).unwrap();
     assert!(!condition.matches_request(&ordinary));
     let searched = systemprompt_gateway::protocol::inbound::anthropic_messages::parse::parse(
-        &json!({"model":"claude-sonnet-5","max_tokens":16,"messages":[{"role":"user","content":"Hi"}],"tools":[{"type":"web_search_20250305","name":"web_search"}]})
+        &json!({"model":"claude-sonnet-5-5","max_tokens":16,"messages":[{"role":"user","content":"Hi"}],"tools":[{"type":"web_search_20250305","name":"web_search"}]})
     ).unwrap();
     assert!(condition.matches_request(&searched));
 }
@@ -224,7 +227,7 @@ async fn large_inference_body_is_accepted_and_oversize_is_reported_as_bytes() {
         ))
     };
     let text = "x".repeat(9 * 1024 * 1024);
-    let body = serde_json::to_vec(&json!({"model":"claude-sonnet-5","max_tokens":16,"messages":[{"role":"user","content":text}]})).unwrap();
+    let body = serde_json::to_vec(&json!({"model":"claude-sonnet-5-5","max_tokens":16,"messages":[{"role":"user","content":text}]})).unwrap();
     let (_, parsed) = read_gateway_body(&adapter, Request::new(Body::from(body)), &mut partial())
         .await
         .unwrap();

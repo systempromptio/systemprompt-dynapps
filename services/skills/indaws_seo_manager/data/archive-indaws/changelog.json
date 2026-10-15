@@ -1,0 +1,209 @@
+[
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "helpdesk.team",
+    "id": 1,
+    "field": "website_meta_description",
+    "before": null,
+    "after": "Soporte técnico Odoo de Indaws. Abre tu ticket y recibe ayuda experta de nuestro equipo de consultores certificados. Respuesta en menos de 24h."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 622,
+    "field": "website_meta_description",
+    "before": "",
+    "after": "Odoo para construcción. Gestiona obras, subcontratas, presupuestos y certificaciones con un ERP especializado. Descubre la solución de Indaws."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 32,
+    "field": "website_meta_description",
+    "before": "Odoo Demo ➕ Descubre el funcionamiento...",
+    "after": "Solicita una demo gratuita de Odoo. Te mostramos en directo cómo el ERP puede transformar la gestión de tu empresa. Sin compromiso."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 517,
+    "field": "website_meta_description",
+    "before": null,
+    "after": "Formación Odoo online y presencial. Cursos para usuarios, consultores y desarrolladores. Aprende con los expertos de Indaws Academy."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 69,
+    "field": "website_meta_description",
+    "before": "Odoo Contabilidad ➕ (error copy-paste)",
+    "after": "Casos de éxito reales de empresas que han transformado su gestión con Odoo e Indaws. Descubre resultados en distintos sectores."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 666,
+    "field": "website_meta_description",
+    "before": null,
+    "after": "Indy, el chatbot inteligente de Indaws. Resuelve tus dudas sobre Odoo al instante con asistencia automatizada 24/7."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 721,
+    "field": "website_meta_description",
+    "before": null,
+    "after": "IndawsCore: módulos propios desarrollados por Indaws para potenciar Odoo. Funcionalidades exclusivas para empresas españolas."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 656,
+    "field": "website_meta_description",
+    "before": "",
+    "after": "Partners tecnológicos de Indaws. Conoce nuestro ecosistema de colaboradores y alianzas para ofrecer soluciones integrales con Odoo."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "slide.channel",
+    "id": 35,
+    "field": "website_meta_description",
+    "before": null,
+    "after": "Curso completo de Odoo v18 gratis. Aprende a gestionar tu empresa paso a paso: CRM, ventas, compras, inventario y contabilidad."
+  },
+  {
+    "date": "2026-02-02T09:37:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 420,
+    "field": "website_meta_description",
+    "before": null,
+    "after": "Blog de Indaws: guías, tutoriales y novedades sobre Odoo. Aprende a sacar el máximo partido al ERP con artículos de expertos."
+  },
+  {
+    "date": "2026-02-02T09:38:00Z",
+    "batch": "Lote 1",
+    "model": "website.page",
+    "id": 463,
+    "action": "unpublished",
+    "reason": "Duplicate of page 32 (/demo-odoo)"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.rewrite",
+    "id": 92,
+    "action": "created",
+    "redirect": "301",
+    "url_from": "/partners",
+    "url_to": "/partners-indaws"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.page",
+    "id": 517,
+    "field": "website_meta_title",
+    "before": "formacion",
+    "after": "Formación Odoo Online y Presencial | Indaws Academy"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.page",
+    "id": 666,
+    "field": "website_meta_title",
+    "before": "CHATBOT INDY",
+    "after": "Chatbot Odoo Inteligente: Indy | Indaws"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.page",
+    "id": 721,
+    "field": "website_meta_title",
+    "before": "indawscore",
+    "after": "IndawsCore: Módulos Propios para Odoo | Indaws"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.page",
+    "id": 656,
+    "field": "website_meta_title",
+    "before": "Partners INDAWS",
+    "after": "Partners Tecnológicos de Odoo | Indaws"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.page",
+    "id": 622,
+    "field": "website_meta_title",
+    "before": "Construcción Odoo",
+    "after": "Odoo para Construcción: ERP Especializado | Indaws"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.page",
+    "id": 420,
+    "field": "website_meta_title",
+    "before": "BLOG",
+    "after": "Blog Odoo: Guías, Tutoriales y Novedades | Indaws"
+  },
+  {
+    "date": "2026-02-02T09:43:00Z",
+    "batch": "Lote 2",
+    "model": "website.page",
+    "id": 69,
+    "field": "website_meta_title",
+    "before": null,
+    "after": "Casos de Éxito con Odoo en España | Indaws"
+  },
+  {
+    "date": "2026-02-02T19:41:05.714883Z",
+    "batch": "SEO Fix 1",
+    "model": "website.page",
+    "id": 79,
+    "field": "website_meta_title",
+    "before": "inDAWS - Especialistas en Odoo",
+    "after": "¿Qué es Odoo? El ERP Open Source que Usan 12M de Usuarios | Indaws"
+  },
+  {
+    "date": "2026-02-02T19:41:05.714883Z",
+    "batch": "SEO Fix 1",
+    "model": "website.page",
+    "id": 79,
+    "field": "website_meta_description",
+    "before": "Partners oficiales de Odoo...",
+    "after": "Odoo es el ERP modular más usado del mundo. Descubre qué es, qué incluye, cuánto vale y si encaja con tu empresa. Guía actualizada 2026."
+  },
+  {
+    "date": "2026-02-02T19:41:05.714883Z",
+    "batch": "SEO Fix 2",
+    "model": "website.page",
+    "id": 452,
+    "field": "is_published",
+    "before": true,
+    "after": false
+  },
+  {
+    "date": "2026-02-02T19:41:05.714883Z",
+    "batch": "SEO Fix 2",
+    "model": "website.page",
+    "id": 609,
+    "field": "is_published",
+    "before": true,
+    "after": false
+  }
+]

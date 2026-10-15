@@ -20,14 +20,18 @@ use systemprompt::prelude::PgPool;
 use systemprompt::traits::{JobContext, RunnerService};
 use systemprompt_web_admin_core::ssr::viewer_tz::with_viewer_tz;
 use systemprompt_web_admin_farm::routes::public::agent_farm_public_routes;
+use systemprompt_web_admin_farm::routes::worker::agent_farm_worker_routes;
+use systemprompt_web_admin_farm::services::farm_sync::boot::sync_missing_checkouts;
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
+use systemprompt_web_admin_farm::services::runner::report::backfill_missing_reports;
 use systemprompt_web_admin_farm::state::{FarmState, build_farm_state_from_app};
 use tokio_util::sync::CancellationToken;
 
 use super::admin;
 
 pub(crate) const FARM_PUBLIC_PREFIX: &str = "/agent-farm";
+pub(crate) const FARM_WORKER_PREFIX: &str = "/agent-farm-worker";
 
 pub fn farm_public_router(read_pool: Arc<PgPool>, state: Arc<FarmState>) -> Router {
     agent_farm_public_routes()
@@ -39,6 +43,10 @@ pub fn farm_public_router(read_pool: Arc<PgPool>, state: Arc<FarmState>) -> Rout
             read_pool,
             farm_context_middleware,
         ))
+}
+
+pub(crate) fn farm_worker_router() -> Router {
+    agent_farm_worker_routes()
 }
 
 async fn farm_context_middleware(
@@ -64,12 +72,18 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
         || state.paths.composed_services_root.clone(),
         |paths| paths.system().services().to_path_buf(),
     );
-    let pool = Arc::clone(&state.pool);
+    let state = Arc::clone(state);
     tokio::spawn(async move {
-        match seed_farms_from_yaml(&pool, &services).await {
+        match seed_farms_from_yaml(&state.pool, &services).await {
             Ok(count) => tracing::info!(farms = count, "agent farms seeded"),
             Err(e) => tracing::error!(error = %e, "agent farm seed failed"),
         }
+        let restored = sync_missing_checkouts(&state).await;
+        tracing::info!(farms = restored, "agent farm checkouts restored");
+        let reported = backfill_missing_reports(&state.pool).await;
+        tracing::info!(runs = reported, "missing farm run reports backfilled");
+        let resumed = systemprompt_web_admin_farm::services::evals::resume_eval_runs(&state).await;
+        tracing::info!(eval_runs = resumed, "interrupted eval runs resumed");
     });
 }
 

@@ -1,0 +1,32 @@
+<title>Skill eval · odoo-traceback-doctor</title>
+<style>
+:root{--bg:#F5F5FA;--surf:#fff;--ink:#050543;--soft:#3b3b63;--mut:#7c7a93;--bd:#e4e3ec;
+--ok:#3BB273;--warn:#FF911F;--bad:#F13C42;--violet:#951CF3;--chip:#f2f1f8;}
+@media(prefers-color-scheme:dark){:root{--bg:#04041c;--surf:#0b0b33;--ink:#f5f5fa;--soft:#cfcede;--mut:#8b89a6;--bd:#22225c;--chip:#16164a;}}
+:root[data-theme=dark]{--bg:#04041c;--surf:#0b0b33;--ink:#f5f5fa;--soft:#cfcede;--mut:#8b89a6;--bd:#22225c;--chip:#16164a;}
+:root[data-theme=light]{--bg:#F5F5FA;--surf:#fff;--ink:#050543;--soft:#3b3b63;--mut:#7c7a93;--bd:#e4e3ec;--chip:#f2f1f8;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;overflow-x:hidden}
+.wrap{max-width:980px;margin:0 auto;padding:28px 22px 60px}
+h1{font-size:21px;margin:0 0 2px}.sub{color:var(--mut);font-size:13px;margin-bottom:22px}
+.sub code{font-family:ui-monospace,monospace;color:var(--violet)}
+.tiles{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:26px}
+.tile{background:var(--surf);border:1px solid var(--bd);border-radius:13px;padding:16px 20px;min-width:130px}
+.tile .n{font-size:26px;font-weight:700}.tile .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut)}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);margin:26px 0 10px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surf);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{background:var(--chip);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}
+td.q{color:var(--soft)}td.sk{font-family:ui-monospace,monospace;color:var(--violet)}
+.tw{overflow-x:auto}
+.bars{display:flex;flex-direction:column;gap:7px}
+.brow{display:flex;align-items:center;gap:10px;font-size:13px}
+.brow .lab{font-family:ui-monospace,monospace;min-width:190px;color:var(--soft)}
+.brow .track{flex:1;height:14px;background:var(--chip);border-radius:99px;overflow:hidden}
+.brow .track span{display:block;height:100%;background:var(--bad)}
+.brow .v{font-variant-numeric:tabular-nums;color:var(--mut);min-width:34px;text-align:right}
+.pass{color:var(--ok)}.fail{color:var(--bad)}
+.desc{background:var(--surf);border:1px solid var(--bd);border-left:4px solid var(--ok);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.55}
+.best{border-left-color:var(--ok)}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;background:var(--chip);color:var(--soft);font-family:ui-monospace,monospace}
+</style>
+<div class="wrap"><h1>Optimización de description</h1><div class="sub"><code>odoo-traceback-doctor</code></div><div class="tiles"><div class="tile"><div class="n">2/4</div><div class="l">Mejor test</div></div><div class="tile"><div class="n">2/4</div><div class="l">Mejor train</div></div><div class="tile"><div class="n">3</div><div class="l">Iteraciones</div></div><div class="tile"><div class="n">max_iters</div><div class="l">Salida</div></div></div><h2>Trayectoria (★ mejor por test)</h2><div class="tw"><table><thead><tr><th>Iter</th><th>Train</th><th>Test</th><th>Description (recorte)</th></tr></thead><tbody><tr><td>0 ★</td><td>2/4</td><td>2/4</td><td class="q">Diagnostica errores Odoo en runtime (traceback/log): clasifica, localiza causa raíz y propone fix. Cubre -u (P…</td></tr><tr><td>1</td><td>2/4</td><td>2/4</td><td class="q">Usa este skill cuando el usuario tenga un fallo de Odoo EN RUNTIME (un traceback, log, o excepción concreta) y…</td></tr><tr><td>2</td><td>2/4</td><td>2/4</td><td class="q">Usa este skill cuando el usuario traiga un fallo concreto de Odoo (traceback, log, mensaje de excepción o "me …</td></tr></tbody></table></div><h2>Mejor description propuesta (460 chars)</h2><div class="desc best">Diagnostica errores Odoo en runtime (traceback/log): clasifica, localiza causa raíz y propone fix. Cubre -u (ParseError, Field does not exist), IntegrityError, psycopg2, AccessError, assets/OWL, migración. NOT auditoría estática (→ odoo-code-auditor). Triggers: "me peta el modulo", "error al actualizar con -u", "traceback de Odoo", "Field does not exist", "IntegrityError", "AccessError", "error de assets/OWL", "debug odoo traceback", "fix this odoo error".</div></div>

@@ -1,0 +1,729 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Email Campaign Builder Template Placeholders",
+  "description": "Schema de placeholders para templates de email marketing",
+  "templates": {
+    "base-email.html": {
+      "description": "Template base para emails genéricos con CTA. Diseño responsive compatible con todos los clientes.",
+      "placeholders": {
+        "{{SUBJECT}}": {
+          "type": "string",
+          "description": "Asunto del email (aparece en <title>)",
+          "example": "Novedades de Indaws",
+          "required": true
+        },
+        "{{PREHEADER}}": {
+          "type": "string",
+          "description": "Texto preview que aparece en el inbox después del asunto",
+          "example": "Descubre las últimas actualizaciones de Odoo",
+          "required": true
+        },
+        "{{HEADING}}": {
+          "type": "string",
+          "description": "Título principal del email (H1)",
+          "example": "NOVEDADES DE FEBRERO",
+          "required": true
+        },
+        "{{BODY_CONTENT}}": {
+          "type": "html",
+          "description": "Contenido HTML principal del email",
+          "example": "<p>Hola,</p><p>Te contamos las últimas novedades...</p>",
+          "required": true
+        },
+        "{{CTA_URL}}": {
+          "type": "url",
+          "description": "URL del botón principal de acción",
+          "example": "https://www.indaws.es/contacto",
+          "required": true
+        },
+        "{{CTA_TEXT}}": {
+          "type": "string",
+          "description": "Texto del botón CTA",
+          "example": "SABER MÁS",
+          "required": true
+        },
+        "{{UNSUBSCRIBE_URL}}": {
+          "type": "url",
+          "description": "URL para darse de baja (requerido por ley)",
+          "example": "{{unsubscribe_url}}",
+          "required": true,
+          "notes": "En Odoo usar {{unsubscribe_url}} para link dinámico"
+        },
+        "{{YEAR}}": {
+          "type": "string",
+          "description": "Año actual para copyright footer",
+          "example": "2025",
+          "required": true
+        }
+      }
+    },
+    "newsletter.html": {
+      "description": "Newsletter mensual con artículo principal, 3 noticias destacadas, y recurso promocionado.",
+      "placeholders": {
+        "{{SUBJECT}}": {
+          "type": "string",
+          "description": "Asunto del email",
+          "example": "Newsletter Indaws #24",
+          "required": true
+        },
+        "{{PREHEADER}}": {
+          "type": "string",
+          "description": "Preview text del inbox",
+          "example": "IA aplicada a tu ERP + 3 recursos gratuitos",
+          "required": true
+        },
+        "{{NEWSLETTER_NUMBER}}": {
+          "type": "string",
+          "description": "Número de edición de la newsletter",
+          "example": "#24",
+          "required": true
+        },
+        "{{NEWSLETTER_DATE}}": {
+          "type": "string",
+          "description": "Fecha de la newsletter",
+          "example": "Febrero 2025",
+          "required": true
+        },
+        "{{HEADING}}": {
+          "type": "string",
+          "description": "Título principal",
+          "example": "Lo mejor de febrero",
+          "required": true
+        },
+        "{{SUBHEADING}}": {
+          "type": "string",
+          "description": "Subtítulo bajo el heading",
+          "example": "Novedades de Odoo, casos de éxito y recursos exclusivos",
+          "required": true
+        },
+        "{{ARTICLE_TITLE}}": {
+          "type": "string",
+          "description": "Título del artículo principal",
+          "example": "Odoo 18: Primera impresión",
+          "required": true
+        },
+        "{{ARTICLE_CONTENT}}": {
+          "type": "html",
+          "description": "Contenido HTML del artículo principal",
+          "example": "<p>Después de 3 meses usando Odoo 18...</p>",
+          "required": true
+        },
+        "{{ARTICLE_URL}}": {
+          "type": "url",
+          "description": "Link al artículo completo",
+          "example": "https://www.indaws.es/blog/odoo-18",
+          "required": true
+        },
+        "{{NEWS_1_TITLE}}": {
+          "type": "string",
+          "description": "Título noticia 1",
+          "example": "Nuevo módulo de IA para inventario",
+          "required": true
+        },
+        "{{NEWS_1_SUMMARY}}": {
+          "type": "string",
+          "description": "Resumen noticia 1 (1-2 líneas)",
+          "example": "Predicción de demanda automática basada en histórico de ventas",
+          "required": true
+        },
+        "{{NEWS_2_TITLE}}": {
+          "type": "string",
+          "description": "Título noticia 2",
+          "example": "Caso de éxito: Espacio Orgánico",
+          "required": true
+        },
+        "{{NEWS_2_SUMMARY}}": {
+          "type": "string",
+          "description": "Resumen noticia 2",
+          "example": "De 3 días a 4 horas en el cierre mensual",
+          "required": true
+        },
+        "{{NEWS_3_TITLE}}": {
+          "type": "string",
+          "description": "Título noticia 3",
+          "example": "Webinar: Demo Odoo MRP",
+          "required": true
+        },
+        "{{NEWS_3_SUMMARY}}": {
+          "type": "string",
+          "description": "Resumen noticia 3",
+          "example": "Jueves 20 Feb a las 11:00. Plazas limitadas.",
+          "required": true
+        },
+        "{{RESOURCE_TITLE}}": {
+          "type": "string",
+          "description": "Título del recurso destacado",
+          "example": "Guía: Migración a Odoo en 90 días",
+          "required": true
+        },
+        "{{RESOURCE_DESCRIPTION}}": {
+          "type": "string",
+          "description": "Descripción del recurso",
+          "example": "Checklist completo para migrar de tu ERP actual a Odoo",
+          "required": true
+        },
+        "{{RESOURCE_URL}}": {
+          "type": "url",
+          "description": "Link de descarga/acceso al recurso",
+          "example": "https://www.indaws.es/recursos/guia-migracion",
+          "required": true
+        },
+        "{{RESOURCE_CTA}}": {
+          "type": "string",
+          "description": "Texto del botón del recurso",
+          "example": "DESCARGAR GRATIS",
+          "required": true
+        },
+        "{{CTA_URL}}": {
+          "type": "url",
+          "description": "URL del CTA principal final",
+          "example": "https://www.indaws.es/contacto",
+          "required": true
+        },
+        "{{CTA_TEXT}}": {
+          "type": "string",
+          "description": "Texto del CTA principal",
+          "example": "HABLEMOS DE TU PROYECTO",
+          "required": true
+        },
+        "{{UNSUBSCRIBE_URL}}": {
+          "type": "url",
+          "description": "URL de baja",
+          "example": "{{unsubscribe_url}}",
+          "required": true
+        },
+        "{{YEAR}}": {
+          "type": "string",
+          "description": "Año para copyright",
+          "example": "2025",
+          "required": true
+        }
+      }
+    },
+    "event-invite.html": {
+      "description": "Invitación a evento con hero visual, detalles de fecha/hora/lugar, y CTA de registro.",
+      "placeholders": {
+        "{{SUBJECT}}": {
+          "type": "string",
+          "description": "Asunto del email",
+          "example": "Te invitamos: Desayuno IA Aplicada — 20 Feb",
+          "required": true
+        },
+        "{{PREHEADER}}": {
+          "type": "string",
+          "description": "Preview text",
+          "example": "Plazas limitadas. Reserva la tuya.",
+          "required": true
+        },
+        "{{EVENT_TYPE}}": {
+          "type": "string",
+          "description": "Tipo/categoría del evento",
+          "example": "Desayuno Empresarial",
+          "required": true
+        },
+        "{{EVENT_NAME}}": {
+          "type": "string",
+          "description": "Nombre completo del evento",
+          "example": "IA Aplicada a tu Sistema de Gestión",
+          "required": true
+        },
+        "{{EVENT_TAGLINE}}": {
+          "type": "string",
+          "description": "Subtítulo o descripción corta",
+          "example": "Descubre cómo la IA puede transformar tu ERP",
+          "required": true
+        },
+        "{{EVENT_DATE}}": {
+          "type": "string",
+          "description": "Fecha del evento formateada",
+          "example": "20 Feb 2026",
+          "required": true
+        },
+        "{{EVENT_TIME}}": {
+          "type": "string",
+          "description": "Horario del evento",
+          "example": "09:00 - 12:00",
+          "required": true
+        },
+        "{{EVENT_LOCATION}}": {
+          "type": "string",
+          "description": "Lugar del evento",
+          "example": "The Terminal Hub, Valencia",
+          "required": true
+        },
+        "{{BODY_CONTENT}}": {
+          "type": "html",
+          "description": "Descripción del evento",
+          "example": "<p>Únete a nosotros para un desayuno exclusivo...</p>",
+          "required": true
+        },
+        "{{HIGHLIGHTS_TITLE}}": {
+          "type": "string",
+          "description": "Título sección agenda/highlights",
+          "example": "Lo que veremos",
+          "required": true
+        },
+        "{{HIGHLIGHTS_CONTENT}}": {
+          "type": "html",
+          "description": "Lista de temas o agenda",
+          "example": "<ul><li>Demo de IA integrada en Odoo</li><li>Casos reales de automatización</li></ul>",
+          "required": true
+        },
+        "{{CTA_URL}}": {
+          "type": "url",
+          "description": "URL de registro",
+          "example": "https://www.indaws.es/eventos/ia-gestion",
+          "required": true
+        },
+        "{{CTA_TEXT}}": {
+          "type": "string",
+          "description": "Texto del botón de registro",
+          "example": "RESERVAR MI PLAZA",
+          "required": true
+        },
+        "{{CTA_SUBTEXT}}": {
+          "type": "string",
+          "description": "Texto bajo el CTA (urgencia/info)",
+          "example": "Solo 40 plazas disponibles",
+          "required": true
+        },
+        "{{UNSUBSCRIBE_URL}}": {
+          "type": "url",
+          "description": "URL de baja",
+          "example": "{{unsubscribe_url}}",
+          "required": true
+        },
+        "{{YEAR}}": {
+          "type": "string",
+          "description": "Año para copyright",
+          "example": "2025",
+          "required": true
+        }
+      }
+    },
+    "followup.html": {
+      "description": "Email de seguimiento post-evento o post-contacto. Incluye recap, recursos, siguiente paso y firma comercial.",
+      "placeholders": {
+        "{{SUBJECT}}": {
+          "type": "string",
+          "description": "Asunto del email",
+          "example": "Gracias por asistir + recursos del evento",
+          "required": true
+        },
+        "{{PREHEADER}}": {
+          "type": "string",
+          "description": "Preview text",
+          "example": "Presentación, fotos y siguiente paso",
+          "required": true
+        },
+        "{{BANNER_TEXT}}": {
+          "type": "string",
+          "description": "Texto del banner superior amarillo",
+          "example": "GRACIAS POR ASISTIR",
+          "required": true
+        },
+        "{{HEADING}}": {
+          "type": "string",
+          "description": "Título principal",
+          "example": "Fue un placer tenerte con nosotros",
+          "required": true
+        },
+        "{{GREETING_CONTENT}}": {
+          "type": "html",
+          "description": "Párrafos de saludo/agradecimiento",
+          "example": "<p>Esperamos que el desayuno te haya resultado útil...</p>",
+          "required": true
+        },
+        "{{RECAP_TITLE}}": {
+          "type": "string",
+          "description": "Título de la sección recap",
+          "example": "Lo que vimos",
+          "required": true
+        },
+        "{{RECAP_CONTENT}}": {
+          "type": "html",
+          "description": "Resumen de los puntos clave",
+          "example": "<ul><li>IA para automatizar tareas repetitivas</li><li>Integración con WhatsApp Business</li></ul>",
+          "required": true
+        },
+        "{{RESOURCE_1_TITLE}}": {
+          "type": "string",
+          "description": "Título recurso 1",
+          "example": "Presentación PDF",
+          "required": true
+        },
+        "{{RESOURCE_1_DESC}}": {
+          "type": "string",
+          "description": "Descripción recurso 1",
+          "example": "Las slides del evento en formato PDF",
+          "required": true
+        },
+        "{{RESOURCE_1_URL}}": {
+          "type": "url",
+          "description": "URL recurso 1",
+          "example": "https://drive.google.com/...",
+          "required": true
+        },
+        "{{RESOURCE_2_TITLE}}": {
+          "type": "string",
+          "description": "Título recurso 2",
+          "example": "Fotos del evento",
+          "required": true
+        },
+        "{{RESOURCE_2_DESC}}": {
+          "type": "string",
+          "description": "Descripción recurso 2",
+          "example": "Galería de fotos del desayuno",
+          "required": true
+        },
+        "{{RESOURCE_2_URL}}": {
+          "type": "url",
+          "description": "URL recurso 2",
+          "example": "https://drive.google.com/...",
+          "required": true
+        },
+        "{{RESOURCE_3_TITLE}}": {
+          "type": "string",
+          "description": "Título recurso 3",
+          "example": "Video resumen",
+          "required": true
+        },
+        "{{RESOURCE_3_DESC}}": {
+          "type": "string",
+          "description": "Descripción recurso 3",
+          "example": "2 minutos con los highlights",
+          "required": true
+        },
+        "{{RESOURCE_3_URL}}": {
+          "type": "url",
+          "description": "URL recurso 3",
+          "example": "https://youtube.com/...",
+          "required": true
+        },
+        "{{NEXT_STEPS_CONTENT}}": {
+          "type": "html",
+          "description": "Párrafo con siguiente paso sugerido",
+          "example": "<p>Si te interesa explorar cómo aplicar esto en tu empresa, reserva 20 minutos con nosotros sin compromiso.</p>",
+          "required": true
+        },
+        "{{CTA_URL}}": {
+          "type": "url",
+          "description": "URL del CTA principal",
+          "example": "https://calendly.com/indaws/demo",
+          "required": true
+        },
+        "{{CTA_TEXT}}": {
+          "type": "string",
+          "description": "Texto del CTA",
+          "example": "AGENDAR LLAMADA",
+          "required": true
+        },
+        "{{CTA_SUBTEXT}}": {
+          "type": "string",
+          "description": "Texto bajo el CTA",
+          "example": "20 minutos sin compromiso",
+          "required": true
+        },
+        "{{COMMERCIAL_PHOTO}}": {
+          "type": "url",
+          "description": "URL de la foto del comercial",
+          "example": "https://www.indaws.es/team/victor.jpg",
+          "required": true
+        },
+        "{{COMMERCIAL_NAME}}": {
+          "type": "string",
+          "description": "Nombre del comercial",
+          "example": "Victor Peris",
+          "required": true
+        },
+        "{{COMMERCIAL_ROLE}}": {
+          "type": "string",
+          "description": "Cargo del comercial",
+          "example": "CEO & Founder",
+          "required": true
+        },
+        "{{COMMERCIAL_EMAIL}}": {
+          "type": "string",
+          "description": "Email del comercial",
+          "example": "victor@indaws.es",
+          "required": true
+        },
+        "{{COMMERCIAL_PHONE}}": {
+          "type": "string",
+          "description": "Teléfono del comercial",
+          "example": "+34 600 123 456",
+          "required": true
+        },
+        "{{UNSUBSCRIBE_URL}}": {
+          "type": "url",
+          "description": "URL de baja",
+          "example": "{{unsubscribe_url}}",
+          "required": true
+        },
+        "{{YEAR}}": {
+          "type": "string",
+          "description": "Año para copyright",
+          "example": "2025",
+          "required": true
+        }
+      }
+    },
+    "campaign-report.html": {
+      "description": "Reporte visual de métricas de campaña de email. Dashboard con KPIs, funnel y rendimiento por email.",
+      "placeholders": {
+        "{{CAMPAIGN_NAME}}": {
+          "type": "string",
+          "description": "Nombre de la campaña",
+          "example": "Evento IA Aplicada - Feb 2025",
+          "required": true
+        },
+        "{{CAMPAIGN_TYPE}}": {
+          "type": "string",
+          "description": "Tipo de campaña",
+          "example": "Evento",
+          "required": true
+        },
+        "{{CAMPAIGN_STATUS}}": {
+          "type": "string",
+          "description": "Estado: draft, sent, scheduled",
+          "example": "sent",
+          "required": true
+        },
+        "{{REPORT_DATE}}": {
+          "type": "string",
+          "description": "Fecha de generación del reporte",
+          "example": "10 Feb 2025",
+          "required": true
+        },
+        "{{TOTAL_SENT}}": {
+          "type": "number",
+          "description": "Total emails enviados",
+          "example": "1,234",
+          "required": true
+        },
+        "{{SENT_RATE}}": {
+          "type": "number",
+          "description": "Porcentaje de la lista enviado",
+          "example": "98",
+          "required": true
+        },
+        "{{OPEN_RATE}}": {
+          "type": "number",
+          "description": "Tasa de apertura %",
+          "example": "42.5",
+          "required": true
+        },
+        "{{OPEN_RATE_DELTA}}": {
+          "type": "string",
+          "description": "Diferencia vs benchmark",
+          "example": "+8.2%",
+          "required": true
+        },
+        "{{OPEN_RATE_DELTA_CLASS}}": {
+          "type": "string",
+          "description": "Clase CSS: positive, negative, neutral",
+          "example": "positive",
+          "required": true
+        },
+        "{{CLICK_RATE}}": {
+          "type": "number",
+          "description": "Tasa de clic %",
+          "example": "12.3",
+          "required": true
+        },
+        "{{CLICK_RATE_DELTA}}": {
+          "type": "string",
+          "description": "Diferencia vs benchmark",
+          "example": "+4.1%",
+          "required": true
+        },
+        "{{CLICK_RATE_DELTA_CLASS}}": {
+          "type": "string",
+          "description": "Clase CSS para delta",
+          "example": "positive",
+          "required": true
+        },
+        "{{CLICK_RATE_BAR}}": {
+          "type": "number",
+          "description": "Ancho barra progreso (0-100)",
+          "example": "61",
+          "required": true
+        },
+        "{{CONVERSIONS}}": {
+          "type": "number",
+          "description": "Número de conversiones",
+          "example": "23",
+          "required": true
+        },
+        "{{CONVERSION_RATE}}": {
+          "type": "number",
+          "description": "Tasa de conversión %",
+          "example": "1.9",
+          "required": true
+        },
+        "{{FUNNEL_SENT}}": {
+          "type": "string",
+          "description": "Enviados (label funnel)",
+          "example": "1,234",
+          "required": true
+        },
+        "{{FUNNEL_OPENED}}": {
+          "type": "string",
+          "description": "Abiertos (label funnel)",
+          "example": "524",
+          "required": true
+        },
+        "{{FUNNEL_OPENED_PCT}}": {
+          "type": "number",
+          "description": "% abiertos para ancho barra",
+          "example": "42",
+          "required": true
+        },
+        "{{FUNNEL_CLICKED}}": {
+          "type": "string",
+          "description": "Clics (label funnel)",
+          "example": "152",
+          "required": true
+        },
+        "{{FUNNEL_CLICKED_PCT}}": {
+          "type": "number",
+          "description": "% clics para ancho barra",
+          "example": "12",
+          "required": true
+        },
+        "{{FUNNEL_CONVERTED}}": {
+          "type": "string",
+          "description": "Convertidos (label funnel)",
+          "example": "23",
+          "required": true
+        },
+        "{{FUNNEL_CONVERTED_PCT}}": {
+          "type": "number",
+          "description": "% conversión para ancho barra",
+          "example": "2",
+          "required": true
+        },
+        "{{#EMAILS}}": {
+          "type": "array",
+          "description": "Array de emails con métricas individuales",
+          "required": true,
+          "items": {
+            "EMAIL_SUBJECT": "Asunto del email",
+            "EMAIL_DATE": "Fecha de envío",
+            "EMAIL_RECIPIENTS": "Número de destinatarios",
+            "EMAIL_OPEN_RATE": "Tasa apertura %",
+            "EMAIL_CLICK_RATE": "Tasa clic %"
+          }
+        },
+        "{{BOUNCE_RATE}}": {
+          "type": "number",
+          "description": "Tasa de rebote %",
+          "example": "1.2",
+          "required": true
+        },
+        "{{BOUNCE_COLOR}}": {
+          "type": "string",
+          "description": "Color según severidad",
+          "example": "#10b981",
+          "required": true
+        },
+        "{{BOUNCE_BAR}}": {
+          "type": "number",
+          "description": "Ancho barra (0-100)",
+          "example": "12",
+          "required": true
+        },
+        "{{UNSUB_RATE}}": {
+          "type": "number",
+          "description": "Tasa de bajas %",
+          "example": "0.3",
+          "required": true
+        },
+        "{{UNSUB_COLOR}}": {
+          "type": "string",
+          "description": "Color según severidad",
+          "example": "#10b981",
+          "required": true
+        },
+        "{{UNSUB_BAR}}": {
+          "type": "number",
+          "description": "Ancho barra (0-100)",
+          "example": "3",
+          "required": true
+        },
+        "{{SPAM_RATE}}": {
+          "type": "number",
+          "description": "Tasa de reportes spam %",
+          "example": "0.1",
+          "required": true
+        },
+        "{{SPAM_COLOR}}": {
+          "type": "string",
+          "description": "Color según severidad",
+          "example": "#10b981",
+          "required": true
+        },
+        "{{SPAM_BAR}}": {
+          "type": "number",
+          "description": "Ancho barra (0-100)",
+          "example": "1",
+          "required": true
+        },
+        "{{COMMERCIAL_PHOTO}}": {
+          "type": "url",
+          "description": "Foto del comercial asignado",
+          "example": "https://www.indaws.es/team/victor.jpg",
+          "required": true
+        },
+        "{{COMMERCIAL_NAME}}": {
+          "type": "string",
+          "description": "Nombre del comercial",
+          "example": "Victor Peris",
+          "required": true
+        },
+        "{{COMMERCIAL_ROLE}}": {
+          "type": "string",
+          "description": "Cargo",
+          "example": "CEO",
+          "required": true
+        },
+        "{{COMMERCIAL_EMAIL}}": {
+          "type": "string",
+          "description": "Email del comercial",
+          "example": "victor@indaws.es",
+          "required": true
+        },
+        "{{COMMERCIAL_PHONE}}": {
+          "type": "string",
+          "description": "Teléfono",
+          "example": "+34 600 123 456",
+          "required": true
+        },
+        "{{ODOO_CAMPAIGN_URL}}": {
+          "type": "url",
+          "description": "Link a la campaña en Odoo",
+          "example": "https://erp.indaws.es/web#action=...",
+          "required": true
+        },
+        "{{ODOO_LIST_URL}}": {
+          "type": "url",
+          "description": "Link a la lista en Odoo",
+          "example": "https://erp.indaws.es/web#action=...",
+          "required": true
+        },
+        "{{ODOO_ANALYTICS_URL}}": {
+          "type": "url",
+          "description": "Link a analytics en Odoo",
+          "example": "https://erp.indaws.es/web#action=...",
+          "required": true
+        },
+        "{{YEAR}}": {
+          "type": "string",
+          "description": "Año para footer",
+          "example": "2025",
+          "required": true
+        }
+      }
+    }
+  }
+}

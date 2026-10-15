@@ -1,11 +1,11 @@
-# Fixed eval inputs for the dynapps-super-admin plugin. Unlike the Salesforce
-# suite these are natural questions with no slash command: whether the right
+# Fixed eval inputs for the dynapps-super-admin plugin. These are natural
+# questions with no slash command: whether the right
 # skill triggers on its own is part of what is measured (`expect` names it).
 # Every question reads real sp-dev data and is read-only. Edit a prompt only
 # with a new suite version: prompts are hashed into every run's manifest.
 plugin: dynapps-super-admin
-suite_version: 1
-model: claude-sonnet-5[1m]
+suite_version: 2
+model: claude-sonnet-5-5[1m]
 # Why: the harness retries a session that started before the bridge's MCP
 # servers were ready; this is the server every case needs.
 primary_connector: _systemprompt__
@@ -14,36 +14,6 @@ suffix: >-
   do not write memory files. Do not ask questions; make reasonable assumptions
   and finish.
 cases:
-  jay_working_on:
-    expect: admin_ai_usage
-    prompt: "what has jay been working on in the past 4 weeks?"
-  belgium_team_count:
-    expect: admin_ai_usage
-    prompt: "how many people in Belgium are using systemprompt?"
-  belgium_team_intensity:
-    expect: admin_ai_usage
-    prompt: "how intensively is the Belgium team using the system over the past 30 days? how many hours per day? whose work relates to Odoo implementations?"
-  ai_costs_week:
-    expect: admin_ai_usage
-    prompt: "What did we spend on AI this week, and who were the top five users?"
-  top_skills:
-    expect: admin_ai_usage
-    prompt: "Which skills are used most over the last 30 days, and by whom?"
-  failed_requests:
-    expect: admin_ai_usage
-    prompt: "Were there any failed or denied AI requests in the last 7 days? What caused them?"
-  one_user_usage:
-    expect: admin_ai_usage
-    prompt: "How much has Meenakshi Ruia used the platform in the last 30 days: how many days, how many conversations, what for?"
-  daily_brief:
-    expect: admin_daily_brief
-    prompt: "Give me my daily brief."
-  critical_projects:
-    expect: admin_critical_projects
-    prompt: "Which projects are critical right now and why?"
-  project_status:
-    expect: admin_critical_projects
-    prompt: "Which Jira projects have the most overdue work, and who owns it?"
   instance_health:
     expect: systemprompt_cli
     prompt: "Is the instance healthy? Check services and recent errors."

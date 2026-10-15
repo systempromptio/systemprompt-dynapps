@@ -28,7 +28,7 @@ advisor-tool-2026-03-01,effort-2025-11-24";
 
 fn claude_code_body() -> Map<String, Value> {
     let Value::Object(body) = json!({
-        "model": "claude-haiku-4-5",
+        "model": "claude-haiku-5-5",
         "max_tokens": 1024,
         "messages": [{"role": "user", "content": "hi"}],
         "context_management": {"edits": [{"type": "clear_thinking_20251015"}]},

@@ -9,15 +9,11 @@
 mod account_state;
 pub mod callback_notice;
 pub mod config;
-pub mod discovery;
 pub mod failure;
 pub mod generic;
 mod generic_discovery;
-pub mod payload;
 mod resolve;
 mod response;
-mod salesforce;
-pub mod site;
 pub mod token_plan;
 mod token_response;
 mod tokens;

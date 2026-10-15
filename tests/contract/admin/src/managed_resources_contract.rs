@@ -43,7 +43,7 @@ async fn baseline_capture_requires_origin_and_organizational_revisions_are_share
         )
         .await;
     assert_eq!(status, StatusCode::CREATED);
-    let id: String = sqlx::query_scalar("SELECT v.id FROM managed_revisions v JOIN managed_resources r ON r.id=v.resource_id WHERE r.resource_key='admin_daily_brief'")
+    let id: String = sqlx::query_scalar("SELECT v.id FROM managed_revisions v JOIN managed_resources r ON r.id=v.resource_id WHERE r.resource_key='systemprompt_cli'")
         .fetch_one(&*db.pool).await.expect("captured daily brief");
     let path = format!("/api/public/admin/managed/revisions/{id}");
     let (status, _) = app

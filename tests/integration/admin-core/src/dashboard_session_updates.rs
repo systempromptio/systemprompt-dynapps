@@ -63,14 +63,14 @@ async fn update_session_metadata_writes_every_non_empty_field() {
         &db.pool,
         &SessionId::new(session.clone()),
         "claude-code",
-        "claude-opus-4-5",
+        "claude-opus-5-5",
         "acceptEdits",
     )
     .await;
 
     let row = read_metadata(&db.pool, &session).await;
     assert_eq!(row.client_source.as_deref(), Some("claude-code"));
-    assert_eq!(row.model.as_deref(), Some("claude-opus-4-5"));
+    assert_eq!(row.model.as_deref(), Some("claude-opus-5-5"));
     assert_eq!(row.permission_mode.as_deref(), Some("acceptEdits"));
     db.cleanup().await;
 }
@@ -82,13 +82,13 @@ async fn update_session_metadata_keeps_the_stored_value_when_a_field_is_blank() 
     };
     let session = seeded_session(&db.pool, "metablank").await;
     let id = SessionId::new(session.clone());
-    update_session_metadata(&db.pool, &id, "claude-code", "claude-opus-4-5", "plan").await;
+    update_session_metadata(&db.pool, &id, "claude-code", "claude-opus-5-5", "plan").await;
 
     update_session_metadata(&db.pool, &id, "", "", "acceptEdits").await;
 
     let row = read_metadata(&db.pool, &session).await;
     assert_eq!(row.client_source.as_deref(), Some("claude-code"));
-    assert_eq!(row.model.as_deref(), Some("claude-opus-4-5"));
+    assert_eq!(row.model.as_deref(), Some("claude-opus-5-5"));
     assert_eq!(row.permission_mode.as_deref(), Some("acceptEdits"));
     db.cleanup().await;
 }

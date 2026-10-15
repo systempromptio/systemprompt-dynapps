@@ -16,6 +16,7 @@ pub use systemprompt::agent_runs::{
 };
 use systemprompt_web_shared::web_define_id;
 
+web_define_id!(ClientId);
 web_define_id!(FarmId);
 web_define_id!(FarmAgentId);
 web_define_id!(FarmRunId);
@@ -93,7 +94,23 @@ text_enum!(TriggeredVia {
     Dashboard => "dashboard",
     Api => "api",
     Eval => "eval",
+    Mcp => "mcp",
+    Console => "console",
+    Demo => "demo",
+    Scheduler => "scheduler",
 });
+
+impl TriggeredVia {
+    pub const ALL: [Self; 7] = [
+        Self::Dashboard,
+        Self::Api,
+        Self::Eval,
+        Self::Mcp,
+        Self::Console,
+        Self::Demo,
+        Self::Scheduler,
+    ];
+}
 
 text_enum!(EvalRunStatus {
     Queued => "queued",

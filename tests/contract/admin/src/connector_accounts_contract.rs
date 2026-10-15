@@ -25,7 +25,7 @@ async fn connector_token_never_exposes_credentials_without_broker_authentication
     for principal in [Principal::Anonymous, Principal::Admin] {
         let (status, body) = app
             .call(Call::get(
-                "/api/public/connectors/atlassian/token",
+                "/api/public/connectors/dynbrain/token",
                 principal,
             ))
             .await;
@@ -92,17 +92,22 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
     let state = "contract-consent-state";
     let grant = Grant {
         user: admin_user.as_str().to_owned(),
-        configuration_binding: String::new(),
+        // Bound to the loaded dynbrain configuration, so the callback reaches
+        // the denial rather than stopping at the stale-configuration check.
+        configuration_binding: connector_oauth::generic::binding(&Provider::Generic(
+            "dynbrain".to_owned(),
+        ))
+        .unwrap_or_default(),
         authorization_issuer: String::new(),
         token_auth_method: String::new(),
-        provider: Provider::Atlassian,
+        provider: Provider::Generic("dynbrain".to_owned()),
         client: String::new(),
         client_secret: String::new(),
         verifier: String::new(),
         access_token: String::new(),
         refresh_token: None,
         expires_at: 0,
-        token_endpoint: String::new(),
+        token_endpoint: "https://portal.dynapps.es/oauth/token".to_owned(),
         generation: 0,
         session: Some(session.to_owned()),
         auth_method: String::new(),
@@ -113,20 +118,14 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
         authorization_scheme: "Bearer".to_owned(),
     };
     let sealed = connector_oauth::seal(&grant).expect("seal consent state");
-    connector_credentials::save_state(
-        &db.pool,
-        &admin_user,
-        Provider::Atlassian.slug(),
-        state,
-        &sealed,
-    )
-    .await
-    .expect("save consent state");
+    connector_credentials::save_state(&db.pool, &admin_user, "dynbrain", state, &sealed)
+        .await
+        .expect("save consent state");
 
     let (status, body) = app
         .call_with_bearer(
             Call::get(
-                "/api/public/connectors/atlassian/callback?state=contract-consent-state&error=denied",
+                "/api/public/connectors/dynbrain/callback?state=contract-consent-state&error=denied",
                 Principal::NonAdmin,
             ),
             &non_admin_token,
@@ -137,35 +136,24 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
     let (status, body) = app
         .call_with_bearer(
             Call::get(
-                "/api/public/connectors/atlassian/callback?state=contract-consent-state&error=denied",
+                "/api/public/connectors/dynbrain/callback?state=contract-consent-state&error=denied",
                 Principal::Admin,
             ),
             &admin_token,
         )
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "callback: {body}");
-    assert!(body.contains("Connector consent denied"));
     assert!(
-        connector_credentials::consume_state(
-            &db.pool,
-            &admin_user,
-            Provider::Atlassian.slug(),
-            state
-        )
-        .await
-        .expect("state read")
-        .is_none(),
+        body.contains("Connector consent denied"),
+        "callback: {body}"
+    );
+    assert!(
+        connector_credentials::consume_state(&db.pool, &admin_user, "dynbrain", state)
+            .await
+            .expect("state read")
+            .is_none(),
         "state is single-use"
     );
-
-    let (status, body) = app
-        .call(Call::get(
-            "/api/public/connectors/salesforce/callback?state=not-salesforce&code=unused",
-            Principal::Anonymous,
-        ))
-        .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "salesforce state: {body}");
-    assert!(body.contains("Consent state names no Salesforce org"));
 
     db.cleanup().await;
 }

@@ -2,11 +2,10 @@
 //! code flow with PKCE, validated against the tenant's discovery document and
 //! JWKS.
 //!
-//! This is the alternative to the SAML trust in `entra_saml` — an App
-//! Registration with a client secret instead of an Enterprise Application with
-//! federation metadata. State correlation, replay, the identity policy and the
-//! session are the core SSO driver's; this module only builds the redirect and
-//! turns the callback into an [`ExternalIdentity`].
+//! The tenant trust is an App Registration with a client secret. State
+//! correlation, replay, the identity policy and the session are the core SSO
+//! driver's; this module only builds the redirect and turns the callback into
+//! an [`ExternalIdentity`].
 //!
 //! The `redirect_uri` sent at authorize and at code redemption is the same
 //! value — the configured one, else the driver's callback URL — since Entra
@@ -17,6 +16,7 @@
 mod claims;
 mod config;
 mod discovery;
+mod jwks;
 mod token;
 mod verify;
 
@@ -27,7 +27,6 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::RngCore;
 use sha2::{Digest, Sha256};
-use systemprompt::security::keys::JwksClient;
 use systemprompt::sso::{
     CookieSameSite, ExternalIdentity, SsoError, SsoHookContext, SsoIdentityPolicy, SsoPaths,
     SsoProtocol, SsoProvider, SsoRedirect, SsoReturn, SsoStart, SsoStateContext, SsoStateSeed,
@@ -37,7 +36,7 @@ pub use claims::IdTokenClaims;
 pub use config::{EntraOidcConfig, ID, install_config};
 pub use discovery::OidcDiscovery;
 pub use token::ClientSecretSource;
-pub use verify::identity_from_claims;
+pub use verify::{identity_from_claims, resolve_issuer_template};
 
 use discovery::DiscoverySource;
 use token::{CodeRedemption, redeem_code};
@@ -88,6 +87,19 @@ pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
     format!("{}{separator}{query}", req.authorization_endpoint)
 }
 
+// Why: RFC 9207 §2.4 — an `iss` on the authorization response must name the
+// issuer the request went to; its absence is allowed, since Entra ID does not
+// advertise `authorization_response_iss_parameter_supported`.
+#[must_use]
+pub fn authorization_response_issuer_matches(
+    iss: &str,
+    discovered_issuer: &str,
+    configured_issuer: &str,
+    tenant: &str,
+) -> bool {
+    iss == resolve_issuer_template(discovered_issuer, tenant) || iss == configured_issuer
+}
+
 #[must_use]
 pub fn pkce_challenge(verifier: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
@@ -106,7 +118,6 @@ pub struct EntraOidcProvider {
     issuer: String,
     discovery: DiscoverySource,
     http: reqwest::Client,
-    jwks: JwksClient,
 }
 
 impl EntraOidcProvider {
@@ -119,7 +130,6 @@ impl EntraOidcProvider {
         discovery.spawn_refresh();
         Ok(Self {
             issuer: cfg.issuer(),
-            jwks: JwksClient::new(cfg.jwks_allowed_hosts.clone()),
             client_secret,
             discovery,
             http,
@@ -243,6 +253,16 @@ impl SsoProvider for EntraOidcProvider {
         };
         let redirect_uri = self.redirect_uri("");
         let discovery = self.discovery.current().await?;
+        if let Some(iss) = ret.param("iss")
+            && !authorization_response_issuer_matches(
+                iss,
+                &discovery.issuer,
+                &self.issuer,
+                &self.cfg.entra_tenant_id,
+            )
+        {
+            return Err(SsoError::InvalidAssertion("iss".to_owned()));
+        }
         let client_secret = self.client_secret.current().ok_or_else(|| {
             SsoError::Unavailable(
                 "Entra OIDC client secret missing from the secrets store".to_owned(),
@@ -261,7 +281,7 @@ impl SsoProvider for EntraOidcProvider {
         )
         .await?;
         let identity =
-            verify::validate_id_token(&id_token, &self.cfg, &discovery, &self.jwks, &nonce).await?;
+            verify::validate_id_token(&id_token, &self.cfg, &discovery, &self.http, &nonce).await?;
         Ok(identity)
     }
 }

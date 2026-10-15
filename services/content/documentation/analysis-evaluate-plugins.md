@@ -49,10 +49,10 @@ The first run on a plugin is its **baseline**. Every later run is compared with 
 ## Run
 
 ```bash
-scripts/eval/eval.sh run r2-2026-09-25 dynapps-salesforce
+scripts/eval/eval.sh run r2-2026-09-25 dynapps-super-admin
 ```
 
-This runs every skill in the suite four at a time. Each run is a headless Claude Code session on the bridge host, with the model set in the suite file. The prompt is the skill's slash command, the fixed prompt, and the suite's constant suffix (scope to the test records, never write, never ask). The run manifest records:
+This runs every skill in the suite four at a time. Each run is a headless Claude Code session on the bridge host, with the model set in the suite file. The prompt is the skill's slash command, the fixed prompt, and the suite's constant suffix (read only, never write, never ask). The run manifest records:
 
 | Field | Meaning |
 |---|---|
@@ -67,8 +67,8 @@ This runs every skill in the suite four at a time. Each run is a headless Claude
 To measure a change the same day, before it ships, install this tree's skills straight into the eval host's plugin cache:
 
 ```bash
-python3 scripts/eval/patch-bridge.py dynapps-salesforce            # back up, then install
-python3 scripts/eval/patch-bridge.py dynapps-salesforce --restore  # put the served version back
+python3 scripts/eval/patch-bridge.py dynapps-super-admin            # back up, then install
+python3 scripts/eval/patch-bridge.py dynapps-super-admin --restore  # put the served version back
 ```
 
 The run manifest records the patch under `bridge_patch`. The gateway still credits these conversations to the marketplace version it serves, so the console's Versions page shows them under the old hash until the deploy. The deterministic metrics are unaffected. The next bridge sync replaces a patch, so check that `.eval-patch` is still in the cache before a run.
@@ -129,7 +129,7 @@ Tool calls are read from every turn of the conversation. Each turn repeats the t
 | `completed` | A widget rendered, or the final answer is at least 200 characters. |
 | `success` | Completed, at least one call to the plugin's connector, no schema errors, no writes, and tools were available. |
 
-The harness adds guards of its own on top of the console's figures, reported separately and never shown in the console. For example, `unscoped_queries` counts record queries without the suite's test-data filter. The suite's `success_rate` also requires those guards to pass, while `console_success_rate` is exactly the console's figure.
+The harness adds guards of its own on top of the console's figures, reported separately and never shown in the console. For example, `writes` counts tool calls that would have changed data, and `invented_causes` counts explanations the evidence does not support. The suite's `success_rate` also requires those guards to pass, while `console_success_rate` is exactly the console's figure.
 
 **`analysis-plugin-eval-tools`** returns one row per version, skill and tool: calls, conversations, failed calls by class and repeated calls, by the same rules. It names the tool that is failing, not just the skill.
 

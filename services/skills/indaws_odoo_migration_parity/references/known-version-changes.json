@@ -1,0 +1,22 @@
+{
+  "_readme": "Fallback KB used ONLY when no oracle is available. Per category, a list of regexes matched against element ids (module.name / model::field / report_name). A match classifies a LOST STANDARD element as INTER_VERSION (an Odoo change) instead of UNKNOWN. Keep patterns SPECIFIC: an over-broad pattern can hide a real regression. This is a generic Odoo seed, NOT tied to any customer; extend it as triage confirms new inter-version changes. The oracle is the precise path; this is only the shortcut for well-known removals. The '*' key applies to every category.",
+  "_version_note": "Anchor patterns with ^ / $ and escape dots. Group by the target major where the change lands when useful.",
+  "fields": [
+    "::uom_po_id$",
+    "::detailed_type$"
+  ],
+  "views": [],
+  "menus": [],
+  "actions": [],
+  "reports": [],
+  "access": [],
+  "rules": [],
+  "filters": [],
+  "crons": [],
+  "automations": [],
+  "mail_templates": [],
+  "groups": [],
+  "*": [],
+  "_model_renames_note": "model_renames maps an OLD model name to its successor model in the target version (Odoo merges/renames). If the successor is present in MIGRATED, a disappeared OLD model is labelled RENAMED (verify data moved) instead of DATA_LOSS_RISK. If the successor is absent, it stays DATA_LOSS_RISK. Seed generic, version-specific renames here.",
+  "model_renames": {}
+}

@@ -35,15 +35,9 @@ fn tree() -> Vec<FileEntry> {
             "marketplaces/commons/config.yaml",
             "id: commons\nplugins: [ba]\n",
         ),
-        file(
-            "plugins/ba/config.yaml",
-            "id: ba\nskills: [jira_management]\n",
-        ),
-        file(
-            "skills/jira_management/config.yaml",
-            "id: jira_management\n",
-        ),
-        file("skills/jira_management/SKILL.md", "# Jira\n"),
+        file("plugins/ba/config.yaml", "id: ba\nskills: [odoo_quotes]\n"),
+        file("skills/odoo_quotes/config.yaml", "id: odoo_quotes\n"),
+        file("skills/odoo_quotes/SKILL.md", "# Odoo\n"),
         file("skills/unrelated/SKILL.md", "# Not in any plugin\n"),
         file("rules/india.md", "irrelevant to any marketplace"),
     ]
@@ -52,7 +46,7 @@ fn tree() -> Vec<FileEntry> {
 fn specs() -> Vec<MarketplaceSpec> {
     let ba = PluginSpec {
         id: PluginId::new("ba"),
-        skills: vec![SkillId::new("jira_management")],
+        skills: vec![SkillId::new("odoo_quotes")],
     };
     vec![
         MarketplaceSpec {
@@ -98,10 +92,7 @@ fn the_hash_moves_only_with_the_bytes_the_marketplace_delivers() {
     );
 
     let mut moved = tree();
-    moved[4] = file(
-        "skills/jira_management/SKILL.md",
-        "# Jira, one byte later\n",
-    );
+    moved[4] = file("skills/odoo_quotes/SKILL.md", "# Odoo, one byte later\n");
     let after = hash_marketplaces(&moved, &specs(), base);
     assert_ne!(
         india(&before),
@@ -110,7 +101,7 @@ fn the_hash_moves_only_with_the_bytes_the_marketplace_delivers() {
     );
     assert_eq!(
         before[0].manifest.plugins[0].skills[0].skill_id.as_str(),
-        "jira_management"
+        "odoo_quotes"
     );
     assert_ne!(
         before[0].manifest.plugins[0].skills[0].digest,
@@ -182,12 +173,12 @@ fn a_missing_skill_directory_still_shapes_the_version() {
 #[test]
 fn skill_keys_take_the_dashed_form_invocation_facts_carry() {
     assert_eq!(
-        skill_key("dynapps-ba", "jira_management"),
-        "dynapps-ba:jira-management"
+        skill_key("dynapps-ba", "odoo_quotes"),
+        "dynapps-ba:odoo-quotes"
     );
     let versions = hash_marketplaces(&tree(), &specs(), base);
     assert_eq!(
         versions[0].manifest.plugins[0].skills[0].skill_key,
-        "ba:jira-management"
+        "ba:odoo-quotes"
     );
 }

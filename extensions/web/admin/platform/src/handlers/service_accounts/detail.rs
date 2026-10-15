@@ -1,5 +1,7 @@
 //! One service account: its credentials by provider, the attach and rotate
-//! forms (secret fields write-only), and the delete action.
+//! forms (secret fields write-only), the portal OAuth grants an admin
+//! connects on its behalf (what `client` / `service_account` mode farm runs
+//! spend on the Dynapps portal servers), and the delete action.
 
 use std::sync::Arc;
 
@@ -9,6 +11,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
+use systemprompt_web_admin_core::connections::source::get_connections;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
@@ -27,6 +30,14 @@ struct KindOption {
 }
 
 #[derive(Debug, Serialize)]
+struct PortalGrantView {
+    provider: String,
+    display_name: String,
+    status: String,
+    connect_url: String,
+}
+
+#[derive(Debug, Serialize)]
 struct ServiceAccountPage {
     page: &'static str,
     title: String,
@@ -37,6 +48,7 @@ struct ServiceAccountPage {
     credentials: Vec<CredentialView>,
     has_credentials: bool,
     kinds: Vec<KindOption>,
+    portal_grants: Vec<PortalGrantView>,
 }
 
 pub(crate) async fn service_account_page(
@@ -61,6 +73,25 @@ pub(crate) async fn service_account_page(
         .iter()
         .map(CredentialView::from)
         .collect();
+    let portal_grants = faults
+        .take(
+            "portal grants",
+            get_connections(&pool, &user_id)
+                .await
+                .map(|snapshot| snapshot.connections),
+        )
+        .into_iter()
+        .filter(|c| c.requires_auth && c.configured && !c.session_attested)
+        .map(|c| PortalGrantView {
+            connect_url: format!(
+                "/api/public/connectors/{}/start?service_account={}",
+                c.provider, user_id
+            ),
+            provider: c.provider,
+            display_name: c.display_name,
+            status: c.status,
+        })
+        .collect();
     let page = ServiceAccountPage {
         page: "service-accounts",
         breadcrumbs: vec![
@@ -80,6 +111,7 @@ pub(crate) async fn service_account_page(
                 label: kind.label(),
             })
             .collect(),
+        portal_grants,
     };
     Ok(render_page_with_faults(
         &shell.engine,

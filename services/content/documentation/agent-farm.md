@@ -74,7 +74,7 @@ to an eval run and no judge field is ever returned.
 ## A run from start to facts
 
 ```text
-run_start   {"farm": "odoo-delivery", "agent": "module-scaffold", "prompt": "..."}
+run_start   {"farm": "dynapps-night-audit", "agent": "accounting_night_audit", "prompt": "..."}
 run_status  {"run_id": "<id>"}          until terminal
 run_events  {"run_id": "<id>", "after_seq": 0}
 run_facts   {"run_id": "<id>"}

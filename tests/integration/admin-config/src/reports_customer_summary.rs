@@ -30,7 +30,7 @@ async fn seed(pool: &sqlx::PgPool) {
     insert_request(pool, &seed).await;
 
     let mut seed = RequestSeed::new("r-heavy-2", &heavy, at(2001, 3, 6, 9));
-    seed.model = Some("claude-opus-4-5-20251101");
+    seed.model = Some("claude-opus-5-5");
     seed.input_tokens = 500;
     seed.output_tokens = 100;
     seed.status = "failed";

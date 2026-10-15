@@ -1,0 +1,103 @@
+{
+  "_comment": "Règles mécaniques (DASH/MARCA/IDIOMA/REGISTRO/PRESION/EXCL/PASIVA) et listes à éviter importées de dynapps-voice draft 2026-07-17 (references/french-fr.md + french-be.md + french-ch.md : les interdits BE/CH vivent ici, dans le pack de langue de base — chevauchement accepté).",
+  "acronyms_extra": [],
+  "brochure": [
+    "innovant", "innovante", "innovation de rupture", "leader", "numéro 1", "n°1",
+    "de pointe", "à la pointe", "de référence", "end-to-end", "end to end", "solution 360",
+    "360°", "clé en main", "best-in-class", "best in class",
+    "synergie", "holistique", "disruptif", "disruptive", "révolutionnaire", "de classe mondiale",
+    "écosystème intégré", "puissant et flexible", "sur mesure pour tous vos besoins",
+    "solutions innovantes", "technologie de pointe", "solution robuste", "outil puissant",
+    "outils performants", "plateforme agile", "approche agile", "approche globale",
+    "excellence opérationnelle", "le meilleur partenaire", "leader du marché",
+    "expertise reconnue", "qualité irréprochable", "rigueur helvétique", "fiabilité suisse",
+    "out-of-the-box", "équipe passionnée", "partenaire de confiance"
+  ],
+  "jargon": [
+    "pipeline", "lead", "leads", "workflow", "backlog", "dashboard", "deadline",
+    "core business", "partner", "template"
+  ],
+  "slop": [
+    "booster", "dynamiser", "maximiser", "révolutionner", "transformer radicalement",
+    "un éventail de", "une large gamme de", "tout un monde de", "le monde en perpétuelle évolution",
+    "au-delà de vos attentes", "passer au niveau supérieur",
+    "delve", "leverage", "elevate", "tapestry", "testament", "beacon", "synergize",
+    "groundbreaking", "seamless", "cutting-edge", "unlock", "unleash", "empower",
+    "game-changer", "robust solution",
+    "authentique", "passionné", "enthousiaste", "transformation digitale",
+    "valeur ajoutée", "optimiser vos processus", "fluidifier vos opérations",
+    "centraliser vos données", "piloter votre activité", "piloter votre croissance",
+    "aligner vos équipes", "accompagnement personnalisé", "accompagnement sur mesure",
+    "approche personnalisée"
+  ],
+  "fluff": [
+    "dans un monde de plus en plus", "à l'ère du numérique", "de nos jours", "aujourd'hui plus que jamais",
+    "il convient de noter", "il convient de souligner", "il est important de noter",
+    "il est important de souligner", "il est important de mentionner", "sans aucun doute",
+    "en somme", "en résumé", "en conclusion", "pour conclure", "en fin de compte",
+    "nous sommes ravis de vous annoncer", "nous sommes fiers de partager",
+    "nous sommes fiers de vous annoncer", "c'est avec grand plaisir que",
+    "c'est avec plaisir que", "c'est avec enthousiasme que",
+    "il nous est agréable de vous informer", "nous avons le plaisir de",
+    "permettez-nous de vous présenter",
+    "n'hésitez pas à nous contacter", "n'hésitez pas à prendre contact",
+    "pour plus d'informations", "pour de plus amples informations",
+    "contactez-nous dès aujourd'hui", "contactez-nous sans engagement",
+    "découvrez nos solutions", "nous restons à votre disposition", "nous restons disponibles",
+    "nous vous accompagnons dans votre démarche", "nous sommes à vos côtés",
+    "ensemble, construisons", "nous mettons tout en oeuvre pour"
+  ],
+  "stopwords": [
+    "le", "la", "les", "un", "une", "des", "du", "de", "et", "ou", "mais", "que",
+    "qui", "dans", "en", "avec", "pour", "sans", "sur", "est", "sont", "était",
+    "vous", "nous", "votre", "vos", "notre", "nos", "ce", "cette", "ces", "son",
+    "sa", "ses", "il", "elle", "ils", "elles", "ne", "pas", "plus", "très", "aussi",
+    "comme", "si", "au", "aux", "chez", "entre", "après", "avant", "tout", "toute"
+  ],
+  "leak_denylist": [
+    "por usuario", "análisis funcional", "salida a producción", "incluido", "incluida",
+    "precio cerrado", "puesta en marcha", "presupuesto", "implantación", "formación",
+    "cronograma", "cuota mensual", "cuota anual", "desde el primer día",
+    "equipo funcional", "sesiones de análisis", "alcance del proyecto",
+    "según tus necesidades", "fase de análisis", "a medida de"
+  ],
+  "register": [
+    { "avoid": "\\btu\\b", "use": "vous" },
+    { "avoid": "\\bton\\b", "use": "votre" },
+    { "avoid": "\\bta\\b", "use": "votre" },
+    { "avoid": "\\btes\\b", "use": "vos" }
+  ],
+  "passive_patterns": [
+    "\\b(?:a|ont|avait|avaient)\\s+ete\\s+\\w+",
+    "\\b(?:est|sont|etait|etaient|sera|seront)\\s+\\w+(?:e|es|ee|ees)\\s+par\\b"
+  ],
+  "pressure": [
+    "dernière chance", "seulement jusqu'au", "seulement jusqu'à", "offre limitée",
+    "durée limitée", "agissez maintenant", "ne manquez pas", "dépêchez-vous",
+    "avant qu'il ne soit trop tard", "places limitées", "il ne reste que",
+    "profitez-en maintenant"
+  ],
+  "word_charclass": "A-Za-zÀÂÇÈÉÊËÎÏÔÙÛÜŒàâçèéêëîïôùûüœ0-9./-",
+  "messages": {
+    "ok": "✓ brand_lint : aucun signalement. Ton et capitalisation OK.",
+    "warn": "⚠️  brand_lint : {n} avertissement(s) — à revoir avant de générer :\n",
+    "finding_line": "  [{kind:7}] {path} : «{token}»  {tip}",
+    "tips": {
+      "CAPS": "→ utiliser une capitalisation de type phrase (seule la 1re lettre)",
+      "SLOP": "→ tournure creuse d'IA : dites-le avec des mots simples (règle anti-slop)",
+      "FLUFF": "→ remplissage d'intro/conclusion : allez à l'essentiel, sans conclusion",
+      "FOLLETO": "→ supprimer l'adjectif de plaquette commerciale (Golden Rule 10)",
+      "RITMO": "→ variez la longueur : alternez phrases courtes et longues",
+      "JERGA": "→ préférer le terme du secteur (voir sector_glossary)",
+      "JERGA!": "→ figure dans glossary.evitar : remplacer par le terme du secteur",
+      "DASH": "→ pas de tiret cadratin : utilisez , . ( ) ou ->  (demi-cadratin réservé aux plages numériques)",
+      "MARCA": "→ écrire « Dynapps » (D majuscule ; minuscule réservée au logo)",
+      "IDIOMA": "→ fuite de langue : rédigez dans la langue du pack",
+      "REGISTRO": "→ registre : vouvoyez (vous/votre), jamais « tu »",
+      "PRESION": "→ pression commerciale : présentez l'urgence comme de la transparence de planification",
+      "EXCL": "→ pas de point d'exclamation dans le corps du texte (warn)",
+      "PASIVA": "→ voix passive probable : réécrivez à l'actif (warn, heuristique)"
+    },
+    "monotony_finding": "{run} phrases consécutives d'environ {avg} mots"
+  }
+}

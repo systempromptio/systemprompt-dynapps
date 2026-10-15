@@ -42,6 +42,11 @@ pub struct RunStartInput {
     #[schemars(description = "Prompt for the agent. Empty uses the agent's entry prompt.")]
     #[serde(default)]
     pub prompt: String,
+    #[schemars(
+        description = "Eval case id from the agent's suite. Set, the run uses the case's prompt and fixture and is evaluated when it finishes (assertions, then the judge for a rubric case); the result names the eval run. Empty launches a plain run."
+    )]
+    #[serde(default)]
+    pub case: String,
     #[schemars(description = "Turn ceiling. 0 means the agent's or farm's default.")]
     #[serde(default)]
     pub max_turns: u32,
@@ -56,6 +61,11 @@ pub struct RunStartInput {
     )]
     #[serde(default)]
     pub project: String,
+    #[schemars(
+        description = "Client slug the run is for (e.g. `dynapps`). Empty means the farm's own client."
+    )]
+    #[serde(default)]
+    pub client: String,
 }
 
 /// One run by id.
@@ -144,6 +154,11 @@ pub struct FarmEvalResultsInput {
     #[schemars(description = "Suite id. Empty means every suite.")]
     #[serde(default)]
     pub suite: String,
+    #[schemars(
+        description = "History window: `<n>d`, `<n>h` or an RFC 3339 time. Set, `history` carries per agent per day eval runs, pass rate, mean judge score and cost since then. Empty returns no history."
+    )]
+    #[serde(default)]
+    pub since: String,
 }
 
 /// Usage over a window, for you or for one of your projects.
@@ -172,4 +187,26 @@ pub struct CatalogListInput {
     )]
     #[serde(default)]
     pub section: String,
+}
+
+/// Per-client and per-agent farm outcomes with recent runs, for the dashboard.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FarmDashboardInput {
+    #[schemars(
+        description = "`mine` (runs you launched) or `all` (administrators only). Empty picks `all` for an administrator and `mine` otherwise."
+    )]
+    #[serde(default)]
+    pub scope: String,
+    #[schemars(description = "`24h`, `7d` or `30d`. Defaults to `7d`.")]
+    #[serde(default = "seven_days")]
+    pub window: String,
+    #[schemars(
+        description = "Client id (its slug) to narrow to one client; empty for every client."
+    )]
+    #[serde(default)]
+    pub client: String,
+    #[schemars(description = "Recent runs to return. 1-200; defaults to 50.")]
+    #[serde(default = "fifty")]
+    pub limit: u16,
 }

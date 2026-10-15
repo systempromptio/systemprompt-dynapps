@@ -7,6 +7,13 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use std::collections::BTreeMap;
+
+use super::clients_yaml::{AgentOverride, ClientDef, validate_clients};
+use super::evals_yaml::EvalsConfig;
+use super::run_as::RunAs;
+use super::runner_yaml::{FlyRunnerConfig, RunnerMode};
+use super::tool_policy_yaml::FarmToolPolicy;
 use crate::error::{FarmError, FarmResult};
 
 pub const FARMS_FILE: &str = "web/config/agent-farms.yaml";
@@ -15,9 +22,13 @@ pub const FARMS_FILE: &str = "web/config/agent-farms.yaml";
 #[serde(deny_unknown_fields)]
 pub struct FarmsDoc {
     #[serde(default)]
+    pub clients: Vec<ClientDef>,
+    #[serde(default)]
     pub farms: Vec<FarmDef>,
     #[serde(default)]
     pub runner: Option<RunnerConfig>,
+    #[serde(default)]
+    pub evals: Option<EvalsConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -32,11 +43,17 @@ pub struct FarmDef {
     #[serde(default)]
     pub owner: Option<String>,
     #[serde(default)]
-    pub run_as: Option<String>,
+    pub run_as: Option<RunAs>,
     #[serde(default)]
     pub project: Option<String>,
     #[serde(default)]
+    pub client: Option<String>,
+    #[serde(default)]
+    pub agents: BTreeMap<String, AgentOverride>,
+    #[serde(default)]
     pub defaults: FarmDefaults,
+    #[serde(default)]
+    pub tool_policy: FarmToolPolicy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,6 +100,10 @@ pub struct RunnerConfig {
     pub max_concurrent: usize,
     #[serde(default)]
     pub claude_bin: Option<String>,
+    #[serde(default)]
+    pub mode: RunnerMode,
+    #[serde(default)]
+    pub fly: Option<FlyRunnerConfig>,
 }
 
 impl Default for RunnerConfig {
@@ -90,6 +111,8 @@ impl Default for RunnerConfig {
         Self {
             max_concurrent: default_max_concurrent(),
             claude_bin: None,
+            mode: RunnerMode::default(),
+            fly: None,
         }
     }
 }
@@ -124,7 +147,7 @@ const fn default_max_concurrent() -> usize {
 
 const PERMISSION_MODES: [&str; 4] = ["default", "acceptEdits", "plan", "bypassPermissions"];
 
-fn is_slug(value: &str) -> bool {
+pub(super) fn is_slug(value: &str) -> bool {
     !value.is_empty()
         && value
             .chars()
@@ -133,8 +156,27 @@ fn is_slug(value: &str) -> bool {
 
 impl FarmsDoc {
     pub fn validate(&self) -> FarmResult<()> {
+        validate_clients(&self.clients, FARMS_FILE)?;
+        let clients: BTreeSet<&str> = self.clients.iter().map(|c| c.slug.as_str()).collect();
         let mut seen = BTreeSet::new();
         for farm in &self.farms {
+            if let Some(client) = farm.client.as_deref()
+                && !clients.contains(client)
+            {
+                return Err(invalid(&format!(
+                    "farm {:?}: client {client:?} is not declared under clients",
+                    farm.id
+                )));
+            }
+            for (agent, run_as) in farm
+                .agents
+                .iter()
+                .filter_map(|(id, o)| o.run_as.as_ref().map(|r| (id, r)))
+            {
+                run_as
+                    .validate(&format!("farm {:?}: agent {agent:?}", farm.id))
+                    .map_err(|e| invalid(&e))?;
+            }
             if !is_slug(&farm.id) {
                 return Err(invalid(&format!("farm id {:?} is not a slug", farm.id)));
             }
@@ -147,18 +189,20 @@ impl FarmsDoc {
                     farm.id, farm.marketplace
                 )));
             }
-            if farm
-                .run_as
-                .as_deref()
-                .is_some_and(|id| id.trim().is_empty())
-            {
-                return Err(invalid(&format!("farm {:?}: run_as is empty", farm.id)));
+            if let Some(run_as) = &farm.run_as {
+                run_as
+                    .validate(&format!("farm {:?}", farm.id))
+                    .map_err(|e| invalid(&e))?;
             }
             farm.source.validate(&farm.id)?;
             farm.defaults.validate(&farm.id)?;
+            farm.tool_policy.validate(&farm.id)?;
         }
         if self.runner.as_ref().is_some_and(|r| r.max_concurrent == 0) {
             return Err(invalid("runner.max_concurrent must be at least 1"));
+        }
+        if let Some(evals) = &self.evals {
+            evals.validate(FARMS_FILE)?;
         }
         Ok(())
     }

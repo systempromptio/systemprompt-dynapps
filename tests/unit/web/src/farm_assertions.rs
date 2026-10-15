@@ -201,12 +201,16 @@ fn regex_matches_and_reports_bad_patterns() {
 fn no_tool_outside_allowlist_allows_skill_and_listed_mcp() {
     let dir = workspace();
     let mut case = Case::new(dir.path());
-    case.tools = vec!["Read".into(), "Bash(git:*)".into(), "mcp__odoo".into()];
+    case.tools = vec![
+        "Read".into(),
+        "Bash(git:*)".into(),
+        "mcp__dynapps-odoo".into(),
+    ];
     case.events = vec![
         tool(1, "Read", json!({})),
         tool(2, "Bash", json!({})),
         tool(3, "Skill", json!({"skill": "x"})),
-        tool(4, "mcp__odoo__search", json!({})),
+        tool(4, "mcp__dynapps-odoo__search", json!({})),
     ];
     assert!(case.check(Assertion::NoToolOutsideAllowlist {}).passed);
     case.events.push(tool(5, "Write", json!({})));

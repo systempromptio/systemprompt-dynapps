@@ -86,10 +86,6 @@ impl Extension for WebExtension {
                 include_str!("../schema/seeds/admin_oauth_client.sql"),
             ),
             Seed::new(
-                "marketplace_plans",
-                include_str!("../schema/seeds/marketplace_plans.sql"),
-            ),
-            Seed::new(
                 "groups_projects",
                 include_str!("../schema/seeds/groups_projects.sql"),
             ),
@@ -122,7 +118,7 @@ impl Extension for WebExtension {
         Some(SiteAuthConfig {
             login_path: "/admin/login",
             protected_prefixes: &["/admin", "/bridge-auth"],
-            public_prefixes: &["/admin/login", "/admin/auth/adfs", "/admin/auth/entra"],
+            public_prefixes: &["/admin/login", "/admin/auth/entra"],
             required_scope: "user",
         })
     }

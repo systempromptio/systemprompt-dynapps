@@ -1,0 +1,43 @@
+<title>Skill Ecosystem · Health</title>
+<style>
+:root{--bg:#F5F5FA;--surf:#fff;--ink:#050543;--soft:#3b3b63;--mut:#7c7a93;--bd:#e4e3ec;
+--ok:#3BB273;--warn:#FF911F;--bad:#F13C42;--violet:#951CF3;--chip:#f2f1f8;}
+@media(prefers-color-scheme:dark){:root{--bg:#04041c;--surf:#0b0b33;--ink:#f5f5fa;--soft:#cfcede;--mut:#8b89a6;--bd:#22225c;--chip:#16164a;}}
+:root[data-theme=dark]{--bg:#04041c;--surf:#0b0b33;--ink:#f5f5fa;--soft:#cfcede;--mut:#8b89a6;--bd:#22225c;--chip:#16164a;}
+:root[data-theme=light]{--bg:#F5F5FA;--surf:#fff;--ink:#050543;--soft:#3b3b63;--mut:#7c7a93;--bd:#e4e3ec;--chip:#f2f1f8;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
+font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;overflow-x:hidden}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 22px 60px}
+h1{font-size:22px;margin:0 0 2px}.sub{color:var(--mut);font-size:13px;margin-bottom:22px}
+.hero{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:26px}
+.big{background:var(--surf);border:1px solid var(--bd);border-radius:14px;padding:18px 22px;min-width:150px}
+.big .n{font-size:30px;font-weight:700}.big .l{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:30px}
+.card{background:var(--surf);border:1px solid var(--bd);border-radius:12px;padding:13px 15px}
+.ct{font-family:ui-monospace,monospace;font-size:12.5px;color:var(--soft);margin-bottom:9px}
+.bar{height:7px;background:var(--chip);border-radius:99px;overflow:hidden;margin-bottom:8px}
+.bar span{display:block;height:100%}
+.cn{font-size:15px;font-weight:700}.cn small{color:var(--mut);font-weight:400;font-size:10px}
+h2{font-size:14px;margin:26px 0 10px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surf);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{background:var(--chip);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}
+td.sk{font-family:ui-monospace,monospace;color:var(--violet);white-space:nowrap}
+.empty{text-align:center;color:var(--mut)}
+.tw{overflow-x:auto}
+</style>
+<div class="wrap">
+<h1>Skill Ecosystem · Health</h1>
+<div class="sub">9 suites · generado hoy</div>
+<div class="hero">
+<div class="big"><div class="n">98%</div><div class="l">Salud (PASS)</div></div>
+<div class="big"><div class="n">165/168</div><div class="l">Skills 12/12</div></div>
+<div class="big"><div class="n">0</div><div class="l">Errores ecosistema</div></div>
+<div class="big"><div class="n">13</div><div class="l">Warnings</div></div>
+</div>
+<div class="grid"><div class="card"><div class="ct">@common</div><div class="bar"><span style="width:98%;background:var(--warn)"></span></div><div class="cn">39/40 <small>PASS</small></div></div><div class="card"><div class="ct">@consultant</div><div class="bar"><span style="width:100%;background:var(--ok)"></span></div><div class="cn">24/24 <small>PASS</small></div></div><div class="card"><div class="ct">@developer</div><div class="bar"><span style="width:98%;background:var(--warn)"></span></div><div class="cn">50/51 <small>PASS</small></div></div><div class="card"><div class="ct">@hr</div><div class="bar"><span style="width:100%;background:var(--ok)"></span></div><div class="cn">6/6 <small>PASS</small></div></div><div class="card"><div class="ct">@management</div><div class="bar"><span style="width:100%;background:var(--ok)"></span></div><div class="cn">7/7 <small>PASS</small></div></div><div class="card"><div class="ct">@marketing</div><div class="bar"><span style="width:100%;background:var(--ok)"></span></div><div class="cn">13/13 <small>PASS</small></div></div><div class="card"><div class="ct">@migration-lab</div><div class="bar"><span style="width:100%;background:var(--ok)"></span></div><div class="cn">4/4 <small>PASS</small></div></div><div class="card"><div class="ct">@odoo-knowledge</div><div class="bar"><span style="width:100%;background:var(--ok)"></span></div><div class="cn">1/1 <small>PASS</small></div></div><div class="card"><div class="ct">@sales</div><div class="bar"><span style="width:95%;background:var(--warn)"></span></div><div class="cn">21/22 <small>PASS</small></div></div></div>
+<h2>Skills con fallos duros (3)</h2>
+<div class="tw"><table><thead><tr><th>Suite</th><th>Skill</th><th>Fallos</th></tr></thead><tbody><tr><td>@common</td><td class="sk">boes-publish</td><td>no shared refs mention</td></tr><tr><td>@developer</td><td class="sk">odoo-rescue-pack</td><td>lines: 170 (max 150)</td></tr><tr><td>@sales</td><td class="sk">quotation-builder-value-based</td><td>lines: 166 (max 150)</td></tr></tbody></table></div>
+<h2>Warnings (13)</h2>
+<div class="tw"><table><thead><tr><th>Suite</th><th>Skill</th><th>Warning</th></tr></thead><tbody><tr><td>@common</td><td class="sk">odoo-pilot</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@common</td><td class="sk">odoo-server-action-creator</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@consultant</td><td class="sk">report-designer-author</td><td>description 715 chars (&gt;600, trim recommended)</td></tr><tr><td>@developer</td><td class="sk">git-precheck</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@developer</td><td class="sk">odoo-data-files</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@developer</td><td class="sk">odoo-module-migration-scripts</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@developer</td><td class="sk">odoo-module-upgrader</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@developer</td><td class="sk">odoo-pos-developer</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@developer</td><td class="sk">odoo-rescue-pack</td><td>description 867 chars (&gt;600, trim recommended)</td></tr><tr><td>@developer</td><td class="sk">odoo-reverse-engineering</td><td>description 956 chars (&gt;600, trim recommended)</td></tr><tr><td>@developer</td><td class="sk">report-designer-developer</td><td>description 847 chars (&gt;600, trim recommended)</td></tr><tr><td>@sales</td><td class="sk">partner-references-industry</td><td>description con '&lt;' o '&gt;' (Anthropic hard-limit: rompe el parseo del frontmatter)</td></tr><tr><td>@sales</td><td class="sk">quotation-builder-value-based</td><td>description 764 chars (&gt;600, trim recommended)</td></tr></tbody></table></div>
+</div>

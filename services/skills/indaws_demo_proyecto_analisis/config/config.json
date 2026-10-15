@@ -1,0 +1,20 @@
+{
+  "_doc": "Thresholds y pesos del Health Score para el análisis de un proyecto individual.",
+  "company": {
+    "name": "Lumina Ingeniería"
+  },
+  "health_weights": {
+    "_doc": "Pesos de las 4 componentes del Health Score (deben sumar 100).",
+    "hours": 30,
+    "pace": 25,
+    "tasks": 25,
+    "team": 20
+  },
+  "thresholds": {
+    "green": 80,
+    "amber": 60,
+    "concentration_warn_pct": 45,
+    "consumption_warn_pct": 100,
+    "consumption_critical_pct": 115
+  }
+}

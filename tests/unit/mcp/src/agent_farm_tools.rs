@@ -1,4 +1,4 @@
-//! The `agent-farm` MCP server: its fourteen tools are the whole surface,
+//! The `agent-farm` MCP server: its sixteen tools are the whole surface,
 //! every schema it lists is well-formed and Gemini-declarable, the
 //! read-only annotation sits on exactly the tools that change nothing, and
 //! `authorize_run` admits a person's own run, their project's run and an
@@ -18,18 +18,20 @@ use systemprompt_mcp_agent_farm::{RunOrigin, Viewer, authorize_run};
 use systemprompt_web_admin_core::repositories::agent_run_facts::RunScope;
 use systemprompt_web_shared::ProjectId;
 
-const READ_ONLY: [&str; 11] = [
+const READ_ONLY: [&str; 13] = [
     "run_status",
     "run_events",
     "run_list",
     "run_facts",
     "run_stats",
+    "farm_run_report",
     "farm_eval_results",
     "analytics_costs",
     "analytics_requests",
     "analytics_skills",
     "analytics_tools",
     "catalog_list",
+    "farm_dashboard",
 ];
 
 fn names(tools: &[rmcp::model::Tool]) -> Vec<String> {
@@ -37,7 +39,7 @@ fn names(tools: &[rmcp::model::Tool]) -> Vec<String> {
 }
 
 #[test]
-fn the_fourteen_tools_are_the_whole_surface() {
+fn the_sixteen_tools_are_the_whole_surface() {
     let tools = list_tools();
     assert_eq!(names(&tools), TOOL_NAMES);
     assert_eq!(SERVER_NAME, "agent-farm");

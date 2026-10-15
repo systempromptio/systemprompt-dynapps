@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "instance.schema.json",
+  "title": "instance.json",
+  "description": "Org/Odoo coupling + legal entity (plan §2.2). Ops-owned. Connector-agnostic: impl_template_id and odoo_partner_manager are DISCOVERED/verified per connected DB, not hardcoded across entities. legal_entity is required (each Dynapps entity is a distinct legal seller). Fields tagged verify_from_odoo must be confirmed against the connected instance, never inherited from es.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "odoo_url",
+    "odoo_db",
+    "impl_template_name",
+    "sales_url_pattern",
+    "team_email_domain",
+    "core_module_label",
+    "core_module_set_exists",
+    "contact",
+    "odoo_partner_manager",
+    "legal_entity",
+    "offices",
+    "local_country",
+    "credibility"
+  ],
+  "properties": {
+    "odoo_url": {
+      "type": "string",
+      "description": "Instance base URL, e.g. 'https://portal.dynapps.es'."
+    },
+    "odoo_db": {
+      "type": "string",
+      "description": "Odoo DB name, e.g. 'master'. Also a resolve_locale signal."
+    },
+    "impl_template_name": {
+      "type": "string",
+      "verify_from_odoo": true,
+      "description": "Name of the sale.order.template ('Implantación v2'). The engine RESOLVES its id at runtime by name in the connected DB — do NOT hardcode 15; it differs per DB."
+    },
+    "impl_template_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "verify_from_odoo": true,
+      "description": "OPTIONAL cached id for the impl template in THIS DB (es historical=15). null = resolve by name at runtime (preferred). Never share across entities."
+    },
+    "sales_url_pattern": {
+      "type": "string",
+      "description": "e.g. '{odoo_url}/odoo/sales/{id}'."
+    },
+    "cases_base_url": {
+      "type": "string",
+      "description": "Base URL de los casos de éxito por locale (case studies)."
+    },
+    "_cases_base_url_note": {
+      "type": "string",
+      "description": "Nota interna sobre cases_base_url (campo comentario, prefijo _)."
+    },
+    "industries": {
+      "type": "object",
+      "description": "OPTIONAL. EXACT industry taxonomy labels of this entity's market website, keyed by the canonical industry ids of shared/industries.json. Value = label string (flat language packs: es/en) OR a {lang: label} object (country layers composed with multiple languages: BE nl/fr, CH fr/en). Only include ids the country site actually offers (BE has no construction; CH has no laboratories/logistics). Reference cards must render the label verbatim — never translate or paraphrase (Ine/marketing rule).",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "_industries_note": {
+      "type": "string",
+      "description": "Nota interna sobre industries (campo comentario, prefijo _)."
+    },
+    "team_email_domain": {
+      "type": "string",
+      "description": "Domain for hr.employee team lookup, e.g. 'dynapps.es'."
+    },
+    "core_module_label": {
+      "type": "string",
+      "description": "Display label of the entity's Core module set, e.g. 'Dynapps Core'."
+    },
+    "core_module_set_exists": {
+      "type": "boolean",
+      "description": "Whether an Dynapps-Core-equivalent module set exists for this entity."
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "email",
+        "web",
+        "tel"
+      ],
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "web": {
+          "type": "string"
+        },
+        "tel": {
+          "type": "string"
+        }
+      }
+    },
+    "odoo_partner_manager": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "name",
+        "email"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "verify_from_odoo"
+          ],
+          "description": "Always verify_from_odoo: Odoo-SA-assigned per entity."
+        },
+        "name": {
+          "type": "string",
+          "verify_from_odoo": true
+        },
+        "email": {
+          "type": "string",
+          "verify_from_odoo": true
+        }
+      }
+    },
+    "legal_entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "vat",
+        "address",
+        "governing_law"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "verify_from_odoo": true,
+          "description": "Registered legal name of the selling entity, e.g. 'DYNAPPS BUSINESS SOLUTIONS, S.L.'."
+        },
+        "vat": {
+          "type": "string",
+          "verify_from_odoo": true,
+          "description": "Legal-entity VAT number."
+        },
+        "address": {
+          "type": "string",
+          "verify_from_odoo": true,
+          "description": "Registered address."
+        },
+        "governing_law": {
+          "type": "string",
+          "description": "Jurisdiction for T&Cs, e.g. 'España'."
+        }
+      }
+    },
+    "offices": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Office/country list phrasing shown in 'why us'."
+    },
+    "local_country": {
+      "type": "string",
+      "description": "Local-partner country name, e.g. 'España'."
+    },
+    "credibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implementations",
+        "claims_text"
+      ],
+      "properties": {
+        "implementations": {
+          "type": "integer",
+          "description": "Group implementation count, e.g. 900."
+        },
+        "claims_text": {
+          "type": "string",
+          "description": "Per-locale free text REVIEWED for local advertising law (FR DGCCRF / NL misleidende reclame). Not a reused boolean. es='Partner de Odoo a nivel mundial'."
+        },
+        "experts": {
+          "type": "integer",
+          "description": "Group expert headcount for the credibility band, e.g. 280 (Ine sales deck). Group-level figure: same value in every layer."
+        },
+        "countries": {
+          "type": "integer",
+          "description": "Countries with active customers for the credibility band, e.g. 52 (Ine sales deck). Group-level figure: same value in every layer."
+        },
+        "iso27001": {
+          "type": "boolean",
+          "description": "true SOLO donde la entidad tiene la certificación ISO 27001 (BE); false => claim genérica de seguridad"
+        }
+      }
+    }
+  }
+}

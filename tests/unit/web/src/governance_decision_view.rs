@@ -76,8 +76,8 @@ fn a_prompt_is_named_a_prompt_and_not_a_tool() {
 fn a_real_tool_is_named_as_one() {
     assert_eq!(target_label("Bash", None), "tool Bash");
     assert_eq!(
-        target_label("mcp__atlassian__listConfluenceContent", None),
-        "tool mcp__atlassian__listConfluenceContent"
+        target_label("mcp__dynbrain__docs_search", None),
+        "tool mcp__dynbrain__docs_search"
     );
 }
 

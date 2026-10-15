@@ -1,0 +1,126 @@
+<!--
+  qualification_form.html - Plantilla de referencia del formulario de cualificacion
+
+  NOTA: Este archivo es una referencia visual. El HTML final se genera
+  programaticamente desde generate_html.py con datos reales.
+
+  Estilos: inline-only (compatible con chatter Odoo que elimina CSS/JS)
+  Branding: Indaws (#714B67 primary, #00A09D secondary)
+  Badges: [AUTO] #28a745, [PARCIAL] #ffc107, [PENDIENTE] #dc3545
+-->
+
+<div style="font-family:'Segoe UI',Arial,sans-serif;max-width:750px;color:#2C2C2C">
+
+  <!-- Header -->
+  <div style="background:#714B67;padding:28px 32px;border-radius:10px;margin-bottom:28px">
+    <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Indaws · Formulario de Cualificación Odoo</div>
+    <div style="color:#fff;margin:0;font-size:22px;font-weight:700">{{empresa}}</div>
+    <div style="color:rgba(255,255,255,.75);margin:8px 0 0;font-size:13px">Fecha de cualificación: {{fecha}}</div>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid #D9D0E3;margin-bottom:24px">
+
+    <!-- 1. Actividad del negocio -->
+    <tr>
+      <td colspan="2" style="background:#714B67;color:#fff;font-weight:bold;padding:10px 14px;font-size:13px;letter-spacing:.5px">
+        1. ACTIVIDAD DEL NEGOCIO
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#F3F0F5;font-weight:600;padding:9px 14px;width:170px;font-size:12px;color:#714B67;vertical-align:top;border-bottom:1px solid #D9D0E3">Sector / Actividad</td>
+      <td style="padding:9px 14px;font-size:13px;vertical-align:top;border-bottom:1px solid #D9D0E3">
+        {{cnae_description}} <span style="background:#28a745;color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:6px;display:inline-block">AUTO</span>
+      </td>
+    </tr>
+
+    <!-- 2. Dimensionamiento -->
+    <tr>
+      <td colspan="2" style="background:#714B67;color:#fff;font-weight:bold;padding:10px 14px;font-size:13px;letter-spacing:.5px">
+        2. DIMENSIONAMIENTO
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#F3F0F5;font-weight:600;padding:9px 14px;width:170px;font-size:12px;color:#714B67;vertical-align:top;border-bottom:1px solid #D9D0E3">Datos clave</td>
+      <td style="padding:9px 14px;font-size:13px;vertical-align:top;border-bottom:1px solid #D9D0E3">
+        <b>Facturación:</b> {{facturacion}} &nbsp;|&nbsp; <b>Empleados:</b> {{empleados}}
+      </td>
+    </tr>
+
+    <!-- 3. Sistema actual -->
+    <tr>
+      <td colspan="2" style="background:#714B67;color:#fff;font-weight:bold;padding:10px 14px;font-size:13px;letter-spacing:.5px">
+        3. SISTEMA ACTUAL
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#F3F0F5;font-weight:600;padding:9px 14px;width:170px;font-size:12px;color:#714B67;vertical-align:top;border-bottom:1px solid #D9D0E3">Plataforma actual</td>
+      <td style="padding:9px 14px;font-size:13px;vertical-align:top;border-bottom:1px solid #D9D0E3">
+        {{sistema_actual}} <span style="background:#ffc107;color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:6px;display:inline-block">PARCIAL</span>
+      </td>
+    </tr>
+
+    <!-- 4. Pain points -->
+    <tr>
+      <td colspan="2" style="background:#714B67;color:#fff;font-weight:bold;padding:10px 14px;font-size:13px;letter-spacing:.5px">
+        4. PAIN POINTS IDENTIFICADOS
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:14px;border-bottom:1px solid #D9D0E3">
+        <div style="margin-bottom:8px;padding:9px 12px;background:#FFF8F0;border-radius:6px;border-left:4px solid #E8A020">
+          <div style="font-size:13px;font-weight:600">{{pain_emoji}} {{pain_title}}</div>
+          <div style="font-size:12px;color:#666;margin-top:3px">{{pain_desc}}</div>
+        </div>
+      </td>
+    </tr>
+
+    <!-- 5. Modulos de interes -->
+    <tr>
+      <td colspan="2" style="background:#714B67;color:#fff;font-weight:bold;padding:10px 14px;font-size:13px;letter-spacing:.5px">
+        5. MÓDULOS DE INTERÉS
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#F3F0F5;font-weight:600;padding:9px 14px;width:170px;font-size:12px;color:#714B67;vertical-align:top;border-bottom:1px solid #D9D0E3">Módulos Odoo</td>
+      <td style="padding:9px 14px;font-size:13px;vertical-align:top;border-bottom:1px solid #D9D0E3">
+        <span style="background:#00A09D;color:#fff;border-radius:10px;padding:2px 9px;font-size:11px;margin:2px 3px;display:inline-block">{{modulo}}</span>
+      </td>
+    </tr>
+
+    <!-- 6. Presupuesto & Timeline -->
+    <tr>
+      <td colspan="2" style="background:#714B67;color:#fff;font-weight:bold;padding:10px 14px;font-size:13px;letter-spacing:.5px">
+        6. PRESUPUESTO &amp; TIMELINE
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#F3F0F5;font-weight:600;padding:9px 14px;width:170px;font-size:12px;color:#714B67;vertical-align:top;border-bottom:1px solid #D9D0E3">Estado presupuesto</td>
+      <td style="padding:9px 14px;font-size:13px;vertical-align:top;border-bottom:1px solid #D9D0E3">
+        {{presupuesto}} <span style="background:#dc3545;color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:6px;display:inline-block">PENDIENTE</span>
+      </td>
+    </tr>
+
+    <!-- 7. Mapa de decisores -->
+    <tr>
+      <td colspan="2" style="background:#714B67;color:#fff;font-weight:bold;padding:10px 14px;font-size:13px;letter-spacing:.5px">
+        7. MAPA DE DECISORES
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:14px">
+        <div style="margin-bottom:10px;padding:10px 12px;background:#F9F7FB;border-radius:6px;border-left:4px solid #714B67">
+          <div style="font-size:13px;color:#555">{{decisor_mention}}</div>
+        </div>
+      </td>
+    </tr>
+
+  </table>
+
+  <!-- Next step -->
+  <div style="padding:16px 20px;background:#E8F7F7;border-radius:9px;border:1.5px solid #00A09D;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;color:#00A09D;margin-bottom:5px">📅 Siguiente paso</div>
+    <div style="font-size:13px">Agendar toma de datos detallada con el <b>Responsable de Zona</b>.</div>
+  </div>
+
+  <div style="font-size:11px;color:#aaa;text-align:center;margin-top:20px">Documento generado automáticamente por Indaws · {{fecha}}</div>
+</div>

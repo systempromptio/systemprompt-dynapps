@@ -84,9 +84,10 @@ fn build_env(ctx: &AppContext) -> Env {
     Env {
         #[cfg(feature = "farm")]
         farm: Some(
-            systemprompt_web_admin_farm::state::build_farm_state_from_app(
+            systemprompt_web_admin_farm::state::build_farm_state_with_ai(
                 Arc::clone(&pool),
                 Some(ctx.app_paths()),
+                ctx.ai_service_arc(),
             ),
         ),
         pool,

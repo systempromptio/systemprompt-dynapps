@@ -215,6 +215,25 @@ scheduler:
       owner: admin
       enabled: true
 
+    # The nightly accounting audit on the agent farm (web extension). At
+    # 02:00 UTC it queues one run of `accounting_night_audit` on the
+    # `dynapps-night-audit` farm (services/web/config/agent-farms.yaml) onto
+    # core's agent_runs, launched as `launcher`; the farm runs in `user`
+    # mode, so the run spends that person's own dynapps-odoo and dynbrain
+    # grants. The run records `triggered_via = scheduler` and the job only
+    # queues it. Where the launcher is not an active person (every
+    # environment but production) the tick logs that and queues nothing.
+    # Manual run: `systemprompt infra jobs run farm_scheduled_run`.
+    - name: farm_scheduled_run
+      extension: web
+      owner: admin
+      schedule: "0 0 2 * * *"
+      enabled: true
+      parameters:
+        farm: dynapps-night-audit
+        agent: accounting_night_audit
+        launcher: ed@systemprompt.io
+
     # Data lifecycle: measure daily, archive raw weeks before they expire,
     # archive the rollups monthly (kept forever) and run the health check.
     # Archives land under storage/exports/{weekly,monthly}/ and are listed on

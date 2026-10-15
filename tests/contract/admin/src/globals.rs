@@ -133,10 +133,10 @@ fn add_identity_server(dest: &std::path::Path) {
         .expect("write fixture sfcore_dev.yaml");
     let config_path = dest.join("config/config.yaml");
     let config = std::fs::read_to_string(&config_path).expect("read fixture config.yaml");
-    let anchor = "  - ../mcp/atlassian.yaml\n";
+    let anchor = "  - ../mcp/dynbrain.yaml\n";
     assert!(
         config.contains(anchor),
-        "services/config/config.yaml must include ../mcp/atlassian.yaml"
+        "services/config/config.yaml must include ../mcp/dynbrain.yaml"
     );
     std::fs::write(
         &config_path,

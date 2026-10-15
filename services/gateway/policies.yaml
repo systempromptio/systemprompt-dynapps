@@ -96,30 +96,29 @@ policies:
   - name: default-quotas
     enabled: true
     spec:
-      # Warn, never enforce — see the header. Nothing on this plane refuses.
+      # WARN (Ed, 2026-10-15): enforce (set 2026-10-14) refused active
+      # users with 429 at the $5/h window. Back to warning thresholds;
+      # breaches are recorded, nothing is refused.
       quota_mode: warn
       quota_windows:
-        # Per user, hourly: a runaway agent is flagged within the hour without
-        # any normal developer session ever tripping the threshold.
+        # Per user, hourly: 120 requests or $5 (about ten farm runs).
         - subject: user
           window_seconds: 3600
-          max_requests: 600
-          max_cost_microdollars: 20000000
-        # Installation-wide, daily: a $200/day warning threshold. A day that
-        # passes it shows up in the warnings report; nothing is refused.
+          max_requests: 120
+          max_cost_microdollars: 5000000
+        # Per user, daily: 500 requests or $15.
+        - subject: user
+          window_seconds: 86400
+          max_requests: 500
+          max_cost_microdollars: 15000000
+        # Whole installation, daily: $40.
         - subject: organization
           window_seconds: 86400
-          max_cost_microdollars: 200000000
-        # Per project, daily: a $100/day warning threshold keyed on the project
-        # core attributed each request to (header, bound API key, or primary
-        # project). Last on purpose: under `quota_fault_mode: closed`
-        # (services/ai/gateway.yaml) a person on no project is a subject fault,
-        # which ends evaluation at this window and, in warn mode, records a
-        # quota warning instead of refusing. The windows above are already
-        # counted by then. Give everyone a project before `quota_mode: enforce`.
-        - subject: project
-          window_seconds: 86400
-          max_cost_microdollars: 100000000
+          max_cost_microdollars: 40000000
+        # Whole installation, calendar month: $150.
+        - subject: organization
+          window_seconds: 2678400
+          max_cost_microdollars: 150000000
       # No redact_categories: core refuses un-redactable content even in warn mode, so it is enabled only with the enforce flip.
       safety:
         mode: warn

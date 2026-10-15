@@ -1,0 +1,105 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Per farm agent over the window: runs, outcomes, cost, completion and the\n-- mean eval score of its runs, infrastructure failures left out of the mean\n-- and counted separately. $1 narrows to one client, $2 to one user's runs.\nSELECT r.farm_id AS \"farm_id!: FarmId\",\n       r.agent_id AS \"agent_id!: FarmAgentId\",\n       COUNT(*)::bigint AS \"runs!\",\n       COUNT(*) FILTER (WHERE r.status = 'succeeded')::bigint AS \"succeeded!\",\n       COUNT(*) FILTER (WHERE r.status IN ('succeeded', 'failed', 'timed_out'))::bigint AS \"finished!\",\n       COALESCE(SUM(r.cost_microdollars), 0)::bigint AS \"cost_microdollars!\",\n       COUNT(rr.run_id) FILTER (WHERE rr.completed)::bigint AS \"completed!\",\n       AVG(s.score)::float8 AS \"eval_mean?\",\n       COUNT(s.score)::bigint AS \"eval_scored!\",\n       COUNT(*) FILTER (WHERE s.infra_failure)::bigint AS \"infra_failures!\",\n       MAX(r.created_at) AS \"last_run_at!\"\nFROM agent_farm_runs r\nLEFT JOIN agent_farm_run_reports rr ON rr.run_id = r.id\nLEFT JOIN agent_farm_run_eval_scores s ON s.run_id = r.id\nWHERE r.created_at >= $3\n  AND ($1::text IS NULL OR r.client_id = $1)\n  AND ($2::text IS NULL OR r.user_id = $2)\nGROUP BY r.farm_id, r.agent_id\nORDER BY COUNT(*) DESC, r.farm_id, r.agent_id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "farm_id!: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "farm_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "agent_id!: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "agent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "runs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "succeeded!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "finished!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "completed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "eval_mean?",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "eval_scored!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "infra_failures!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "last_run_at!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c2aa9a9f618f18d15406da4e5c09b4cbb5e99ce48aa6b6cf2f6144927b42a0f4"
+}

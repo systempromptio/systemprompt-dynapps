@@ -1,0 +1,19 @@
+{
+  "_layer": "country",
+  "currency": {
+    "code": "EUR", "code_label": "EUR", "symbol": "€",
+    "symbol_position": "after", "symbol_space": true,
+    "decimals": 0, "decimal_sep": ",", "thousands_sep": ".",
+    "round_display": "half_up", "round_step": 10
+  },
+  "spreadsheet": {
+    "number_format_currency": "#,##0[$€]",
+    "locale_block": {
+      "name": "<<per-lang: Dutch (Belgium) nl_BE | French (Belgium) fr_BE>>",
+      "code": "<<nl_BE | fr_BE>>",
+      "thousandsSeparator": ".", "decimalSeparator": ",",
+      "dateFormat": "dd/mm/yyyy", "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ";", "weekStart": 1
+    }
+  }
+}

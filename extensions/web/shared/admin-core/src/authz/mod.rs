@@ -15,7 +15,6 @@
 //! | 140 | `project` | the crate owning projects |
 //! | 150 | `group` | the crate owning groups |
 //! | 160 | `connector` | [`connector`] |
-//! | 170 | `salesforce` | the crate owning Salesforce links |
 //! | 200 | role | core resolver; re-exposed by the crate owning roles |
 //! | 250 | `cost_centre` | the crate owning projects |
 //! | 260 | `practice` | the crate owning projects |

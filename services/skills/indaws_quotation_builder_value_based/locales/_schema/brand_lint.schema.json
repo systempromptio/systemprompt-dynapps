@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "brand_lint.schema.json",
+  "title": "brand_lint.json",
+  "description": "brand_lint lexicons + word charclass + messages (plan §2.2). Translator-owned. At runtime ACRONYMS = shared/slop_en_core.json core ∪ fiscal.acronyms_fiscal ∪ brand_lint.acronyms_extra. word_charclass MUST include the language's accented letters so the tokenizer doesn't drop them (FR œàâçèéêëîïôùûü, NL ëïöü). Mechanical-rule data (stopwords / leak_denylist / register / passive_patterns / pressure) imported from dynapps-voice draft 2026-07-17: ALL language data lives here, never in the engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["acronyms_extra", "brochure", "jargon", "slop", "fluff", "stopwords", "leak_denylist", "register", "passive_patterns", "pressure", "word_charclass", "messages"],
+  "properties": {
+    "_comment": { "type": "string", "description": "Provenance note (e.g. imported voice-guide version stamp)." },
+    "acronyms_extra": { "type": "array", "items": { "type": "string" }, "description": "Extra allowed acronyms beyond shared core + fiscal. es=[]." },
+    "brochure": { "type": "array", "items": { "type": "string" }, "description": "Brochure/marketing-cliché lexicon." },
+    "jargon": { "type": "array", "items": { "type": "string" }, "description": "Anglicism/jargon lexicon." },
+    "slop": { "type": "array", "items": { "type": "string" }, "description": "AI-slop verb/phrase lexicon." },
+    "fluff": { "type": "array", "items": { "type": "string" }, "description": "Filler-phrase lexicon." },
+    "stopwords": { "type": "array", "items": { "type": "string" }, "description": "~50 common function words of THIS pack's language. The engine aggregates every pack's set to profile the dominant language of a prose field (IDIOMA check)." },
+    "leak_denylist": { "type": "array", "items": { "type": "string" }, "description": "Literal giveaways of a FOREIGN language (today: common Spanish phrases) that must never appear in this pack's prose. es=[]." },
+    "register": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["avoid"],
+        "additionalProperties": false,
+        "properties": {
+          "avoid": { "type": "string", "description": "Regex (matched on normalized lowercase text) for a banned register token, e.g. nl '\\\\bu\\\\b'." },
+          "use": { "type": "string", "description": "Suggested replacement register, e.g. 'je/jij'." }
+        }
+      },
+      "description": "Banned register tokens (REGISTRO check). nl: u/uw -> je/jij; fr: tu/ton/ta -> vous/votre. es=[] by product decision."
+    },
+    "passive_patterns": { "type": "array", "items": { "type": "string" }, "description": "Passive-voice heuristic regexes, matched on the accent-stripped lowercase text. WARN-only. es=[] by product decision." },
+    "pressure": { "type": "array", "items": { "type": "string" }, "description": "Sales-pressure/urgency phrase lexicon (PRESION check): urgency must read as planning transparency." },
+    "word_charclass": { "type": "string", "description": "Regex charclass for word tokenization, es='A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9./-'." },
+    "messages": {
+      "type": "object",
+      "required": ["ok", "warn", "tips"],
+      "additionalProperties": true,
+      "properties": {
+        "ok": { "type": "string", "description": "es='✓ brand_lint: sin hallazgos'." },
+        "warn": { "type": "string", "description": "Placeholder {n}. es='⚠️ brand_lint: {n} aviso(s)…'." },
+        "tips": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
+  }
+}

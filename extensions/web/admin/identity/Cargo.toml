@@ -3,7 +3,7 @@ name = "systemprompt-web-admin-identity"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Identity domain of the admin dashboard for the systemprompt.io template: users and their sessions, SAML single sign-on and developer sign-in, groups, projects, roles and the access-control rules."
+description = "Identity domain of the admin dashboard for the systemprompt.io template: users and their sessions, Entra ID OIDC single sign-on and developer sign-in, groups, projects, roles and the access-control rules."
 repository.workspace = true
 homepage.workspace = true
 publish = false
@@ -38,21 +38,19 @@ thiserror = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
-# Crypto & encoding (developer login codes, SAML relay state, groups.yaml
-# digests)
+# Crypto & encoding (developer login codes, groups.yaml digests)
 sha2 = { workspace = true }
 hex = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true }
 
-# SAML 2.0 relying party: pure-Rust XML-DSig, no libxml2/xmlsec.
-saml = { workspace = true }
 # Verifies Entra ID OpenID Connect id_tokens (RS256 against the tenant JWKS).
 jsonwebtoken = { workspace = true }
-# Fetches the IdP federation metadata from `idp_metadata_url`.
+# Fetches the OIDC discovery document, JWKS and token endpoint.
 reqwest = { workspace = true }
 
 # Utilities
+url = { workspace = true }
 urlencoding = { workspace = true }
 inventory = { workspace = true }
 async-trait = { workspace = true }

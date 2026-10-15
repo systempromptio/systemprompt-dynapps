@@ -1,0 +1,24 @@
+{"vals_list": [{
+  "name": "{titulo_conciso}",
+  "project_id": "{project_id}",
+  "stage_id": 1008,
+  "priority": "1",
+  "x_studio_task_difficulty": "{low|medium|high|very_high}",
+  "allocated_hours": "{horas_con_factor_IA}",
+  "x_studio_is_planned": false,
+  "x_studio_fecha_de_revision": false,
+  "x_studio_review_user_id": "{res_users_id_del_TL}",
+  "x_studio_review_priority": "1",
+  "x_studio_plan_hours": "{horas_planificacion_redactor}",
+  "tag_ids": "{[[6, 0, [tag_ids_segun_tipo]]]}",
+  "description": "<div>{HTML: contexto + objetivo + alcance + guia + criterios + referencias}</div>",
+  "x_studio_task_testing": "<div>{HTML: plan de testing detallado}</div>",
+  "x_studio_explicacin": "{TEXT: restricciones tecnicas + gotchas + breaking changes}",
+  "xx_checklist_ids": [
+    [0, 0, {"name": "{paso 1}", "type": "development", "sequence": 1, "weight": 30, "state": "pending", "notes": "<p>{Notas paso 1}</p>"}],
+    [0, 0, {"name": "{paso 2}", "type": "development", "sequence": 2, "weight": 40, "state": "pending", "notes": "<p>{Notas paso 2}</p>"}],
+    [0, 0, {"name": "Tests unitarios", "type": "test", "sequence": 3, "weight": 20, "state": "pending", "notes": "<p><b>Skill</b>: odoo-test-generator</p>"}],
+    [0, 0, {"name": "Quality gate", "type": "test", "sequence": 4, "weight": 10, "state": "pending", "notes": "<p><b>Skill</b>: quality-gate</p>"}]
+  ]
+}],
+"context": {"lang": "es_ES"}}

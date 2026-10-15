@@ -25,6 +25,24 @@ pub enum SsoProviderError {
         #[source]
         source: reqwest::Error,
     },
+    #[error("JWKS uri {url} unusable: {source}")]
+    JwksUri {
+        url: String,
+        #[source]
+        source: url::ParseError,
+    },
+    #[error("JWKS fetch from {url} failed: {source}")]
+    JwksFetch {
+        url: String,
+        #[source]
+        source: reqwest::Error,
+    },
+    #[error("JWKS from {url} unparseable: {source}")]
+    JwksParse {
+        url: String,
+        #[source]
+        source: reqwest::Error,
+    },
     #[error("token endpoint unreachable: {0}")]
     TokenEndpoint(#[source] reqwest::Error),
     #[error("token response unparseable: {0}")]
@@ -35,30 +53,6 @@ pub enum SsoProviderError {
     IdTokenRejected(#[source] jsonwebtoken::errors::Error),
     #[error("id_token claims: {0}")]
     IdTokenClaims(#[source] serde_json::Error),
-    #[error("SAMLResponse is not base64: {0}")]
-    SamlBase64(#[source] base64::DecodeError),
-    #[error("IdP metadata unusable: {0}")]
-    IdpMetadata(#[source] saml::Error),
-    #[error("IdP federation metadata client: {0}")]
-    MetadataClient(#[source] reqwest::Error),
-    #[error("IdP federation metadata fetch from {url} failed: {source}")]
-    MetadataFetch {
-        url: String,
-        #[source]
-        source: reqwest::Error,
-    },
-    #[error("IdP federation metadata from {url} does not parse: {source}")]
-    MetadataParse {
-        url: String,
-        #[source]
-        source: saml::Error,
-    },
-    #[error("service-provider configuration rejected: {0}")]
-    SpConfig(#[source] saml::Error),
-    #[error("AuthnRequest could not be built: {0}")]
-    AuthnRequest(#[source] saml::Error),
-    #[error("SP metadata: {0}")]
-    SpMetadata(#[source] saml::Error),
 }
 
 impl From<SsoProviderError> for SsoError {
@@ -67,19 +61,14 @@ impl From<SsoProviderError> for SsoError {
             SsoProviderError::TokenParse(_)
             | SsoProviderError::IdTokenHeader(_)
             | SsoProviderError::IdTokenRejected(_)
-            | SsoProviderError::IdTokenClaims(_)
-            | SsoProviderError::SamlBase64(_) => Self::InvalidAssertion(err.to_string()),
+            | SsoProviderError::IdTokenClaims(_) => Self::InvalidAssertion(err.to_string()),
             SsoProviderError::Discovery { .. }
             | SsoProviderError::DiscoveryStatus { .. }
             | SsoProviderError::DiscoveryParse { .. }
             | SsoProviderError::TokenEndpoint(_)
-            | SsoProviderError::IdpMetadata(_)
-            | SsoProviderError::MetadataClient(_)
-            | SsoProviderError::MetadataFetch { .. }
-            | SsoProviderError::MetadataParse { .. }
-            | SsoProviderError::SpConfig(_)
-            | SsoProviderError::AuthnRequest(_)
-            | SsoProviderError::SpMetadata(_) => Self::Unavailable(err.to_string()),
+            | SsoProviderError::JwksUri { .. }
+            | SsoProviderError::JwksFetch { .. }
+            | SsoProviderError::JwksParse { .. } => Self::Unavailable(err.to_string()),
         }
     }
 }

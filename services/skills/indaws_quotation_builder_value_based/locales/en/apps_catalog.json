@@ -1,0 +1,854 @@
+{
+  "config_general": {
+    "display_name": "General Settings",
+    "icon": "settings.svg",
+    "color": "#951CF3",
+    "outcome": "A solid multi-company foundation",
+    "intro": "The foundation of your new ERP system. Includes all the initial configuration your team needs to start working from day one: company data, users, permissions, tax setup and document templates.",
+    "value": "A well-configured system from the start saves weeks of later adjustments and ensures that every document you issue (invoices, quotations, delivery notes) carries your corporate identity.",
+    "funcionalidades": [
+      "System configuration (company, logo, currency, language)",
+      "User creation and permissions",
+      "Email templates and mail server",
+      "Basic tax configuration (VAT number, fiscal positions, VAT)",
+      "Document header and footer customization"
+    ],
+    "formaciones": [
+      {
+        "n": "System administrator",
+        "sesiones": 1
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Multi-company (250€/additional company)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Multi-language (printed documents)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "30-60 users",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "60-100 users",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "+100 users",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "crm": {
+    "display_name": "CRM",
+    "icon": "crm.svg",
+    "color": "#951CF3",
+    "outcome": "Sales pipeline under control",
+    "intro": "Your sales pipeline, centralized. Every opportunity, every call, every meeting is recorded and visible to the whole team. With real-time dashboards you always know how sales activity is progressing.",
+    "value": "Stop losing opportunities for lack of follow-up. With a well-implemented CRM, your sales team can focus on selling instead of hunting for information in emails and spreadsheets.",
+    "funcionalidades": [
+      "Sales pipeline (stages, probabilities, ≤3 salespeople)",
+      "Opportunities (creation, follow-up, closing)",
+      "Custom fields on the opportunity record",
+      "Activities (calls, meetings, tasks)",
+      "Contact management (companies and contacts)",
+      "Basic reporting (pipeline dashboard, forecast)"
+    ],
+    "formaciones": [
+      {
+        "n": "Sales team",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Projects on opportunities"
+    ],
+    "extras": [
+      {
+        "n": "4-10 sales reps (multi-team, assignment)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "+10 sales reps (territories, targets)",
+        "p": 1000,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Lead scoring and nurturing",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Sales automations",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Opportunities migration",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Advanced prospecting (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "ventas": {
+    "display_name": "Sales",
+    "icon": "sale_management.svg",
+    "color": "#FF575D",
+    "outcome": "From quotation to payment",
+    "intro": "Manage the entire sales cycle: from creating the quotation to invoicing, including order confirmation and delivery tracking. Your customers can sign quotations online and check their orders and invoices from the portal.",
+    "value": "Reduce administrative workload and give your customers a professional experience with a self-service portal, electronic signature and automated communications.",
+    "funcionalidades": [
+      "Quotations (creation, sending, online signature)",
+      "Sales orders (confirmation, tracking)",
+      "Price lists (multiple lists)",
+      "Product catalog (categories, variants)",
+      "Customer portal",
+      "Sales reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Administration + sales",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Multiple discounts",
+      "Quotation versions",
+      "Quotation enhancements",
+      "Customer-specific product codes",
+      "Sales documents"
+    ],
+    "extras": [
+      {
+        "n": "Subscriptions / Recurrence",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Additional quotation templates",
+        "p": 250,
+        "c": "personalizaciones"
+      },
+      {
+        "n": "Products migration",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Customers migration",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Pricelists migration",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Approval flow (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Kits / bundled products (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Order-type flows (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "B2B loyalty (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "compras": {
+    "display_name": "Purchase",
+    "icon": "purchase.svg",
+    "color": "#FF7759",
+    "outcome": "Procurement under control",
+    "intro": "Centralize procurement management: create purchase orders, compare offers from multiple suppliers, control goods receipt and validate vendor bills against orders and delivery notes.",
+    "value": "Gain visibility over what you buy, from whom and at what price. Negotiate better with real data and avoid duplicates or errors in vendor billing.",
+    "funcionalidades": [
+      "Purchase orders",
+      "Multi-supplier",
+      "Requests for quotation (RFQ)",
+      "Supplier records",
+      "Bill control (2/3 way matching)",
+      "Purchase reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Purchasing manager",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [
+      "Supplier migration"
+    ],
+    "dynapps_core": [
+      "Purchase-sales integration"
+    ],
+    "extras": [
+      {
+        "n": "Replenishment (minimum stock)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Blanket agreements",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Dropshipping",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Purchase pricelists migration",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Advanced purchasing management (Dynapps Core)",
+        "p": 750,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "inventario": {
+    "display_name": "Inventory",
+    "icon": "stock.svg",
+    "color": "#FF7E23",
+    "outcome": "Traceable stock in real time",
+    "intro": "Full control of your warehouse: know at all times what you have, where it is and how much it is worth. Manage inbound, outbound, internal transfers and periodic stock counts with full traceability.",
+    "value": "Avoid stockouts, reduce excess inventory and gain efficiency in warehouse operations. Traceability lets you respond to any incident in minutes.",
+    "funcionalidades": [
+      "1 warehouse (inbound, stock, outbound)",
+      "Stock moves",
+      "Products (categories, UoM, minimum stock)",
+      "Periodic stock count",
+      "Reporting (stock, valuation)"
+    ],
+    "formaciones": [
+      {
+        "n": "Warehouse manager",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [
+      "Product migration"
+    ],
+    "dynapps_core": [
+      "Valued delivery notes",
+      "Advanced stock management"
+    ],
+    "extras": [
+      {
+        "n": "Multi-warehouse (250€/warehouse)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Lot traceability",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Serial-number traceability",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Expiration dates (FEFO)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Advanced logistics routes",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Barcodes (PDA)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Automatic replenishment",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Current stock migration",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Serial/lot number generator (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Stock in projects (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Brands and labels (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "fabricacion": {
+    "display_name": "Manufacturing (MRP)",
+    "icon": "mrp.svg",
+    "color": "#FF575D",
+    "outcome": "Production connected to sales",
+    "intro": "Plan and manage your production: define bills of materials, create manufacturing orders, control component consumption and analyze production costs and efficiency.",
+    "value": "Connect production with sales, purchasing and inventory. When a customer places an order, the system can automatically generate the manufacturing orders and the raw-material purchases required.",
+    "funcionalidades": [
+      "Bills of materials",
+      "1 work center",
+      "Manufacturing orders",
+      "Material consumption",
+      "Production reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Production manager",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Multi work center (250€/center)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Work orders",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Subcontracting",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Production planning (MPS)",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Quality control (ISO)",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "PLM (BoM versions, ECOs)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Maintenance (prev./corrective)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Breakdown / Multi-level",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Bills of materials migration",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Routes/centers migration",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "facturacion": {
+    "display_name": "Invoicing",
+    "icon": "account.svg",
+    "color": "#951CF3",
+    "outcome": "Automated, compliant invoicing",
+    "intro": "Complete invoicing for customers and suppliers: create invoices, credit notes and corrective invoices, record receipts and payments, and track outstanding due dates. All integrated with sales, purchasing and accounting.",
+    "value": "Reduce errors and administrative time. Invoices are generated automatically from orders or delivery notes, and you can email them with a single click.",
+    "funcionalidades": [
+      "Customer invoicing (invoices, credit notes, corrective invoices)",
+      "Vendor bills",
+      "Complete flow (creation→receipt/payment)",
+      "Receipts and payments",
+      "Reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Administration",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Invoicing utilities"
+    ],
+    "extras": [
+      {
+        "n": "Custom PDF generator (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Advanced margins and costs (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "contabilidad": {
+    "display_name": "Accounting",
+    "icon": "account_accountant.svg",
+    "color": "#951CF3",
+    "outcome": "Closing and consolidation",
+    "accounting_from_fiscal": true,
+    "intro": "Accounting integrated with your chart of accounts: automatic bank reconciliation, fixed-asset management, assisted period closings and all legal reports (balance sheet, P&L, general ledger, tax filings).",
+    "value": "Your accounting is fed automatically from sales and purchase invoices. Automatic bank reconciliation drastically reduces the time spent on monthly closing.",
+    "funcionalidades": [
+      "Chart of accounts (VAT)",
+      "Bank reconciliation",
+      "Fixed assets",
+      "Period closings",
+      "Accounting receipts and payments",
+      "Accounting reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Accounting",
+        "sesiones": 3
+      }
+    ],
+    "migraciones": [
+      "Chart of accounts migration",
+      "Opening entry migration"
+    ],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "SII (Immediate Supply of Information, AEAT)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "SEPA direct debit",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Multi-currency",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Analytic accounting",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Accounting budgets",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Intrastat / form 349",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "SII improvements (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "proyecto": {
+    "display_name": "Project",
+    "icon": "project.svg",
+    "color": "#FF7759",
+    "outcome": "Profitability per project",
+    "intro": "Manage internal and customer projects: create tasks with subtasks and dependencies, assign resources, log timesheets and visualize progress with Gantt charts.",
+    "value": "Control the effort and profitability of every project. Integrated with invoicing to bill hours or milestones directly to the customer.",
+    "funcionalidades": [
+      "Multi-project",
+      "Tasks and subtasks (Gantt)",
+      "Timesheets",
+      "Collaboration",
+      "Reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Project manager",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Time tracking per project"
+    ],
+    "extras": [
+      {
+        "n": "Project billing",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Resource planning",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Stock in projects (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "helpdesk": {
+    "display_name": "Helpdesk",
+    "icon": "helpdesk.svg",
+    "color": "#FF7E23",
+    "outcome": "Professional customer support",
+    "intro": "Professional customer support: ticket management with SLAs, a self-service portal where your customers create and track their issues, and a knowledge base with FAQ articles.",
+    "value": "Improve customer satisfaction with controlled response times and a portal where they can resolve common questions without contacting your team.",
+    "funcionalidades": [
+      "1 support team (basic SLA)",
+      "Tickets (manual and email)",
+      "Customer portal",
+      "Knowledge base",
+      "Reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Support team",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Additional teams (250€/team)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Timesheets on tickets",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Support billing",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Automations",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Live chat",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "website": {
+    "display_name": "Website / eCommerce",
+    "icon": "website.svg",
+    "color": "#951CF3",
+    "outcome": "A website connected to your ERP",
+    "intro": "Your web presence integrated with the ERP: a corporate site with a blog, a contact form linked to the CRM, a customer portal and, optionally, an online store with catalog, cart and checkout.",
+    "value": "A website connected to the ERP means online orders flow straight into sales, stock updates in real time and customers see their data updated instantly.",
+    "funcionalidades": [
+      "Corporate website (5 pages)",
+      "Blog",
+      "Contact form",
+      "Customer portal",
+      "Basic SEO",
+      "Responsive"
+    ],
+    "formaciones": [
+      {
+        "n": "Content manager",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "eCommerce enhancements"
+    ],
+    "extras": [
+      {
+        "n": "Additional pages (100€/page)",
+        "p": 100,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Online store (eCommerce)",
+        "p": 1500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Multi-language website",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Custom design",
+        "p": 750,
+        "c": "personalizaciones"
+      },
+      {
+        "n": "Live chat",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Website content migration",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Google Merchant (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "marketing_email": {
+    "display_name": "Email Marketing",
+    "icon": "mass_mailing.svg",
+    "color": "#FF575D",
+    "outcome": "Measurable campaigns",
+    "intro": "Integrated email marketing campaigns: a visual editor to design emails, contact list management, segmentation and detailed results analysis (opens, clicks, unsubscribes).",
+    "value": "Communicate with your customers professionally and measure the real impact of every campaign. Integrated with CRM and sales to segment by purchasing behavior.",
+    "funcionalidades": [
+      "Email campaigns (visual editor)",
+      "Contact lists",
+      "3 email templates",
+      "Reporting (opens, clicks)"
+    ],
+    "formaciones": [
+      {
+        "n": "Marketing",
+        "sesiones": 1
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Marketing automation",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Advanced segmentation",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Additional templates",
+        "p": 250,
+        "c": "personalizaciones"
+      },
+      {
+        "n": "SMS marketing",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Advanced email design (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Enhanced outgoing mail (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "rrhh": {
+    "display_name": "HR",
+    "icon": "hr.svg",
+    "color": "#FF7E23",
+    "outcome": "Your team in one place",
+    "intro": "Centralized management of your team: employee directory, employment contracts, org chart, clock-in/clock-out and department management.",
+    "value": "All of your team's information in one place. Integrated with projects to link hours worked and with accounting for expense management.",
+    "funcionalidades": [
+      "Employee directory",
+      "Departments (org chart)",
+      "Employment contracts",
+      "Attendance / Time tracking"
+    ],
+    "formaciones": [
+      {
+        "n": "HR",
+        "sesiones": 1
+      }
+    ],
+    "migraciones": [
+      "Employee migration"
+    ],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Time off and holidays",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Employee expenses",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Appraisals / Performance",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Recruiting",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Fleet management",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Employee training",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "50-100 employees",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "+100 employees",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Holiday balances migration",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Employee portal (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Additional training sessions (200€/sess.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  }
+}

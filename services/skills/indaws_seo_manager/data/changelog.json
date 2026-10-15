@@ -1,0 +1,33 @@
+[
+  {
+    "date": "2026-07-21",
+    "type": "migration",
+    "notes": "Skill rebuilt for www.dynapps.es (new CMS, multi-region group site). Previous indaws.es data archived in data/archive-indaws/. Execution layer disabled: audit-only mode until the new CMS API is integrated."
+  },
+  {
+    "date": "2026-07-21",
+    "type": "audit",
+    "audit_type": "full-partial-technical",
+    "findings_count": 15,
+    "critical_issues": 4,
+    "score": 62,
+    "actions_proposed": 12,
+    "notes": "Primera auditoria dynapps.es. Solo componente tecnico (94 paginas) + verificacion migracion: DataForSEO sin credenciales (keywords/backlinks/competidores pendientes). P1: redirects legacy indaws 302+404 (~87% muestra), canonical 0/94, schema 0/94, /es/contact sin H1. Informe: data/reports/2026-07-21-auditoria-full-dynapps.md"
+  },
+  {
+    "date": "2026-07-21",
+    "type": "audit",
+    "audit_type": "full-multiagent-review",
+    "findings_count": 40,
+    "critical_issues": 14,
+    "score": 62,
+    "actions_proposed": 40,
+    "notes": "Review total multi-agente (6 dimensiones + critico, 403k tokens): best practices SEO 2026 + gap analysis. DataForSEO desbloqueado: dynapps.es 13 kw (0 TOP10) vs indaws.es 111 kw (31 TOP10) aun vivas; backlinks 90 RD/rank 57; baseline target 22 kw guardado en rank_history. Plan consolidado en data/action-plan.json (40 tareas, 14 P1); tracker HTML publicado: https://share.dynapps.io/v/f5083fa22661489d80465d441d7b635e"
+  },
+  {
+    "date": "2026-07-21",
+    "type": "recommendations",
+    "batch": "MIG-02 redirect map",
+    "notes": "Mapa de redirects 301 indaws.es->dynapps.es entregado: 829 URLs priorizadas por keywords vivas (111) + backlinks (1000 analizados). 9 destinos manuales alta confianza, 38 slug-match, 782 fallback de seccion; 17 URLs marcadas RECREAR CONTENIDO antes de redirigir. Fichero: data/redirect-map-indaws-dynapps.csv"
+  }
+]

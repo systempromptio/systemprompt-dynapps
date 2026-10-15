@@ -1,0 +1,84 @@
+{
+  "_doc": "Configuracion del scoring ICP para cualificacion de leads de implantacion Odoo.",
+  "icp_thresholds": {
+    "min_employees": 10,
+    "min_turnover_eur": 1000000,
+    "description": "ICP = empresa con +10 empleados Y facturacion anual > 1M EUR"
+  },
+  "scoring_weights": {
+    "employees": 30,
+    "turnover": 30,
+    "sector_fit": 20,
+    "expected_revenue": 20,
+    "_total": 100
+  },
+  "employee_scoring": {
+    "0-9": 0,
+    "10-24": 40,
+    "25-49": 60,
+    "50-99": 80,
+    "100-199": 95,
+    "200+": 100
+  },
+  "turnover_scoring": {
+    "0-499999": 0,
+    "500000-999999": 30,
+    "1000000-2999999": 60,
+    "3000000-9999999": 80,
+    "10000000+": 100
+  },
+  "sector_fit": {
+    "high": {
+      "score": 100,
+      "sectors": [
+        "Fabricacion",
+        "Distribucion",
+        "Comercio mayorista",
+        "Servicios profesionales",
+        "Tecnologia",
+        "Ingenieria"
+      ]
+    },
+    "medium": {
+      "score": 60,
+      "sectors": [
+        "Retail",
+        "Construccion",
+        "Alimentacion",
+        "Logistica",
+        "Educacion",
+        "Salud"
+      ]
+    },
+    "low": {
+      "score": 30,
+      "sectors": [
+        "Hosteleria",
+        "Inmobiliaria",
+        "Agricultura",
+        "Otros"
+      ]
+    }
+  },
+  "expected_revenue_scoring": {
+    "0-4999": 10,
+    "5000-14999": 30,
+    "15000-29999": 50,
+    "30000-59999": 75,
+    "60000-99999": 90,
+    "100000+": 100
+  },
+  "qualification_thresholds": {
+    "qualified": 60,
+    "review": 35,
+    "discard": 0,
+    "description": ">=60 = cualificado (asignar+avanzar), 35-59 = revision manual, <35 = descartable"
+  },
+  "enrichment": {
+    "provider": "einforma",
+    "api_base_url": "https://api.einforma.com/v1",
+    "lookup_field": "vat",
+    "fallback_field": "company_name",
+    "_note": "Configurar API key en variable de entorno EINFORMA_API_KEY"
+  }
+}

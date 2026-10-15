@@ -32,7 +32,7 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
     );
     pool.close().await;
     let payload = serde_json::json!({
-        "entity": systemprompt_security::authz::EntityRef::McpServer(systemprompt::identifiers::McpServerId::try_new("atlassian").expect("valid fixture identifier")),
+        "entity": systemprompt_security::authz::EntityRef::McpServer(systemprompt::identifiers::McpServerId::try_new("dynbrain").expect("valid fixture identifier")),
         "user_id": "00000000-0000-0000-0000-000000000001",
         "trace_id": "00000000-0000-0000-0000-000000000002",
         "roles": ["admin"]

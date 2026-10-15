@@ -31,7 +31,7 @@ bundle with the bundled database and one compose file.
 | Image access | a GitHub personal access token with `read:packages` issued by Dynapps (the package is private); `docker login ghcr.io` on each node |
 | Database | PostgreSQL **16** (tested floor for this deployment; 18 is the general floor) reachable from all three regions on 5432 with TLS, with the `vector`, `uuid-ossp` and `pgcrypto` extensions available |
 | Model provider | a Google service-account JSON for Vertex AI (the gateway routes `claude-*` to Vertex, failing over to Anthropic), plus an Anthropic API key |
-| Public entry | one hostname (for example `ai.example.com`) with TLS terminated at the load balancer in each region, all three forwarding to their local node. HTTPS is mandatory: the sign-in cookie is `Secure` and the SAML assertion is posted back to an `https` ACS URL |
+| Public entry | one hostname (for example `ai.example.com`) with TLS terminated at the load balancer in each region, all three forwarding to their local node. HTTPS is mandatory: the sign-in cookie is `Secure` and the Entra ID OpenID Connect redirect URI must be `https` |
 
 ## 2. Database
 
@@ -80,7 +80,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --trusted-proxies 10.10.0.0/16,10.20.0.0/16,10.30.0.0/16 \
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --image ghcr.io/systempromptio/systemprompt-dynapps:0.67.0     # validates the result in the image
+  --image ghcr.io/systempromptio/systemprompt-dynapps:0.69.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -129,7 +129,7 @@ On every node, with `/etc/dynapps/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.67.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
+export SYSTEMPROMPT_TAG=0.69.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml run --rm app migrate   # node 1 only, once
@@ -152,7 +152,7 @@ balancer, so capacity never drops to zero. Run the checklist on each node
 once it is `healthy`, passing the node's `server.role`:
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.67.0 --role all
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.69.0 --role all
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its
@@ -171,8 +171,8 @@ calls, the binary version, the MCP child server, the migration ledger and the bo
 and after every upgrade.
 
 First sign-in: `https://ai.example.com/admin/login`. The bootstrap admin is
-the `admin` user with the e-mail given to `--admin-email`, and sign-in is Microsoft Entra ID (SAML) SSO only, so configure the Entra enterprise application
-first (`/documentation/adfs-sso-setup` on the node's own documentation site). With SSO down, use the CLI break-glass
+the `admin` user with the e-mail given to `--admin-email`, and sign-in is Microsoft Entra ID (OpenID Connect) SSO only, so configure the Entra App Registration
+first (`/documentation/entra-id-sso-setup` on the node's own documentation site). With SSO down, use the CLI break-glass
 session described in `/documentation/authentication`.
 
 ## 6. Upgrade and roll back

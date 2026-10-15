@@ -1,0 +1,6 @@
+{
+  "_layer": "country",
+  "_authoring": "AUTORAR con el market owner BE. Misma estructura de claves que locales/es/pricing.json (rates, analysis_formula, support, golive_weeks, migration, poc, recurring_monthly, app_base_prices, complement_prices, recurrent_lines, ia_catalog, adjust_band_pct, maintenance_plan). Moneda EUR. Todos los importes <<VERIFY>>.",
+  "_currency": "EUR",
+  "_verify": "Rellenar TODOS los importes desde el pricing de mercado BE + product ids/licencia desde el Odoo BE. No heredar es."
+}

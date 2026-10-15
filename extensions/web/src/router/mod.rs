@@ -18,7 +18,7 @@ mod pools;
 mod sign_out;
 mod sso;
 
-use axum::{Extension, Router};
+use axum::Router;
 
 use systemprompt::extension::prelude::{ExtensionContext, ExtensionRouter};
 
@@ -35,10 +35,6 @@ pub(crate) fn build(ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
 
     let mut combined = Router::new()
         .merge(share_api)
-        .merge(
-            systemprompt_web_admin_identity::routes::public::saml_metadata_routes()
-                .layer(Extension(sso_deps.clone())),
-        )
         .nest("/api/public", api_router);
 
     match admin_ssr::build(&db, sso_deps) {

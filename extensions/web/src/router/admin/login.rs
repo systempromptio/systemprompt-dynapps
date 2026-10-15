@@ -22,7 +22,6 @@ struct LoginContext<'a> {
     shell: systemprompt_web_admin_core::ssr::context::BrandingShell<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     redirect_encoded: Option<String>,
-    sso_saml_enabled: bool,
     sso_oidc_enabled: bool,
     dev_login_enabled: bool,
 }
@@ -48,8 +47,6 @@ pub(super) async fn login_page(
     let ctx = LoginContext {
         shell: branding_context(&engine),
         redirect_encoded,
-        sso_saml_enabled: sso_deps
-            .provider_enabled(systemprompt_web_admin_identity::sso::entra_saml::ID),
         sso_oidc_enabled: sso_deps
             .provider_enabled(systemprompt_web_admin_identity::sso::entra_oidc::ID),
         dev_login_enabled: systemprompt_web_admin_identity::dev_login_enabled(),

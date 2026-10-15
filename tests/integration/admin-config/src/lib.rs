@@ -62,11 +62,7 @@ mod connector_credentials;
 mod connector_readiness;
 
 #[cfg(test)]
-mod connector_reprovision;
-
 #[cfg(test)]
-mod salesforce_identity;
-
 #[cfg(test)]
 mod executive_marketplace;
 
@@ -78,3 +74,12 @@ mod connector_resolution;
 
 #[cfg(test)]
 mod connector_resolution_fixture;
+
+#[cfg(test)]
+mod workspace_marketplaces;
+
+#[cfg(test)]
+mod portal_harness;
+
+#[cfg(test)]
+mod portal_e2e;

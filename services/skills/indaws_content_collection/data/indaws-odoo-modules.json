@@ -1,0 +1,1841 @@
+{
+  "repository": "indawsodoo/indaws-odoo",
+  "description": "Modulos core de Indaws que extienden funcionalidades estandar de Odoo",
+  "total_modules": 123,
+  "modules_with_description": 123,
+  "modules": [
+    {
+      "technical_name": "indaws_account",
+      "name": "inDAWS: Account",
+      "description": "Extensiones de contabilidad Indaws: mejoras en facturas, asientos y reporting contable.",
+      "category": "Accounting",
+      "depends": [
+        "indaws_product",
+        "indaws_base_account"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_account_edi",
+      "name": "inDAWS: Account EDI",
+      "description": "Bridge: integra facturacion electronica (EDI) con las extensiones contables Indaws.",
+      "category": "",
+      "depends": [
+        "account_edi",
+        "indaws_account"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_account_move_merge",
+      "name": "Indaws: Account Move Merge",
+      "description": "Permite fusionar varios asientos contables o facturas en un unico documento.",
+      "category": "Accounting/Accounting",
+      "depends": [
+        "indaws_base_account"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_account_payment_paytef",
+      "name": "inDAWS: Account Payment Paytef",
+      "description": "Add Paytef payment method to account payment.",
+      "category": "Accounting",
+      "depends": [
+        "account_payment",
+        "indaws_payment_paytef"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_account_triple_discount",
+      "name": "inDAWS: Account Triple Discount",
+      "description": "Bridge: aplica triple descuento en cascada en lineas de factura.",
+      "category": "Accounting/Accounting",
+      "depends": [
+        "indaws_account"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_api",
+      "name": "inDAWS: API",
+      "description": "Configurable API",
+      "category": "System",
+      "depends": [
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base",
+      "name": "inDAWS: Base",
+      "description": "Modulo base de Indaws. Dependencia obligatoria de todos los modulos indaws_*.",
+      "category": "Hidden",
+      "depends": [
+        "base_setup"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0",
+        "19.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_account",
+      "name": "Indaws Base Account",
+      "description": "Extensiones base de contabilidad: campos y logica comun para modulos contables.",
+      "category": "Accounting",
+      "depends": [
+        "account",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_crm",
+      "name": "inDAWS: Base CRM",
+      "description": "Extensiones base de CRM: campos y comportamientos comunes para modulos CRM.",
+      "category": "Hidden",
+      "depends": [
+        "crm",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_hr",
+      "name": "Indaws Base HR",
+      "description": "Extensiones base de RRHH: campos y logica comun para modulos de recursos humanos.",
+      "category": "Human Resources/Attendances",
+      "depends": [
+        "hr"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_hr_attendance",
+      "name": "Indaws Base HR Attendance",
+      "description": "Bridge: conecta base Indaws con control de asistencia.",
+      "category": "Human Resources/Attendances",
+      "depends": [
+        "hr_attendance"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_mass_mailing",
+      "name": "inDAWS: Base Mass Mailing",
+      "description": "Bridge: conecta base Indaws con email marketing.",
+      "category": "Marketing/Email Marketing",
+      "depends": [
+        "mass_mailing",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_mrp",
+      "name": "inDAWS: Base Mrp",
+      "description": "Extensiones base de fabricacion: campos y logica comun para modulos MRP.",
+      "category": "Survey",
+      "depends": [
+        "mrp",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_payment",
+      "name": "inDAWS: Base Payment",
+      "description": "Bridge: conecta base Indaws con pasarelas de pago.",
+      "category": "Hidden",
+      "depends": [
+        "payment",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_pos",
+      "name": "inDAWS: Base Point of Sale",
+      "description": "Bridge: conecta base Indaws con punto de venta.",
+      "category": "Point of Sale",
+      "depends": [
+        "point_of_sale",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_product",
+      "name": "Indaws Base Product",
+      "description": "Bridge: conecta base Indaws con productos y stock.",
+      "category": "Product",
+      "depends": [
+        "product",
+        "stock",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_project",
+      "name": "Indaws Base Project",
+      "description": "Extensiones base de proyectos: campos y logica comun para modulos de proyecto.",
+      "category": "Services/Project",
+      "depends": [
+        "project",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_purchase",
+      "name": "Indaws Base Purchase",
+      "description": "Extensiones base de compras: campos y logica comun para modulos de compra.",
+      "category": "Purchase",
+      "depends": [
+        "purchase",
+        "indaws_base_account"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_sale",
+      "name": "Indaws Base Sale",
+      "description": "Extensiones base de ventas: campos y logica comun para modulos de venta.",
+      "category": "Sale",
+      "depends": [
+        "sale",
+        "indaws_base_account"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_stock",
+      "name": "inDAWS: Base Stock",
+      "description": "Extensiones base de inventario: campos y logica comun para modulos de stock.",
+      "category": "Stock",
+      "depends": [
+        "indaws_base_product"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_survey",
+      "name": "inDAWS: Base Survey",
+      "description": "Bridge: conecta base Indaws con encuestas.",
+      "category": "Survey",
+      "depends": [
+        "survey",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_website",
+      "name": "inDAWS: Base Website",
+      "description": "Bridge: conecta base Indaws con el website builder.",
+      "category": "Website",
+      "depends": [
+        "website",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_website_sale",
+      "name": "inDAWS: Base Website Sale",
+      "description": "Bridge: conecta base Indaws con ecommerce.",
+      "category": "Website",
+      "depends": [
+        "indaws_base_website",
+        "website_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_website_sale_stock",
+      "name": "indaws_base_website_sale_stock",
+      "description": "Bridge: conecta ecommerce Indaws con disponibilidad de stock.",
+      "category": "Website",
+      "depends": [
+        "indaws_base_website_sale",
+        "website_sale_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_crm_project",
+      "name": "inDAWS: CRM Project",
+      "description": "Vinculacion CRM-Proyectos: crea proyectos desde oportunidades comerciales.",
+      "category": "CRM",
+      "depends": [
+        "crm",
+        "project",
+        "indaws_base_crm"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_crm_prospection",
+      "name": "inDAWS: CRM Prospection",
+      "description": "Gestion de prospeccion comercial: campanas, listas de prospeccion y seguimiento automatizado.",
+      "category": "Hidden",
+      "depends": [
+        "indaws_base_crm"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_data_export",
+      "name": "inDAWS: Export",
+      "description": "Framework de exportacion automatica de datos a APIs, webhooks y ficheros.",
+      "category": "System",
+      "depends": [
+        "indaws_base",
+        "queue_job"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_data_import",
+      "name": "inDAWS: Importation System",
+      "description": "Framework de importacion masiva de datos desde CSV, Excel, JSON y APIs externas.",
+      "category": "System",
+      "depends": [
+        "indaws_base",
+        "queue_job"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_data_import_templates_product",
+      "name": "inDAWS: Data Import Templates Product",
+      "description": "Plantillas de importacion predefinidas para productos.",
+      "category": "",
+      "depends": [
+        "product",
+        "indaws_data_import"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_hr",
+      "name": "Indaws HR",
+      "description": "Indaws HR.",
+      "category": "Human Resources/Attendances",
+      "depends": [
+        "hr_attendance",
+        "base",
+        "web",
+        "hr",
+        "hr_holidays",
+        "website"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_hr_attendance_report",
+      "name": "HR Attendance Reports",
+      "description": "Informes de asistencia: reporting avanzado de fichajes y horas trabajadas.",
+      "category": "Human Resources",
+      "depends": [
+        "base",
+        "hr",
+        "hr_attendance",
+        "documents",
+        "sign",
+        "documents_sign",
+        "indaws_base_hr"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_hr_timesheet_attendance",
+      "name": "inDAWs: HR Timesheet Attendance",
+      "description": "Bridge: conecta partes de horas con control de asistencia.",
+      "category": "Human Resources/Attendances",
+      "depends": [
+        "hr_timesheet_attendance",
+        "hr_attendance",
+        "indaws_base",
+        "indaws_base_hr_attendance"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_invoice_section",
+      "name": "Indaws Invoice Section",
+      "description": "Dynamically adds section from ResConfig Settings by groubpy Picking Transfer and Sale Order",
+      "category": "Uncategorized",
+      "depends": [
+        "sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_l10n_es_account_ipc",
+      "name": "Spain - Account IPC",
+      "description": "IPC (Consumer Price Index) configuration for invoicing",
+      "category": "Accounting/Localizations",
+      "depends": [
+        "account"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_l10n_es_edi_sii",
+      "name": "inDAWS: Spain - SII EDI Suministro de Libros",
+      "description": "Module that implements improvements to the SII EDI Suministro de Libros process",
+      "category": "",
+      "depends": [
+        "l10n_es_edi_sii",
+        "indaws_account_edi"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_l10n_es_edi_verifactu",
+      "name": "inDAWS: Spain - Veri*Factu",
+      "description": "Module that implements improvements to the Veri*Factu process",
+      "category": "",
+      "depends": [
+        "l10n_es_edi_verifactu",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_l10n_es_pos",
+      "name": "inDAWs: Spanish POS",
+      "description": "Spanish Simplified Invoice for Point of Sale",
+      "category": "Accounting/Localizations/Point of Sale",
+      "depends": [
+        "l10n_es_pos",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_loyalty",
+      "name": "Indaws Loyalty",
+      "description": "Loyalty program usage dates management for Odoo",
+      "category": "Loyalty",
+      "depends": [
+        "loyalty",
+        "indaws_base"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_mail",
+      "name": "inDAWS Mail",
+      "description": "inDAWS Mail",
+      "category": "Payment",
+      "depends": [
+        "indaws_base",
+        "mail"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_mail_account",
+      "name": "Email CC and BCC when sending invoice",
+      "description": "This module enables sending mail to CC and BCC partners for invoices.",
+      "category": "Social",
+      "depends": [
+        "account",
+        "indaws_base_account",
+        "indaws_mail"
+      ],
+      "license": "AGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_mass_mailing",
+      "name": "inDAWS: Mailing",
+      "description": "Mejoras de email marketing: funcionalidades avanzadas de campanas y plantillas.",
+      "category": "Marketing/Email Marketing",
+      "depends": [
+        "mass_mailing",
+        "mass_mailing_themes"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_mobile",
+      "name": "inDAWs: Mobile",
+      "description": "Mobile API controller for Flutter applications",
+      "category": "Tools",
+      "depends": [
+        "web",
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_mobile_fsm",
+      "name": "inDAWs: Mobile FSM Worksheets",
+      "description": "Servicio de campo movil: gestion de tareas y ordenes en dispositivos moviles.",
+      "category": "Tools",
+      "depends": [
+        "indaws_mobile",
+        "industry_fsm_report"
+      ],
+      "license": "",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_payment_order_modification",
+      "name": "Modification on payment orders",
+      "description": "Modification on payment orders",
+      "category": "Payment",
+      "depends": [
+        "account_payment_order",
+        "base"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_payment_paytef",
+      "name": "inDAWS: Payment Paytef",
+      "description": "Add Paytef payment method to website.",
+      "category": "Payment Acquirer",
+      "depends": [
+        "payment",
+        "indaws_base_payment"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_pos",
+      "name": "inDAWS: Point of Sale",
+      "description": "Mejoras de TPV: funcionalidades avanzadas de punto de venta.",
+      "category": "Point of Sale",
+      "depends": [
+        "point_of_sale",
+        "indaws_base_pos"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_pos_analytic",
+      "name": "inDAWS: POS Analytic",
+      "description": "Cuentas analiticas en TPV: distribucion de ingresos por cuenta analitica.",
+      "category": "Point of Sale, Accounting",
+      "depends": [
+        "indaws_base_pos"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_pos_cashkeeper",
+      "name": "InDaws POS CashKeeper",
+      "description": "Integrate your POS system locally or in the cloud with CashKeeper payment terminals",
+      "category": "Sales/Point of Sale",
+      "depends": [
+        "point_of_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_pos_location",
+      "name": "InDaws POS Stock Location",
+      "description": "InDaws POS Stock Location helps cashiers and users easily identify the \n                best location with available product quantities across multiple POS locations. \n                It also provides real-time data on alternate location quantities, enabling efficient\n                requests for picking in emergency scenarios. This solution simplifies inventory management\n                and enhances operational efficiency, ensuring stock availability and improving \n                customer service.",
+      "category": "Point of Sale",
+      "depends": [
+        "indaws_base_pos"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_pos_loyalty",
+      "name": "Indaws POS Loyalty",
+      "description": "Loyalty modification to show point from programs between usage dates",
+      "category": "Loyalty",
+      "depends": [
+        "pos_loyalty",
+        "indaws_base_pos",
+        "indaws_loyalty"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_pos_paytef",
+      "name": "inDAWS: Point of Sale - Paytef",
+      "description": "Add Paytef payment method to Point of Sale.",
+      "category": "Point of Sale",
+      "depends": [
+        "indaws_base_pos"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_product",
+      "name": "indaws_product",
+      "description": "Add brand management on products and variants.",
+      "category": "Product",
+      "depends": [
+        "indaws_base_product",
+        "sale",
+        "purchase"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_product_data_feed",
+      "name": "inDAWS: Product Data Feed",
+      "description": "Feed de datos de producto: exportacion automatica de catalogo para marketplaces.",
+      "category": "Website",
+      "depends": [
+        "indaws_base_website_sale_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_product_data_feed_gmc",
+      "name": "inDAWS: Product Data Feed GMC",
+      "description": "Feed de Google Merchant Center: exportacion de catalogo para Google Shopping.",
+      "category": "eCommerce",
+      "depends": [
+        "indaws_product_data_feed",
+        "indaws_product"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_product_lot_sequence",
+      "name": "inDAWS: Product Lot Sequence",
+      "description": "Secuencias de lote: numeracion automatica personalizada de lotes de producto.",
+      "category": "Stock",
+      "depends": [
+        "product",
+        "stock",
+        "base",
+        "indaws_product",
+        "mrp"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_product_supplierinfo_for_customer",
+      "name": "Indaws Product Supplierinfo for Customers",
+      "description": "Allows to define prices for customers in the products",
+      "category": "Sales Management",
+      "depends": [
+        "product",
+        "indaws_base_product"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_product_supplierinfo_for_customer_partner",
+      "name": "Product Supplierinfo For Customer Partner",
+      "description": "Bridge: vincula precios de cliente con contactos del partner.",
+      "category": "Custom",
+      "depends": [
+        "indaws_product_supplierinfo_for_customer"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_product_supplierinfo_for_customer_sale",
+      "name": "Indaws Product Supplierinfo for Customer Sale",
+      "description": "Loads in every sale order line the customer code defined in the product",
+      "category": "Sales Management",
+      "depends": [
+        "sale",
+        "indaws_product_supplierinfo_for_customer"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_project",
+      "name": "Indaws Project",
+      "description": "Indaws Project.",
+      "category": "Services/Project",
+      "depends": [
+        "project"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_project_mrp_stock_material",
+      "name": "inDAWs: Project - MRP Stock Material",
+      "description": "Bridge: conecta fabricacion de proyecto con materiales de stock.",
+      "category": "Services/Project",
+      "depends": [
+        "project_mrp",
+        "indaws_project_stock_material"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_project_purchase_stock_material",
+      "name": "inDAWs: Project - Purchase Stock Material",
+      "description": "Bridge: conecta compras de proyecto con materiales de stock.",
+      "category": "Services/Project",
+      "depends": [
+        "project_purchase_stock",
+        "indaws_project_stock_material"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_project_sale_margin_stock_material",
+      "name": "inDAWs: Project - Sale Margin Stock Material",
+      "description": "Bridge: conecta margenes de proyecto con materiales de stock.",
+      "category": "Services/Project",
+      "depends": [
+        "indaws_project_sale_stock_material",
+        "indaws_sale_margin"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_project_sale_stock_material",
+      "name": "inDAWs: Project - Sale Stock Material",
+      "description": "Bridge: conecta ventas de proyecto con materiales de stock.",
+      "category": "Services/Project",
+      "depends": [
+        "sale_project_stock",
+        "indaws_project_stock_material"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_project_stock_material",
+      "name": "inDAWs: Project Stock Material",
+      "description": "Materiales de proyecto: gestion de materiales de stock vinculados a tareas de proyecto.",
+      "category": "Services/Project",
+      "depends": [
+        "project_stock",
+        "indaws_base_project"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_purchase",
+      "name": "Indaws Purchase",
+      "description": "Mejoras de compras: funcionalidades avanzadas de ordenes de compra y proveedores.",
+      "category": "Purchase",
+      "depends": [
+        "indaws_product",
+        "indaws_base_purchase"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_purchase_account",
+      "name": "Indaws Purchase Account",
+      "description": "Adds full support for managing purchase advances and deposits, allowing users to record down payments or fixed deposits on confirmed Purchase Orders and automatically apply them when generating Vendor Bills.",
+      "category": "Purchase",
+      "depends": [
+        "indaws_base_account",
+        "indaws_base_purchase"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_purchase_stock",
+      "name": "Indaws Purchase Stock",
+      "description": "Mejoras de compras-inventario: funcionalidades avanzadas de recepcion y valoracion.",
+      "category": "Procurements",
+      "depends": [
+        "purchase_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_purchase_stock_picking_invoice",
+      "name": "inDAWS: Purchase Stock Picking Invoice",
+      "description": "Bridge: conecta facturacion desde albaran con compras.",
+      "category": "Hidden",
+      "depends": [
+        "purchase_stock",
+        "indaws_purchase",
+        "indaws_stock_picking_invoice"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_purchase_stock_valued_picking",
+      "name": "Indaws: Purchase Stock Valued Picking",
+      "description": "Bridge: conecta albaranes valorados con compras.",
+      "category": "Inventory/Inventory",
+      "depends": [
+        "purchase_stock",
+        "indaws_stock_valued_picking"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_purchase_supplier",
+      "name": "inDAWS Purchase Supplier",
+      "description": "Gestion avanzada de proveedores: datos adicionales y clasificacion.",
+      "category": "Purchase",
+      "depends": [
+        "contacts",
+        "indaws_base_purchase"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_purchase_triple_discount",
+      "name": "inDAWS: Purchase Triple Discount",
+      "description": "Bridge: aplica triple descuento en cascada en lineas de compra.",
+      "category": "Inventory/Purchase",
+      "depends": [
+        "indaws_account_triple_discount",
+        "indaws_purchase"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_report_docx",
+      "name": "inDAWS: Report DOCX",
+      "description": "Generador de informes DOCX: plantillas Word con Jinja2 para documentos personalizados.",
+      "category": "Hidden",
+      "depends": [
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_report_docx_account",
+      "name": "inDAWS: Report DOCX Invoice",
+      "description": "Bridge: plantillas DOCX para documentos contables (facturas, etc.).",
+      "category": "",
+      "depends": [
+        "account",
+        "indaws_report_docx_portal"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_report_docx_portal",
+      "name": "inDAWS: Report DOCX Portal",
+      "description": "Bridge: hace accesibles los informes DOCX desde el portal web.",
+      "category": "",
+      "depends": [
+        "portal",
+        "indaws_report_docx"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_report_docx_product",
+      "name": "inDAWS: Report DOCX Product",
+      "description": "Bridge: plantillas DOCX con datos avanzados de producto.",
+      "category": "Reporting",
+      "depends": [
+        "product",
+        "indaws_report_docx",
+        "indaws_product"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_report_docx_sale",
+      "name": "inDAWS: Report DOCX Sale",
+      "description": "Bridge: plantillas DOCX para documentos de venta (presupuestos, pedidos).",
+      "category": "",
+      "depends": [
+        "sale",
+        "indaws_report_docx_portal"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_report_docx_stock",
+      "name": "inDAWS: Report DOCX Stock",
+      "description": "Bridge: plantillas DOCX para documentos de almacen (albaranes).",
+      "category": "Reporting",
+      "depends": [
+        "stock",
+        "indaws_report_docx_product"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale",
+      "name": "inDAWS: Sale",
+      "description": "Mejoras de ventas: funcionalidades avanzadas de pedidos, presupuestos y flujos comerciales.",
+      "category": "Sales",
+      "depends": [
+        "indaws_base_sale",
+        "indaws_account",
+        "indaws_product"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_approval",
+      "name": "inDAWS: Sale Approval",
+      "description": "Flujo de aprobacion de ventas: niveles de autorizacion para pedidos de venta.",
+      "category": "Sales",
+      "depends": [
+        "indaws_base_sale",
+        "sale"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_base",
+      "name": "Indaws: Sale Base",
+      "description": "Bridge: conecta modulo base de ventas con extensiones Indaws.",
+      "category": "Hidden",
+      "depends": [
+        "sale",
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_detail_view",
+      "name": "inDAWs: Sale Detail View",
+      "description": "Vista detallada de venta: vista alternativa con informacion ampliada del pedido.",
+      "category": "Hidden",
+      "depends": [
+        "indaws_sale"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_document",
+      "name": "inDAWS: Sale Document",
+      "description": "Documentos adjuntos a venta: gestion de documentacion vinculada a pedidos.",
+      "category": "Sales",
+      "depends": [
+        "indaws_base_sale"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_invoice_plan",
+      "name": "inDAWS: Sale Invoice Plan",
+      "description": "Create invoice plan for sales orders",
+      "category": "Sales",
+      "depends": [
+        "indaws_base_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_line_print",
+      "name": "inDAWs: Sale Line Print",
+      "description": "Impresion selectiva de lineas: permite elegir que lineas aparecen en el PDF.",
+      "category": "Sales",
+      "depends": [
+        "indaws_base_sale"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_loyalty",
+      "name": "Indaws Sale Loyalty",
+      "description": "Bridge: integra programas de fidelizacion con ventas.",
+      "category": "Sales",
+      "depends": [
+        "sale_loyalty",
+        "indaws_loyalty"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_margin",
+      "name": "inDAWs: Sale Margin",
+      "description": "Gestion avanzada de margenes: calculo de margenes por linea y pedido.",
+      "category": "Sales/Sales",
+      "depends": [
+        "sale_margin",
+        "indaws_sale"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_margin_purchase",
+      "name": "inDAWs: Sales Margin Purchase",
+      "description": "Bridge: conecta margenes de venta con costes de compra.",
+      "category": "Sales/Sales",
+      "depends": [
+        "purchase",
+        "indaws_sale_margin"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_mrp_bom",
+      "name": "inDAWs: Sale MRP BOM",
+      "description": "Allows define a BOM in the sales lines.",
+      "category": "Sale",
+      "depends": [
+        "mrp",
+        "sale_stock",
+        "indaws_base_mrp"
+      ],
+      "license": "AGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_order_line_code",
+      "name": "inDAWs: Sales Order Line Code",
+      "description": "Codigos de linea de pedido: numeracion y referencia por linea de venta.",
+      "category": "Sales/Sales",
+      "depends": [
+        "indaws_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_order_line_edit",
+      "name": "inDAWs: Sales Order Line Edit",
+      "description": "Edicion avanzada de lineas de pedido: campos editables adicionales.",
+      "category": "Sales/Sales",
+      "depends": [
+        "indaws_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_order_revision",
+      "name": "inDAWs: Sale Order Revision",
+      "description": "Revisiones de pedido: control de versiones y historico de cambios en presupuestos.",
+      "category": "Hidden",
+      "depends": [
+        "indaws_sale"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_order_type",
+      "name": "inDAWs: Sale Order Type",
+      "description": "Tipos de pedido de venta: clasificacion y comportamiento por tipo de pedido.",
+      "category": "Sales",
+      "depends": [
+        "sale",
+        "indaws_base_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_order_type_manual_delivery",
+      "name": "inDAWs: Sale Order Type Manual Delivery",
+      "description": "Bridge: conecta tipos de pedido con entrega manual.",
+      "category": "Sales",
+      "depends": [
+        "indaws_sale_order_type_sale_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_order_type_sale_stock",
+      "name": "inDAWs: Sale Order Type Sale Stock",
+      "description": "Bridge: conecta tipos de pedido con gestion de stock.",
+      "category": "Sales",
+      "depends": [
+        "sale_stock",
+        "indaws_sale_order_type"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_pricelist_global_rule",
+      "name": "Indaws Sale pricelist global rule",
+      "description": "Reglas globales de tarifa: aplica reglas de precio a nivel global (todas las tarifas).",
+      "category": "Sales Management",
+      "depends": [
+        "sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_product_composition",
+      "name": "inDAWs: Sale Product Composition",
+      "description": "Composicion de productos en venta: desglosa productos compuestos en lineas de pedido.",
+      "category": "Sales/Sales",
+      "depends": [
+        "indaws_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_product_composition_print",
+      "name": "inDAWs: Sale Complementary Print",
+      "description": "Bridge: impresion de composicion de productos en documentos de venta.",
+      "category": "Sales/Sales",
+      "depends": [
+        "indaws_sale_product_composition",
+        "indaws_sale_line_print"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_product_composition_timesheet",
+      "name": "inDAWs: Sale Product Composition Timesheet",
+      "description": "Bridge: conecta composicion de productos con partes de horas.",
+      "category": "Hidden",
+      "depends": [
+        "sale_timesheet",
+        "indaws_sale_product_composition"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_purchase",
+      "name": "inDAWs: Sales & Purchase",
+      "description": "Bridge: conecta ventas con compras (generacion automatica de pedidos de compra).",
+      "category": "Sales/Sales",
+      "depends": [
+        "sale_purchase",
+        "indaws_sale"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_purchase_requisition",
+      "name": "inDAWs: Sales & Purchase Requisition",
+      "description": "Bridge: conecta ventas con acuerdos de compra.",
+      "category": "Sales/Sales",
+      "depends": [
+        "purchase_requisition_sale",
+        "indaws_sale_purchase"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_purchase_stock",
+      "name": "inDAWs: Sales & Purchase Stock",
+      "description": "Bridge: conecta ventas-compras con stock.",
+      "category": "Sales/Sales",
+      "depends": [
+        "sale_purchase_stock",
+        "indaws_sale_purchase"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_restricted_qty",
+      "name": "inDAWS: Sale Restricted Qty",
+      "description": "Cantidades restringidas: limita cantidades minimas/maximas y multiplos en ventas.",
+      "category": "Sales",
+      "depends": [
+        "indaws_base_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_stock_picking_invoice",
+      "name": "inDAWS: Sale Stock Picking Invoice",
+      "description": "Bridge: conecta facturacion desde albaran con ventas.",
+      "category": "Hidden",
+      "depends": [
+        "sale_stock",
+        "indaws_stock_picking_invoice"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_stock_valued_picking",
+      "name": "Indaws: Sale Stock Valued Picking",
+      "description": "Bridge: conecta albaranes valorados con ventas.",
+      "category": "Inventory/Inventory",
+      "depends": [
+        "sale_stock",
+        "indaws_stock_valued_picking"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_triple_discount",
+      "name": "Indaws Sale triple discount",
+      "description": "Triple descuento en cascada en lineas de venta (3 niveles de descuento).",
+      "category": "Sales",
+      "depends": [
+        "sale_management",
+        "indaws_account_triple_discount"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_security",
+      "name": "inDAWs: Security",
+      "description": "Seguridad Indaws: grupos y reglas de acceso adicionales transversales.",
+      "category": "Hidden",
+      "depends": [
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_stock",
+      "name": "inDAWS: Stock",
+      "description": "Mejoras de inventario: funcionalidades avanzadas de almacen, ubicaciones y movimientos.",
+      "category": "Stock",
+      "depends": [
+        "stock",
+        "indaws_base_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_stock_account",
+      "name": "inDAWS: Stock Account",
+      "description": "Bridge: conecta mejoras de stock con contabilidad.",
+      "category": "Stock",
+      "depends": [
+        "stock_account",
+        "indaws_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_stock_available_immediately",
+      "name": "Indaws: Stock Available Immediately",
+      "description": "Disponibilidad inmediata: muestra stock realmente disponible (sin reservas).",
+      "category": "Warehouse",
+      "depends": [
+        "stock",
+        "sale_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_stock_base",
+      "name": "Indaws: Stock Base",
+      "description": "Bridge: conecta base de stock con extensiones Indaws.",
+      "category": "Hidden",
+      "depends": [
+        "stock",
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_stock_picking_invoice",
+      "name": "inDAWS: Stock Picking Invoice",
+      "description": "Facturacion desde albaran: genera facturas directamente desde albaranes de entrega.",
+      "category": "Stock",
+      "depends": [
+        "indaws_stock_account"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_stock_removal_priority",
+      "name": "Indaws Stock Removal Location by Priority",
+      "description": "Establish a removal priority on stock locations.",
+      "category": "Inventory/Inventory",
+      "depends": [
+        "indaws_stock_base"
+      ],
+      "license": "AGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_stock_valued_picking",
+      "name": "Indaws: Stock Valued Picking",
+      "description": "Albaranes valorados: muestra precios y totales en albaranes de entrega.",
+      "category": "Inventory/Inventory",
+      "depends": [
+        "stock",
+        "indaws_stock_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_storage",
+      "name": "inDAWs: Storage Base",
+      "description": "Almacenamiento externo: framework para conectar almacenamiento de archivos externo.",
+      "category": "Hidden",
+      "depends": [
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_storage_s3",
+      "name": "inDAWs: Storage S3",
+      "description": "Almacenamiento S3: conecta adjuntos de Odoo con Amazon S3 o compatible.",
+      "category": "Hidden",
+      "depends": [
+        "indaws_storage"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_survey",
+      "name": "inDAWs: Survey",
+      "description": "Module that enables survey usage across other Odoo models with dynamic linking and response tracking",
+      "category": "Survey",
+      "depends": [
+        "indaws_base_survey"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_website_sale",
+      "name": "inDAWS: Website Sale",
+      "description": "Mejoras de ecommerce: funcionalidades avanzadas de tienda online.",
+      "category": "Website",
+      "depends": [
+        "indaws_base_website_sale",
+        "product"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_website_sale_collect",
+      "name": "inDAWS: Website Sale Collect",
+      "description": "Bridge: conecta ecommerce con recogida en tienda.",
+      "category": "Website",
+      "depends": [
+        "indaws_website_sale",
+        "website_sale_collect"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_website_sale_loyalty",
+      "name": "inDAWS: Website Sale Loyalty",
+      "description": "Bridge: programas de fidelizacion en la tienda online.",
+      "category": "Website",
+      "depends": [
+        "indaws_sale_loyalty",
+        "website_sale_loyalty"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_website_sale_product_brand",
+      "name": "inDAWS: Website Sale Product Brand",
+      "description": "Marcas de producto en ecommerce: filtro y navegacion por marca en tienda online.",
+      "category": "Website",
+      "depends": [
+        "indaws_product",
+        "indaws_base_website_sale"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_website_sale_restricted_qty",
+      "name": "inDAWS: Website Sale Restricted Qty",
+      "description": "Bridge: aplica restricciones de cantidad en la tienda online.",
+      "category": "Website",
+      "depends": [
+        "indaws_website_sale",
+        "indaws_sale_restricted_qty"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_website_sale_stock",
+      "name": "inDAWS: Website Sale Stock",
+      "description": "Bridge: muestra disponibilidad de stock en la tienda online.",
+      "category": "Website",
+      "depends": [
+        "indaws_website_sale",
+        "website_sale_stock"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_hr_timesheet",
+      "name": "Indaws: HR Timesheet",
+      "description": "Mejoras de partes de horas: funcionalidades avanzadas de registro y reporting de timesheets.",
+      "category": "Services/Timesheets",
+      "depends": [
+        "hr_timesheet",
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "19.0"
+      ]
+    }
+  ]
+}

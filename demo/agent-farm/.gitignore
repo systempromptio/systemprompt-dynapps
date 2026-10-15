@@ -1,4 +1,7 @@
-# Per-run state written by the agent-farm e2e scripts (tokens, cookies, digests).
+# Per-run state written by the night-audit e2e scripts (run ids, query results,
+# follow-up transcripts). Never holds a secret: ED_PAT stays in the environment.
+.state/
+# Left behind by the previous agent-farm e2e.
 .token.user
 .user_id
 .admin_jwt

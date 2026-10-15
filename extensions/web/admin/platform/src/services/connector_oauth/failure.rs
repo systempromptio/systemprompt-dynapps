@@ -1,7 +1,6 @@
 //! Typed connector failures decide credential retention independently of HTTP
 //! status.
 
-use super::Provider;
 use serde::{Deserialize, Serialize};
 use systemprompt_web_admin_core::error::AdminError;
 
@@ -30,9 +29,7 @@ impl FailureKind {
 
     pub const fn guidance(self) -> &'static str {
         match self {
-            Self::GrantRejected => {
-                "Salesforce or the provider rejected authorization. Reconnect to continue."
-            },
+            Self::GrantRejected => "The provider rejected authorization. Reconnect to continue.",
             Self::Configuration => {
                 "The provider rejected the app configuration. Ask the platform administrator to check its client credentials and OAuth settings."
             },
@@ -81,29 +78,12 @@ impl FlowFailure {
     }
 }
 
-// Why: Salesforce can reject concurrent refreshes without revoking the grant;
-// Atlassian uses unauthorized_client for a specifically retired refresh token.
-pub(crate) fn oauth_failure(
-    provider: &Provider,
-    status: u16,
-    code: Option<&str>,
-    description: Option<&str>,
-) -> FailureKind {
+pub(crate) fn oauth_failure(status: u16, code: Option<&str>) -> FailureKind {
     if status >= 500 || status == 429 {
-        return FailureKind::Outage;
-    }
-    let description = description.unwrap_or_default().to_ascii_lowercase();
-    if provider.is_salesforce() && description.contains("already being processed") {
         return FailureKind::Outage;
     }
     match code {
         Some("invalid_grant") => FailureKind::GrantRejected,
-        Some("unauthorized_client")
-            if *provider == Provider::Atlassian
-                && description.contains("refresh_token is invalid") =>
-        {
-            FailureKind::GrantRejected
-        },
         Some(
             "invalid_client"
             | "unauthorized_client"

@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::{AgentRunId, ContextId, MarketplaceId, PluginId, UserId};
 use systemprompt_web_shared::ProjectId;
 
+use crate::config::RunAsMode;
 use crate::types::{
-    EvalResultId, EvalSuiteId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
+    ClientId, EvalResultId, EvalSuiteId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,7 +27,9 @@ pub struct NewFarm {
     pub max_budget_usd: f64,
     pub model: Option<String>,
     pub run_as_user_id: Option<UserId>,
+    pub run_as_mode: Option<RunAsMode>,
     pub project_id: Option<ProjectId>,
+    pub client_id: Option<ClientId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +83,7 @@ pub struct NewRun {
     pub timeout_seconds: i32,
     pub source_commit_sha: Option<String>,
     pub eval_result_id: Option<EvalResultId>,
+    pub client_id: Option<ClientId>,
 }
 
 /// The farm facts a finished run records; the executor's own outcome is on

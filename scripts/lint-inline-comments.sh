@@ -48,7 +48,7 @@ set -uo pipefail
 
 EXEMPT_FILE="scripts/rustdoc-exemptions.txt"
 WHY_CAP=6
-WHY_EXTERNAL='AD FS|ADFS|SAML|Handlebars|axum|Postgres|sqlx|SQLx|core|Claude Code|MCP|zip|serde|schemars|Gemini|Salesforce|Atlassian|OAuth|reqwest|cargo|rustc|clippy|toolchain|Windows|macOS|Linux|SEP-'
+WHY_EXTERNAL='AD FS|ADFS|SAML|Handlebars|axum|Postgres|sqlx|SQLx|core|Claude Code|MCP|zip|serde|schemars|Gemini|Salesforce|Atlassian|Odoo|OAuth|reqwest|cargo|rustc|clippy|toolchain|Windows|macOS|Linux|SEP-'
 is_exempt() {
     [ -f "$EXEMPT_FILE" ] || return 1
     grep -v '^[[:space:]]*#' "$EXEMPT_FILE" | grep -qxF "$1"

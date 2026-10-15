@@ -16,6 +16,7 @@ use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, EvalCaseRow, RunRow};
 use crate::repositories::{evals, runs};
 use crate::services::farm_sync::eval_yaml::{Assertion, DEFAULT_JUDGE_THRESHOLD};
+use crate::services::runner::report::refresh_report_eval;
 use crate::services::runs::{LaunchRequest, cancel, launch};
 use crate::state::FarmState;
 use crate::types::{EvalResultId, EvalResultStatus, FarmId, FarmRunId, RunStatus, TriggeredVia};
@@ -43,7 +44,6 @@ pub(crate) struct CaseOutcome {
 }
 
 pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
-    let pool = &job.state.pool;
     let timeout = job
         .case
         .timeout_secs
@@ -64,10 +64,18 @@ pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
             max_budget_usd: None,
             timeout_seconds: i32::try_from(timeout).ok(),
             eval_result_id: Some(job.result_id.clone()),
+            client_id: None,
         },
     )
     .await?;
-    evals::update_eval_result_run(pool, job.result_id, &launched.id).await?;
+    evals::update_eval_result_run(&job.state.pool, job.result_id, &launched.id).await?;
+    settle_case(job, &launched).await
+}
+
+pub(crate) async fn settle_case(job: &CaseJob<'_>, launched: &RunRow) -> FarmResult<CaseOutcome> {
+    let pool = &job.state.pool;
+    let timeout =
+        u64::try_from(launched.timeout_seconds).unwrap_or(job.state.limits.default_timeout_seconds);
     let (run, agent_run) =
         wait_for_terminal(job, &launched.id, timeout + WAIT_GRACE_SECONDS).await?;
     let events = list_events(job.state, &agent_run).await?;
@@ -106,6 +114,7 @@ pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
         },
     )
     .await?;
+    refresh_report_eval(pool, job.result_id).await;
     Ok(CaseOutcome {
         status: Some(status),
         score,

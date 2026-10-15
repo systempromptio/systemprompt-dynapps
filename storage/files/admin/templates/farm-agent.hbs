@@ -69,6 +69,15 @@
           {{/each}}
         </ul>
       {{/if}}
+
+      {{#if eval_trends}}
+        {{#> components/section title="Eval history" note="last 30 days"}}{{/components/section}}
+        {{> farm/eval-trends rows=eval_trends caption="Eval history of this agent"}}
+      {{/if}}
+      {{#if eval_runs}}
+        {{#> components/section title="Recent eval runs" note="assertions and judge rationale per run"}}{{/components/section}}
+        {{> farm/eval-runs-recent rows=eval_runs caption="Recent eval runs of this agent"}}
+      {{/if}}
     </div>
 
     {{> farm/launch-dialog launch}}

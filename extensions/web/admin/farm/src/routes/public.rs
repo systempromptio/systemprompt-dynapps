@@ -17,8 +17,14 @@ pub fn agent_farm_public_routes() -> Router<Arc<FarmState>> {
         .route("/agents", get(public::list_agents))
         .route("/runs", post(public::launch_run).get(public::list_runs))
         .route("/runs/{run_id}", get(public::get_run))
+        .route("/runs/{run_id}/report", get(public::get_run_report))
         .route("/runs/{run_id}/events", get(public::list_run_events))
         .route("/runs/{run_id}/cancel", post(public::cancel_run))
         .route("/evals/{suite_id}/run", post(public::run_eval_suite))
         .route("/evals/runs/{eval_run_id}", get(public::get_eval_run))
+        .route("/evals/history", get(public::eval_history))
+        .route(
+            "/evals/suites/{suite_id}/runs",
+            get(public::list_suite_runs),
+        )
 }

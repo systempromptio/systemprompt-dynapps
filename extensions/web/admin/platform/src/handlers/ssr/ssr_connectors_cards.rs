@@ -51,7 +51,6 @@ pub(super) fn status_label(status: &str) -> &'static str {
         "reconnect_required" => "Reconnect required",
         "verification_required" => "Verification required",
         "temporarily_unavailable" => "Temporarily unavailable",
-        "not_provisioned" => "Not provisioned",
         "not_configured" => "Not configured",
         "no_auth_required" => "Built in",
         _ => "Not connected",
@@ -69,47 +68,36 @@ pub(super) fn tone(status: &str) -> &'static str {
 
 fn family(provider: &str) -> &'static str {
     match provider {
-        "atlassian" => "atlassian",
         "google_workspace" => "google",
         "systemprompt" => "systemprompt",
-        p if p.starts_with("salesforce") => "salesforce",
         _ => "generic",
     }
 }
 
 fn kind(glyph: &str) -> &'static str {
     match glyph {
-        "atlassian" => "Atlassian Cloud",
         "google" => "Google Workspace",
         "systemprompt" => "Control plane",
-        "salesforce" => "Salesforce org",
         _ => "MCP server",
     }
 }
 
 fn monogram(glyph: &str, name: &str) -> String {
     match glyph {
-        "atlassian" => "At".into(),
         "google" => "G".into(),
         "systemprompt" => "Sp".into(),
-        "salesforce" => "Sf".into(),
         _ => name.chars().take(2).collect(),
     }
 }
 
-fn blurb(glyph: &str, c: &Connection) -> String {
+fn blurb(glyph: &str) -> String {
     match glyph {
-        "atlassian" => "Jira issues and Confluence pages, read and written as you.".into(),
         "google" => {
             "Search across Drive, Gmail and Calendar — only what you can already open.".into()
         },
         "systemprompt" => {
             "The Dynapps control plane: governed tools, catalogue and deployments, as the admin you are signed in as.".into()
         },
-        "salesforce" => format!(
-            "Records, SOQL and metadata in {}, as the Salesforce user you sign in as.",
-            c.display_name
-        ),
         _ => "Authorize once; every client you connect uses the same account.".into(),
     }
 }
@@ -141,21 +129,13 @@ fn host(url: &str) -> String {
 
 pub(super) fn note(c: &Connection) -> Option<String> {
     if !c.entitled {
-        return Some(if c.provider.starts_with("salesforce") {
-            "Your account is not entitled to this Salesforce org".to_owned()
-        } else if c.session_attested {
+        return Some(if c.session_attested {
             "Not open to your account".to_owned()
         } else {
             "An active account is required to connect providers".to_owned()
         });
     }
     match (c.status.as_str(), c.error_code.as_deref()) {
-        ("not_provisioned", _) => {
-            Some("Waiting for a Salesforce administrator to provision this org".to_owned())
-        },
-        (_, Some("sandbox_refreshed")) => {
-            Some("This org was refreshed by an administrator — reconnect to continue".to_owned())
-        },
         (_, Some("verification_failed")) => {
             Some("Authorization saved, but the last verification failed".to_owned())
         },
@@ -226,7 +206,7 @@ pub fn card(c: &Connection) -> ConnectorCardView {
         glyph,
         monogram: monogram(glyph, &c.display_name),
         kind: kind(glyph),
-        blurb: blurb(glyph, c),
+        blurb: blurb(glyph),
         used_by: used_by(&c.provider),
         status: c.status.clone(),
         status_label: status_label(&c.status),

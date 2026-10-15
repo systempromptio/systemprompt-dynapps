@@ -15,6 +15,7 @@ systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-admin-governance = { workspace = true }
+systemprompt-web-admin-farm = { workspace = true }
 systemprompt-web-content = { workspace = true }
 # Audit: uses ai, content, database, extension, generator, identifiers, models, traits — requires `full`.
 systemprompt = { workspace = true, features = ["full"] }

@@ -4,7 +4,7 @@
 use systemprompt_web_admin_core::util::mcp_tool_name::{McpToolName, parse_mcp_tool_name_with};
 
 fn known() -> Vec<String> {
-    ["systemprompt", "odoo_erp", "atlassian"]
+    ["systemprompt", "odoo_erp", "dynbrain"]
         .into_iter()
         .map(str::to_owned)
         .collect()
@@ -13,10 +13,10 @@ fn known() -> Vec<String> {
 #[test]
 fn plain_server_form_splits_on_the_last_separator() {
     assert_eq!(
-        parse_mcp_tool_name_with("mcp__atlassian__listConfluenceContent", &known()),
+        parse_mcp_tool_name_with("mcp__dynbrain__docs_search", &known()),
         Some(McpToolName {
-            server: "atlassian".to_owned(),
-            tool: "listConfluenceContent".to_owned(),
+            server: "dynbrain".to_owned(),
+            tool: "docs_search".to_owned(),
         })
     );
 }

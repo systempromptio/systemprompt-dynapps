@@ -163,6 +163,8 @@ mod users_manual_roles;
 mod users_revocation;
 #[cfg(test)]
 mod users_scope;
+#[cfg(test)]
+mod users_timed_role;
 
 #[cfg(test)]
 mod dashboard_query_scaling;
@@ -185,15 +187,6 @@ mod sync_plane_restart_stability;
 
 #[cfg(test)]
 mod sso_harness;
-
-#[cfg(test)]
-mod sso_saml_flow;
-
-#[cfg(test)]
-mod sso_saml_refusals;
-
-#[cfg(test)]
-mod sso_saml_policy;
 
 #[cfg(test)]
 mod sso_oidc_flow;

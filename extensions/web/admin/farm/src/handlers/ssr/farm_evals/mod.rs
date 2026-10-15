@@ -1,6 +1,8 @@
 //! `GET /admin/farm/evals` — every eval suite, the latest verdict per case
-//! pivoted against agents, how scores and pass rates move over the window,
-//! and a Run now form per suite. Filterable by farm and window (`?days=`).
+//! pivoted against agents, how scores and pass rates move over the window
+//! (per suite and per agent per day), the recent eval runs with their
+//! triggers, and a Run now form per suite. Filterable by farm and window
+//! (`?days=`).
 
 mod context;
 pub(crate) mod matrix;
@@ -24,14 +26,18 @@ use context::{EvalSuiteRowView, KpiView, OptionView, WINDOWS};
 pub(crate) use context::{eval_status_badge, is_eval_live, score_display};
 use matrix::{EvalMatrixView, eval_matrix};
 
+use crate::handlers::ssr::shared::{
+    EvalRunItemView, EvalTrendRowView, eval_run_items, eval_trend_rows,
+};
 use crate::repositories::evals::{
-    list_all_eval_suites, list_eval_cases, list_eval_runs_paged, list_eval_suites,
-    list_latest_results_matrix,
+    list_all_eval_suites, list_eval_cases, list_eval_history, list_eval_runs_paged,
+    list_eval_suites, list_latest_results_matrix,
 };
 use crate::repositories::farms::list_farms;
 use crate::types::FarmId;
 
 const RUNS_SCAN: i64 = 500;
+const RECENT_EVAL_RUNS: usize = 15;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct EvalsQuery {
@@ -54,6 +60,8 @@ struct EvalsPage {
     pass_chart: SvgLineChartView,
     suites: Vec<EvalSuiteRowView>,
     has_suites: bool,
+    history_rows: Vec<EvalTrendRowView>,
+    recent_runs: Vec<EvalRunItemView>,
 }
 
 pub(crate) async fn evals_page(
@@ -90,7 +98,12 @@ pub(crate) async fn evals_page(
         "eval runs",
         list_eval_runs_paged(&pool, farm_id.as_ref(), None, RUNS_SCAN, 0).await,
     );
-    let runs = context::in_window(runs, Utc::now() - Duration::days(i64::from(days)));
+    let since = Utc::now() - Duration::days(i64::from(days));
+    let runs = context::in_window(runs, since);
+    let history = faults.take(
+        "eval history",
+        list_eval_history(&pool, farm_id.as_ref(), None, since).await,
+    );
 
     let ctx = EvalsPage {
         page: "farm-evals",
@@ -109,6 +122,8 @@ pub(crate) async fn evals_page(
         pass_chart: trends::pass_rate_chart(&runs, days),
         suites: context::suite_views(&suites, &runs),
         has_suites: !suites.is_empty(),
+        history_rows: eval_trend_rows(&history),
+        recent_runs: eval_run_items(&runs[..runs.len().min(RECENT_EVAL_RUNS)]),
     };
     Ok(render_page_with_faults(
         &shell.engine,

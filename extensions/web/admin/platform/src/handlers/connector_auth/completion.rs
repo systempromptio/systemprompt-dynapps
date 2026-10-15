@@ -71,7 +71,7 @@ async fn complete(
             Err(failure)
         },
     };
-    live_user(pool, headers, false).await?;
+    let actor = live_user(pool, headers, false).await?;
     if let Err(failure) = outcome {
         if failure.kind != FailureKind::GrantRejected && grant.refresh_token.is_some() {
             store_pending_verification(pool, user, &grant).await?;
@@ -89,14 +89,12 @@ async fn complete(
     }
     store_verified(pool, user, &grant).await?;
     tracing::info!(user_id = %user, provider = grant.provider.slug(), trace_id = %reference, "connector_connected");
-    Ok((
-        [(CACHE_CONTROL, "no-store")],
-        Redirect::to(&format!(
-            "/admin/connectors#connector-{}",
-            grant.provider.slug()
-        )),
-    )
-        .into_response())
+    let destination = if actor.user_id == *user {
+        format!("/admin/connectors#connector-{}", grant.provider.slug())
+    } else {
+        format!("/admin/identity/service-accounts/{user}")
+    };
+    Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&destination)).into_response())
 }
 
 fn oauth_client() -> AdminResult<reqwest::Client> {

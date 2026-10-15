@@ -1,0 +1,1162 @@
+{
+  "signals": {
+    "apps": {
+      "config_general": [],
+      "crm": [
+        "crm",
+        "pipeline",
+        "commercial",
+        "opportunité",
+        "prospect",
+        "lead",
+        "prospection",
+        "entonnoir"
+      ],
+      "ventas": [
+        "vente",
+        "devis",
+        "commande de vente",
+        "bon de commande",
+        "liste de prix",
+        "tarif",
+        "prix",
+        "catalogue",
+        "facturation des ventes",
+        "portail client"
+      ],
+      "compras": [
+        "achat",
+        "fournisseur",
+        "commande fournisseur",
+        "approvisionnement",
+        "rfq",
+        "demande de prix"
+      ],
+      "inventario": [
+        "inventaire",
+        "entrepôt",
+        "stock",
+        "logistique",
+        "bon de livraison",
+        "picking",
+        "traçabilité",
+        "lot",
+        "numéro de série"
+      ],
+      "fabricacion": [
+        "fabrication",
+        "production",
+        "mrp",
+        "nomenclature",
+        "bom",
+        "ordre de fabrication",
+        "assemblage",
+        "usine",
+        "atelier"
+      ],
+      "facturacion": [
+        "facture",
+        "facturation",
+        "facture électronique",
+        "chorus pro",
+        "factur-x",
+        "règlement",
+        "paiement",
+        "rectificative",
+        "avoir"
+      ],
+      "contabilidad": [
+        "comptabilité",
+        "comptable",
+        "plan comptable",
+        "pcg",
+        "rapprochement",
+        "écriture",
+        "grand livre",
+        "bilan",
+        "compte de résultat",
+        "fec",
+        "tva",
+        "ca3",
+        "sepa"
+      ],
+      "proyecto": [
+        "projet",
+        "tâche",
+        "timesheet",
+        "feuille de temps",
+        "planification"
+      ],
+      "helpdesk": [
+        "helpdesk",
+        "assistance",
+        "support",
+        "ticket",
+        "incident",
+        "sla",
+        "service client"
+      ],
+      "website": [
+        "web",
+        "site web",
+        "ecommerce",
+        "boutique en ligne",
+        "blog",
+        "page web"
+      ],
+      "marketing_email": [
+        "marketing",
+        "e-mail marketing",
+        "newsletter",
+        "campagne e-mail",
+        "emailing"
+      ],
+      "rrhh": [
+        "rh",
+        "salarié",
+        "employé",
+        "paie",
+        "pointage",
+        "absence",
+        "congés",
+        "contrat de travail",
+        "ressources humaines"
+      ]
+    },
+    "complementos": {
+      "multi_company": [
+        "groupe de sociétés",
+        "filiale",
+        "plusieurs sociétés",
+        "inter-société",
+        "consolidation"
+      ],
+      "multi_idioma": [
+        "international",
+        "export",
+        "clients étrangers",
+        "anglais",
+        "français",
+        "portugais"
+      ],
+      "crm_4_10_comerciales": [
+        "équipe commerciale",
+        "multi-équipe",
+        "plusieurs commerciaux"
+      ],
+      "crm_10_comerciales": [
+        "réseau commercial",
+        "agences commerciales"
+      ],
+      "crm_lead_scoring": [
+        "qualification",
+        "scoring",
+        "nurturing",
+        "leads automatiques"
+      ],
+      "crm_automatizaciones": [
+        "e-mails automatiques",
+        "alertes commerciales",
+        "suivi automatique"
+      ],
+      "crm_migracion": [
+        "pipeline actuel",
+        "historique commercial",
+        "crm précédent",
+        "salesforce",
+        "hubspot"
+      ],
+      "crm_prospeccion": [
+        "prospection",
+        "enrichissement",
+        "recherche d'entreprises"
+      ],
+      "ventas_suscripciones": [
+        "récurrent",
+        "abonnement",
+        "contrat",
+        "mensualité",
+        "cotisation",
+        "renouvellement",
+        "saas"
+      ],
+      "ventas_plantillas": [
+        "plusieurs types de devis",
+        "services et produits",
+        "national et export"
+      ],
+      "ventas_migr_productos": [
+        "catalogue actuel",
+        "produits dans l'erp précédent",
+        "migrer les produits"
+      ],
+      "ventas_migr_clientes": [
+        "base de clients",
+        "fiches client",
+        "migrer les clients"
+      ],
+      "ventas_migr_tarifas": [
+        "listes de prix actuelles",
+        "listes de prix",
+        "remises par client"
+      ],
+      "ventas_aprobacion": [
+        "validation",
+        "autorisation",
+        "remise maximale",
+        "marge minimale"
+      ],
+      "ventas_kits": [
+        "kit",
+        "pack",
+        "composé",
+        "bundle"
+      ],
+      "ventas_flujos_tipo": [
+        "consignation",
+        "échantillon",
+        "types de vente"
+      ],
+      "ventas_fidelizacion": [
+        "points",
+        "fidélité",
+        "programme de fidélité"
+      ],
+      "compras_reabastecimiento": [
+        "stock minimum",
+        "réapprovisionnement automatique",
+        "point de commande",
+        "réapprovisionnement"
+      ],
+      "compras_acuerdos": [
+        "contrat d'achat",
+        "prix négocié",
+        "contrat-cadre",
+        "tarif annuel"
+      ],
+      "compras_dropshipping": [
+        "dropshipping",
+        "expédition directe",
+        "le fournisseur livre le client"
+      ],
+      "compras_migr_tarifas": [
+        "prix d'achat",
+        "listes de prix fournisseur actuelles"
+      ],
+      "compras_gestion_avanzada": [
+        "évaluation des fournisseurs",
+        "délais de livraison",
+        "alertes d'achat"
+      ],
+      "inv_multi_almacen": [
+        "entrepôts",
+        "agences",
+        "site",
+        "transferts internes"
+      ],
+      "inv_lotes": [
+        "lot",
+        "traçabilité",
+        "rappel produit"
+      ],
+      "inv_series": [
+        "numéro de série",
+        "à l'unité",
+        "garantie par unité",
+        "serial"
+      ],
+      "inv_caducidad": [
+        "péremption",
+        "périssable",
+        "fefo",
+        "alimentaire"
+      ],
+      "inv_rutas": [
+        "pick-pack-ship",
+        "cross-docking",
+        "transit",
+        "zone de picking"
+      ],
+      "inv_codigos_barras": [
+        "scanner",
+        "code-barres",
+        "douchette",
+        "pda"
+      ],
+      "inv_reabastecimiento": [
+        "réapprovisionnement entre entrepôts",
+        "stock minimum par entrepôt"
+      ],
+      "inv_migr_stock": [
+        "inventaire actuel",
+        "stock valorisé",
+        "migrer le stock"
+      ],
+      "inv_gen_serie": [
+        "nomenclature des lots",
+        "génération automatique",
+        "format de série"
+      ],
+      "inv_stock_proyectos": [
+        "matières par projet",
+        "consommation de projet",
+        "chantiers"
+      ],
+      "inv_marcas": [
+        "marques",
+        "étiquettes produit",
+        "multi-marque"
+      ],
+      "fact_gen_pdf": [
+        "modèle de facture personnalisé",
+        "format propre",
+        "pdf sur mesure"
+      ],
+      "fact_margenes": [
+        "marge",
+        "coût de revient",
+        "marge minimale",
+        "contrôle des coûts"
+      ],
+      "cont_sii": [
+        "e-reporting",
+        "reporting en temps réel",
+        "administration fiscale",
+        "dgfip"
+      ],
+      "cont_sepa": [
+        "prélèvement",
+        "sepa",
+        "mandat",
+        "encaissement bancaire",
+        "prélèvement automatique"
+      ],
+      "cont_multi_divisa": [
+        "devise",
+        "dollar",
+        "livre",
+        "monnaie étrangère"
+      ],
+      "cont_analitica": [
+        "centre de coût",
+        "analytique",
+        "par service"
+      ],
+      "cont_presupuestos": [
+        "budget par service",
+        "contrôle des écarts",
+        "budget"
+      ],
+      "cont_intrastat": [
+        "emebi",
+        "deb",
+        "état récapitulatif",
+        "intracommunautaire",
+        "intrastat"
+      ],
+      "cont_mejoras_sii": [
+        "erreurs e-reporting",
+        "tableau de bord e-reporting",
+        "renvois"
+      ],
+      "proy_facturacion": [
+        "facturer les heures",
+        "jalons facturables"
+      ],
+      "proy_planificacion": [
+        "charge de travail",
+        "disponibilité",
+        "planification d'équipe"
+      ],
+      "proy_stock": [
+        "matières",
+        "stock par projet",
+        "consommation de matières"
+      ],
+      "rrhh_ausencias": [
+        "congés",
+        "absences",
+        "permissions",
+        "calendrier d'équipe",
+        "arrêts maladie"
+      ],
+      "rrhh_gastos": [
+        "notes de frais",
+        "frais des salariés",
+        "indemnités",
+        "kilométrage"
+      ],
+      "rrhh_evaluaciones": [
+        "entretien",
+        "performance",
+        "objectifs",
+        "feedback"
+      ],
+      "rrhh_recruiting": [
+        "recrutement",
+        "candidats",
+        "offres d'emploi",
+        "recruiting"
+      ],
+      "rrhh_flota": [
+        "véhicules",
+        "flotte",
+        "voitures de société",
+        "leasing"
+      ],
+      "rrhh_formacion": [
+        "formation interne",
+        "cours",
+        "plan de formation"
+      ],
+      "rrhh_portal": [
+        "portail salarié",
+        "libre-service",
+        "accès au bulletin de paie"
+      ],
+      "mrp_multi_centro": [
+        "lignes de production",
+        "usines",
+        "postes de travail"
+      ],
+      "mrp_work_orders": [
+        "opérations",
+        "ordres de travail",
+        "séquence de fabrication"
+      ],
+      "mrp_subcontratacion": [
+        "sous-traitance",
+        "fabrication externe",
+        "façonnage"
+      ],
+      "mrp_mps": [
+        "plan directeur",
+        "prévision de la demande",
+        "mps"
+      ],
+      "mrp_calidad": [
+        "qualité",
+        "contrôle",
+        "certificats",
+        "iso",
+        "inspection"
+      ],
+      "mrp_plm": [
+        "versions",
+        "eco",
+        "cycle de vie",
+        "modifications d'ingénierie"
+      ],
+      "mrp_mantenimiento": [
+        "maintenance",
+        "préventif",
+        "correctif",
+        "gmao"
+      ],
+      "mrp_multinivel": [
+        "semi-fini",
+        "produit intermédiaire",
+        "multi-niveaux",
+        "éclatement"
+      ],
+      "mrp_migr_ldm": [
+        "nomenclatures",
+        "bom actuelle",
+        "décomposition des coûts"
+      ],
+      "mrp_migr_rutas": [
+        "postes de travail actuels",
+        "gammes de fabrication"
+      ],
+      "web_paginas": [
+        "beaucoup de sections",
+        "plus de 5 pages"
+      ],
+      "web_ecommerce": [
+        "boutique en ligne",
+        "ecommerce",
+        "vente en ligne",
+        "panier",
+        "b2c"
+      ],
+      "web_multi_idioma": [
+        "site en anglais",
+        "site multilingue"
+      ],
+      "web_diseno": [
+        "design personnalisé",
+        "branding",
+        "marque propre"
+      ],
+      "web_chat": [
+        "chat",
+        "livechat",
+        "assistance en direct"
+      ],
+      "web_migracion": [
+        "site actuel",
+        "migrer le contenu web",
+        "wordpress"
+      ],
+      "web_merchant": [
+        "google shopping",
+        "google merchant"
+      ],
+      "hd_equipos": [
+        "équipes de support",
+        "technique et commercial",
+        "après-vente"
+      ],
+      "hd_partes_horas": [
+        "saisir le temps de support",
+        "heures par ticket"
+      ],
+      "hd_facturacion": [
+        "facturer le support",
+        "support facturable"
+      ],
+      "hd_automatizaciones": [
+        "affectation automatique",
+        "escalade",
+        "sla automatique"
+      ],
+      "hd_chat": [
+        "livechat",
+        "chat de support"
+      ],
+      "mkt_automatizacion": [
+        "séquence d'e-mails",
+        "nurturing",
+        "drip",
+        "marketing automation"
+      ],
+      "mkt_segmentacion": [
+        "segments",
+        "comportement",
+        "dynamique"
+      ],
+      "mkt_plantillas": [
+        "plus de 3 modèles",
+        "modèles personnalisés"
+      ],
+      "mkt_sms": [
+        "sms",
+        "messages texte",
+        "campagnes sms"
+      ],
+      "mkt_diseno": [
+        "design d'e-mail professionnel",
+        "newsletter corporate"
+      ],
+      "mkt_correo": [
+        "suivi des e-mails",
+        "renvois",
+        "logs e-mail"
+      ]
+    },
+    "metrics": {
+      "usuarios": "utilisateurs?",
+      "empleados": "(?:salari[ée]s?|employ[ée]s?)",
+      "comerciales": "commerciaux?|commerciale?s?",
+      "almacenes": "entrep[oô]ts?"
+    },
+    "sectors": {
+      "alimentacion": {
+        "display": "Alimentaire",
+        "keywords": [
+          "alimentaire",
+          "agroalimentaire",
+          "food",
+          "conserve",
+          "viande"
+        ]
+      },
+      "fabricacion": {
+        "display": "Fabrication",
+        "keywords": [
+          "usine",
+          "fabric",
+          "industrie",
+          "production industrielle"
+        ]
+      },
+      "retail": {
+        "display": "Commerce de détail",
+        "keywords": [
+          "retail",
+          "magasin",
+          "commerce de détail"
+        ]
+      },
+      "tecnologia": {
+        "display": "Technologie",
+        "keywords": [
+          "logiciel",
+          "technologie",
+          "it ",
+          "saas",
+          "développement logiciel"
+        ]
+      },
+      "construccion": {
+        "display": "Construction",
+        "keywords": [
+          "construction",
+          "bâtiment",
+          "immobilier"
+        ]
+      },
+      "logistica": {
+        "display": "Logistique",
+        "keywords": [
+          "logistique",
+          "transport",
+          "distribution"
+        ]
+      },
+      "servicios": {
+        "display": "Services",
+        "keywords": [
+          "consultant",
+          "service professionnel",
+          "conseil"
+        ]
+      }
+    },
+    "archetypes": {
+      "multi-entity": [
+        "multi",
+        "socié",
+        "filiale",
+        "groupe",
+        "entité",
+        "consolidat",
+        "intercompany",
+        "pays",
+        "site",
+        "holding"
+      ],
+      "excel-legacy": [
+        "excel",
+        "tableur",
+        "manuel",
+        "legacy",
+        "access",
+        "maison",
+        "ancien",
+        "obsol",
+        "artisanal",
+        "diy",
+        "papier",
+        "silo"
+      ],
+      "b2b-webshop": [
+        "ecommerce",
+        "e-commerce",
+        "boutique",
+        "en ligne",
+        "b2b",
+        "portail",
+        "catalog",
+        "commandes web",
+        "webshop"
+      ],
+      "fast-golive": [
+        "rapide",
+        "délai",
+        "urgent",
+        "au plus vite",
+        "dès que possible",
+        "deadline"
+      ],
+      "scaling": [
+        "croissance",
+        "scal",
+        "expansion",
+        "international",
+        "ouvrir",
+        "nouveaux marchés"
+      ]
+    },
+    "intake_labels": {
+      "tipo_proyecto": [
+        "type de projet"
+      ],
+      "sector": [
+        "secteur",
+        "activité"
+      ],
+      "usuarios": [
+        "utilisateurs",
+        "odoo"
+      ]
+    },
+    "intake_truthy": [
+      "oui",
+      "groupe",
+      "international"
+    ],
+    "header_markers": [
+      "recueil des besoins",
+      "cahier des charges",
+      "data intake"
+    ],
+    "n_sociedades_word": "socié",
+    "vertical_signals": {
+      "inbuilt": [
+        "bc3",
+        "fiebdc3",
+        "presto",
+        "arquimedes"
+      ]
+    },
+    "app_parse_order": [
+      "config_general",
+      "crm",
+      "ventas",
+      "compras",
+      "inventario",
+      "facturacion",
+      "contabilidad",
+      "proyecto",
+      "rrhh",
+      "fabricacion",
+      "website",
+      "helpdesk",
+      "marketing_email"
+    ],
+    "complementos_catalog": {
+      "config_general": [
+        { "id": "multi_company", "nombre": "Multi-sociétés", "precio": 250, "por_unidad": true },
+        { "id": "multi_idioma", "nombre": "Multilingue", "precio": 250 }
+      ],
+      "crm": [
+        { "id": "crm_4_10_comerciales", "nombre": "4-10 commerciaux", "precio": 500 },
+        { "id": "crm_10_comerciales", "nombre": "+10 commerciaux", "precio": 1000 },
+        { "id": "crm_lead_scoring", "nombre": "Lead scoring & nurturing", "precio": 500 },
+        { "id": "crm_automatizaciones", "nombre": "Automatisations commerciales", "precio": 250 },
+        { "id": "crm_migracion", "nombre": "Migration des opportunités", "precio": 500 },
+        { "id": "crm_prospeccion", "nombre": "⚙️ Prospection avancée", "precio": 500 }
+      ],
+      "ventas": [
+        { "id": "ventas_suscripciones", "nombre": "Abonnements / Récurrence", "precio": 750 },
+        { "id": "ventas_plantillas", "nombre": "Modèles supplémentaires", "precio": 250 },
+        { "id": "ventas_migr_productos", "nombre": "Migration des produits", "precio": 250 },
+        { "id": "ventas_migr_clientes", "nombre": "Migration des clients", "precio": 250 },
+        { "id": "ventas_migr_tarifas", "nombre": "Migration des listes de prix", "precio": 500 },
+        { "id": "ventas_aprobacion", "nombre": "⚙️ Circuit de validation", "precio": 500 },
+        { "id": "ventas_kits", "nombre": "⚙️ Kits (produits composés)", "precio": 500 },
+        { "id": "ventas_flujos_tipo", "nombre": "⚙️ Flux par type de commande", "precio": 500 },
+        { "id": "ventas_fidelizacion", "nombre": "⚙️ Fidélité", "precio": 500 }
+      ],
+      "compras": [
+        { "id": "compras_reabastecimiento", "nombre": "Règles de réapprovisionnement", "precio": 500 },
+        { "id": "compras_acuerdos", "nombre": "Contrats-cadres", "precio": 500 },
+        { "id": "compras_dropshipping", "nombre": "Dropshipping", "precio": 500 },
+        { "id": "compras_migr_tarifas", "nombre": "Migration des tarifs d'achat", "precio": 250 },
+        { "id": "compras_gestion_avanzada", "nombre": "⚙️ Achats avancés", "precio": 750 }
+      ],
+      "inventario": [
+        { "id": "inv_multi_almacen", "nombre": "Multi-entrepôts", "precio": 250, "por_unidad": true },
+        { "id": "inv_lotes", "nombre": "Traçabilité par lot", "precio": 500 },
+        { "id": "inv_series", "nombre": "Traçabilité par numéro de série", "precio": 500 },
+        { "id": "inv_caducidad", "nombre": "Dates de péremption", "precio": 250 },
+        { "id": "inv_rutas", "nombre": "Routes logistiques avancées", "precio": 500 },
+        { "id": "inv_codigos_barras", "nombre": "Codes-barres", "precio": 500 },
+        { "id": "inv_reabastecimiento", "nombre": "Réapprovisionnement automatique", "precio": 500 },
+        { "id": "inv_migr_stock", "nombre": "Migration du stock actuel", "precio": 500 },
+        { "id": "inv_gen_serie", "nombre": "⚙️ Générateur série/lot", "precio": 250 },
+        { "id": "inv_stock_proyectos", "nombre": "⚙️ Stock par projet", "precio": 500 },
+        { "id": "inv_marcas", "nombre": "⚙️ Marques et étiquettes", "precio": 250 }
+      ],
+      "facturacion": [
+        { "id": "fact_gen_pdf", "nombre": "⚙️ Générateur de PDF", "precio": 500 },
+        { "id": "fact_margenes", "nombre": "⚙️ Marges et coûts avancés", "precio": 500 }
+      ],
+      "contabilidad": [
+        { "id": "cont_sii", "nombre": "E-reporting temps réel", "precio": 500 },
+        { "id": "cont_sepa", "nombre": "Prélèvement SEPA", "precio": 750 },
+        { "id": "cont_multi_divisa", "nombre": "Multi-devises", "precio": 250 },
+        { "id": "cont_analitica", "nombre": "Comptabilité analytique", "precio": 500 },
+        { "id": "cont_presupuestos", "nombre": "Budgets comptables", "precio": 500 },
+        { "id": "cont_intrastat", "nombre": "EMEBI / état récapitulatif", "precio": 250 },
+        { "id": "cont_mejoras_sii", "nombre": "⚙️ Améliorations e-reporting", "precio": 500 }
+      ],
+      "proyecto": [
+        { "id": "proy_facturacion", "nombre": "Facturation de projet", "precio": 500 },
+        { "id": "proy_planificacion", "nombre": "Planification des ressources", "precio": 500 },
+        { "id": "proy_stock", "nombre": "⚙️ Stock par projet", "precio": 500 }
+      ],
+      "rrhh": [
+        { "id": "rrhh_ausencias", "nombre": "Congés & absences", "precio": 500 },
+        { "id": "rrhh_gastos", "nombre": "Notes de frais", "precio": 500 },
+        { "id": "rrhh_evaluaciones", "nombre": "Entretiens / Performance", "precio": 500 },
+        { "id": "rrhh_recruiting", "nombre": "Recrutement", "precio": 500 },
+        { "id": "rrhh_flota", "nombre": "Flotte", "precio": 500 },
+        { "id": "rrhh_formacion", "nombre": "Formation des salariés", "precio": 250 },
+        { "id": "rrhh_portal", "nombre": "⚙️ Portail salarié", "precio": 500 }
+      ],
+      "fabricacion": [
+        { "id": "mrp_multi_centro", "nombre": "Multi-postes de travail", "precio": 250, "por_unidad": true },
+        { "id": "mrp_work_orders", "nombre": "Ordres de travail", "precio": 500 },
+        { "id": "mrp_subcontratacion", "nombre": "Sous-traitance", "precio": 750 },
+        { "id": "mrp_mps", "nombre": "Plan directeur de production (MPS)", "precio": 750 },
+        { "id": "mrp_calidad", "nombre": "Contrôle qualité", "precio": 750 },
+        { "id": "mrp_plm", "nombre": "PLM", "precio": 500 },
+        { "id": "mrp_mantenimiento", "nombre": "Maintenance", "precio": 500 },
+        { "id": "mrp_multinivel", "nombre": "Nomenclature multi-niveaux", "precio": 500 },
+        { "id": "mrp_migr_ldm", "nombre": "Migration des nomenclatures", "precio": 500 },
+        { "id": "mrp_migr_rutas", "nombre": "Migration des gammes/postes", "precio": 250 }
+      ],
+      "website": [
+        { "id": "web_paginas", "nombre": "Pages supplémentaires", "precio": 100, "por_unidad": true },
+        { "id": "web_ecommerce", "nombre": "Boutique en ligne (eCommerce)", "precio": 1500 },
+        { "id": "web_multi_idioma", "nombre": "Site multilingue", "precio": 500 },
+        { "id": "web_diseno", "nombre": "Design personnalisé", "precio": 750 },
+        { "id": "web_chat", "nombre": "Chat en direct", "precio": 250 },
+        { "id": "web_migracion", "nombre": "Migration du contenu", "precio": 500 },
+        { "id": "web_merchant", "nombre": "⚙️ Google Merchant", "precio": 250 }
+      ],
+      "helpdesk": [
+        { "id": "hd_equipos", "nombre": "Équipes supplémentaires", "precio": 250, "por_unidad": true },
+        { "id": "hd_partes_horas", "nombre": "Feuilles de temps sur les tickets", "precio": 250 },
+        { "id": "hd_facturacion", "nombre": "Facturation du support", "precio": 500 },
+        { "id": "hd_automatizaciones", "nombre": "Automatisations", "precio": 250 },
+        { "id": "hd_chat", "nombre": "Chat en direct", "precio": 250 }
+      ],
+      "marketing_email": [
+        { "id": "mkt_automatizacion", "nombre": "Marketing automation", "precio": 750 },
+        { "id": "mkt_segmentacion", "nombre": "Segmentation avancée", "precio": 250 },
+        { "id": "mkt_plantillas", "nombre": "Modèles supplémentaires", "precio": 250 },
+        { "id": "mkt_sms", "nombre": "SMS marketing", "precio": 500 },
+        { "id": "mkt_diseno", "nombre": "⚙️ Design d'e-mail avancé", "precio": 500 },
+        { "id": "mkt_correo", "nombre": "⚙️ Envoi de courrier amélioré", "precio": 250 }
+      ]
+    },
+    "sectors_parse": [
+      {
+        "label": "food",
+        "keywords": ["alimentaire", "agroalimentaire", "food", "conserve", "viande"]
+      },
+      {
+        "label": "manufacturing",
+        "keywords": ["usine", "fabric", "industrie", "production industrielle"]
+      },
+      {
+        "label": "retail",
+        "keywords": ["retail", "magasin", "commerce de détail"]
+      },
+      {
+        "label": "technology",
+        "keywords": ["logiciel", "technologie", "it ", "saas", "développement logiciel"]
+      },
+      {
+        "label": "construction",
+        "keywords": ["construction", "chantier", "immobilier"]
+      },
+      {
+        "label": "logistics",
+        "keywords": ["logistique", "transport", "distribution"]
+      },
+      {
+        "label": "services",
+        "keywords": ["consultant", "service professionnel", "conseil"]
+      }
+    ],
+    "erps": [
+      "sap",
+      "sage",
+      "cegid",
+      "ebp",
+      "divalto",
+      "dynamics",
+      "navision",
+      "quadratus",
+      "pennylane",
+      "excel",
+      "odoo",
+      "prestashop",
+      "woocommerce",
+      "shopify"
+    ]
+  },
+  "glossary": {
+    "sector_glossary_table": [
+      {
+        "odoo_term": "Client / partenaire",
+        "sector_words": [
+          "maître d'ouvrage, entreprise générale (construction)",
+          "patient/établissement (santé)",
+          "compte (industrie)"
+        ]
+      },
+      {
+        "odoo_term": "Produit",
+        "sector_words": [
+          "référence/SKU (alimentaire)",
+          "livrable (services)",
+          "article/taille-couleur (mode)"
+        ]
+      },
+      {
+        "odoo_term": "Nomenclature (BoM)",
+        "sector_words": [
+          "décomposition des coûts (alimentaire)",
+          "recette (chimie)",
+          "gamme de pièces (métallurgie)"
+        ]
+      },
+      {
+        "odoo_term": "Ordre de fabrication (MRP)",
+        "sector_words": [
+          "ordre de production",
+          "lot de fabrication",
+          "batch"
+        ]
+      },
+      {
+        "odoo_term": "Bon de livraison / picking",
+        "sector_words": [
+          "bordereau de livraison",
+          "bon d'entrepôt"
+        ]
+      },
+      {
+        "odoo_term": "Lot / traçabilité",
+        "sector_words": [
+          "numéro de coulée (acier)",
+          "péremption/lot (alimentaire)",
+          "numéro de série"
+        ]
+      },
+      {
+        "odoo_term": "Projet",
+        "sector_words": [
+          "chantier (construction)",
+          "dossier (services professionnels)",
+          "affaire (juridique)"
+        ]
+      },
+      {
+        "odoo_term": "Opportunité (CRM)",
+        "sector_words": [
+          "appel d'offres",
+          "soumission",
+          "devis en cours"
+        ]
+      },
+      {
+        "odoo_term": "Facture",
+        "sector_words": [
+          "situation de travaux (construction)",
+          "note d'honoraires (juridique)"
+        ]
+      },
+      {
+        "odoo_term": "Entrepôt",
+        "sector_words": [
+          "chantier/site",
+          "agence",
+          "centre logistique"
+        ]
+      }
+    ],
+    "lang_labels": {
+      "english": "Anglais",
+      "anglais": "Anglais",
+      "spanish": "Espagnol",
+      "espagnol": "Espagnol",
+      "french": "Français",
+      "français": "Français",
+      "francais": "Français",
+      "german": "Allemand",
+      "allemand": "Allemand",
+      "portuguese": "Portugais",
+      "portugais": "Portugais",
+      "italian": "Italien",
+      "italien": "Italien",
+      "dutch": "Néerlandais",
+      "néerlandais": "Néerlandais",
+      "neerlandais": "Néerlandais",
+      "flemish": "Flamand",
+      "flamand": "Flamand"
+    },
+    "soft_skills": {
+      "adaptability": "Adaptabilité",
+      "conflict management": "Gestion des conflits",
+      "leadership": "Leadership",
+      "organizational": "Organisation",
+      "problem-solving": "Résolution de problèmes",
+      "problem solving": "Résolution de problèmes",
+      "teamwork": "Travail en équipe",
+      "communication": "Communication",
+      "time management": "Gestion du temps",
+      "creativity": "Créativité",
+      "critical thinking": "Esprit critique",
+      "negotiation": "Négociation",
+      "decision making": "Prise de décision",
+      "stress management": "Gestion du stress",
+      "analytical": "Capacité d'analyse",
+      "customer service": "Relation client"
+    },
+    "skill_block": [
+      "loisir",
+      "sport",
+      "hobby",
+      "personnel",
+      "famille",
+      "centres d'intérêt"
+    ],
+    "skill_type_tokens": {
+      "odoo": "odoo",
+      "lang": [
+        "langue",
+        "lang"
+      ]
+    },
+    "odoo_skill_prefix": "Odoo {sn}"
+  },
+  "cases": {
+    "local_case_source": "common-skills:content-collection",
+    "case_translations": {
+      "50five": {
+        "resultado": "Un Odoo unique comme colonne vertébrale dans douze pays européens, passant de distributeur smart-home à opérateur de plus de 600 000 points de recharge.",
+        "metric": "12 pays, 1 plateforme",
+        "cliente": "50Five",
+        "sectors": ["energy", "utilities", "e-mobility", "technical retail"],
+        "scope": "international"
+      },
+      "sensorfact": {
+        "resultado": "A remplacé les achats manuels par un système intégré d'approvisionnement, d'inventaire, de comptabilité et de ventes au service de 1 600 clients dans 40 pays.",
+        "metric": "1 600 clients dans 40 pays",
+        "cliente": "Sensorfact",
+        "sectors": ["energy", "industry", "industrial saas"],
+        "scope": "international"
+      },
+      "regiechatel": {
+        "resultado": "A consolidé la gestion de plus de 100 syndics de copropriété sur une seule plateforme, remplaçant des combinaisons de fichiers Word et Excel.",
+        "metric": "100+ administrations sur une plateforme",
+        "cliente": "Régie Châtel",
+        "sectors": ["financial services", "property management", "professional services"],
+        "scope": "international"
+      },
+      "cyclis": {
+        "resultado": "Est passé du montage artisanal des fondateurs à une plateforme Odoo intégrée qui a soutenu la croissance jusqu'à plus de 36 000 vélos en location longue durée.",
+        "metric": "36 000+ vélos en location",
+        "cliente": "Cyclis Bike Lease",
+        "sectors": ["financial services", "renting", "leasing", "mobility"],
+        "scope": "international"
+      },
+      "lonestar": {
+        "resultado": "A unifié sept départements de laboratoire spécialisés (65 000 échantillons par an) sur une seule plateforme Odoo + LIMS en seulement quatre mois.",
+        "metric": "7 départements unifiés en 4 mois",
+        "cliente": "Lone Star Alpha Laboratories",
+        "sectors": ["laboratories", "health", "regulated"],
+        "scope": "international"
+      },
+      "lfgparis": {
+        "resultado": "A amené le plus ancien laboratoire de gemmologie au monde sur une plateforme Odoo unifiée avec LIMS intégré pour la conformité et l'exploitation.",
+        "metric": "LIMS intégré au plus ancien laboratoire gemmologique",
+        "cliente": "LFG Paris",
+        "sectors": ["laboratories", "regulated"],
+        "scope": "international"
+      },
+      "readytobrand": {
+        "resultado": "A mis en place une colonne vertébrale Odoo unique soutenant une exploitation multi-pays et l'expansion.",
+        "metric": "Multi-pays sur une seule colonne Odoo",
+        "cliente": "Ready to Brand",
+        "sectors": ["retail", "wholesale", "distribution"],
+        "scope": "international"
+      },
+      "primaproteccion": {
+        "resultado": "A migré ce distributeur B2B d'équipements de sécurité d'un système legacy vers Odoo, atteignant 95 % des commandes via la boutique en ligne.",
+        "metric": "95 % des commandes via la boutique en ligne",
+        "cliente": "Prima Protección",
+        "sectors": ["retail", "wholesale", "distribution", "ppe", "workplace safety"],
+        "scope": "international"
+      },
+      "obiz": {
+        "resultado": "A consolidé trois entités sur une seule plateforme Odoo après une acquisition, couvrant la comptabilité, les achats et les ventes.",
+        "metric": "3 entités sur une seule plateforme",
+        "cliente": "Obiz Group",
+        "sectors": ["professional services", "consulting"],
+        "scope": "international"
+      },
+      "tmtechnics": {
+        "resultado": "Après un premier ERP resté au milieu du gué, a réuni chantier, production et coûts par projet sur une seule plateforme Odoo, avec un go-live unique sans incident et les marges réelles visibles dès la préparation de l'offre.",
+        "metric": "Chantier, production et coûts par projet sur 1 plateforme",
+        "cliente": "TM Technics",
+        "sectors": ["construction", "bâtiment", "fabrication métallique", "montage", "installation", "industriel"],
+        "scope": "international"
+      },
+      "despraz": {
+        "resultado": "A remplacé Excel et des outils dispersés par une plateforme unique couvrant tout le cycle du chantier, du devis à la clôture : 3 339 chantiers et une base tarifaire partagée par tous les chefs de projet.",
+        "metric": "3 339 chantiers sur une plateforme",
+        "cliente": "Despraz SA",
+        "sectors": ["construction", "bâtiment", "chantiers", "préfabrication", "installation industrielle", "industriel"],
+        "scope": "international"
+      },
+      "puratos": {
+        "resultado": "A standardisé les usines acquises du groupe sur un seul template Odoo : 14 sites de production sur 4 continents et 230 utilisateurs, avec des go-lives pays en moins de deux mois.",
+        "metric": "14 usines et 230 utilisateurs sur 1 template",
+        "cliente": "Puratos",
+        "sectors": ["fabrication", "agroalimentaire", "multi-sites", "groupe industriel"],
+        "scope": "international"
+      },
+      "tunergia": {
+        "resultado": "A consolidé les leads, projets et validations de ce cabinet de conseil en énergie valencien sur une seule plateforme Odoo, remplaçant Telegram, Excel et le papier après seize ans.",
+        "metric": "2 sociétés, 1 plateforme Odoo",
+        "cliente": "Tunergia",
+        "sectors": ["énergie", "utilities", "conseil en énergie", "services"],
+        "scope": "local"
+      },
+      "todotrofeo": {
+        "resultado": "A remplacé un outil de facturation basique et des centaines de fichiers dispersés par Ventes, CRM et Commandes dans Odoo : tout l'historique de chaque client sur un seul écran.",
+        "metric": "1 écran par client, ~500 commandes/mois",
+        "cliente": "Todotrofeo",
+        "sectors": ["fabrication", "trophées", "médailles", "sur mesure"],
+        "scope": "local"
+      },
+      "espacioorganico": {
+        "resultado": "Est passé de transferts manuels entre magasins et d'achats à l'intuition à un réassort min-max piloté par les ventes, sur Odoo standard, en 6,5 mois.",
+        "metric": "En production en 6,5 mois",
+        "cliente": "Espacio Orgánico",
+        "sectors": ["retail", "alimentation", "bio", "ecommerce", "commerce de détail"],
+        "scope": "local"
+      }
+    },
+    "sector_token_map": {
+      "alimentaire": "food",
+      "agroalimentaire": "food",
+      "fabrication": "manufacturing",
+      "industrie": "manufacturing",
+      "commerce de détail": "retail",
+      "retail": "retail",
+      "technologie": "tech",
+      "construction": "construction",
+      "bâtiment": "construction",
+      "logistique": "logistics",
+      "services": "services",
+      "énergie": "energy",
+      "utilities": "utilities",
+      "mobilité électrique": "e-mobility",
+      "retail technique": "technical-retail",
+      "saas industriel": "industrial-saas",
+      "services financiers": "financial-services",
+      "gestion immobilière": "property-management",
+      "syndic de copropriété": "property-management",
+      "services professionnels": "professional-services",
+      "location longue durée": "renting",
+      "leasing": "leasing",
+      "mobilité": "mobility",
+      "laboratoires": "labs",
+      "santé": "health",
+      "secteur réglementé": "regulated",
+      "grossiste": "wholesale",
+      "distribution": "distribution",
+      "epi": "ppe",
+      "sécurité au travail": "workplace-safety",
+      "conseil": "consulting"
+    }
+  }
+}

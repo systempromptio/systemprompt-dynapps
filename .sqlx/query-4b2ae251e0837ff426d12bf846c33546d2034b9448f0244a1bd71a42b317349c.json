@@ -1,0 +1,172 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT run_id AS \"run_id!: FarmRunId\",\n       completed AS \"completed!\",\n       summary AS \"summary?\",\n       final_message AS \"final_message?\",\n       outputs AS \"outputs!\",\n       mcp_calls AS \"mcp_calls!\",\n       mcp_reads AS \"mcp_reads!\",\n       mcp_writes AS \"mcp_writes!\",\n       governance_warnings AS \"governance_warnings!\",\n       delivery_status AS \"delivery_status!\",\n       eval_passed AS \"eval_passed?\",\n       eval_score AS \"eval_score?\",\n       created_at AS \"created_at!\"\nFROM agent_farm_run_reports\nWHERE run_id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "run_id!: FarmRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "completed!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "completed"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "final_message?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "final_message"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "outputs!",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "outputs"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "mcp_calls!",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_calls"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "mcp_reads!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_reads"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "mcp_writes!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_writes"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "governance_warnings!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "governance_warnings"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "delivery_status!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "delivery_status"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "eval_passed?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_passed"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "eval_score?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_score"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "4b2ae251e0837ff426d12bf846c33546d2034b9448f0244a1bd71a42b317349c"
+}

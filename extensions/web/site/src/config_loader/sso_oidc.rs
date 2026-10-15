@@ -2,7 +2,7 @@
 //! (`services/web/config/entra-oidc.yaml`).
 //!
 //! The absolute `redirect_uri` is derived from the profile's
-//! `api_external_url` plus the file's `redirect_path`, as the SAML URLs are,
+//! `api_external_url` plus the file's `redirect_path`,
 //! so one committed config is correct on every deployment host. A missing
 //! file is a disabled provider, never an error.
 

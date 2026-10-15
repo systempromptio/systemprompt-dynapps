@@ -216,13 +216,7 @@ async fn importing_the_current_baseline_is_repeatable_and_preserves_source_bytes
     .await;
     let repo = ManagedRepository::new(&db.db_pool());
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../services");
-    let ids = [
-        "admin_daily_brief",
-        "admin_critical_projects",
-        "admin_ai_usage",
-        "systemprompt_cli",
-    ]
-    .map(systemprompt::identifiers::SkillId::new);
+    let ids = ["systemprompt_cli"].map(systemprompt::identifiers::SkillId::new);
     let captured = capture_skills(&root, &ids).expect("real baseline source");
     let source = repo
         .register_source(
@@ -242,7 +236,7 @@ async fn importing_the_current_baseline_is_repeatable_and_preserves_source_bytes
         .import_skills(&owner, &source, &captured, None)
         .await
         .expect("retry");
-    assert_eq!(first.revisions.len(), 4);
+    assert_eq!(first.revisions.len(), 1);
     assert_ne!(
         first.snapshot_id, retry.snapshot_id,
         "every synchronization attempt has distinct durable provenance"

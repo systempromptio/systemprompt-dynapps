@@ -1,10 +1,9 @@
 # Dynapps SSO (Microsoft Entra ID) — OpenID Connect relying party.
 #
-# The alternative to the SAML trust in adfs.yaml: an App Registration with a
-# client secret instead of an Enterprise Application with federation metadata.
-# Run one or the other, not both, against the same Entra groups.
+# The only sign-in on this instance: an App Registration with a client secret.
 #
-# DISABLED until Dynapps IT has created the App Registration. To switch on:
+# ENABLED 2026-10-14; admin consent, groups claim and real group ids in place
+# 2026-10-15. Original steps:
 #   1. Fill in `tenant_id` and `client_id` below (App Registration > Overview).
 #   2. Store the client secret VALUE in the secrets store under the key named
 #      by `client_secret_secret` (default `entra_oidc_client_secret`). The
@@ -30,10 +29,10 @@
 #
 # Public authentication reference: services/content/documentation/entra-id-sso-setup.md
 
-enabled: false
+enabled: true
 
-tenant_id: "00000000-0000-0000-0000-000000000000"
-client_id: "00000000-0000-0000-0000-000000000000"
+tenant_id: "19b092eb-6d38-4c26-bf69-6a97d5c150d8"
+client_id: "f4379821-4c96-49a9-b5bf-7f8b9fd14c6a"
 client_secret_secret: entra_oidc_client_secret
 
 redirect_path: /admin/auth/entra/callback
@@ -47,19 +46,32 @@ clock_skew_seconds: 120
 
 # Only these email domains may sign in.
 allowed_email_domains:
+  - dynapps.be
+  - dynapps.nl
+  - dynapps.fr
   - dynapps.es
-  - wearedynapps.com
+  - dynapps.ch
+  - dynapps.eu
+  # Test only (2026-10-14): Ed's user in the Dynapps tenant is ed@systemprompt.io.
+  - systemprompt.io
 
 # Attach a first sign-in to the active local account that owns the asserted
 # (verified) address, instead of provisioning a duplicate.
 link_by_email: true
 
+# Demo only: a guest account (ed@systemprompt.io is a guest in the Dynapps
+# tenant) carries no xms_edov, so its email would not count as verified and
+# could not link. Set false once IT adds the xms_edov optional claim.
+trust_guest_email: true
+
 # A sign-in whose token carries no group at all gets no session.
 deny_without_group: true
 
-# Entra group object id -> roles. Placeholders until IT sends the real ids.
+# Entra group object id -> roles (ids from Dynapps IT, 2026-10-15).
 group_roles:
-  "11111111-1111-1111-1111-111111111111": [platform_admin, admin, user]
-  "22222222-2222-2222-2222-222222222222": [user]
+  # Systemprompt - Admin
+  "720095b5-6d25-4f5f-9cce-6074b5904b89": [platform_admin, admin, user]
+  # Dynapps all - Users
+  "b22f2dae-ee55-4ac7-8d5c-99cddfe1f9a5": [user]
 
 auto_provision: true

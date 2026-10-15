@@ -1,0 +1,52 @@
+{
+  "vat_label": "BTW",
+  "seller_vat_number": "<<VERIFY: BTW-nummer van de verkopende NL-entiteit>>",
+  "einvoicing": {
+    "mandate_status": "b2g_only",
+    "authority": "Logius / Nederlandse Peppolautoriteit (NPa)",
+    "network": ["Peppol", "Digipoort"],
+    "formats": ["Peppol BIS 3.0", "NLCIUS", "SI-UBL 2.0"],
+    "phase_dates": [],
+    "tolerances": null,
+    "threshold": null,
+    "detection_signals": ["e-factuur", "e-facturatie", "elektronische factuur", "peppol", "nlcius", "si-ubl", "ubl", "digipoort", "factureren aan de overheid", "b2g"],
+    "copy_render": "Native e-facturatie in Odoo, geïntegreerd met verkoop en boekhouding. Verstuur en ontvang elektronische facturen via het Peppol-netwerk (Peppol BIS 3.0 / NLCIUS / SI-UBL), conform EN 16931 — verplicht voor facturen aan de rijksoverheid (B2G, sinds 2017). Voor binnenlands B2B is e-facturatie vandaag nog vrijwillig, maar de verplichting komt eraan: het ministerie van Financiën adviseerde op 10 maart 2026 een nationale B2B-verplichting rond 2030, in lijn met de EU-verplichting (ViDA) voor grensoverschrijdende intracommunautaire B2B-transacties vanaf juli 2030. Met Odoo ben je er nu al klaar voor."
+  },
+  "chart_of_accounts": {
+    "code": "RGS",
+    "copy": "Boekhouding ingericht op een Nederlands grootboekrekeningschema en de Nederlandse BTW-regels, desgewenst gemapt op RGS (Referentie Grootboekschema, de vrijwillige standaardtaxonomie): automatische bankaflettering, beheer van vaste activa, ondersteunde periodeafsluitingen en alle wettelijke rapportages (balans, winst-en-verliesrekening, grootboek, BTW-aangifte)."
+  },
+  "tax_filings": [
+    {
+      "id": "btw_aangifte",
+      "legal_name": "BTW-aangifte (omzetbelasting)",
+      "authority": "Belastingdienst",
+      "is_mandatory": true,
+      "threshold": null,
+      "odoo_module": "<<VERIFY: Odoo l10n_nl BTW-aangifte modulenaam in NL DB>>",
+      "signals": ["btw", "btw-aangifte", "omzetbelasting", "belastingdienst", "aangifte omzetbelasting"]
+    },
+    {
+      "id": "icp_opgaaf",
+      "legal_name": "Opgaaf intracommunautaire prestaties (ICP)",
+      "authority": "Belastingdienst",
+      "is_mandatory": false,
+      "threshold": "Verplicht bij intracommunautaire leveringen en diensten aan BTW-plichtige afnemers in de EU",
+      "odoo_module": "<<VERIFY: Odoo l10n_nl ICP/EC sales list modulenaam in NL DB>>",
+      "signals": ["icp", "icp-opgaaf", "intracommunautair", "intracommunautaire prestaties", "eu-levering", "opgaaf ib", "listing"]
+    }
+  ],
+  "reverse_charge_clause": "Bij intracommunautaire leveringen en diensten aan een BTW-plichtige afnemer in een andere EU-lidstaat is de BTW verlegd naar de afnemer (BTW verlegd / reverse charge), waar van toepassing.",
+  "cross_border_notes": "Voor grensoverschrijdende B2C-eCommerce binnen de EU is de OSS/IOSS-regeling van toepassing (Éénloketsysteem, aangifte via de Belastingdienst).",
+  "carriers": ["PostNL", "DHL", "DPD", "GLS", "pallettransport"],
+  "payment_terms": {
+    "validity_days": 30,
+    "default_payment_method": "bankoverschrijving",
+    "late_payment_clause": "Bij te late betaling is van rechtswege de wettelijke handelsrente verschuldigd (art. 6:119a BW; ECB-herfinancieringsrente + 8 procentpunten — 10,50% in H1 2026), zonder dat een ingebrekestelling vereist is. De betaaltermijn tussen ondernemingen bedraagt maximaal 60 dagen; grote ondernemingen dienen mkb-leveranciers binnen 30 dagen te betalen. <<VERIFY: sign-off door NL finance/legal vereist vóór gebruik in ondertekende offertes>>",
+    "mandatory_mentions": []
+  },
+  "fineprint_web": "* Prijzen in {currency_code_label}, exclusief {vat_label}. De analyse wordt bij aanvang gefactureerd; de implementatie wordt maandelijks gefactureerd gedurende het traject. Betaalwijze: {forma_pago}. Deze offerte is {validity_days} dagen geldig.",
+  "fineprint_pdf": "* Prijzen in {currency_code_label}, exclusief {vat_label}. De analyse wordt bij aanvang gefactureerd; de implementatie wordt maandelijks gefactureerd gedurende het traject. Betaalwijze: {forma_pago}. Deze offerte is {validity_days} dagen geldig.",
+  "travel_clause": "Algemene voorwaarden: dagen op locatie kunnen een meerprijs met zich meebrengen voor reis- en verblijfkosten buiten het gebruikelijke werkgebied, apart te offreren.",
+  "acronyms_fiscal": ["BTW", "KVK", "RSIN", "ICP", "OSS", "IOSS", "RGS", "SEPA", "IBAN", "SBI", "NLCIUS", "UBL", "PEPPOL", "EN16931", "VIDA", "BSN", "EORI", "INTRASTAT"]
+}

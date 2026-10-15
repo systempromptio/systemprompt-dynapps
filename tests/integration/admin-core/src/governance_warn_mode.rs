@@ -2,7 +2,9 @@
 //! `services/governance/config.yaml` is parsed by the same loader the server
 //! uses, built into the same `GovernanceEngine`, and driven with the inputs
 //! that were denying real traffic before the mode existed. Every stage must
-//! still find what it found, and none of them may refuse.
+//! still find what it found. Every stage inherits the window (no stage
+//! overrides it with `mode: enforce` since 2026-10-15), so each finding is a
+//! recorded warn and nothing is refused.
 //!
 //! The write side is exercised too: each warn verdict is recorded through
 //! `record_decision` into a throwaway database and read back with the same
@@ -93,6 +95,7 @@ impl<'a> Call<'a> {
                 user_id: self.user.clone(),
             },
             access_scope: self.scope,
+            roles: &[],
             session_id: self.session,
             user_id: self.user,
             input: &self.input,
@@ -165,7 +168,7 @@ fn the_shipped_chain_has_every_stage_on_and_every_stage_warning() {
         assert!(policy.enabled, "{stage} is enabled — warn is not off");
         assert!(
             policy.mode.is_warn(),
-            "{stage} inherits warn and does not override it"
+            "{stage}: no stage overrides the window with enforce"
         );
     }
 }
@@ -278,6 +281,7 @@ fn an_admin_only_tool_from_a_user_is_a_warn_from_scope_check() {
 
     assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
     assert_eq!(warned_policies(&evaluation), vec!["scope_check"]);
+    assert!(evaluation.decision.permits());
 }
 
 #[test]
@@ -291,6 +295,7 @@ fn a_blocklisted_tool_name_is_a_warn_from_tool_blocklist() {
 
     assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
     assert_eq!(warned_policies(&evaluation), vec!["tool_blocklist"]);
+    assert!(evaluation.decision.permits());
 }
 
 // Why: the shipped window is 300 calls a minute per session. Under enforce the
@@ -314,12 +319,10 @@ fn an_exhausted_rate_limit_window_is_a_warn_from_rate_limit() {
     assert!(evaluation.decision.permits());
 }
 
-// Why: a deny halts the chain, so under enforce only the first stage to fire
-// is ever recorded. Warn does not halt: a call that trips three stages is
-// recorded against all three, which is what makes the report honest about
-// what enforcement would cost.
+// Why: a warn does not halt the chain, so every stage that finds something on
+// one call records its own warn and the call is still admitted.
 #[test]
-fn a_warn_does_not_halt_the_chain_so_every_finding_on_the_call_is_recorded() {
+fn every_stage_that_finds_something_on_one_call_records_a_warn() {
     let engine = shipped_engine();
     let user = UserId::new(unique("user"));
     let session = SessionId::new(unique("session"));
@@ -333,20 +336,15 @@ fn a_warn_does_not_halt_the_chain_so_every_finding_on_the_call_is_recorded() {
     let evaluation = call.evaluate(&engine);
 
     assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
-    let mut warned = warned_policies(&evaluation);
-    warned.sort_unstable();
-    assert_eq!(warned, vec!["scope_check", "secret_scan", "tool_blocklist"]);
-    assert!(
-        !evaluation
-            .chain
-            .iter()
-            .any(|e| e.result == ChainEntryResult::Skip),
-        "no stage was skipped as 'already halted'"
+    assert_eq!(
+        warned_policies(&evaluation),
+        vec!["secret_scan", "scope_check", "tool_blocklist"]
     );
+    assert!(failed_policies(&evaluation).is_empty());
 }
 
 #[tokio::test]
-async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() {
+async fn every_decision_is_written_and_every_warn_rolls_up() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -366,10 +364,9 @@ async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() 
     ];
     for call in &calls {
         let evaluation = call.evaluate(&engine);
-        assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
         record_decision(&db.pool, &call.audit(evaluation))
             .await
-            .expect("the warn row is written");
+            .expect("the decision row is written");
     }
 
     let rows: Vec<(String, String, String)> = sqlx::query_as(
@@ -382,7 +379,7 @@ async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() 
     .expect("read the rows back");
     assert_eq!(rows.len(), 3, "one row per call, none dropped");
     for (decision, policy, reason) in &rows {
-        assert_eq!(decision, "warn", "{policy}: the verdict column says warn");
+        assert_eq!(decision, "warn", "{policy}: every stage warns");
         assert!(
             !reason.is_empty(),
             "{policy}: the reason a deny would have carried is kept"
@@ -392,18 +389,14 @@ async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() 
     assert_eq!(
         policies,
         vec!["scope_check", "secret_scan", "tool_blocklist"],
-        "the policy column names the stage that warned, never default_allow"
+        "the policy column names the stage that decided, never default_allow"
     );
 
     let rollup = list_governance_warnings(&db.pool, None, 100)
         .await
         .expect("the report query runs");
     let ours: Vec<_> = rollup.iter().filter(|r| r.user_id == user).collect();
-    assert_eq!(
-        ours.len(),
-        3,
-        "the report sees every warned policy for this user"
-    );
+    assert_eq!(ours.len(), 3, "the report sees every warned policy");
     assert!(
         ours.iter()
             .all(|r| r.count == 1 && !r.example_reason.is_empty())

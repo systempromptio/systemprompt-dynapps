@@ -28,7 +28,7 @@ async fn list_recent_unrejected_requests_includes_a_fresh_completed_request() {
 
     let found = rows.iter().find(|r| r.id == id).expect("seeded request");
     assert_eq!(found.user_id.as_str(), user);
-    assert_eq!(found.model, "claude-sonnet-4-5-20250929");
+    assert_eq!(found.model, "claude-sonnet-5-5");
     assert!(
         found.session_id.is_none(),
         "a request with no session must not synthesize one"
@@ -105,7 +105,7 @@ async fn insert_gateway_acl_decision_writes_one_auditable_row() {
             decision_id: &decision_id,
             user_id: &user,
             session_id: "sess-1",
-            model: "claude-opus-4-5-20251101",
+            model: "claude-opus-5-5",
             agent_scope: "gateway",
             decision: "deny",
             reason: "route not granted",
@@ -129,7 +129,7 @@ async fn insert_gateway_acl_decision_writes_one_auditable_row() {
     );
     assert_eq!(row.1, "deny");
     assert_eq!(
-        row.2, "claude-opus-4-5-20251101",
+        row.2, "claude-opus-5-5",
         "the model stands in for the tool name on the gateway path"
     );
 

@@ -1,0 +1,99 @@
+{
+  "vat_label": "TVA",
+  "seller_vat_number": "<<VERIFY: numéro de TVA intracommunautaire de l'entité vendeuse FR>>",
+  "einvoicing": {
+    "mandate_status": "b2b_phased",
+    "authority": "DGFiP",
+    "network": ["Plateforme Agréée (PA, ex-PDP)", "PPF (annuaire central + concentrateur e-reporting)", "Chorus Pro"],
+    "formats": ["Factur-X", "UBL 2.1", "UN/CEFACT CII"],
+    "phase_dates": [
+      {
+        "date": "2026-09-01",
+        "scope": "réception",
+        "applies_to": "toutes les entreprises assujetties à la TVA en France",
+        "note": "Obligation de RECEVOIR des factures électroniques pour toutes les entreprises."
+      },
+      {
+        "date": "2026-09-01",
+        "scope": "émission",
+        "applies_to": "grandes entreprises (>5 000 salariés) et entreprises de taille intermédiaire (ETI, 250 à 5 000 salariés)",
+        "note": "Obligation d'ÉMETTRE des factures électroniques et e-reporting pour les grandes entreprises et ETI."
+      },
+      {
+        "date": "2027-09-01",
+        "scope": "émission",
+        "applies_to": "PME et micro-entreprises (TPE)",
+        "note": "Obligation d'ÉMETTRE des factures électroniques et e-reporting pour les PME, TPE et micro-entreprises."
+      }
+    ],
+    "tolerances": [
+      "Assujettis non établis en France : obligations d'e-invoicing et d'e-reporting reportées au 1er septembre 2027 (mesure de simplification DGFiP).",
+      "Nouvelles mentions obligatoires sur les factures (n° SIREN du client, adresse de livraison, nature des opérations, option TVA sur les débits) : tolérance transitoire de l'administration au démarrage — l'absence de ces mentions n'entraîne ni rejet ni sanction pendant la période de rodage.",
+      "Démarrage sur un socle réduit : cas d'usage et statuts de cycle de vie limités au minimum obligatoire au lancement, montée en charge progressive des cas complexes.",
+      "E-reporting : souplesse annoncée sur les premières échéances de transmission des données de transaction et de paiement.",
+      "<<VERIFY: liste complète des mesures de simplification/tolérances DGFiP (publication 2025-2026) à confirmer par finance/legal FR avant usage en avant-vente>>"
+    ],
+    "threshold": null,
+    "detection_signals": ["facture électronique", "facturation électronique", "chorus pro", "factur-x", "ppf", "pdp", "plateforme agréée", "e-reporting", "dématérialisation"],
+    "copy_render": "Facturation électronique conforme au calendrier français : réception de factures électroniques obligatoire pour toutes les entreprises au 1er septembre 2026, émission par paliers selon la taille (grandes entreprises et ETI dès le 1er septembre 2026, PME et TPE au 1er septembre 2027), via une Plateforme Agréée (ex-PDP) raccordée au PPF, aux formats Factur-X, UBL 2.1 ou CII, intégrée à vos ventes et à votre comptabilité."
+  },
+  "chart_of_accounts": {
+    "code": "PCG",
+    "copy": "Comptabilité intégrée au Plan Comptable Général (PCG) et aux règles de TVA : rapprochement bancaire automatique, gestion des immobilisations, clôtures assistées et tous les états légaux (bilan, compte de résultat, grand livre, balance, déclarations fiscales)."
+  },
+  "tax_filings": [
+    {
+      "id": "fec",
+      "legal_name": "FEC — Fichier des Écritures Comptables",
+      "authority": "DGFiP",
+      "is_mandatory": true,
+      "threshold": "Toute entreprise tenant une comptabilité informatisée (art. L47 A du LPF)",
+      "odoo_module": "<<VERIFY: nom technique du module Odoo l10n_fr FEC dans la base FR>>",
+      "signals": ["fec", "fichier des écritures comptables", "contrôle fiscal", "l47 a"]
+    },
+    {
+      "id": "ca3",
+      "legal_name": "CA3 — déclaration de TVA (régime réel normal)",
+      "authority": "DGFiP",
+      "is_mandatory": true,
+      "threshold": "Régime réel normal (déclaration mensuelle) ; CA3 trimestrielle si TVA due < 4 000 €/an",
+      "odoo_module": "<<VERIFY: nom technique du module Odoo l10n_fr TVA/CA3 dans la base FR>>",
+      "signals": ["ca3", "déclaration de tva", "tva", "régime réel normal", "3310-ca3"]
+    },
+    {
+      "id": "emebi",
+      "legal_name": "EMEBI + état récapitulatif TVA (ex-DEB)",
+      "authority": "Douanes (DGDDI) / DGFiP",
+      "is_mandatory": false,
+      "threshold": "EMEBI sur sondage des entreprises désignées ; état récapitulatif TVA dès la première livraison intracommunautaire",
+      "odoo_module": "<<VERIFY: nom technique du module Odoo l10n_fr intrastat/EMEBI dans la base FR>>",
+      "signals": ["emebi", "deb", "déclaration d'échanges de biens", "état récapitulatif", "intracommunautaire", "intrastat", "ue"]
+    },
+    {
+      "id": "sepa",
+      "legal_name": "Prélèvement SEPA",
+      "authority": null,
+      "is_mandatory": false,
+      "threshold": null,
+      "odoo_module": "<<VERIFY: nom technique du module Odoo SEPA dans la base FR>>",
+      "signals": ["sepa", "prélèvement", "mandat sepa", "virement"]
+    }
+  ],
+  "reverse_charge_clause": "Opération intracommunautaire : autoliquidation de la TVA par le preneur le cas échéant (art. 283-1 et 283-2 du CGI).",
+  "cross_border_notes": "Guichets OSS/IOSS pertinents pour le commerce électronique intra-UE et les ventes à distance.",
+  "carriers": ["Chronopost", "Colissimo", "DPD", "GLS", "Geodis", "messagerie palettes"],
+  "payment_terms": {
+    "validity_days": 30,
+    "default_payment_method": "virement bancaire",
+    "late_payment_clause": "Pénalités de retard exigibles en cas de retard de paiement, calculées au taux d'intérêt appliqué par la BCE à son opération de refinancement la plus récente majoré de 10 points de pourcentage, sans qu'un rappel soit nécessaire (art. L441-10 du Code de commerce).",
+    "mandatory_mentions": [
+      "Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L441-10 et D441-5 du Code de commerce).",
+      "Pas d'escompte pour paiement anticipé, sauf mention contraire.",
+      "Conditions de règlement : paiement à 30 jours à compter de la date d'émission de la facture."
+    ]
+  },
+  "fineprint_web": "* Prix en {currency_code_label}, {vat_label} non comprise. L'analyse est facturée au démarrage ; l'implantation est facturée mensuellement pendant le déroulement du projet. Mode de règlement : {forma_pago}. Pénalités de retard exigibles sans rappel (taux BCE + 10 points) et indemnité forfaitaire de recouvrement de 40 € en cas de retard (art. L441-10 du Code de commerce). Proposition valable {validity_days} jours.",
+  "fineprint_pdf": "* Prix en {currency_code_label}, {vat_label} non comprise. L'analyse est facturée au démarrage ; l'implantation est facturée mensuellement pendant le déroulement du projet. Mode de règlement : {forma_pago}. Pénalités de retard exigibles sans rappel (taux BCE + 10 points) et indemnité forfaitaire de recouvrement de 40 € en cas de retard (art. L441-10 du Code de commerce). Proposition valable {validity_days} jours.",
+  "travel_clause": "Conditions générales. Les journées sur site peuvent donner lieu à une facturation complémentaire des frais de déplacement et de séjour hors de la zone de travail habituelle, chiffrés séparément.",
+  "acronyms_fiscal": ["TVA", "SIREN", "SIRET", "DGFiP", "FEC", "CA3", "EMEBI", "DEB", "PCG", "PPF", "PDP", "CGI", "LPF", "OSS", "IOSS", "URSSAF", "RCS", "DGDDI", "BCE", "SEPA"]
+}

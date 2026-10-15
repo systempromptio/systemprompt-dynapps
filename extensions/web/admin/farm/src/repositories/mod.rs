@@ -3,11 +3,13 @@
 //! exactly one value; mutations keep their verb.
 
 pub mod agents;
+pub mod clients;
 pub mod evals;
 pub mod farms;
 pub mod filters;
 pub mod fixtures;
 pub mod people;
+pub mod reports;
 pub mod rows;
 pub mod runs;
 pub mod summaries;

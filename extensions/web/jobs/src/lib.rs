@@ -12,6 +12,8 @@
 //!   consumed by the SSR layer.
 //! - **Analytics / housekeeping** ([`ContentAnalyticsAggregationJob`],
 //!   [`SecretMigrationJob`]) — periodic rollups and one-shot migrations.
+//! - **Agent farm** ([`FarmScheduledRunJob`]) — queues the nightly farm run the
+//!   scheduler config names, recorded as started by the scheduler.
 //! - **Data lifecycle** ([`RetentionDailyReportJob`], [`AuditChainVerifyJob`],
 //!   [`RetentionExportWeeklyJob`], [`RetentionExportMonthlyJob`]) — measures,
 //!   archives and health-checks the retention-managed tables; see
@@ -31,6 +33,7 @@ mod content_analytics;
 mod conversation_judge;
 mod conversation_rollup;
 mod copy_assets;
+mod farm_scheduled_run;
 mod gateway_overhead;
 mod governance_bootstrap;
 mod ingestion;
@@ -59,6 +62,7 @@ pub use content_analytics::ContentAnalyticsAggregationJob;
 pub use conversation_judge::ConversationJudgeJob;
 pub use conversation_rollup::ConversationRollupJob;
 pub use copy_assets::CopyExtensionAssetsJob;
+pub use farm_scheduled_run::FarmScheduledRunJob;
 pub use gateway_overhead::GatewayOverheadRollupJob;
 pub use governance_bootstrap::GovernanceBootstrapJob;
 pub use ingestion::ContentIngestionJob;

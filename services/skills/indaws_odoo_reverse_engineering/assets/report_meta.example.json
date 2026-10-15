@@ -1,0 +1,38 @@
+{
+  "_comment": "Parte editorial OPCIONAL del informe. Colócalo como <out_dir>/report_meta.json antes de build_report.py.",
+  "client": "ACME",
+  "brand": "indaws",
+  "_comment_brand": "Marca del informe: 'indaws' (def.) o 'dynapps'. Localiza fuentes/logos/paleta de esa marca.",
+  "date": "24 de junio de 2026",
+  "task": "#20740",
+  "title": "Ingeniería Inversa",
+  "subtitle": "ACME · Sistema a medida sobre Odoo 16",
+  "highlights": [
+    {"title": "Control de presencia y cálculo de jornada", "text": "A partir de las marcas de entrada y salida calcula horas trabajadas, extra y ausencias y asigna un estado a cada jornada. Conocemos qué alimenta cada cálculo; la fórmula interna exacta es lógica cerrada."},
+    {"title": "Informe financiero por empleado", "text": "Calcula el resultado de cada empleado partiendo de sus ingresos y restando deducciones por cursos, viajes, alojamiento y anticipos."}
+  ],
+  "security_notes": [
+    {"title": "Nota de seguridad para la migración", "text": "Algún conector guarda dentro del sistema claves de acceso y credenciales de terceros. Conviene renovarlas durante la migración."}
+  ],
+  "recommendation": "Indaws asume la continuidad y evolución de vuestro Odoo. La lógica interna que hoy no es visible la documentaremos y validaremos mediante pruebas funcionales controladas durante la migración.",
+  "next_steps": [
+    "Priorizar la validación funcional por uso real: empezar por los módulos de mayor peso.",
+    "Confirmar las aproximaciones señaladas en este informe mediante casos reales.",
+    "Revisar y renovar las credenciales y claves almacenadas en el sistema."
+  ],
+  "_comment_secciones": "OPCIONALES: solo se renderizan si las incluyes. Útiles para una auditoría de pre-migración completa.",
+  "available_source": [
+    {"modules": "okticket_connector y familia", "author": "Alia Technologies", "license": "AGPL-3", "repo": "github.com/Alialabs/connector-okticket", "note": "Código abierto: no requiere ingeniería inversa. Riesgo solo en el servicio externo."}
+  ],
+  "risks": [
+    {"level": "critico", "ref": "R-01 · mi_modulo", "title": "Integración externa sin fuente", "body": "Descripción del riesgo para la migración.", "action": "Qué hacer."},
+    {"level": "alto", "ref": "R-02 · otro_modulo", "title": "Automatismo invisible", "body": "...", "action": "..."},
+    {"level": "medio", "ref": "R-03 · tercero", "title": "Licencia propietaria", "body": "...", "action": "..."}
+  ],
+  "irlogging": {
+    "intro": "Resumen de lo leído en ir.logging.",
+    "found": [{"title": "Acción X (activa)", "detail": "Qué hace, observado."}],
+    "goal": "Cómo subir el % de conocimiento ejecutando los procesos cerrados en preproducción.",
+    "pending": [{"title": "Flujo Y", "detail": "Prueba pendiente en entorno controlado."}]
+  }
+}

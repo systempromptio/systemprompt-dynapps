@@ -25,6 +25,7 @@ pub struct RunStartOutput {
     pub origin: String,
     pub farm_run_id: String,
     pub status: String,
+    pub eval_run_id: Option<String>,
     pub hint: String,
 }
 farm_output!(RunStartOutput, "agent_run_start");
@@ -51,6 +52,8 @@ pub struct RunStatusOutput {
     pub cost_microdollars: Option<i64>,
     pub exit_code: Option<i32>,
     pub cancel_requested: bool,
+    pub client: Option<String>,
+    pub report: Option<super::outputs_report::RunReportOutput>,
 }
 farm_output!(RunStatusOutput, "agent_run_status");
 
@@ -179,12 +182,26 @@ pub struct EvalCellOutput {
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct EvalDayOutput {
+    pub farm: String,
+    pub agent: String,
+    pub day: String,
+    pub runs: i64,
+    pub passed: i64,
+    pub decided: i64,
+    pub pass_rate: Option<f64>,
+    pub mean_score: Option<f64>,
+    pub cost_usd: f64,
+}
+
+#[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct EvalResultsOutput {
     pub rows: Vec<EvalCellOutput>,
     pub returned: usize,
     pub passed: usize,
     pub failed: usize,
     pub errored: usize,
+    pub history: Vec<EvalDayOutput>,
 }
 farm_output!(EvalResultsOutput, "agent_farm_eval_results");
 

@@ -229,7 +229,7 @@ the bridge resolves your credentials from `$HOME`, which under `sudo` is
 ## Choosing a model
 
 Models are namespaced by provider, so they are written `systemprompt/<model>` —
-for example `systemprompt/claude-sonnet-5`. Enrolment writes the list the
+for example `systemprompt/claude-sonnet-5-5`. Enrolment writes the list the
 gateway currently offers this client and sets a default, so the picker shows
 what your role is allowed. Ask for a model that is not on that list and the
 gateway refuses it rather than silently substituting another.
@@ -273,8 +273,8 @@ endpoint through a **Custom Endpoint** model group:
        "apiType": "chat-completions",
        "models": [
          {
-           "id": "claude-sonnet-5",
-           "name": "Claude Sonnet 5 (Dynapps)",
+           "id": "claude-sonnet-5-5",
+           "name": "Claude Sonnet 5.5 (Dynapps)",
            "url": "http://127.0.0.1:48217/v1/chat/completions",
            "toolCalling": true
          }

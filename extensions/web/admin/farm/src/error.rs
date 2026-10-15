@@ -88,6 +88,23 @@ pub enum FarmError {
     #[error("Config: {0}")]
     Config(String),
 
+    #[error("Runner: {0}")]
+    Runner(String),
+
+    #[error("Runner: {at}: {source}")]
+    RunnerHttp {
+        at: String,
+        #[source]
+        source: reqwest::Error,
+    },
+
+    #[error("Runner bundle file {path:?}: {source}")]
+    BundleDecode {
+        path: String,
+        #[source]
+        source: base64::DecodeError,
+    },
+
     #[error("Agent run: {0}")]
     AgentRuns(#[from] AgentRunsError),
 
@@ -104,6 +121,20 @@ pub enum FarmError {
         #[source]
         source: Box<IdValidationError>,
     },
+
+    #[error("Invalid: {0}")]
+    RunAs(#[from] RunAsRefusal),
+}
+
+/// Why a launch could not resolve whose identity the run acts as.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum RunAsRefusal {
+    #[error("run_as mode client: the run names no client")]
+    NoClient,
+    #[error("run_as mode client: client {client:?} names no service_account")]
+    ClientHasNoAccount { client: String },
+    #[error("run_as mode service_account: no active service account is resolved")]
+    NoServiceAccount,
 }
 
 pub type FarmResult<T> = Result<T, FarmError>;
@@ -114,9 +145,9 @@ impl From<FarmError> for AdminError {
             FarmError::NotFound(msg) => Self::NotFound(msg),
             FarmError::Forbidden(msg) => Self::Forbidden(msg),
             FarmError::Validation(msg) => Self::Unprocessable(msg),
-            err @ (FarmError::InvalidRegex { .. } | FarmError::NotUtf8 { .. }) => {
-                Self::Unprocessable(err.to_string())
-            },
+            err @ (FarmError::InvalidRegex { .. }
+            | FarmError::NotUtf8 { .. }
+            | FarmError::RunAs(_)) => Self::Unprocessable(err.to_string()),
             other => Self::Internal(Box::new(other)),
         }
     }

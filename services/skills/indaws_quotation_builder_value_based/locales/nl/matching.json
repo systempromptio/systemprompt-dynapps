@@ -1,0 +1,1152 @@
+{
+  "signals": {
+    "apps": {
+      "config_general": [],
+      "crm": [
+        "crm",
+        "pipeline",
+        "verkoop",
+        "commercieel",
+        "opportuniteit",
+        "kans",
+        "lead",
+        "prospectie",
+        "verkooptrechter"
+      ],
+      "ventas": [
+        "verkoop",
+        "offerte",
+        "verkooporder",
+        "prijslijst",
+        "prijs",
+        "catalogus",
+        "verkoopfacturatie",
+        "klantenportaal"
+      ],
+      "compras": [
+        "inkoop",
+        "leverancier",
+        "inkooporder",
+        "bevoorrading",
+        "aanvraag offerte",
+        "rfq"
+      ],
+      "inventario": [
+        "voorraad",
+        "magazijn",
+        "stock",
+        "logistiek",
+        "pakbon",
+        "picking",
+        "traceerbaarheid",
+        "partij",
+        "serienummer"
+      ],
+      "fabricacion": [
+        "productie",
+        "fabricage",
+        "mrp",
+        "stuklijst",
+        "bom",
+        "productieorder",
+        "assemblage",
+        "fabriek"
+      ],
+      "facturacion": [
+        "factuur",
+        "facturatie",
+        "inning",
+        "betaling",
+        "creditnota",
+        "correctiefactuur"
+      ],
+      "contabilidad": [
+        "boekhouding",
+        "boekhouder",
+        "rekeningschema",
+        "aflettering",
+        "boeking",
+        "balans",
+        "winst-en-verliesrekening",
+        "grootboek",
+        "btw-aangifte",
+        "sepa"
+      ],
+      "proyecto": [
+        "project",
+        "taak",
+        "urenregistratie",
+        "urenstaat",
+        "planning"
+      ],
+      "helpdesk": [
+        "helpdesk",
+        "support",
+        "ondersteuning",
+        "ticket",
+        "melding",
+        "sla",
+        "servicedesk"
+      ],
+      "website": [
+        "web",
+        "website",
+        "webshop",
+        "e-commerce",
+        "online winkel",
+        "blog",
+        "webpagina"
+      ],
+      "marketing_email": [
+        "marketing",
+        "e-mailmarketing",
+        "nieuwsbrief",
+        "e-mailcampagne",
+        "mailing"
+      ],
+      "rrhh": [
+        "hr",
+        "personeel",
+        "medewerker",
+        "loonadministratie",
+        "tijdregistratie",
+        "verlof",
+        "vakantie",
+        "arbeidsovereenkomst",
+        "human resources"
+      ]
+    },
+    "complementos": {
+      "multi_company": [
+        "groep van bedrijven",
+        "dochteronderneming",
+        "meerdere bedrijven",
+        "intercompany",
+        "consolidatie"
+      ],
+      "multi_idioma": [
+        "internationaal",
+        "export",
+        "buitenlandse klanten",
+        "engels",
+        "frans",
+        "duits"
+      ],
+      "crm_4_10_comerciales": [
+        "verkoopteam",
+        "meerdere teams",
+        "verschillende verkopers"
+      ],
+      "crm_10_comerciales": [
+        "verkoopnetwerk",
+        "verkoopvestigingen"
+      ],
+      "crm_lead_scoring": [
+        "kwalificatie",
+        "scoring",
+        "nurturing",
+        "automatische leads"
+      ],
+      "crm_automatizaciones": [
+        "automatische e-mails",
+        "verkoopmeldingen",
+        "automatische opvolging"
+      ],
+      "crm_migracion": [
+        "huidige pipeline",
+        "verkoophistoriek",
+        "vorig crm",
+        "salesforce",
+        "hubspot"
+      ],
+      "crm_prospeccion": [
+        "prospectie",
+        "verrijking",
+        "bedrijven zoeken"
+      ],
+      "ventas_suscripciones": [
+        "terugkerend",
+        "abonnement",
+        "contract",
+        "maandtermijn",
+        "termijn",
+        "verlenging",
+        "saas"
+      ],
+      "ventas_plantillas": [
+        "verschillende offertetypes",
+        "diensten en producten",
+        "binnenland en export"
+      ],
+      "ventas_migr_productos": [
+        "huidige catalogus",
+        "producten in vorig erp",
+        "producten migreren"
+      ],
+      "ventas_migr_clientes": [
+        "klantenbestand",
+        "klantfiches",
+        "klanten migreren"
+      ],
+      "ventas_migr_tarifas": [
+        "huidige prijslijsten",
+        "prijslijsten",
+        "kortingen per klant"
+      ],
+      "ventas_aprobacion": [
+        "goedkeuring",
+        "autorisatie",
+        "maximale korting",
+        "minimale marge"
+      ],
+      "ventas_kits": [
+        "kit",
+        "pakket",
+        "samengesteld product",
+        "bundel"
+      ],
+      "ventas_flujos_tipo": [
+        "consignatie",
+        "monster",
+        "verkooptypes"
+      ],
+      "ventas_fidelizacion": [
+        "punten",
+        "getrouwheid",
+        "spaarprogramma"
+      ],
+      "compras_reabastecimiento": [
+        "minimumvoorraad",
+        "automatische aanvulling",
+        "bestelpunt",
+        "bevoorrading"
+      ],
+      "compras_acuerdos": [
+        "inkoopcontract",
+        "onderhandelde prijs",
+        "raamovereenkomst",
+        "jaarprijslijst"
+      ],
+      "compras_dropshipping": [
+        "dropshipping",
+        "directe verzending",
+        "leverancier levert aan klant"
+      ],
+      "compras_migr_tarifas": [
+        "inkoopprijzen",
+        "huidige leveranciersprijslijsten"
+      ],
+      "compras_gestion_avanzada": [
+        "leveranciersbeoordeling",
+        "levertijden",
+        "inkoopmeldingen"
+      ],
+      "inv_multi_almacen": [
+        "magazijnen",
+        "vestigingen",
+        "loods",
+        "interne overboekingen"
+      ],
+      "inv_lotes": [
+        "partij",
+        "traceerbaarheid",
+        "recall"
+      ],
+      "inv_series": [
+        "serienummer",
+        "per stuk",
+        "garantie per stuk",
+        "serial"
+      ],
+      "inv_caducidad": [
+        "houdbaarheid",
+        "vervaldatum",
+        "bederfelijk",
+        "fefo",
+        "voeding"
+      ],
+      "inv_rutas": [
+        "pick-pack-ship",
+        "cross-docking",
+        "transit",
+        "pickzone"
+      ],
+      "inv_codigos_barras": [
+        "scanner",
+        "barcode",
+        "handscanner",
+        "pda"
+      ],
+      "inv_reabastecimiento": [
+        "aanvulling tussen magazijnen",
+        "minimumvoorraad per magazijn"
+      ],
+      "inv_migr_stock": [
+        "huidige voorraad",
+        "gewaardeerde voorraad",
+        "voorraad migreren"
+      ],
+      "inv_gen_serie": [
+        "partijnomenclatuur",
+        "automatische generatie",
+        "serieformaat"
+      ],
+      "inv_stock_proyectos": [
+        "materialen per project",
+        "projectverbruik",
+        "werven"
+      ],
+      "inv_marcas": [
+        "merken",
+        "productlabels",
+        "meerdere merken"
+      ],
+      "fact_gen_pdf": [
+        "aangepaste factuursjabloon",
+        "eigen opmaak",
+        "pdf op maat"
+      ],
+      "fact_margenes": [
+        "marge",
+        "landed cost",
+        "minimale marge",
+        "kostenbeheersing"
+      ],
+      "cont_sii": [
+        "realtime rapportage",
+        "e-reporting",
+        "belastingdienst rapportage"
+      ],
+      "cont_sepa": [
+        "automatische incasso",
+        "sepa",
+        "machtiging",
+        "bankincasso",
+        "incasso-opdracht"
+      ],
+      "cont_multi_divisa": [
+        "valuta",
+        "dollar",
+        "pond",
+        "vreemde valuta"
+      ],
+      "cont_analitica": [
+        "kostenplaats",
+        "analytisch",
+        "per afdeling"
+      ],
+      "cont_presupuestos": [
+        "budget per afdeling",
+        "afwijkingscontrole",
+        "budget"
+      ],
+      "cont_intrastat": [
+        "intrastat",
+        "icp-opgaaf",
+        "intracommunautair",
+        "eu-levering"
+      ],
+      "cont_mejoras_sii": [
+        "rapportagefouten",
+        "rapportage-dashboard",
+        "herverzendingen"
+      ],
+      "proy_facturacion": [
+        "uren factureren",
+        "factureerbare mijlpalen"
+      ],
+      "proy_planificacion": [
+        "werklast",
+        "beschikbaarheid",
+        "teamplanning"
+      ],
+      "proy_stock": [
+        "materialen",
+        "voorraad per project",
+        "materiaalverbruik"
+      ],
+      "rrhh_ausencias": [
+        "vakantie",
+        "verlof",
+        "afwezigheid",
+        "teamkalender",
+        "ziekteverzuim"
+      ],
+      "rrhh_gastos": [
+        "onkosten medewerker",
+        "onkostennota's",
+        "dagvergoeding",
+        "kilometervergoeding"
+      ],
+      "rrhh_evaluaciones": [
+        "beoordeling",
+        "functioneren",
+        "doelstellingen",
+        "feedback"
+      ],
+      "rrhh_recruiting": [
+        "werving",
+        "kandidaten",
+        "vacatures",
+        "recruiting"
+      ],
+      "rrhh_flota": [
+        "voertuigen",
+        "wagenpark",
+        "bedrijfswagens",
+        "leasing"
+      ],
+      "rrhh_formacion": [
+        "interne opleiding",
+        "cursussen",
+        "opleidingsplan"
+      ],
+      "rrhh_portal": [
+        "medewerkersportaal",
+        "selfservice",
+        "loonstrook raadplegen"
+      ],
+      "mrp_multi_centro": [
+        "productielijnen",
+        "fabrieken",
+        "werkplekken"
+      ],
+      "mrp_work_orders": [
+        "bewerkingen",
+        "werkorders",
+        "productievolgorde"
+      ],
+      "mrp_subcontratacion": [
+        "uitbesteding",
+        "externe productie",
+        "loonwerk"
+      ],
+      "mrp_mps": [
+        "hoofdplanning",
+        "vraagvoorspelling",
+        "mps"
+      ],
+      "mrp_calidad": [
+        "kwaliteit",
+        "controle",
+        "certificaten",
+        "iso",
+        "inspectie"
+      ],
+      "mrp_plm": [
+        "versies",
+        "eco",
+        "levenscyclus",
+        "engineering changes"
+      ],
+      "mrp_mantenimiento": [
+        "onderhoud",
+        "preventief",
+        "correctief",
+        "cmms"
+      ],
+      "mrp_multinivel": [
+        "halffabricaat",
+        "tussenproduct",
+        "meerlaags",
+        "explosie"
+      ],
+      "mrp_migr_ldm": [
+        "stuklijsten",
+        "huidige bom",
+        "kostprijsopbouw"
+      ],
+      "mrp_migr_rutas": [
+        "huidige werkplekken",
+        "productieroutes"
+      ],
+      "web_paginas": [
+        "veel secties",
+        "meer dan 5 pagina's"
+      ],
+      "web_ecommerce": [
+        "webshop",
+        "e-commerce",
+        "online verkoop",
+        "winkelwagen",
+        "b2c"
+      ],
+      "web_multi_idioma": [
+        "website in het engels",
+        "meertalige website"
+      ],
+      "web_diseno": [
+        "ontwerp op maat",
+        "branding",
+        "eigen merk"
+      ],
+      "web_chat": [
+        "chat",
+        "livechat",
+        "live-ondersteuning"
+      ],
+      "web_migracion": [
+        "huidige website",
+        "webinhoud migreren",
+        "wordpress"
+      ],
+      "web_merchant": [
+        "google shopping",
+        "google merchant"
+      ],
+      "hd_equipos": [
+        "supportteams",
+        "technisch en commercieel",
+        "aftersales"
+      ],
+      "hd_partes_horas": [
+        "supporttijd registreren",
+        "uren per ticket"
+      ],
+      "hd_facturacion": [
+        "support factureren",
+        "factureerbare support"
+      ],
+      "hd_automatizaciones": [
+        "automatische toewijzing",
+        "escalatie",
+        "automatische sla"
+      ],
+      "hd_chat": [
+        "livechat",
+        "supportchat"
+      ],
+      "mkt_automatizacion": [
+        "e-mailreeks",
+        "nurturing",
+        "drip",
+        "marketingautomatisering"
+      ],
+      "mkt_segmentacion": [
+        "segmenten",
+        "gedrag",
+        "dynamisch"
+      ],
+      "mkt_plantillas": [
+        "meer dan 3 sjablonen",
+        "aangepaste sjablonen"
+      ],
+      "mkt_sms": [
+        "sms",
+        "tekstberichten",
+        "sms-campagnes"
+      ],
+      "mkt_diseno": [
+        "professioneel e-mailontwerp",
+        "bedrijfsnieuwsbrief"
+      ],
+      "mkt_correo": [
+        "e-mailopvolging",
+        "herverzendingen",
+        "e-maillogs"
+      ]
+    },
+    "metrics": {
+      "usuarios": "gebruikers?",
+      "empleados": "(?:medewerkers?|werknemers?)",
+      "comerciales": "verkopers?",
+      "almacenes": "magazijn(?:en)?"
+    },
+    "sectors": {
+      "alimentacion": {
+        "display": "Voeding",
+        "keywords": [
+          "voeding",
+          "voedsel",
+          "food",
+          "conserven",
+          "vlees"
+        ]
+      },
+      "fabricacion": {
+        "display": "Productie",
+        "keywords": [
+          "fabriek",
+          "productie",
+          "industrie",
+          "industriële productie"
+        ]
+      },
+      "retail": {
+        "display": "Retail",
+        "keywords": [
+          "retail",
+          "winkel",
+          "detailhandel"
+        ]
+      },
+      "tecnologia": {
+        "display": "Technologie",
+        "keywords": [
+          "software",
+          "technologie",
+          "it ",
+          "saas",
+          "softwareontwikkeling"
+        ]
+      },
+      "construccion": {
+        "display": "Bouw",
+        "keywords": [
+          "bouw",
+          "aannemer",
+          "vastgoed"
+        ]
+      },
+      "logistica": {
+        "display": "Logistiek",
+        "keywords": [
+          "logistiek",
+          "transport",
+          "distributie"
+        ]
+      },
+      "servicios": {
+        "display": "Dienstverlening",
+        "keywords": [
+          "consultant",
+          "zakelijke dienstverlening",
+          "adviesbureau"
+        ]
+      }
+    },
+    "archetypes": {
+      "multi-entity": [
+        "multi",
+        "bedrijf",
+        "dochter",
+        "groep",
+        "entiteit",
+        "consolidat",
+        "intercompany",
+        "land",
+        "vestiging",
+        "holding"
+      ],
+      "excel-legacy": [
+        "excel",
+        "spreadsheet",
+        "werkblad",
+        "handmatig",
+        "legacy",
+        "access",
+        "verouderd",
+        "oud",
+        "zelfbouw",
+        "diy",
+        "papier",
+        "eiland"
+      ],
+      "b2b-webshop": [
+        "e-commerce",
+        "ecommerce",
+        "winkel",
+        "online",
+        "b2b",
+        "portaal",
+        "catalog",
+        "weborders",
+        "webshop"
+      ],
+      "fast-golive": [
+        "snel",
+        "termijn",
+        "dringend",
+        "zo snel mogelijk",
+        "asap",
+        "deadline"
+      ],
+      "scaling": [
+        "groei",
+        "schaal",
+        "expansie",
+        "internationaal",
+        "openen",
+        "nieuwe markten"
+      ]
+    },
+    "intake_labels": {
+      "tipo_proyecto": [
+        "projecttype",
+        "type project"
+      ],
+      "sector": [
+        "sector",
+        "branche",
+        "activiteit"
+      ],
+      "usuarios": [
+        "gebruikers",
+        "odoo"
+      ]
+    },
+    "intake_truthy": [
+      "ja",
+      "groep",
+      "internationaal"
+    ],
+    "header_markers": [
+      "gegevensinventarisatie",
+      "data intake",
+      "intake"
+    ],
+    "n_sociedades_word": "bedrijf",
+    "vertical_signals": {
+      "inbuilt": [
+        "bc3",
+        "fiebdc3",
+        "presto",
+        "arquimedes"
+      ]
+    },
+    "app_parse_order": [
+      "config_general",
+      "crm",
+      "ventas",
+      "compras",
+      "inventario",
+      "facturacion",
+      "contabilidad",
+      "proyecto",
+      "rrhh",
+      "fabricacion",
+      "website",
+      "helpdesk",
+      "marketing_email"
+    ],
+    "complementos_catalog": {
+      "config_general": [
+        { "id": "multi_company", "nombre": "Multi-company", "precio": 250, "por_unidad": true },
+        { "id": "multi_idioma", "nombre": "Meertaligheid", "precio": 250 }
+      ],
+      "crm": [
+        { "id": "crm_4_10_comerciales", "nombre": "4-10 verkopers", "precio": 500 },
+        { "id": "crm_10_comerciales", "nombre": "+10 verkopers", "precio": 1000 },
+        { "id": "crm_lead_scoring", "nombre": "Lead scoring & nurturing", "precio": 500 },
+        { "id": "crm_automatizaciones", "nombre": "Verkoopautomatiseringen", "precio": 250 },
+        { "id": "crm_migracion", "nombre": "Migratie van opportuniteiten", "precio": 500 },
+        { "id": "crm_prospeccion", "nombre": "⚙️ Geavanceerde prospectie", "precio": 500 }
+      ],
+      "ventas": [
+        { "id": "ventas_suscripciones", "nombre": "Abonnementen / Terugkerend", "precio": 750 },
+        { "id": "ventas_plantillas", "nombre": "Extra sjablonen", "precio": 250 },
+        { "id": "ventas_migr_productos", "nombre": "Migratie van producten", "precio": 250 },
+        { "id": "ventas_migr_clientes", "nombre": "Migratie van klanten", "precio": 250 },
+        { "id": "ventas_migr_tarifas", "nombre": "Migratie van prijslijsten", "precio": 500 },
+        { "id": "ventas_aprobacion", "nombre": "⚙️ Goedkeuringsflow", "precio": 500 },
+        { "id": "ventas_kits", "nombre": "⚙️ Kits (samengestelde producten)", "precio": 500 },
+        { "id": "ventas_flujos_tipo", "nombre": "⚙️ Flows per ordertype", "precio": 500 },
+        { "id": "ventas_fidelizacion", "nombre": "⚙️ Getrouwheid", "precio": 500 }
+      ],
+      "compras": [
+        { "id": "compras_reabastecimiento", "nombre": "Aanvullingsregels", "precio": 500 },
+        { "id": "compras_acuerdos", "nombre": "Raamcontracten", "precio": 500 },
+        { "id": "compras_dropshipping", "nombre": "Dropshipping", "precio": 500 },
+        { "id": "compras_migr_tarifas", "nombre": "Migratie inkoopprijslijsten", "precio": 250 },
+        { "id": "compras_gestion_avanzada", "nombre": "⚙️ Geavanceerd inkoopbeheer", "precio": 750 }
+      ],
+      "inventario": [
+        { "id": "inv_multi_almacen", "nombre": "Meerdere magazijnen", "precio": 250, "por_unidad": true },
+        { "id": "inv_lotes", "nombre": "Partijtraceerbaarheid", "precio": 500 },
+        { "id": "inv_series", "nombre": "Serienummertraceerbaarheid", "precio": 500 },
+        { "id": "inv_caducidad", "nombre": "Vervaldatums", "precio": 250 },
+        { "id": "inv_rutas", "nombre": "Geavanceerde logistieke routes", "precio": 500 },
+        { "id": "inv_codigos_barras", "nombre": "Barcodes", "precio": 500 },
+        { "id": "inv_reabastecimiento", "nombre": "Automatische aanvulling", "precio": 500 },
+        { "id": "inv_migr_stock", "nombre": "Migratie huidige voorraad", "precio": 500 },
+        { "id": "inv_gen_serie", "nombre": "⚙️ Serienummer-/partijgenerator", "precio": 250 },
+        { "id": "inv_stock_proyectos", "nombre": "⚙️ Voorraad in projecten", "precio": 500 },
+        { "id": "inv_marcas", "nombre": "⚙️ Merken en labels", "precio": 250 }
+      ],
+      "facturacion": [
+        { "id": "fact_gen_pdf", "nombre": "⚙️ PDF-generator", "precio": 500 },
+        { "id": "fact_margenes", "nombre": "⚙️ Geavanceerde marges & kosten", "precio": 500 }
+      ],
+      "contabilidad": [
+        { "id": "cont_sii", "nombre": "Realtime fiscale rapportage", "precio": 500 },
+        { "id": "cont_sepa", "nombre": "SEPA automatische incasso", "precio": 750 },
+        { "id": "cont_multi_divisa", "nombre": "Meerdere valuta", "precio": 250 },
+        { "id": "cont_analitica", "nombre": "Analytische boekhouding", "precio": 500 },
+        { "id": "cont_presupuestos", "nombre": "Boekhoudkundige budgetten", "precio": 500 },
+        { "id": "cont_intrastat", "nombre": "Intrastat / ICP-opgaaf", "precio": 250 },
+        { "id": "cont_mejoras_sii", "nombre": "⚙️ Verbeteringen fiscale rapportage", "precio": 500 }
+      ],
+      "proyecto": [
+        { "id": "proy_facturacion", "nombre": "Projectfacturatie", "precio": 500 },
+        { "id": "proy_planificacion", "nombre": "Resourceplanning", "precio": 500 },
+        { "id": "proy_stock", "nombre": "⚙️ Voorraad in projecten", "precio": 500 }
+      ],
+      "rrhh": [
+        { "id": "rrhh_ausencias", "nombre": "Verlof & vakantie", "precio": 500 },
+        { "id": "rrhh_gastos", "nombre": "Onkosten", "precio": 500 },
+        { "id": "rrhh_evaluaciones", "nombre": "Beoordelingen / Functioneren", "precio": 500 },
+        { "id": "rrhh_recruiting", "nombre": "Werving & selectie", "precio": 500 },
+        { "id": "rrhh_flota", "nombre": "Wagenpark", "precio": 500 },
+        { "id": "rrhh_formacion", "nombre": "Opleiding medewerkers", "precio": 250 },
+        { "id": "rrhh_portal", "nombre": "⚙️ Medewerkersportaal", "precio": 500 }
+      ],
+      "fabricacion": [
+        { "id": "mrp_multi_centro", "nombre": "Meerdere werkplekken", "precio": 250, "por_unidad": true },
+        { "id": "mrp_work_orders", "nombre": "Werkorders", "precio": 500 },
+        { "id": "mrp_subcontratacion", "nombre": "Uitbesteding", "precio": 750 },
+        { "id": "mrp_mps", "nombre": "Hoofdproductieplanning (MPS)", "precio": 750 },
+        { "id": "mrp_calidad", "nombre": "Kwaliteitscontrole", "precio": 750 },
+        { "id": "mrp_plm", "nombre": "PLM", "precio": 500 },
+        { "id": "mrp_mantenimiento", "nombre": "Onderhoud", "precio": 500 },
+        { "id": "mrp_multinivel", "nombre": "Meerlaagse stuklijst", "precio": 500 },
+        { "id": "mrp_migr_ldm", "nombre": "Migratie van stuklijsten", "precio": 500 },
+        { "id": "mrp_migr_rutas", "nombre": "Migratie routes/werkplekken", "precio": 250 }
+      ],
+      "website": [
+        { "id": "web_paginas", "nombre": "Extra pagina's", "precio": 100, "por_unidad": true },
+        { "id": "web_ecommerce", "nombre": "Webshop (eCommerce)", "precio": 1500 },
+        { "id": "web_multi_idioma", "nombre": "Meertalige website", "precio": 500 },
+        { "id": "web_diseno", "nombre": "Ontwerp op maat", "precio": 750 },
+        { "id": "web_chat", "nombre": "Livechat", "precio": 250 },
+        { "id": "web_migracion", "nombre": "Migratie van webinhoud", "precio": 500 },
+        { "id": "web_merchant", "nombre": "⚙️ Google Merchant", "precio": 250 }
+      ],
+      "helpdesk": [
+        { "id": "hd_equipos", "nombre": "Extra teams", "precio": 250, "por_unidad": true },
+        { "id": "hd_partes_horas", "nombre": "Urenregistratie op tickets", "precio": 250 },
+        { "id": "hd_facturacion", "nombre": "Support factureren", "precio": 500 },
+        { "id": "hd_automatizaciones", "nombre": "Automatiseringen", "precio": 250 },
+        { "id": "hd_chat", "nombre": "Livechat", "precio": 250 }
+      ],
+      "marketing_email": [
+        { "id": "mkt_automatizacion", "nombre": "Marketingautomatisering", "precio": 750 },
+        { "id": "mkt_segmentacion", "nombre": "Geavanceerde segmentatie", "precio": 250 },
+        { "id": "mkt_plantillas", "nombre": "Extra sjablonen", "precio": 250 },
+        { "id": "mkt_sms", "nombre": "SMS-marketing", "precio": 500 },
+        { "id": "mkt_diseno", "nombre": "⚙️ Geavanceerd e-mailontwerp", "precio": 500 },
+        { "id": "mkt_correo", "nombre": "⚙️ Verbeterde uitgaande e-mail", "precio": 250 }
+      ]
+    },
+    "sectors_parse": [
+      {
+        "label": "voeding",
+        "keywords": ["voeding", "voedsel", "food", "conserven", "vlees"]
+      },
+      {
+        "label": "productie",
+        "keywords": ["fabriek", "productie", "industrie", "industriële productie"]
+      },
+      {
+        "label": "retail",
+        "keywords": ["retail", "winkel", "detailhandel"]
+      },
+      {
+        "label": "technologie",
+        "keywords": ["software", "technologie", "it ", "saas", "softwareontwikkeling"]
+      },
+      {
+        "label": "bouw",
+        "keywords": ["bouw", "aannemer", "vastgoed"]
+      },
+      {
+        "label": "logistiek",
+        "keywords": ["logistiek", "transport", "distributie"]
+      },
+      {
+        "label": "dienstverlening",
+        "keywords": ["consultant", "zakelijke dienstverlening", "adviseur"]
+      }
+    ],
+    "erps": [
+      "sap",
+      "navision",
+      "dynamics",
+      "exact",
+      "exact online",
+      "afas",
+      "twinfield",
+      "unit4",
+      "king",
+      "snelstart",
+      "excel",
+      "odoo",
+      "magento",
+      "woocommerce",
+      "shopify"
+    ]
+  },
+  "glossary": {
+    "sector_glossary_table": [
+      {
+        "odoo_term": "Klant / partner",
+        "sector_words": [
+          "opdrachtgever, hoofdaannemer (bouw)",
+          "patiënt/instelling (zorg)",
+          "account (industrie)"
+        ]
+      },
+      {
+        "odoo_term": "Product",
+        "sector_words": [
+          "referentie/SKU (voeding)",
+          "op te leveren resultaat (dienstverlening)",
+          "artikel/maat-kleur (mode)"
+        ]
+      },
+      {
+        "odoo_term": "Stuklijst (BoM)",
+        "sector_words": [
+          "kostprijsopbouw (voeding)",
+          "recept (chemie)",
+          "onderdelenlijst (metaal)"
+        ]
+      },
+      {
+        "odoo_term": "Productieorder (MRP)",
+        "sector_words": [
+          "fabricageorder",
+          "productiepartij",
+          "batch"
+        ]
+      },
+      {
+        "odoo_term": "Pakbon / picking",
+        "sector_words": [
+          "afleverbon",
+          "magazijnbon"
+        ]
+      },
+      {
+        "odoo_term": "Partij / traceerbaarheid",
+        "sector_words": [
+          "smeltnummer (staal)",
+          "houdbaarheid/partij (voeding)",
+          "serienummer"
+        ]
+      },
+      {
+        "odoo_term": "Project",
+        "sector_words": [
+          "werf (bouw)",
+          "dossier (zakelijke dienstverlening)",
+          "zaak (juridisch)"
+        ]
+      },
+      {
+        "odoo_term": "Opportuniteit (CRM)",
+        "sector_words": [
+          "aanbesteding",
+          "tender",
+          "offerte in behandeling"
+        ]
+      },
+      {
+        "odoo_term": "Factuur",
+        "sector_words": [
+          "termijnfactuur (bouw)",
+          "declaratie (juridisch)"
+        ]
+      },
+      {
+        "odoo_term": "Magazijn",
+        "sector_words": [
+          "werf/werkplek",
+          "vestiging",
+          "distributiecentrum"
+        ]
+      }
+    ],
+    "lang_labels": {
+      "english": "Engels",
+      "engels": "Engels",
+      "dutch": "Nederlands",
+      "nederlands": "Nederlands",
+      "french": "Frans",
+      "frans": "Frans",
+      "spanish": "Spaans",
+      "spaans": "Spaans",
+      "german": "Duits",
+      "duits": "Duits",
+      "portuguese": "Portugees",
+      "portugees": "Portugees",
+      "italian": "Italiaans",
+      "italiaans": "Italiaans",
+      "flemish": "Vlaams",
+      "vlaams": "Vlaams"
+    },
+    "soft_skills": {
+      "adaptability": "Aanpassingsvermogen",
+      "conflict management": "Conflictbeheersing",
+      "leadership": "Leiderschap",
+      "organizational": "Organisatievermogen",
+      "problem-solving": "Probleemoplossend vermogen",
+      "problem solving": "Probleemoplossend vermogen",
+      "teamwork": "Teamwork",
+      "communication": "Communicatie",
+      "time management": "Timemanagement",
+      "creativity": "Creativiteit",
+      "critical thinking": "Kritisch denken",
+      "negotiation": "Onderhandelen",
+      "decision making": "Besluitvorming",
+      "stress management": "Stressbestendigheid",
+      "analytical": "Analytisch vermogen",
+      "customer service": "Klantenservice"
+    },
+    "skill_block": [
+      "hobby",
+      "sport",
+      "vrije tijd",
+      "persoonlijk",
+      "familie",
+      "interesses"
+    ],
+    "skill_type_tokens": {
+      "odoo": "odoo",
+      "lang": [
+        "taal",
+        "language",
+        "lang"
+      ]
+    },
+    "odoo_skill_prefix": "Odoo {sn}"
+  },
+  "cases": {
+    "local_case_source": "common-skills:content-collection",
+    "case_translations": {
+      "50five": {
+        "resultado": "Eén Odoo als ruggengraat in twaalf Europese landen, opgeschaald van smart-home-distributeur naar exploitant van meer dan 600.000 laadpunten.",
+        "metric": "12 landen, 1 platform",
+        "cliente": "50Five",
+        "sectors": ["energie", "nutsbedrijven", "e-mobiliteit", "technische retail"],
+        "scope": "internationaal"
+      },
+      "sensorfact": {
+        "resultado": "Verving handmatige inkoop door een geïntegreerd systeem voor inkoop, voorraad, boekhouding en verkoop dat 1.600 klanten in 40 landen bedient.",
+        "metric": "1.600 klanten in 40 landen",
+        "cliente": "Sensorfact",
+        "sectors": ["energie", "industrie", "industriële saas"],
+        "scope": "internationaal"
+      },
+      "regiechatel": {
+        "resultado": "Bracht het beheer van meer dan 100 vastgoedadministraties samen op één platform, ter vervanging van combinaties van Word en Excel.",
+        "metric": "100+ administraties op één platform",
+        "cliente": "Régie Châtel",
+        "sectors": ["financiële dienstverlening", "vastgoedbeheer", "zakelijke dienstverlening"],
+        "scope": "internationaal"
+      },
+      "cyclis": {
+        "resultado": "Ging van de zelfbouwoplossing van de oprichters naar een geïntegreerd Odoo-platform dat de groei tot meer dan 36.000 leasefietsen droeg.",
+        "metric": "36.000+ leasefietsen",
+        "cliente": "Cyclis Bike Lease",
+        "sectors": ["financiële dienstverlening", "verhuur", "leasing", "mobiliteit"],
+        "scope": "internationaal"
+      },
+      "lonestar": {
+        "resultado": "Verenigde zeven gespecialiseerde laboratoriumafdelingen (65.000 monsters per jaar) op één Odoo + LIMS-platform in slechts vier maanden.",
+        "metric": "7 afdelingen verenigd in 4 maanden",
+        "cliente": "Lone Star Alpha Laboratories",
+        "sectors": ["laboratoria", "gezondheid", "gereguleerd"],
+        "scope": "internationaal"
+      },
+      "lfgparis": {
+        "resultado": "Bracht 's werelds oudste gemmologische laboratorium naar één Odoo-platform met ingebouwd LIMS voor compliance en operatie.",
+        "metric": "Geïntegreerd LIMS bij 's werelds oudste gemmologische lab",
+        "cliente": "LFG Paris",
+        "sectors": ["laboratoria", "gereguleerd"],
+        "scope": "internationaal"
+      },
+      "readytobrand": {
+        "resultado": "Implementeerde één Odoo-ruggengraat die de operatie in meerdere landen en de expansie ondersteunt.",
+        "metric": "Meerdere landen op één Odoo-ruggengraat",
+        "cliente": "Ready to Brand",
+        "sectors": ["retail", "groothandel", "distributie"],
+        "scope": "internationaal"
+      },
+      "primaproteccion": {
+        "resultado": "Migreerde deze B2B-distributeur van veiligheidsmateriaal van een verouderd systeem naar Odoo, met 95% van de bestellingen via de webshop.",
+        "metric": "95% van de bestellingen via de webshop",
+        "cliente": "Prima Protección",
+        "sectors": ["retail", "groothandel", "distributie", "pbm", "arbeidsveiligheid"],
+        "scope": "internationaal"
+      },
+      "obiz": {
+        "resultado": "Bracht na een overname drie entiteiten samen op één Odoo-platform, voor boekhouding, inkoop en verkoop.",
+        "metric": "3 entiteiten op één platform",
+        "cliente": "Obiz Group",
+        "sectors": ["zakelijke dienstverlening", "consultancy"],
+        "scope": "internationaal"
+      },
+      "tmtechnics": {
+        "resultado": "Bracht na een eerder vastgelopen ERP-traject bouw, productie en projectkosten samen op één Odoo-platform, met één vlekkeloze go-live en reële marges zichtbaar bij het opmaken van de offerte.",
+        "metric": "Bouw, productie en projectkosten op 1 platform",
+        "cliente": "TM Technics",
+        "sectors": ["bouw", "metaalbewerking", "productie", "montage", "installatie", "industrie"],
+        "scope": "internationaal"
+      },
+      "despraz": {
+        "resultado": "Verving Excel en losse tools door één platform dat de volledige werf dekt, van offerte tot afsluiting: 3.339 werven en één gedeelde tarievenbasis voor alle projectleiders.",
+        "metric": "3.339 werven op één platform",
+        "cliente": "Despraz SA",
+        "sectors": ["bouw", "werven", "prefabricage", "industriële installatie", "industrie"],
+        "scope": "internationaal"
+      },
+      "puratos": {
+        "resultado": "Standaardiseerde de overgenomen vestigingen van de groep op één Odoo-template: 14 fabrieken op 4 continenten en 230 gebruikers, met go-lives per land in minder dan twee maanden.",
+        "metric": "14 fabrieken en 230 gebruikers op 1 template",
+        "cliente": "Puratos",
+        "sectors": ["productie", "voeding", "multi-site", "industriële groep"],
+        "scope": "internationaal"
+      },
+      "tunergia": {
+        "resultado": "Consolideerde leads, projecten en goedkeuringen van dit Valenciaanse energieadviesbureau op één Odoo-platform, ter vervanging van Telegram, Excel en papier na zestien jaar.",
+        "metric": "2 bedrijven, 1 Odoo-platform",
+        "cliente": "Tunergia",
+        "sectors": ["energie", "utilities", "energieadvies", "diensten"],
+        "scope": "lokaal"
+      },
+      "todotrofeo": {
+        "resultado": "Verving een basisfacturatietool en honderden verspreide bestanden door Verkoop, CRM en Orders in Odoo: de volledige klantgeschiedenis op één scherm.",
+        "metric": "1 scherm per klant, ~500 orders/maand",
+        "cliente": "Todotrofeo",
+        "sectors": ["productie", "trofeeën", "medailles", "maatwerk"],
+        "scope": "lokaal"
+      },
+      "espacioorganico": {
+        "resultado": "Ging van handmatige overdrachten tussen winkels en aankopen op gevoel naar verkoopgedreven min-max aanvulling op standaard Odoo, in 6,5 maanden.",
+        "metric": "Live in 6,5 maanden",
+        "cliente": "Espacio Orgánico",
+        "sectors": ["retail", "voeding", "biologisch", "ecommerce", "detailhandel"],
+        "scope": "lokaal"
+      }
+    },
+    "sector_token_map": {
+      "voeding": "food",
+      "productie": "manufacturing",
+      "retail": "retail",
+      "technologie": "tech",
+      "bouw": "construction",
+      "logistiek": "logistics",
+      "dienstverlening": "services",
+      "energie": "energy",
+      "nutsbedrijven": "utilities",
+      "e-mobiliteit": "e-mobility",
+      "technische retail": "technical-retail",
+      "industrie": "industry",
+      "industriële saas": "industrial-saas",
+      "financiële dienstverlening": "financial-services",
+      "vastgoedbeheer": "property-management",
+      "zakelijke dienstverlening": "professional-services",
+      "verhuur": "renting",
+      "leasing": "leasing",
+      "mobiliteit": "mobility",
+      "laboratoria": "labs",
+      "gezondheid": "health",
+      "gereguleerd": "regulated",
+      "groothandel": "wholesale",
+      "distributie": "distribution",
+      "pbm": "ppe",
+      "arbeidsveiligheid": "workplace-safety",
+      "consultancy": "consulting"
+    }
+  }
+}

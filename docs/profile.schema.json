@@ -899,6 +899,10 @@
         {
           "type": "object",
           "properties": {
+            "method": {
+              "type": "string",
+              "const": "token"
+            },
             "token_env": {
               "type": "string",
               "default": "VAULT_TOKEN"
@@ -909,10 +913,6 @@
                 "null"
               ],
               "default": null
-            },
-            "method": {
-              "type": "string",
-              "const": "token"
             }
           },
           "additionalProperties": false,
@@ -923,6 +923,10 @@
         {
           "type": "object",
           "properties": {
+            "method": {
+              "type": "string",
+              "const": "approle"
+            },
             "role_id_env": {
               "type": "string",
               "default": "VAULT_ROLE_ID"
@@ -934,10 +938,6 @@
             "mount": {
               "type": "string",
               "default": "approle"
-            },
-            "method": {
-              "type": "string",
-              "const": "approle"
             }
           },
           "additionalProperties": false,
@@ -948,6 +948,10 @@
         {
           "type": "object",
           "properties": {
+            "method": {
+              "type": "string",
+              "const": "kubernetes"
+            },
             "role": {
               "type": "string"
             },
@@ -958,10 +962,6 @@
             "mount": {
               "type": "string",
               "default": "kubernetes"
-            },
-            "method": {
-              "type": "string",
-              "const": "kubernetes"
             }
           },
           "additionalProperties": false,

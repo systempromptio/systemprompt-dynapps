@@ -24,7 +24,7 @@
 //!   bundle ordering, asset copy's required-vs-optional split, the boot-time
 //!   governance config refusal, and the job error/tally plumbing
 //! - the admin crate's pure halves, migrated here from its former in-crate
-//!   `tests/` dir: ADFS assertion claims and the group->role map, the gateway
+//!   `tests/` dir: the Entra OIDC config and its group->role map, the gateway
 //!   catalog/budget surfaces, marketplace catalog and hook shapes, the
 //!   governance webhook, secrets crypto, the Handlebars engine and its helpers,
 //!   activity/trace constructors, analytics redaction, and the id/range/SVG
@@ -83,6 +83,8 @@ mod devices_page;
 mod doc_links;
 #[cfg(test)]
 mod downstream_credential_configs;
+#[cfg(test)]
+mod dynapps_portal_connectors;
 #[cfg(test)]
 mod export_registry;
 #[cfg(test)]
@@ -215,11 +217,11 @@ mod sso_config_files;
 #[cfg(test)]
 mod sso_oidc_claims;
 #[cfg(test)]
+mod sso_oidc_compliance;
+#[cfg(test)]
 mod sso_permissions;
 #[cfg(test)]
 mod sso_policy;
-#[cfg(test)]
-mod sso_saml_claims;
 #[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]
@@ -325,17 +327,14 @@ mod util_svg_pure;
 mod viewer_timezone;
 
 #[cfg(test)]
+#[cfg(test)]
+mod bridge_release_parity;
+#[cfg(test)]
 mod connector_cards;
 #[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
 mod connector_oauth_classify;
-#[cfg(test)]
-mod connector_token_expiry;
-#[cfg(test)]
-mod salesforce_orgs;
-
-mod bridge_release_parity;
 
 #[cfg(test)]
 mod authorization_failures;
@@ -390,7 +389,21 @@ mod farm_definitions;
 mod farm_host_kind;
 
 #[cfg(test)]
+mod farm_clients;
+#[cfg(test)]
+mod farm_cost_window;
+#[cfg(test)]
+mod farm_eval_mean;
+#[cfg(test)]
+mod farm_eval_resume;
+#[cfg(test)]
 mod farm_run_as;
+
+#[cfg(test)]
+mod farm_mcp_tools;
+
+#[cfg(test)]
+mod governance_dynapps_odoo_gate;
 
 #[cfg(test)]
 mod farm_assertions;
@@ -409,6 +422,24 @@ mod farm_sync_card;
 mod farm_eval_matrix;
 
 #[cfg(test)]
+mod farm_eval_history;
+
+#[cfg(test)]
+mod farm_eval_judge_config;
+
+#[cfg(test)]
+mod catalogue_integrity;
+#[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]
+mod farm_egress;
+#[cfg(test)]
+mod farm_fly_runner;
+#[cfg(test)]
 mod farm_run_events_view;
+#[cfg(test)]
+mod farm_tool_allowlist;
+#[cfg(test)]
+mod farm_tool_policy;
+#[cfg(test)]
+mod farm_tool_tally;

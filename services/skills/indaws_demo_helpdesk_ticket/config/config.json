@@ -1,0 +1,20 @@
+{
+  "_doc": "Config del asistente de respuesta a tickets de helpdesk.",
+  "company": {
+    "name": "Lumina Ingeniería",
+    "support_email": "soporte@lumina-ingenieria.es",
+    "support_phone": "+34 963 000 000"
+  },
+  "history": {
+    "_doc": "Ventana temporal para buscar tickets previos del cliente y proyectos relacionados.",
+    "tickets_days": 90,
+    "projects_days": 365
+  },
+  "defaults": {
+    "_doc": "Política de asignación y stage.",
+    "assignment_strategy": "most_recent_technician",
+    "change_stage_on_finalize": false,
+    "post_internal_note": true,
+    "send_customer_email": false
+  }
+}

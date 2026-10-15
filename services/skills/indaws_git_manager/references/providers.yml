@@ -1,0 +1,154 @@
+# references/providers.yml
+# Provider command mapping for the git-manager skill.
+# The skill reads this to detect the provider and select the right commands.
+# To add a new provider: add a section here. Zero changes to SKILL.md.
+
+providers:
+  gitlab:
+    cli: glab
+    auth_check: "glab auth status"
+    detect_pattern: "gitlab"
+    install:
+      macos: "brew install glab"
+      linux: "sudo apt install glab"
+      windows: "winget install GLab.GLab"
+    auth_instructions: |
+      glab auth login --hostname <your-gitlab-host>
+      # Scopes: api, read_repository, write_repository
+      # Generate at: https://<host>/-/user_settings/personal_access_tokens
+    commands:
+      mr_create: 'glab mr create --title "{title}" --description "{body}" --target-branch {target} --remove-source-branch'
+      mr_view: "glab mr view"
+      mr_list: "glab mr list --state=opened"
+      mr_list_by_branch: "glab mr list --source-branch={branch}"
+      mr_merge: "glab mr merge {id}"
+      ci_status: "glab ci status --branch {branch}"
+      ci_logs: "glab ci trace {job_id}"
+      ci_retry: "glab ci retry {job_id}"
+      api: "glab api {path}"
+      project_settings: >
+        glab api projects/:id --hostname {host}
+      protected_branches: >
+        glab api projects/:id/protected_branches --hostname {host}
+      approval_rules: >
+        glab api projects/:id/approval_rules --hostname {host}
+    platform_validation:
+      merge_method_mapping:
+        squash:
+          merge_method: "merge"
+          squash_option: "always"
+        ff:
+          merge_method: "ff"
+          squash_option: "never"
+        merge-commit:
+          merge_method: "merge"
+          squash_option: "never"
+      fields:
+        - yaml: "merge_requests.method"
+          api: "merge_method + squash_option"
+        - yaml: "merge_requests.require_pipeline"
+          api: "only_allow_merge_if_pipeline_succeeds"
+        - yaml: "merge_requests.require_discussions_resolved"
+          api: "only_allow_merge_if_all_discussions_are_resolved"
+        - yaml: "merge_requests.min_approvals"
+          api: "approval_rules[0].approvals_required"
+    platform_fix:
+      # Auto-fix drift between .gitworkflow.yml and GitLab project settings.
+      # Each fix is a glab api call. Only run after user confirmation.
+      merge_method:
+        squash:
+          - 'glab api -X PUT projects/:id -f merge_method=merge -f squash_option=always --hostname {host}'
+        ff:
+          - 'glab api -X PUT projects/:id -f merge_method=ff -f squash_option=never --hostname {host}'
+        merge-commit:
+          - 'glab api -X PUT projects/:id -f merge_method=merge -f squash_option=never --hostname {host}'
+      delete_source_branch:
+        enable: 'glab api -X PUT projects/:id -f remove_source_branch_after_merge=true --hostname {host}'
+        disable: 'glab api -X PUT projects/:id -f remove_source_branch_after_merge=false --hostname {host}'
+      merge_checks:
+        require_pipeline: 'glab api -X PUT projects/:id -f only_allow_merge_if_pipeline_succeeds={value} --hostname {host}'
+        require_discussions: 'glab api -X PUT projects/:id -f only_allow_merge_if_all_discussions_are_resolved={value} --hostname {host}'
+    gotchas:
+      - "--squash-before-merge flag does NOT exist in glab. Squash is a project-level setting."
+      - "glab ci trace needs numeric job ID, not job name. Get it from glab ci status output."
+      - "glab mr create defaults to repo's default branch — always pass --target-branch."
+      - "glab mr create does not support --hostname flag. Determined by git remote."
+      - "glab ci view requires TTY. Use glab ci status for non-interactive environments."
+
+  github:
+    cli: gh
+    auth_check: "gh auth status"
+    detect_pattern: "github"
+    install:
+      macos: "brew install gh"
+      linux: "sudo apt install gh"
+      windows: "winget install GitHub.cli"
+    auth_instructions: "gh auth login"
+    commands:
+      mr_create: 'gh pr create --title "{title}" --body "{body}" --base {target}'
+      mr_view: "gh pr view"
+      mr_list: "gh pr list"
+      mr_list_by_branch: "gh pr list --head={branch}"
+      mr_merge: "gh pr merge {id} --squash"
+      ci_status: "gh run list --branch {branch} --limit 5"
+      ci_logs: "gh run view {run_id} --log"
+      ci_retry: "gh run rerun {run_id}"
+      api: "gh api {path}"
+      project_settings: >
+        gh api repos/:owner/:repo
+      protected_branches: >
+        gh api repos/:owner/:repo/branches/{branch}/protection
+    platform_validation:
+      merge_method_mapping:
+        squash:
+          allow_squash_merge: true
+        ff:
+          allow_rebase_merge: true
+        merge-commit:
+          allow_merge_commit: true
+      fields:
+        - yaml: "merge_requests.method"
+          api: "allow_squash_merge / allow_rebase_merge / allow_merge_commit"
+        - yaml: "merge_requests.require_pipeline"
+          api: "branch protection: required_status_checks"
+        - yaml: "merge_requests.min_approvals"
+          api: "branch protection: required_pull_request_reviews.required_approving_review_count"
+    platform_fix:
+      # Auto-fix drift between .gitworkflow.yml and GitHub repo settings.
+      # Each fix is a gh api PATCH call. Only run after user confirmation.
+      merge_method:
+        squash:
+          - 'gh api -X PATCH repos/{owner}/{repo} -f allow_squash_merge=true -f allow_merge_commit=false -f allow_rebase_merge=false'
+        ff:
+          - 'gh api -X PATCH repos/{owner}/{repo} -f allow_rebase_merge=true -f allow_squash_merge=false -f allow_merge_commit=false'
+        merge-commit:
+          - 'gh api -X PATCH repos/{owner}/{repo} -f allow_merge_commit=true -f allow_squash_merge=false -f allow_rebase_merge=false'
+      delete_source_branch:
+        enable: 'gh api -X PATCH repos/{owner}/{repo} -f delete_branch_on_merge=true'
+        disable: 'gh api -X PATCH repos/{owner}/{repo} -f delete_branch_on_merge=false'
+    gotchas:
+      - "Uses --base instead of --target-branch."
+      - "--delete-branch is default behavior for merged PRs."
+      - "Squash merge selected via merge method: gh pr merge --squash."
+      - "CI runs identified by run-id, not job name."
+      - "gh run rerun --failed retries only failed jobs (more efficient than full rerun)."
+
+  # --- Extensibility ---
+  # To add Bitbucket, Azure DevOps, Gitea, etc.:
+  # 1. Add a section here following the same structure
+  # 2. No changes needed in SKILL.md
+  #
+  # bitbucket:
+  #   cli: bb
+  #   auth_check: "bb auth status"
+  #   detect_pattern: "bitbucket"
+  #   commands:
+  #     mr_create: 'bb pr create --title "{title}" ...'
+
+# --- Cross-provider gotchas ---
+cross_provider:
+  gotchas:
+    - "grep -oP fails on macOS (BSD grep). Always use grep -oE for regex extraction."
+    - "Annotated tags (git tag -a) required — some CI pipelines only trigger on annotated tags."
+    - "Cherry-pick from merge commits: find the real commit inside the merge, or use git cherry-pick -m 1."
+    - "Never --remove-source-branch when source is a protected/permanent branch (e.g., develop → master)."

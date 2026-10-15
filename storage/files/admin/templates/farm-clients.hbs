@@ -1,0 +1,70 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#> components/page-header title=title
+        subtitle="Who the farm runs are for: runs, success rate, task completion, eval scores and cost per client."}}
+      {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm/runs">All runs</a>
+      {{/inline}}
+    {{/components/page-header}}
+
+    <div class="sp-farm-clients">
+      {{> components/tabs tabs=tabs nav_label="Window"}}
+
+      <section class="sp-kpi-grid sp-kpi-grid--compact" aria-label="Farm outcomes">
+        {{#each kpis}}
+          {{> components/kpi key=this.key label=this.label icon=this.icon value=this.value note=this.note
+              hint=this.hint tone=this.tone spark=this.spark}}
+        {{/each}}
+      </section>
+
+      <section class="sp-farm-clients__trends" aria-label="Trends">
+        {{> components/svg-line-chart runs_chart}}
+        {{> components/svg-line-chart rates_chart}}
+      </section>
+
+      <section aria-label="Clients">
+        {{> components/section title="Clients" count=client_count note="Every client a farm declares, ranked by runs in the window."}}
+        {{#if has_clients}}
+        {{#> components/table caption="Farm runs by client" table_mode="scroll"}}
+          <thead><tr>
+            <th scope="col">Client</th>
+            <th scope="col">Runs</th>
+            <th scope="col" class="sp-table__cell--num">Succeeded</th>
+            <th scope="col" class="sp-table__cell--num">Failed</th>
+            <th scope="col" class="sp-table__cell--num">Active</th>
+            <th scope="col">Success</th>
+            <th scope="col" class="sp-table__cell--num">Completion</th>
+            <th scope="col" class="sp-table__cell--num">Eval</th>
+            <th scope="col" class="sp-table__cell--num">Infra failures</th>
+            <th scope="col" class="sp-table__cell--num">People</th>
+            <th scope="col" class="sp-table__cell--num">Cost</th>
+            <th scope="col" class="sp-col-date">Last run</th>
+          </tr></thead>
+          <tbody>
+          {{#each clients}}
+            <tr>
+              <td><a class="sp-farm-clients__name" href="{{this.url}}">{{this.name}}</a> <code class="sp-code-inline">{{this.slug}}</code></td>
+              <td><span class="sp-farm-clients__share">{{> components/share-bar share_pct=this.share_pct label=(concat this.share_label " of runs")}}<span class="sp-farm-clients__num">{{this.runs}}</span></span></td>
+              <td class="sp-table__cell--num">{{this.succeeded}}</td>
+              <td class="sp-table__cell--num">{{this.failed}}</td>
+              <td class="sp-table__cell--num">{{this.active}}</td>
+              <td>{{> components/badge tone=this.success_tone text=this.success}}</td>
+              <td class="sp-table__cell--num">{{this.completion}}</td>
+              <td class="sp-table__cell--num">{{this.eval}}</td>
+              <td class="sp-table__cell--num">{{this.infra_failures}}</td>
+              <td class="sp-table__cell--num">{{this.people}}</td>
+              <td class="sp-table__cell--num sp-u-mono">{{this.cost}}</td>
+              <td class="sp-col-date sp-table__cell--date" title="{{this.last_run_local}}">{{#if this.last_run}}{{this.last_run}}{{else}}—{{/if}}</td>
+            </tr>
+          {{/each}}
+          </tbody>
+        {{/components/table}}
+        {{else}}
+          {{> components/empty-state heading="No clients yet" message="Name a client on a farm in agent-farms.yaml and sync it; its runs are reported here."}}
+        {{/if}}
+      </section>
+    </div>
+    {{/inline}}
+{{/layout}}

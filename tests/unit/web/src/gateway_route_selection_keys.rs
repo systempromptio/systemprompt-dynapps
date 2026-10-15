@@ -11,7 +11,7 @@ strategy: weighted
 weight: 3
 fallbacks:
 - provider: vertex-us
-  upstream_model: claude-sonnet-5
+  upstream_model: claude-sonnet-5-5
   weight: 2
 - provider: anthropic
 by_scope:
@@ -28,7 +28,7 @@ by_scope:
       - provider: vertex-long
 context_fallbacks:
 - provider: vertex-long
-  upstream_model: claude-sonnet-5-1m
+  upstream_model: claude-sonnet-5-5-1m
 ";
 
 #[test]

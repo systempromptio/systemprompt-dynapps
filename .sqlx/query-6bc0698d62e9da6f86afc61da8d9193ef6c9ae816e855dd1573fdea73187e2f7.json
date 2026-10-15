@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Governance `warn` findings a run's tool calls produced: the same join as\n-- the run page's governance tab (the run's gateway and host sessions, or its\n-- conversation context).\nSELECT COUNT(*) AS \"warnings!\"\nFROM governance_decisions\nWHERE decision = 'warn'\n  AND (session_id = ANY($1::text[]) OR ($2::text IS NOT NULL AND context_id = $2))\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "warnings!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6bc0698d62e9da6f86afc61da8d9193ef6c9ae816e855dd1573fdea73187e2f7"
+}

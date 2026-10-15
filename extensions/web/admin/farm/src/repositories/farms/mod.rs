@@ -1,5 +1,6 @@
 //! Queries over the farms declared in agent-farms.yaml and their sync record.
-//! The YAML is the source of a farm row, so a sync upserts and never deletes.
+//! The YAML is the source of a farm row: a seed upserts every declared farm
+//! and deletes the ones it no longer declares.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{MarketplaceId, UserId};
@@ -7,7 +8,8 @@ use systemprompt_web_shared::ProjectId;
 
 use super::filters::NewFarm;
 use super::rows::FarmRow;
-use crate::types::FarmId;
+use crate::config::RunAsMode;
+use crate::types::{ClientId, FarmId};
 
 pub async fn list_farms(pool: &PgPool) -> Result<Vec<FarmRow>, sqlx::Error> {
     sqlx::query_file_as!(FarmRow, "src/repositories/farms/list_farms.sql")
@@ -23,13 +25,34 @@ pub async fn find_farm(pool: &PgPool, id: &FarmId) -> Result<Option<FarmRow>, sq
 
 pub async fn find_service_account(
     pool: &PgPool,
-    user_id: &UserId,
+    id_or_email: &str,
 ) -> Result<Option<UserId>, sqlx::Error> {
     sqlx::query_file_scalar!(
         "src/repositories/farms/find_service_account.sql",
-        user_id.as_str()
+        id_or_email
     )
     .fetch_optional(pool)
+    .await
+}
+
+pub async fn find_launcher(
+    pool: &PgPool,
+    id_or_email: &str,
+) -> Result<Option<UserId>, sqlx::Error> {
+    sqlx::query_file_scalar!("src/repositories/farms/find_launcher.sql", id_or_email)
+        .fetch_optional(pool)
+        .await
+}
+
+pub async fn delete_undeclared_farms(
+    pool: &PgPool,
+    declared: &[String],
+) -> Result<Vec<String>, sqlx::Error> {
+    sqlx::query_file_scalar!(
+        "src/repositories/farms/delete_undeclared_farms.sql",
+        declared
+    )
+    .fetch_all(pool)
     .await
 }
 
@@ -50,6 +73,8 @@ pub async fn upsert_farm(pool: &PgPool, farm: &NewFarm) -> Result<(), sqlx::Erro
         farm.model,
         farm.run_as_user_id.as_ref().map(UserId::as_str),
         farm.project_id.as_ref().map(ProjectId::as_str),
+        farm.client_id.as_ref().map(ClientId::as_str),
+        farm.run_as_mode.map(RunAsMode::as_str),
     )
     .execute(pool)
     .await?;

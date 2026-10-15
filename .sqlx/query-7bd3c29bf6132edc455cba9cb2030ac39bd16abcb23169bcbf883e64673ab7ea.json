@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM agent_runs WHERE origin_kind = 'agent_farm_run' AND origin_id = $1 AND user_id = $2 AND status IN ('queued', 'preparing', 'running')) AS \"active!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "active!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7bd3c29bf6132edc455cba9cb2030ac39bd16abcb23169bcbf883e64673ab7ea"
+}

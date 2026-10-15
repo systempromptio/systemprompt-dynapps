@@ -1,0 +1,289 @@
+{
+ "source": "odoo18/web/static/src/views/fields (supportedTypes)",
+ "widget_types": {
+  "ace": [
+   "text",
+   "html"
+  ],
+  "attachment_image": [
+   "many2one"
+  ],
+  "badge": [
+   "selection",
+   "many2one",
+   "char"
+  ],
+  "binary": [
+   "binary"
+  ],
+  "boolean": [
+   "boolean"
+  ],
+  "boolean_favorite": [
+   "boolean"
+  ],
+  "boolean_icon": [
+   "boolean"
+  ],
+  "char": [
+   "char"
+  ],
+  "code": [
+   "text",
+   "html"
+  ],
+  "color": [
+   "char"
+  ],
+  "color_picker": [
+   "integer"
+  ],
+  "dashboard_graph": [
+   "text"
+  ],
+  "domain": [
+   "char"
+  ],
+  "email": [
+   "char"
+  ],
+  "float": [
+   "float"
+  ],
+  "float_time": [
+   "float"
+  ],
+  "float_toggle": [
+   "float"
+  ],
+  "handle": [
+   "integer"
+  ],
+  "iframe_wrapper": [
+   "text",
+   "html"
+  ],
+  "image": [
+   "binary",
+   "many2one"
+  ],
+  "image_url": [
+   "char"
+  ],
+  "integer": [
+   "integer"
+  ],
+  "jsonb": [
+   "jsonb"
+  ],
+  "label_selection": [
+   "selection"
+  ],
+  "many2many": [
+   "one2many",
+   "many2many"
+  ],
+  "many2many_binary": [
+   "many2many"
+  ],
+  "many2many_checkboxes": [
+   "many2many"
+  ],
+  "many2many_tags": [
+   "many2many"
+  ],
+  "many2one": [
+   "many2one"
+  ],
+  "many2one_reference": [
+   "many2one_reference"
+  ],
+  "many2one_reference_integer": [
+   "many2one_reference"
+  ],
+  "monetary": [
+   "monetary",
+   "float"
+  ],
+  "one2many": [
+   "one2many",
+   "many2many"
+  ],
+  "pdf_viewer": [
+   "binary"
+  ],
+  "percentage": [
+   "integer",
+   "float"
+  ],
+  "percentpie": [
+   "float",
+   "integer"
+  ],
+  "phone": [
+   "char"
+  ],
+  "priority": [
+   "selection"
+  ],
+  "progressbar": [
+   "integer",
+   "float"
+  ],
+  "properties": [
+   "properties"
+  ],
+  "radio": [
+   "many2one",
+   "selection"
+  ],
+  "reference": [
+   "reference",
+   "char"
+  ],
+  "remaining_days": [
+   "date",
+   "datetime"
+  ],
+  "selection": [
+   "many2one",
+   "selection"
+  ],
+  "selection_badge": [
+   "many2one",
+   "selection"
+  ],
+  "signature": [
+   "binary"
+  ],
+  "state_selection": [
+   "selection"
+  ],
+  "statinfo": [
+   "float",
+   "integer",
+   "monetary"
+  ],
+  "statusbar": [
+   "many2one",
+   "selection"
+  ],
+  "text": [
+   "html",
+   "text"
+  ],
+  "url": [
+   "char"
+  ]
+ },
+ "type_widgets": {
+  "binary": [
+   "binary",
+   "image",
+   "pdf_viewer",
+   "signature"
+  ],
+  "boolean": [
+   "boolean",
+   "boolean_favorite",
+   "boolean_icon"
+  ],
+  "char": [
+   "badge",
+   "char",
+   "color",
+   "domain",
+   "email",
+   "image_url",
+   "phone",
+   "reference",
+   "url"
+  ],
+  "date": [
+   "remaining_days"
+  ],
+  "datetime": [
+   "remaining_days"
+  ],
+  "float": [
+   "float",
+   "float_time",
+   "float_toggle",
+   "monetary",
+   "percentage",
+   "percentpie",
+   "progressbar",
+   "statinfo"
+  ],
+  "html": [
+   "ace",
+   "code",
+   "iframe_wrapper",
+   "text"
+  ],
+  "integer": [
+   "color_picker",
+   "handle",
+   "integer",
+   "percentage",
+   "percentpie",
+   "progressbar",
+   "statinfo"
+  ],
+  "jsonb": [
+   "jsonb"
+  ],
+  "many2many": [
+   "many2many",
+   "many2many_binary",
+   "many2many_checkboxes",
+   "many2many_tags",
+   "one2many"
+  ],
+  "many2one": [
+   "attachment_image",
+   "badge",
+   "image",
+   "many2one",
+   "radio",
+   "selection",
+   "selection_badge",
+   "statusbar"
+  ],
+  "many2one_reference": [
+   "many2one_reference",
+   "many2one_reference_integer"
+  ],
+  "monetary": [
+   "monetary",
+   "statinfo"
+  ],
+  "one2many": [
+   "many2many",
+   "one2many"
+  ],
+  "properties": [
+   "properties"
+  ],
+  "reference": [
+   "reference"
+  ],
+  "selection": [
+   "badge",
+   "label_selection",
+   "priority",
+   "radio",
+   "selection",
+   "selection_badge",
+   "state_selection",
+   "statusbar"
+  ],
+  "text": [
+   "ace",
+   "code",
+   "dashboard_graph",
+   "iframe_wrapper",
+   "text"
+  ]
+ }
+}

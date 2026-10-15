@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} | Indaws</title>
+    
+    <!-- Montserrat Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        /* Indaws Brand Colors */
+        :root {
+            --indaws-yellow: #E5B92B;
+            --indaws-lilac: #6B68FA;
+            --indaws-space: #1C265D;
+            --indaws-sky: #8AC2DB;
+            --indaws-white: #FFFFFF;
+            --indaws-gray-50: #F8FAFC;
+            --indaws-gray-100: #F1F5F9;
+            --indaws-gray-200: #E2E8F0;
+            --indaws-gray-400: #94A3B8;
+            --indaws-gray-600: #475569;
+            --indaws-gray-900: #0F172A;
+            
+            /* Gradients (dark to light) */
+            --indaws-gradient-primary: linear-gradient(135deg, var(--indaws-space) 0%, var(--indaws-lilac) 100%);
+            --indaws-gradient-accent: linear-gradient(135deg, var(--indaws-space) 0%, var(--indaws-sky) 100%);
+            --indaws-gradient-warm: linear-gradient(135deg, var(--indaws-space) 0%, var(--indaws-yellow) 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 400;
+            background: var(--indaws-gray-100);
+            color: var(--indaws-gray-900);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            color: var(--indaws-space);
+            margin-bottom: 0.75rem;
+        }
+
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.5rem; }
+        h3 { font-size: 1.25rem; font-weight: 600; }
+        h4 { font-size: 1.1rem; font-weight: 600; }
+
+        .text-muted {
+            color: var(--indaws-gray-600) !important;
+        }
+
+        .text-accent {
+            color: var(--indaws-lilac);
+        }
+
+        /* Glass Card - Core Component */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(28, 38, 93, 0.08);
+        }
+
+        .glass-card-dark {
+            background: rgba(28, 38, 93, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(107, 104, 250, 0.3);
+            border-radius: 20px;
+            padding: 1.5rem;
+            color: var(--indaws-white);
+        }
+
+        .glass-card-dark h1,
+        .glass-card-dark h2,
+        .glass-card-dark h3,
+        .glass-card-dark h4 {
+            color: var(--indaws-white);
+        }
+
+        /* Accent Cards */
+        .card-accent-yellow {
+            border-left: 4px solid var(--indaws-yellow);
+        }
+
+        .card-accent-lilac {
+            border-left: 4px solid var(--indaws-lilac);
+        }
+
+        .card-accent-sky {
+            border-left: 4px solid var(--indaws-sky);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: var(--indaws-gradient-primary);
+            border-radius: 24px;
+            padding: 2.5rem;
+            color: var(--indaws-white);
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            color: var(--indaws-white);
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero .subtitle {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 1.1rem;
+        }
+
+        /* Bento Grid Utilities */
+        .bento-grid {
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .bento-grid {
+                grid-template-columns: repeat(12, 1fr);
+            }
+
+            .bento-full { grid-column: span 12; }
+            .bento-half { grid-column: span 6; }
+            .bento-third { grid-column: span 4; }
+            .bento-two-thirds { grid-column: span 8; }
+            .bento-quarter { grid-column: span 3; }
+        }
+
+        @media (max-width: 767px) {
+            .bento-grid > * {
+                grid-column: span 1;
+            }
+        }
+
+        /* Metric Card */
+        .metric-card {
+            text-align: center;
+            padding: 1.25rem;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--indaws-lilac);
+            line-height: 1.1;
+        }
+
+        .metric-value.yellow { color: var(--indaws-yellow); }
+        .metric-value.sky { color: var(--indaws-sky); }
+        .metric-value.space { color: var(--indaws-space); }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--indaws-gray-600);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        /* Status Badges */
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.35rem 0.85rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #16A34A;
+        }
+
+        .badge-warning {
+            background: rgba(229, 185, 43, 0.2);
+            color: #B8940F;
+        }
+
+        .badge-pending {
+            background: rgba(107, 104, 250, 0.15);
+            color: var(--indaws-lilac);
+        }
+
+        .badge-neutral {
+            background: var(--indaws-gray-200);
+            color: var(--indaws-gray-600);
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--indaws-gray-200);
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checklist-checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--indaws-gray-400);
+            border-radius: 6px;
+            margin-right: 0.875rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2px;
+        }
+
+        .checklist-checkbox.checked {
+            background: var(--indaws-lilac);
+            border-color: var(--indaws-lilac);
+        }
+
+        .checklist-checkbox.checked::after {
+            content: '';
+            width: 6px;
+            height: 10px;
+            border: 2px solid white;
+            border-top: none;
+            border-left: none;
+            transform: rotate(45deg);
+            margin-bottom: 2px;
+        }
+
+        .checklist-content {
+            flex: 1;
+        }
+
+        .checklist-title {
+            font-weight: 600;
+            color: var(--indaws-gray-900);
+        }
+
+        .checklist-item.checked .checklist-title {
+            color: var(--indaws-gray-400);
+            text-decoration: line-through;
+        }
+
+        .checklist-meta {
+            font-size: 0.8rem;
+            color: var(--indaws-gray-600);
+            margin-top: 0.15rem;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            background: var(--indaws-gray-200);
+            border-radius: 100px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--indaws-gradient-primary);
+            border-radius: 100px;
+            transition: width 0.5s ease;
+        }
+
+        /* Tables */
+        .table-clean {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-clean th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--indaws-gray-600);
+            border-bottom: 2px solid var(--indaws-gray-200);
+        }
+
+        .table-clean td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--indaws-gray-100);
+        }
+
+        .table-clean tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-clean tr:hover td {
+            background: var(--indaws-gray-50);
+        }
+
+        /* Container */
+        .container-report {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Indaws Logo Placeholder */
+        .logo-indaws {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--indaws-yellow);
+            letter-spacing: -0.02em;
+        }
+
+        .logo-indaws span {
+            color: var(--indaws-white);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 3rem;
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--indaws-gray-600);
+            font-size: 0.875rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .glass-card {
+                box-shadow: none;
+                border: 1px solid var(--indaws-gray-200);
+            }
+            
+            .hero {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-report">
+        {{ content }}
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

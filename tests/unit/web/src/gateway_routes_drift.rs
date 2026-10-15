@@ -23,7 +23,7 @@ gateway:
     provider: anthropic
     fallbacks:
     - provider: vertex
-      upstream_model: claude-sonnet-5
+      upstream_model: claude-sonnet-5-5
     by_scope:
       dimension: project
       unmapped: shared
@@ -66,7 +66,7 @@ fn declaration_carries_every_route_field_and_synthesises_missing_ids() {
         claude.route.fallbacks,
         vec![RouteFallbackView {
             provider: "vertex".to_owned(),
-            upstream_model: Some("claude-sonnet-5".to_owned()),
+            upstream_model: Some("claude-sonnet-5-5".to_owned()),
             weight: None,
         }]
     );

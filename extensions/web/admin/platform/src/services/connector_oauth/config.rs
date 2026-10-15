@@ -1,29 +1,14 @@
 //! Pinned provider resources and server-only application configuration.
 
-use crate::services::salesforce_orgs::{
-    SalesforceOrg, SalesforceOrgRegistry, is_salesforce_server_id,
-};
 use serde::{Deserialize, Serialize};
-use systemprompt::identifiers::McpServerId;
 use systemprompt::models::auth::Permission;
 use systemprompt::models::mcp::Deployment;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-pub const SALESFORCE_CALLBACK_SEGMENT: &str = "salesforce";
-// Why: GitHub's hosted MCP server; a person would connect through the generic
-// OAuth path, a service account presents a GitHub App installation instead.
-pub const GITHUB_SLUG: &str = "github";
-
-/// A configured MCP connector.
-///
-/// `Salesforce` carries its server id because each Salesforce org is its own
-/// server (`salesforce-<slug>`), and every org-specific value — domain, app
-/// credentials, endpoint — is read from the org registry under that id.
+/// A configured MCP connector, named by its server id.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(try_from = "String", into = "String")]
 pub enum Provider {
-    Atlassian,
-    Salesforce(McpServerId),
     Generic(String),
 }
 
@@ -38,13 +23,7 @@ impl TryFrom<String> for Provider {
         {
             return Err("Invalid connector identifier".into());
         }
-        Ok(match id.as_str() {
-            "atlassian" => Self::Atlassian,
-            _ if is_salesforce_server_id(&id) => {
-                Self::Salesforce(McpServerId::try_new(id).map_err(|error| error.to_string())?)
-            },
-            _ => Self::Generic(id),
-        })
+        Ok(Self::Generic(id))
     }
 }
 impl From<Provider> for String {
@@ -55,30 +34,10 @@ impl From<Provider> for String {
 impl Provider {
     pub fn slug(&self) -> &str {
         match self {
-            Self::Atlassian => "atlassian",
-            Self::Salesforce(id) => id.as_str(),
             Self::Generic(id) => id,
         }
     }
-    pub fn is_github(&self) -> bool {
-        matches!(self, Self::Generic(id) if id == GITHUB_SLUG)
-    }
-    pub const fn is_salesforce(&self) -> bool {
-        matches!(self, Self::Salesforce(_))
-    }
-    pub fn salesforce_org(&self) -> AdminResult<&'static SalesforceOrg> {
-        match self {
-            Self::Salesforce(id) => SalesforceOrgRegistry::get().find(id).ok_or_else(|| {
-                AdminError::Unavailable("Salesforce org is not in the org registry".into())
-            }),
-            _ => Err(AdminError::BadRequest("Not a Salesforce connector".into())),
-        }
-    }
     pub fn endpoint(&self) -> String {
-        match self {
-            Self::Atlassian => return "https://mcp.atlassian.com/v2/mcp".into(),
-            Self::Salesforce(_) | Self::Generic(_) => {},
-        }
         systemprompt::loader::ServicesBootstrap::get()
             .ok()
             .and_then(|s| s.mcp_servers.get(self.slug()))
@@ -90,36 +49,19 @@ impl Provider {
         Ok(format!(
             "{}/api/public/connectors/{}/callback",
             cfg.api_external_url.trim_end_matches('/'),
-            self.callback_segment(),
+            self.slug(),
         ))
     }
-    // Why: Salesforce orgs share one External Client App whose callback list is
-    // fixed in the source org, so every org uses one callback; the org returns in
-    // the `state` prefix (`consent::start`).
-    fn callback_segment(&self) -> &str {
-        if self.is_salesforce() {
-            SALESFORCE_CALLBACK_SEGMENT
-        } else {
-            self.slug()
-        }
-    }
     pub fn configured(&self) -> bool {
-        let enabled = systemprompt::loader::ServicesBootstrap::get().is_ok_and(|services| {
+        systemprompt::loader::ServicesBootstrap::get().is_ok_and(|services| {
             services
                 .mcp_servers
                 .get(self.slug())
                 .is_some_and(|server| server.enabled)
-        });
-        enabled && (!self.is_salesforce() || self.salesforce_org().is_ok())
-    }
-    pub fn provisioned(&self) -> bool {
-        match self {
-            Self::Salesforce(_) => self.salesforce_org().is_ok_and(SalesforceOrg::provisioned),
-            _ => true,
-        }
+        })
     }
     pub fn requires_auth(&self) -> bool {
-        !matches!(self, Self::Generic(_)) || self.settings().is_some() || self.is_session_attested()
+        self.settings().is_some() || self.is_session_attested()
     }
     fn server(&self) -> Option<&'static Deployment> {
         systemprompt::loader::ServicesBootstrap::get()
@@ -131,7 +73,7 @@ impl Provider {
         self.server()?.connector.clone()
     }
     pub fn session_scopes(&self) -> Option<&'static [Permission]> {
-        if !matches!(self, Self::Generic(_)) || self.settings().is_some() {
+        if self.settings().is_some() {
             return None;
         }
         let oauth = &self.server()?.oauth;
@@ -141,22 +83,9 @@ impl Provider {
         self.session_scopes().is_some()
     }
     pub fn display_name(&self) -> String {
-        match self {
-            Self::Atlassian => "Atlassian".into(),
-            Self::Salesforce(id) => self
-                .salesforce_org()
-                .map_or_else(|_| id.as_str().to_owned(), |org| org.label.clone()),
-            Self::Generic(id) => self
-                .settings()
-                .and_then(|settings| settings.display_name)
-                .unwrap_or_else(|| {
-                    if self.is_github() {
-                        "GitHub".into()
-                    } else {
-                        id.clone()
-                    }
-                }),
-        }
+        self.settings()
+            .and_then(|settings| settings.display_name)
+            .unwrap_or_else(|| self.slug().to_owned())
     }
 }
 
@@ -171,23 +100,4 @@ pub(crate) fn secret(name: &str) -> AdminResult<String> {
         })
         .filter(|s| !s.is_empty() && !s.starts_with("REPLACE_WITH"))
         .ok_or_else(|| AdminError::Unavailable(format!("Connector configuration missing: {name}")))
-}
-
-pub(crate) fn validate_my_domain(value: &str) -> AdminResult<String> {
-    let url = reqwest::Url::parse(value).map_err(AdminError::internal)?;
-    let host = url.host_str().unwrap_or_default();
-    if url.scheme() != "https"
-        || !host.ends_with(".my.salesforce.com")
-        || url.port().is_some()
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_some()
-        || url.fragment().is_some()
-        || url.path() != "/"
-    {
-        return Err(AdminError::BadRequest(
-            "Salesforce MCP domain must be an HTTPS My Domain origin".into(),
-        ));
-    }
-    Ok(value.trim_end_matches('/').to_owned())
 }

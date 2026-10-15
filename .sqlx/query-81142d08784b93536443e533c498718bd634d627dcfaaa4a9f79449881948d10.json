@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO user_manual_roles (user_id, role, granted_by, valid_until)\n           VALUES ($1, $2, $3, $4)\n           ON CONFLICT (user_id, role) DO UPDATE\n              SET granted_by = EXCLUDED.granted_by,\n                  valid_from = CURRENT_TIMESTAMP,\n                  valid_until = EXCLUDED.valid_until\n            WHERE user_manual_roles.valid_until IS NOT NULL\n           RETURNING role AS \"role!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "role!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_manual_roles",
+            "name": "role"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "81142d08784b93536443e533c498718bd634d627dcfaaa4a9f79449881948d10"
+}

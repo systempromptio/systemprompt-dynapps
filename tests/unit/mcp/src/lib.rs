@@ -12,7 +12,8 @@
 //!   place of a stored oversize result, and the trimming fallback
 //! - Gemini declarability of every listed tool's input schema
 //! - the `agent-farm` server's tool surface, schemas, run authorisation and the
-//!   administrator-only `all` scope
+//!   administrator-only `all` scope, and `farm_dashboard`'s JSON shape against
+//!   the fields its dashboard artifact reads
 
 #[cfg(test)]
 mod access_policy;
@@ -35,6 +36,8 @@ mod admin_reports;
 mod agent_farm_tools;
 #[cfg(test)]
 mod bounds;
+#[cfg(test)]
+mod farm_dashboard_shape;
 #[cfg(test)]
 mod typed_activity;
 #[cfg(test)]

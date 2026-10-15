@@ -1,13 +1,13 @@
 marketplace:
   id: dynapps-super-admin
   name: "Dynapps — Super Admin"
-  description: "The single administrator control plane: a daily brief with a traffic-light view of critical projects, critical-project and AI-usage reporting over Jira and Confluence evidence, and direct CLI access to the instance."
+  description: "The single administrator control plane: AI-usage reporting from this platform's own audit tables, and direct CLI access to the instance."
   version: "2.0.0"
   visibility: private
   author:
     name: Dynapps
     email: ed@systemprompt.io
-  keywords: [admin, governance, reporting, atlassian, operations]
+  keywords: [admin, governance, reporting, operations]
   license: proprietary
   # Who reaches this workspace is declared in services/access-control/rules.yaml
   # (entity marketplace/dynapps-super-admin), the single source of entitlement on this instance.
@@ -19,7 +19,6 @@ marketplace:
     source: explicit
     include:
       - systemprompt
-      - atlassian
   agents:
     source: explicit
     include: []

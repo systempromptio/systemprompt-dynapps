@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day-of Checklist | Indaws</title>
+    
+    <!-- Montserrat Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --indaws-yellow: #E5B92B;
+            --indaws-lilac: #6B68FA;
+            --indaws-space: #1C265D;
+            --indaws-sky: #8AC2DB;
+            --indaws-white: #FFFFFF;
+            --indaws-gray-50: #F8FAFC;
+            --indaws-gray-100: #F1F5F9;
+            --indaws-gray-200: #E2E8F0;
+            --indaws-gray-400: #94A3B8;
+            --indaws-gray-600: #475569;
+            --indaws-gray-900: #0F172A;
+            --indaws-gradient-primary: linear-gradient(135deg, var(--indaws-space) 0%, var(--indaws-lilac) 100%);
+            --indaws-gradient-warm: linear-gradient(135deg, var(--indaws-space) 0%, var(--indaws-yellow) 100%);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 400;
+            background: var(--indaws-gray-100);
+            color: var(--indaws-gray-900);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-weight: 700;
+            color: var(--indaws-space);
+            margin-bottom: 0.75rem;
+        }
+
+        .container-report {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* Glass Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        /* Hero */
+        .hero {
+            background: var(--indaws-gradient-warm);
+            border-radius: 24px;
+            padding: 2rem;
+            color: var(--indaws-white);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 { color: var(--indaws-white); font-size: 1.75rem; margin-bottom: 0.25rem; }
+        .hero .subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1rem; margin-bottom: 1rem; }
+
+        .logo-indaws {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--indaws-yellow);
+            margin-bottom: 0.75rem;
+        }
+        .logo-indaws span { color: var(--indaws-white); }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .hero-meta strong { display: block; font-weight: 600; }
+        .hero-meta small { opacity: 0.8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Phase Header */
+        .phase-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .phase-time {
+            background: var(--indaws-space);
+            color: var(--indaws-white);
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .phase-time.now {
+            background: var(--indaws-lilac);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(107, 104, 250, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(107, 104, 250, 0); }
+        }
+
+        .phase-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--indaws-space);
+            margin: 0;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid var(--indaws-gray-200);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .checklist-item:last-child { border-bottom: none; }
+        .checklist-item:hover { background: var(--indaws-gray-50); margin: 0 -0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; border-radius: 8px; }
+
+        .checklist-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--indaws-gray-400);
+            border-radius: 6px;
+            margin-right: 1rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            margin-top: 1px;
+        }
+
+        .checklist-item.checked .checklist-checkbox {
+            background: var(--indaws-lilac);
+            border-color: var(--indaws-lilac);
+        }
+
+        .checklist-checkbox::after {
+            content: '';
+            width: 6px;
+            height: 11px;
+            border: 2px solid white;
+            border-top: none;
+            border-left: none;
+            transform: rotate(45deg);
+            opacity: 0;
+            margin-bottom: 2px;
+        }
+
+        .checklist-item.checked .checklist-checkbox::after { opacity: 1; }
+
+        .checklist-content { flex: 1; }
+
+        .checklist-title {
+            font-weight: 600;
+            color: var(--indaws-gray-900);
+            font-size: 0.95rem;
+        }
+
+        .checklist-item.checked .checklist-title {
+            color: var(--indaws-gray-400);
+            text-decoration: line-through;
+        }
+
+        .checklist-meta {
+            font-size: 0.8rem;
+            color: var(--indaws-gray-600);
+            margin-top: 0.15rem;
+        }
+
+        .checklist-tag {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-left: 0.5rem;
+        }
+
+        .tag-priority { background: rgba(239, 68, 68, 0.12); color: #DC2626; }
+        .tag-av { background: rgba(107, 104, 250, 0.12); color: var(--indaws-lilac); }
+        .tag-catering { background: rgba(229, 185, 43, 0.15); color: #B8940F; }
+        .tag-speaker { background: rgba(138, 194, 219, 0.25); color: #0E7490; }
+
+        /* Progress Bar */
+        .progress-section {
+            background: var(--indaws-space);
+            color: var(--indaws-white);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .progress-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 100px;
+            height: 12px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--indaws-yellow);
+            border-radius: 100px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-count {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--indaws-yellow);
+        }
+
+        /* Quick Reference */
+        .quick-ref {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .quick-ref-item {
+            background: var(--indaws-gray-50);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .quick-ref-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--indaws-gray-600);
+            margin-bottom: 0.25rem;
+        }
+
+        .quick-ref-value {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Emergency Section */
+        .emergency-card {
+            background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .emergency-card h4 {
+            color: #991B1B;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .emergency-card ul {
+            margin: 0;
+            padding-left: 1.25rem;
+            font-size: 0.85rem;
+            color: #7F1D1D;
+        }
+
+        .emergency-card li { margin-bottom: 0.35rem; }
+
+        /* Footer */
+        .footer {
+            margin-top: 2rem;
+            padding: 1rem;
+            text-align: center;
+            color: var(--indaws-gray-400);
+            font-size: 0.75rem;
+        }
+
+        @media print {
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .glass-card { box-shadow: none; border: 1px solid var(--indaws-gray-200); }
+            .checklist-item { page-break-inside: avoid; }
+        }
+
+        @media (max-width: 576px) {
+            .hero-meta { flex-direction: column; gap: 0.75rem; }
+            .container-report { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-report">
+        
+        <!-- HERO -->
+        <div class="hero">
+            <div class="logo-indaws">ind<span>aws</span></div>
+            <h1>Checklist Dia del Evento</h1>
+            <p class="subtitle">IA Aplicada a tu Sistema de Gestion</p>
+            <div class="hero-meta">
+                <div>
+                    <small>Fecha</small>
+                    <strong>20 Feb 2026</strong>
+                </div>
+                <div>
+                    <small>Horario</small>
+                    <strong>09:00 - 12:00</strong>
+                </div>
+                <div>
+                    <small>Venue</small>
+                    <strong>The Terminal Hub</strong>
+                </div>
+                <div>
+                    <small>Asistentes</small>
+                    <strong>42 confirmados</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROGRESS BAR -->
+        <div class="progress-section">
+            <span class="progress-label">Progreso</span>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: 0%" id="progressFill"></div>
+            </div>
+            <span class="progress-count"><span id="checkedCount">0</span>/28</span>
+        </div>
+
+        <!-- QUICK REFERENCE -->
+        <div class="glass-card">
+            <h4 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--indaws-gray-600); margin-bottom: 0.75rem;">Referencia Rapida</h4>
+            <div class="quick-ref">
+                <div class="quick-ref-item">
+                    <div class="quick-ref-label">Contacto Venue</div>
+                    <div class="quick-ref-value">Maria Garcia - 600 123 456</div>
+                </div>
+                <div class="quick-ref-item">
+                    <div class="quick-ref-label">WiFi</div>
+                    <div class="quick-ref-value">TerminalHub / pass2026</div>
+                </div>
+                <div class="quick-ref-item">
+                    <div class="quick-ref-label">Catering</div>
+                    <div class="quick-ref-value">Servicio a las 08:45</div>
+                </div>
+                <div class="quick-ref-item">
+                    <div class="quick-ref-label">Parking</div>
+                    <div class="quick-ref-value">Validar en recepcion</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- T-2H: MONTAJE -->
+        <div class="glass-card">
+            <div class="phase-header">
+                <span class="phase-time">07:00</span>
+                <h3 class="phase-title">Montaje (T-2h)</h3>
+            </div>
+            <ul class="checklist">
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Llegar al venue, contactar responsable <span class="checklist-tag tag-priority">Primero</span></div>
+                        <div class="checklist-meta">Confirmar que todo esta preparado segun lo acordado</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Verificar sala: mesas, sillas, disposicion</div>
+                        <div class="checklist-meta">Formato teatro con espacio para networking lateral</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Montar roll-ups e identidad visual Indaws</div>
+                        <div class="checklist-meta">Roll-up en entrada + roll-up detras del speaker</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Preparar mesa de registro <span class="checklist-tag tag-priority">Prioritario</span></div>
+                        <div class="checklist-meta">Lista asistentes impresa, badges, bolis, merchandising</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Setup AV: conectar portatil, probar proyector <span class="checklist-tag tag-av">AV</span></div>
+                        <div class="checklist-meta">HDMI principal + adaptador USB-C backup</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Probar micro y audio <span class="checklist-tag tag-av">AV</span></div>
+                        <div class="checklist-meta">Micro inalambrico, volumen correcto, sin feedback</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Tener backup presentacion en USB</div>
+                        <div class="checklist-meta">PDF + PPTX en USB</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Verificar catering listo <span class="checklist-tag tag-catering">Catering</span></div>
+                        <div class="checklist-meta">Ubicacion, timing, alergias comunicadas</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Colocar materiales en mesas</div>
+                        <div class="checklist-meta">Folletos, tarjetas visita, libretas branded</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Foto de sala montada (antes de asistentes)</div>
+                        <div class="checklist-meta">Para redes y documentacion interna</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- T-30MIN: PRE-EVENTO -->
+        <div class="glass-card">
+            <div class="phase-header">
+                <span class="phase-time">08:30</span>
+                <h3 class="phase-title">Pre-Evento (T-30min)</h3>
+            </div>
+            <ul class="checklist">
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Equipo en posiciones</div>
+                        <div class="checklist-meta">Registro: [Nombre] | Host: [Nombre] | Foto: [Nombre]</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Speaker: check final de presentacion <span class="checklist-tag tag-speaker">Speaker</span></div>
+                        <div class="checklist-meta">Probar clicker, revisar slides, confirmar timing</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Catering listo para servir <span class="checklist-tag tag-catering">Catering</span></div>
+                        <div class="checklist-meta">Desayuno visible al entrar los asistentes</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Abrir puertas</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- T-0: REGISTRO -->
+        <div class="glass-card">
+            <div class="phase-header">
+                <span class="phase-time">09:00</span>
+                <h3 class="phase-title">Registro y Networking (30 min)</h3>
+            </div>
+            <ul class="checklist">
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Recibir asistentes en la puerta</div>
+                        <div class="checklist-meta">Sonrisa, bienvenida, dirigir a registro</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Check-in: nombre, badge, marcar asistencia <span class="checklist-tag tag-priority">Critico</span></div>
+                        <div class="checklist-meta">Marcar en lista impresa o app Odoo</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Dirigir a zona de desayuno/networking</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Fotos de llegada y networking inicial</div>
+                        <div class="checklist-meta">Gente charlando, desayuno, ambiente</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- PRESENTACION -->
+        <div class="glass-card">
+            <div class="phase-header">
+                <span class="phase-time">09:30</span>
+                <h3 class="phase-title">Presentacion (45 min)</h3>
+            </div>
+            <ul class="checklist">
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Host da la bienvenida (5 min)</div>
+                        <div class="checklist-meta">Presentar Indaws, co-organizador, speaker, agenda</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Speaker presenta (35 min) <span class="checklist-tag tag-speaker">Speaker</span></div>
+                        <div class="checklist-meta">Aviso a 5 min del final</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Fotos del speaker y audiencia</div>
+                        <div class="checklist-meta">Varios angulos, audiencia atenta, branding visible</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Q&A + NETWORKING -->
+        <div class="glass-card">
+            <div class="phase-header">
+                <span class="phase-time">10:15</span>
+                <h3 class="phase-title">Q&A + Networking Final (45 min)</h3>
+            </div>
+            <ul class="checklist">
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Host modera Q&A (15 min)</div>
+                        <div class="checklist-meta">2-3 preguntas preparadas por si nadie pregunta</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Networking final: circular y facilitar</div>
+                        <div class="checklist-meta">Identificar leads calientes, intercambiar tarjetas</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Fotos de networking</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- CIERRE -->
+        <div class="glass-card">
+            <div class="phase-header">
+                <span class="phase-time">11:00</span>
+                <h3 class="phase-title">Cierre y Desmontaje</h3>
+            </div>
+            <ul class="checklist">
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Host agradece y cierra</div>
+                        <div class="checklist-meta">"Recibireis la presentacion por email" + mostrar QR feedback</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Recoger feedback (QR visible)</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Recoger roll-ups y materiales</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Recoger badges no recogidos (lista no-shows)</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Comprobar que no queda nada del equipo</div>
+                    </div>
+                </li>
+                <li class="checklist-item" onclick="toggleCheck(this)">
+                    <div class="checklist-checkbox"></div>
+                    <div class="checklist-content">
+                        <div class="checklist-title">Agradecer al venue</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- EMERGENCY -->
+        <div class="emergency-card">
+            <h4>Emergencias</h4>
+            <ul>
+                <li><strong>Proyector no funciona:</strong> Usar TV del venue / compartir en tablets / presentar sin slides</li>
+                <li><strong>Speaker llega tarde:</strong> Extender networking, reorganizar agenda</li>
+                <li><strong>Pocos asistentes:</strong> Adaptar disposicion a grupo intimo, no mencionar</li>
+                <li><strong>WiFi falla:</strong> Hotspot movil para lo esencial</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            Indaws Event Planner | Imprimir o usar en movil
+        </div>
+    </div>
+
+    <script>
+        function toggleCheck(item) {
+            item.classList.toggle('checked');
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const total = document.querySelectorAll('.checklist-item').length;
+            const checked = document.querySelectorAll('.checklist-item.checked').length;
+            const percent = Math.round((checked / total) * 100);
+            
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('checkedCount').textContent = checked;
+        }
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+</html>

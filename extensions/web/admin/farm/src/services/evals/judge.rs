@@ -1,6 +1,10 @@
-//! The judged half of an eval: one structured-output call through the
-//! process's `AiService` scoring a case's run against its rubric, built the
-//! way the conversation judge job builds its requests.
+//! The judged half of an eval.
+//!
+//! One JSON-answer call through the process's `AiService` scoring a
+//! case's run against its rubric, built the way the conversation judge job
+//! builds its requests. The provider and model come from the `evals:` block of
+//! the farms file, so every trigger builds the same judge through
+//! [`gateway_judge`].
 //!
 //! `StubJudge` stands in where no provider is configured and in tests.
 
@@ -9,15 +13,14 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use serde::Deserialize;
-use systemprompt::ai::{AiMessage, AiRequest, AiService, StructuredOutputOptions};
+use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::models::execution::context::RequestContext;
 
+use crate::config::EvalsConfig;
 use crate::error::{FarmError, FarmResult};
 
 pub const JUDGE_AGENT_NAME: &str = "farm-eval-judge";
-pub const DEFAULT_PROVIDER: &str = "gemini";
-pub const DEFAULT_MODEL: &str = "gemini-3.8-flash";
 const MAX_OUTPUT_TOKENS: u32 = 2_048;
 const JUDGE_CONTEXT_SEED: &[u8] = b"dynapps:farm_eval_judge";
 
@@ -31,7 +34,8 @@ the transcript that the output file does not back up earns nothing.
 passed: true when score meets the threshold you are given.
 rationale: two or three sentences, at most 80 words, naming the evidence for the score.
 findings: short bullet strings, one per rubric item met or missed.
-Never quote credentials, keys or personal data.";
+Never quote credentials, keys or personal data.
+Reply with one JSON object and nothing else, matching this schema:";
 
 pub type JudgeFuture<'a> = Pin<Box<dyn Future<Output = FarmResult<JudgeVerdict>> + Send + 'a>>;
 
@@ -60,8 +64,11 @@ pub trait EvalJudge: Send + Sync {
     fn judge<'a>(&'a self, input: &'a JudgeInput) -> JudgeFuture<'a>;
 }
 
-// Why: Gemini's responseSchema is an OpenAPI subset (enums and `required`
-// only); core's sanitizer strips anything richer.
+// Why: the schema is stated in the prompt, not sent as structured output:
+// Anthropic's current models refuse the forced `tool_choice` core uses for it.
+// Gemini's responseSchema is an OpenAPI subset (enums and `required`
+// only); core's sanitizer strips anything richer, so the schema stays inside
+// what every provider accepts.
 // JSON: outgoing fixed-shape
 #[must_use]
 pub fn verdict_schema() -> serde_json::Value {
@@ -86,7 +93,10 @@ struct RawVerdict {
 }
 
 pub fn parse_verdict(content: &str, threshold: i32) -> FarmResult<(i32, bool, String)> {
-    let raw: RawVerdict = serde_json::from_str(content).map_err(|source| FarmError::Json {
+    let start = content.find('{').unwrap_or(0);
+    let end = content.rfind('}').map_or(content.len(), |i| i + 1);
+    let json = content.get(start..end).unwrap_or(content);
+    let raw: RawVerdict = serde_json::from_str(json).map_err(|source| FarmError::Json {
         at: "judge verdict".to_owned(),
         source,
     })?;
@@ -136,12 +146,12 @@ impl std::fmt::Debug for GatewayJudge {
 
 impl GatewayJudge {
     #[must_use]
-    pub fn new(ai: Arc<AiService>, user_id: UserId) -> Self {
+    pub fn new(ai: Arc<AiService>, user_id: UserId, config: &EvalsConfig) -> Self {
         Self {
             ai,
             actor: Actor::job(user_id, JUDGE_AGENT_NAME),
-            provider: DEFAULT_PROVIDER.to_owned(),
-            model: DEFAULT_MODEL.to_owned(),
+            provider: config.judge_provider.clone(),
+            model: config.judge_model.clone(),
             max_output_tokens: MAX_OUTPUT_TOKENS,
         }
     }
@@ -164,7 +174,7 @@ impl GatewayJudge {
     async fn judge_inner(&self, input: &JudgeInput) -> FarmResult<JudgeVerdict> {
         let request = AiRequest::builder(
             vec![
-                AiMessage::system(SYSTEM_PROMPT),
+                AiMessage::system(format!("{SYSTEM_PROMPT}\n{}", verdict_schema())),
                 AiMessage::user(render_user_message(input)),
             ],
             self.provider.as_str(),
@@ -172,7 +182,6 @@ impl GatewayJudge {
             self.max_output_tokens,
             self.request_context()?,
         )
-        .with_structured_output(StructuredOutputOptions::with_schema(verdict_schema()))
         .build();
         let response = self
             .ai
@@ -189,6 +198,17 @@ impl GatewayJudge {
             output_tokens: response.output_tokens.and_then(|t| i32::try_from(t).ok()),
         })
     }
+}
+
+#[must_use]
+pub fn gateway_judge(
+    ai: Option<Arc<AiService>>,
+    user_id: &UserId,
+    config: &EvalsConfig,
+) -> Option<Arc<dyn EvalJudge>> {
+    let ai = ai?;
+    let judge: Arc<dyn EvalJudge> = Arc::new(GatewayJudge::new(ai, user_id.clone(), config));
+    Some(judge)
 }
 
 impl EvalJudge for GatewayJudge {

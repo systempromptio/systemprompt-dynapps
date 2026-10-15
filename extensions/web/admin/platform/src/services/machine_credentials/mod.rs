@@ -13,32 +13,18 @@
 pub mod caller;
 mod grant;
 pub mod input;
+mod seal;
 
 use crate::repositories::connectors::machine_credentials::{
     MachineCredentialRow, NewMachineCredential, find_machine_credential, set_machine_credential,
 };
 use crate::services::service_accounts::ServiceAccounts;
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin_core::crypto::secret_crypto;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub use grant::endpoint_allowed;
 pub use input::{AttachCredential, MachineKind};
-
-#[derive(Serialize, Deserialize)]
-struct SealedSecret {
-    user: String,
-    provider: String,
-    secret: String,
-}
-
-impl std::fmt::Debug for SealedSecret {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("SealedSecret { <redacted> }")
-    }
-}
 
 // Why: attaching to a provider the account already holds rotates it in place
 // (`set_machine_credential`), so there is no separate rotate path.
@@ -48,13 +34,30 @@ pub struct Holder<'a> {
     pub provider: &'a str,
 }
 
+/// What an attach did: a first credential for the provider, or a rotation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Attached {
+    New,
+    Rotated,
+}
+
+impl Attached {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::New => "attach",
+            Self::Rotated => "rotate",
+        }
+    }
+}
+
 pub async fn attach(
     pool: &PgPool,
     accounts: &ServiceAccounts,
     holder: Holder<'_>,
     input: AttachCredential,
     created_by: &str,
-) -> AdminResult<()> {
+) -> AdminResult<Attached> {
     let Holder { user, provider } = holder;
     if !accounts.is_service_account(user).await? {
         return Err(AdminError::Unprocessable(
@@ -62,15 +65,10 @@ pub async fn attach(
         ));
     }
     let (kind, config, secret) = input.validated()?;
-    let key = secret_crypto::load_master_key()?;
-    let nonce = secret_crypto::generate_nonce();
-    let envelope = serde_json::to_vec(&SealedSecret {
-        user: user.as_str().to_owned(),
-        provider: provider.to_owned(),
-        secret,
-    })
-    .map_err(AdminError::internal)?;
-    let ciphertext = secret_crypto::encrypt(&key, &nonce, &envelope)?;
+    let existed = find_machine_credential(pool, user, provider)
+        .await?
+        .is_some();
+    let sealed = seal::seal(user, provider, secret)?;
     set_machine_credential(
         pool,
         &NewMachineCredential {
@@ -78,13 +76,17 @@ pub async fn attach(
             provider,
             kind: kind.as_str(),
             config,
-            secret_ciphertext: ciphertext,
-            secret_nonce: nonce.to_vec(),
+            secret_ciphertext: sealed.ciphertext,
+            secret_nonce: sealed.nonce,
             created_by,
         },
     )
     .await?;
-    Ok(())
+    Ok(if existed {
+        Attached::Rotated
+    } else {
+        Attached::New
+    })
 }
 
 pub async fn broker_token(
@@ -126,18 +128,5 @@ pub async fn broker_token(
 }
 
 fn open(row: &MachineCredentialRow, user: &UserId, provider: &str) -> AdminResult<String> {
-    let key = secret_crypto::load_master_key()?;
-    let nonce = row
-        .secret_nonce
-        .as_slice()
-        .try_into()
-        .map_err(AdminError::internal)?;
-    let bytes = secret_crypto::decrypt(&key, &nonce, &row.secret_ciphertext)?;
-    let sealed: SealedSecret = serde_json::from_slice(&bytes).map_err(AdminError::internal)?;
-    if sealed.user != user.as_str() || sealed.provider != provider {
-        return Err(AdminError::Forbidden(
-            "Machine credential owner mismatch".into(),
-        ));
-    }
-    Ok(sealed.secret)
+    seal::unseal(&row.secret_ciphertext, &row.secret_nonce, user, provider)
 }

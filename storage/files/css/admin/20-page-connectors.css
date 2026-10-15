@@ -56,8 +56,6 @@
     letter-spacing: var(--sp-tracking-wide);
 }
 
-.sp-connector[data-glyph="salesforce"] .sp-connector__mark,
-.sp-connector[data-glyph="atlassian"] .sp-connector__mark,
 .sp-connector[data-glyph="google"] .sp-connector__mark {
     background: var(--sp-accent-dim);
     color: var(--sp-accent-text);

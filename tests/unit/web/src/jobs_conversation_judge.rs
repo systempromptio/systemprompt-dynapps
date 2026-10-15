@@ -179,3 +179,16 @@ fn an_oversized_conversation_keeps_its_opening_and_closing_turns() {
     assert!(text.contains("USER: prompt 39 "), "closing turn dropped");
     assert!(text.contains("turns omitted"), "no elision marker");
 }
+
+// Why: the judge no longer forces Anthropic tool_choice (Sonnet 5.5 refuses
+// it), so the verdict arrives as text that may be fenced or prefaced.
+#[test]
+fn a_verdict_wrapped_in_prose_or_a_fence_still_parses() {
+    let raw = "Here is the verdict:\n```json\n{\"title\": \"Fix build\", \"category\": \
+               \"development\", \"summary\": \"s\", \"tags\": [], \"outcome\": \"achieved\", \
+               \"skills_observed\": [], \"confidence\": 0.9, \"completion\": 80, \
+               \"completion_rationale\": \"r\"}\n```";
+    let parsed = parse_classification(raw).expect("fenced verdict");
+    assert_eq!(parsed.category, Category::Development);
+    assert_eq!(parsed.completion, 80);
+}

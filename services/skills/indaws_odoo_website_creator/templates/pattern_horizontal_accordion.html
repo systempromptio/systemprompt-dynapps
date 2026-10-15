@@ -1,0 +1,56 @@
+<!--
+  PATTERN: HORIZONTAL accordion (cards that expand). Hook class: s_iw_hacc
+  Behavior: a ROW of narrow cards; when you hover OR click one, it EXPANDS (grows in
+  width) and shows its content; the others shrink. One starts open by default. When you leave the
+  container, it reverts to the last one SELECTED by click. AGNOSTIC content (title+text, icon, image…).
+
+  MECHANICS — animated flex-grow + an `.active` class (a single active item):
+    - Each card is `.s_iw_hacc-item`; one has `.active` at the start (the one open by default).
+    - The JS sets `.active` on HOVER (mouseenter) and on CLICK (locks the selection); on the container's
+      `mouseleave` it reverts to the selected one. The CSS animates `flex-grow` and fades the body in (`.s_iw_hacc-body`).
+    - build_page_arch KEEPS classes/structure; the interaction goes in INJECTED CSS+JS (once, site-wide;
+      delegation via `.s_iw_hacc`, serves all instances).
+
+  RESERVED SPACE: a card with no content (leave the `.s_iw_hacc-body` empty) stays as a slot to
+  fill in later — handy when the design brings positions with no copy yet.
+
+  RESPONSIVE: below <768px the horizontal accordion doesn't fit → it degrades to a vertical STACK with all open.
+
+  === CSS to inject ONCE (hardcode BRAND hex, GOTCHA #15) ===
+  .s_iw_hacc{display:flex;gap:14px;align-items:stretch;}
+  .s_iw_hacc .s_iw_hacc-item{flex:1 1 0;min-width:66px;min-height:360px;background:#DCEEEC;border-radius:22px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;padding:22px;cursor:pointer;transition:flex-grow .45s cubic-bezier(.2,.6,.2,1),background-color .4s ease;}
+  .s_iw_hacc .s_iw_hacc-item.active{flex-grow:7;background:#F4F5F6;justify-content:flex-start;}
+  .s_iw_hacc .s_iw_hacc-num{width:52px;height:52px;border-radius:50%;background:#5EBFBA;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;}
+  .s_iw_hacc .s_iw_hacc-body{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s ease .05s;min-width:230px;}
+  .s_iw_hacc .s_iw_hacc-item.active .s_iw_hacc-body{opacity:1;max-height:1000px;margin-top:22px;}
+  @media(max-width:767.98px){.s_iw_hacc{flex-direction:column;}.s_iw_hacc .s_iw_hacc-item{min-height:0;flex:none;justify-content:flex-start;background:#F4F5F6;}.s_iw_hacc .s_iw_hacc-item .s_iw_hacc-body{opacity:1;max-height:none;margin-top:16px;min-width:0;}}
+  @media (prefers-reduced-motion: reduce){.s_iw_hacc .s_iw_hacc-item,.s_iw_hacc .s_iw_hacc-body{transition:none;}}
+  /* PERF note: animating flex-grow re-runs layout each frame — that IS this design (cards genuinely
+     resize) and the cost is contained to this row; keep it. Do NOT "optimize" it to transform:scale —
+     that distorts the content. If a page shows jank here, shorten the .45s or reduce the card count. */
+
+  === JS to inject ONCE ===
+  (function(){function init(){document.querySelectorAll('.s_iw_hacc').forEach(function(acc){
+   var it=acc.querySelectorAll('.s_iw_hacc-item');if(!it.length)return;var sel=0;
+   function set(i){it.forEach(function(x,idx){x.classList.toggle('active',idx===i);});}set(0);
+   it.forEach(function(el,idx){el.addEventListener('mouseenter',function(){set(idx);});el.addEventListener('click',function(){sel=idx;set(idx);});});
+   acc.addEventListener('mouseleave',function(){set(sel);});});}
+   if(document.readyState!=='loading')init();else document.addEventListener('DOMContentLoaded',init);})();
+
+  Contract: `.s_iw_hacc` wraps the row; each `.s_iw_hacc-item` with a `.s_iw_hacc-num` (optional) and a
+  `.s_iw_hacc-body`. One `.active` at the start. An empty body = reserved space.
+-->
+<div class="s_iw_hacc" data-name="Horizontal accordion">
+  <div class="s_iw_hacc-item active">
+    <div class="s_iw_hacc-num">1</div>
+    <div class="s_iw_hacc-body"><h3 class="fw-bold">{{TITLE 1}}</h3><p>{{TEXT 1}}</p></div>
+  </div>
+  <div class="s_iw_hacc-item">
+    <div class="s_iw_hacc-num">2</div>
+    <div class="s_iw_hacc-body"><h3 class="fw-bold">{{TITLE 2}}</h3><p>{{TEXT 2}}</p></div>
+  </div>
+  <div class="s_iw_hacc-item">
+    <div class="s_iw_hacc-num">3</div>
+    <div class="s_iw_hacc-body"><!-- empty = reserved space for later --></div>
+  </div>
+</div>

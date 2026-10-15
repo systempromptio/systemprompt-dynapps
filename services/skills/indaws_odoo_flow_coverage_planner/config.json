@@ -1,0 +1,21 @@
+{
+  "_comment": "Conexion y opciones. NUNCA commitear credenciales reales. Preferir variables de entorno (ODOO_URL/ODOO_DB/ODOO_USER/ODOO_KEY) que consume odoo-pilot.",
+  "connection": {
+    "url": "${ODOO_URL}",
+    "db": "${ODOO_DB}",
+    "user": "${ODOO_USER}",
+    "key": "${ODOO_KEY}"
+  },
+  "odoo_pilot_dir": "auto-detect: skills/odoo-pilot/scripts",
+  "flow_tester_dir": "auto-detect: skills/odoo-flow-tester",
+  "scope": {
+    "_options": ["all", "business_apps", "custom_only"],
+    "value": "business_apps"
+  },
+  "delivery_mode": {
+    "_options": ["A_document", "B_verify", "C_execute"],
+    "value": "B_verify"
+  },
+  "output_dir": "./flow_coverage_output",
+  "target_version": "auto-detect"
+}

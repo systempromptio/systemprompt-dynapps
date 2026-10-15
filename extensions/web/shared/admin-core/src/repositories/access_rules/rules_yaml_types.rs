@@ -93,8 +93,6 @@ pub struct BandMap {
     pub project: Option<BandSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connector: Option<BandSpec>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub salesforce: Option<BandSpec>,
 }
 
 impl BandMap {
@@ -104,7 +102,6 @@ impl BandMap {
             && self.group.is_none()
             && self.project.is_none()
             && self.connector.is_none()
-            && self.salesforce.is_none()
     }
 
     #[must_use]
@@ -113,7 +110,6 @@ impl BandMap {
             ("project", &self.project),
             ("group", &self.group),
             ("connector", &self.connector),
-            ("salesforce", &self.salesforce),
             ("role", &self.role),
         ]
         .into_iter()
@@ -127,7 +123,6 @@ impl BandMap {
             "group" => self.group = Some(spec),
             "project" => self.project = Some(spec),
             "connector" => self.connector = Some(spec),
-            "salesforce" => self.salesforce = Some(spec),
             _ => {},
         }
     }
@@ -285,7 +280,7 @@ fn subject_problem(spec: &BandSpec) -> Option<&'static str> {
     }
 }
 
-pub const BAND_NAMES: [&str; 5] = ["role", "group", "project", "connector", "salesforce"];
+pub const BAND_NAMES: [&str; 4] = ["role", "group", "project", "connector"];
 
 pub const GLOB_ONLY_KINDS: [EntityKind; 2] = [EntityKind::GatewayRoute, EntityKind::Hook];
 

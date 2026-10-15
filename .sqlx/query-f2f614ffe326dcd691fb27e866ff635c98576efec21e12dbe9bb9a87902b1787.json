@@ -1,0 +1,84 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT farm_id AS \"farm_id!: FarmId\", agent_id AS \"agent_id!: FarmAgentId\",\n       (COALESCE(finished_at, created_at) AT TIME ZONE 'UTC')::date AS \"day!\",\n       COUNT(*)::bigint AS \"runs!\",\n       COALESCE(SUM(passed), 0)::bigint AS \"passed!\",\n       COALESCE(SUM(passed + failed + errored), 0)::bigint AS \"decided!\",\n       AVG(mean_score) AS mean_score,\n       COALESCE(SUM(cost_microdollars), 0)::bigint AS \"cost_microdollars!\"\nFROM agent_farm_eval_runs\nWHERE ($1::text IS NULL OR farm_id = $1)\n  AND ($2::text IS NULL OR agent_id = $2)\n  AND created_at >= $3\n  AND status IN ('completed', 'cancelled')\nGROUP BY farm_id, agent_id, 3\nORDER BY farm_id, agent_id, 3\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "farm_id!: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_runs",
+            "name": "farm_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "agent_id!: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_runs",
+            "name": "agent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "day!",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "runs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "passed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "decided!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "mean_score",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f2f614ffe326dcd691fb27e866ff635c98576efec21e12dbe9bb9a87902b1787"
+}

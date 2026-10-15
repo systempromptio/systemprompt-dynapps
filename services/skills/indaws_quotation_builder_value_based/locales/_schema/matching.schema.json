@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "matching.schema.json",
+  "title": "matching.json",
+  "description": "Signals + glossary + local case translations (plan §2.2). Consultant-owned. Absorbs old signals/glossary/cases files. Archetype keys are EXACT cross-file join keys (multi-entity/excel-legacy/b2b-webshop/fast-golive/scaling) — renaming breaks match_cases.py joins against shared/cases_library.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["signals", "glossary", "cases"],
+  "properties": {
+    "signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apps", "complementos", "metrics", "sectors", "archetypes", "intake_labels", "intake_truthy", "header_markers", "n_sociedades_word", "vertical_signals", "app_parse_order", "complementos_catalog", "sectors_parse", "erps"],
+      "properties": {
+        "app_parse_order": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "parse_toma_datos.py app iteration/output order (canonical app_ids). Preserves the original APPS_SIGNALS insertion order, which differs from app_registry._apps_order."
+        },
+        "complementos_catalog": {
+          "type": "object",
+          "description": "parse_toma_datos.py complement catalog: app_id -> ordered list of {id, nombre, precio, por_unidad?}. Signals for each id come from signals.complementos.<id>.",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "nombre", "precio"],
+              "properties": {
+                "id": { "type": "string" },
+                "nombre": { "type": "string" },
+                "precio": { "type": "number" },
+                "por_unidad": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        "sectors_parse": {
+          "type": "array",
+          "description": "parse_toma_datos.py sector detection, ordered (first match wins). label = the output value written to metadata.sector.",
+          "items": {
+            "type": "object",
+            "required": ["label", "keywords"],
+            "properties": {
+              "label": { "type": "string" },
+              "keywords": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "erps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "parse_toma_datos.py previous-system (ERP) detection tokens."
+        },
+        "apps": {
+          "type": "object",
+          "description": "app_id -> keyword list for app detection. Keys are canonical app_ids.",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
+        "complementos": {
+          "type": "object",
+          "description": "complement_id -> keyword list.",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
+        "metrics": {
+          "type": "object",
+          "description": "metric key -> regex fragment (usuarios/empleados/comerciales/almacenes).",
+          "additionalProperties": { "type": "string" }
+        },
+        "sectors": {
+          "type": "object",
+          "description": "sector key -> {display, keywords}.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["display", "keywords"],
+            "properties": {
+              "display": { "type": "string" },
+              "keywords": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "archetypes": {
+          "type": "object",
+          "description": "EXACT join keys required. Each maps to a keyword list (accent-stripped at match time).",
+          "additionalProperties": false,
+          "required": ["multi-entity", "excel-legacy", "b2b-webshop", "fast-golive", "scaling"],
+          "properties": {
+            "multi-entity": { "type": "array", "items": { "type": "string" } },
+            "excel-legacy": { "type": "array", "items": { "type": "string" } },
+            "b2b-webshop": { "type": "array", "items": { "type": "string" } },
+            "fast-golive": { "type": "array", "items": { "type": "string" } },
+            "scaling": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "intake_labels": {
+          "type": "object",
+          "description": "toma-de-datos field label synonyms.",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
+        "intake_truthy": { "type": "array", "items": { "type": "string" }, "description": "es=['sí','grupo','internacional']." },
+        "header_markers": { "type": "array", "items": { "type": "string" }, "description": "es=['toma de datos','data intake']." },
+        "n_sociedades_word": { "type": "string", "description": "es='socied'." },
+        "vertical_signals": {
+          "type": "object",
+          "description": "vertical key -> keyword list (e.g. inbuilt construction estimators).",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "glossary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sector_glossary_table", "lang_labels", "soft_skills", "skill_block", "skill_type_tokens", "odoo_skill_prefix"],
+      "properties": {
+        "sector_glossary_table": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["odoo_term", "sector_words"],
+            "properties": {
+              "odoo_term": { "type": "string" },
+              "sector_words": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "lang_labels": { "type": "object", "additionalProperties": { "type": "string" }, "description": "es: english/french/spanish/catalan -> localized label." },
+        "soft_skills": { "type": "object", "additionalProperties": { "type": "string" } },
+        "skill_block": { "type": "array", "items": { "type": "string" }, "description": "hobby/personal tokens to exclude from team skills." },
+        "skill_type_tokens": {
+          "type": "object",
+          "required": ["odoo", "lang"],
+          "additionalProperties": true,
+          "description": "fetch_team skill-type tokens; follow locale.odoo_lang.",
+          "properties": {
+            "odoo": { "type": "string" },
+            "lang": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "odoo_skill_prefix": { "type": "string", "description": "Placeholder {sn}. es='Odoo {sn}'." }
+      }
+    },
+    "cases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local_case_source", "case_translations", "sector_token_map"],
+      "properties": {
+        "local_case_source": { "type": "string", "description": "e.g. 'common-skills:content-collection'." },
+        "case_translations": {
+          "type": "object",
+          "description": "Per-case-id localized narrative. Key = case id in shared/cases_library.json. Each case referenced there must have resultado+metric here (or explicit EN fallback) — validator checks referential integrity.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["resultado", "metric"],
+            "properties": {
+              "resultado": { "type": "string" },
+              "metric": { "type": "string" },
+              "cliente": { "type": "string", "description": "Localized client display name; overrides shared/cases_library.json cliente." },
+              "sectors": { "type": "array", "items": { "type": "string" }, "description": "LOCALIZED sector strings used for scoring in this locale (the toma arrives in this language). Distinct from shared neutral tokens." },
+              "scope": { "type": "string", "description": "Localized scope label (es 'internacional' / en 'international')." }
+            }
+          }
+        },
+        "sector_token_map": {
+          "type": "object",
+          "description": "This locale's intake sector words -> language-neutral sector tokens in shared/cases_library.json.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}

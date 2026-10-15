@@ -1,4 +1,4 @@
-//! The judge: one structured-output call per conversation through the
+//! The judge: one JSON-answer call per conversation through the
 //! process's `AiService`, audited as this job's actor. It labels what the
 //! deterministic record cannot — a title, a summary, the intent behind the
 //! conversation and one 0–100 verdict on whether that intent was completed.
@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use systemprompt::ai::{AiMessage, AiRequest, AiService, StructuredOutputOptions};
+use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId};
 use systemprompt::models::execution::context::RequestContext;
 
@@ -64,12 +64,14 @@ summary: one paragraph, at most 60 words, in the third person, describing what t
 wanted and what happened. Never quote credentials, keys or personal data.
 
 tags: up to 8 short lowercase labels that add detail beyond the category (for example \
-\"jira\", \"sql\", \"sfcc\", \"onboarding\").
+\"odoo\", \"sql\", \"invoicing\", \"onboarding\").
 
 skills_observed: the names of any skills or slash commands the person invoked, exactly as \
 they appear (for example \"ba-story-drafting\"). Empty if none.
 
-confidence: 0 to 1, how sure you are of the category.";
+confidence: 0 to 1, how sure you are of the category.
+
+Reply with one JSON object and nothing else, matching this schema:";
 
 #[must_use]
 pub(super) fn job_context_id() -> ContextId {
@@ -104,7 +106,7 @@ impl ConversationClassifier for Judge {
     async fn classify(&self, transcript: &str) -> Result<JudgeVerdict, JobError> {
         let request = AiRequest::builder(
             vec![
-                AiMessage::system(SYSTEM_PROMPT),
+                AiMessage::system(format!("{SYSTEM_PROMPT}\n{}", classification_schema())),
                 AiMessage::user(transcript),
             ],
             self.provider.as_str(),
@@ -112,7 +114,6 @@ impl ConversationClassifier for Judge {
             self.max_output_tokens,
             self.request_context()?,
         )
-        .with_structured_output(StructuredOutputOptions::with_schema(classification_schema()))
         .build();
         let response = self.ai.generate(&request).await?;
         let classification = parse_classification(&response.content)?;

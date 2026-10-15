@@ -1,0 +1,58 @@
+<!--
+  PATTERN: infinite vertical scroll / marquee (no module). Hook class: s_iw_vmarquee
+  Behavior: a column of items scrolls VERTICALLY in a continuous, endless LOOP (auto, not
+  driven by the user's scroll). The item is AGNOSTIC (an <img>, a card, a quote, a logo…).
+  For a HORIZONTAL marquee, change flex-direction to row and translateY→translateX (same mechanics).
+
+  MECHANICS — the seamless-loop trick:
+    - The SET of items is DUPLICATED (2 identical copies) inside `.iw-vmarquee-track`.
+    - The animation does `translateY(-50%)`: after traveling exactly half (= one set), the second set
+      ends up exactly where the first began → invisible jump, perfect loop.
+    - CRITICAL: the spacing between items must go as `margin` ON EACH item (e.g. `mb-4`), NOT as
+      the flex `gap`. With `gap`, the -50% does NOT land on an exact multiple of the set and you see a "jolt" on
+      each loop. With margin-bottom on all items, -50% = exactly one set's height.
+    - Duplicate the EXACT set (same items, same order). Mark the copy with `aria-hidden="true"`.
+
+  RESPONSIVE / accessibility:
+    - The viewport height (`.s_iw_vmarquee`) goes inline and defines how many items are seen at
+      once. Use `height:min(540px,70vh)` (not a bare `540px`) so it never dominates a short phone
+      screen — `min()` in an inline style survives the build. It fits in any column (col-lg-6…).
+    - Pauses on `:hover` (courtesy). Respects `prefers-reduced-motion`: it stops and removes the mask.
+    - `position:sticky/fixed` are NOT used here; `animation` in injected CSS survives build_page_arch
+      (which does remove inline `<style>` and `position:fixed|sticky`).
+
+  === CSS to inject ONCE (custom_code_footer or ir.asset) ===
+  .s_iw_vmarquee{overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 7%,#000 93%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 7%,#000 93%,transparent 100%);}
+  .s_iw_vmarquee .iw-vmarquee-track{display:flex;flex-direction:column;animation:iw-vmarquee-scroll 22s linear infinite;will-change:transform;}
+  .s_iw_vmarquee:hover .iw-vmarquee-track{animation-play-state:paused;}
+  .s_iw_vmarquee.iw-idle .iw-vmarquee-track{animation-play-state:paused;}
+  @keyframes iw-vmarquee-scroll{from{transform:translateY(0);}to{transform:translateY(-50%);}}
+  @media (prefers-reduced-motion: reduce){.s_iw_vmarquee{-webkit-mask-image:none;mask-image:none;}.s_iw_vmarquee .iw-vmarquee-track{animation:none;}}
+
+  === PERF JS to inject ONCE — pause the loop while off-screen (recommended) ===
+  An infinite CSS animation keeps costing CPU/battery even when the section is scrolled out of
+  view. This observer toggles `.iw-idle` so the loop only runs while (near-)visible — identical
+  look on screen. `.iw-idle` self-heals on load (the observer sets the right state immediately),
+  so a state accidentally persisted by a builder Save (GOTCHA 10) is harmless.
+  (function(){function init(){var els=document.querySelectorAll('.s_iw_vmarquee');
+   if(!els.length||!('IntersectionObserver' in window))return;
+   var io=new IntersectionObserver(function(es){es.forEach(function(e){e.target.classList.toggle('iw-idle',!e.isIntersecting);});},{rootMargin:'100px'});
+   els.forEach(function(el){io.observe(el);});}
+   if(document.readyState!=='loading')init();else document.addEventListener('DOMContentLoaded',init);})();
+
+  Speed: raise/lower the `22s`. Reverse direction (down instead of up): invert the keyframe
+  (`from{translateY(-50%)} to{translateY(0)}`) or add `animation-direction:reverse`.
+  If the items are <img>s, add `loading="lazy" decoding="async"` to each.
+  Contract: viewport `.s_iw_vmarquee` (height inline) > `.iw-vmarquee-track` > [set] + [duplicated set].
+  Neutral placeholders: explicit gray with `.wc-ph` (NOT `bg-light`, which is a palette color).
+-->
+<div class="s_iw_vmarquee mx-auto" data-name="Vertical marquee" style="height:min(540px,70vh);max-width:min(100%,440px);">
+  <div class="iw-vmarquee-track">
+    <!-- ===== set (fill with whatever you want: img/card/quote…) ===== -->
+    <div class="mb-4"><div class="wc-ph rounded-4 w-100" style="aspect-ratio:16/10;"></div></div>
+    <div class="mb-4"><div class="wc-ph rounded-4 w-100" style="aspect-ratio:16/10;"></div></div>
+    <!-- ===== EXACT DUPLICATED set (seamless loop) ===== -->
+    <div class="mb-4" aria-hidden="true"><div class="wc-ph rounded-4 w-100" style="aspect-ratio:16/10;"></div></div>
+    <div class="mb-4" aria-hidden="true"><div class="wc-ph rounded-4 w-100" style="aspect-ratio:16/10;"></div></div>
+  </div>
+</div>

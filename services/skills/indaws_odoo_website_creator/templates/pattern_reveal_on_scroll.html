@@ -1,0 +1,87 @@
+<!--
+  PATTERN: reveal on scroll (aka "scroll-driven animation" / "reveal on scroll"). No module.
+  Hook class per element: iw-rup   |   fixed-column helper: iw-sticky-col
+  Behavior: each element marked with `.iw-rup` starts invisible and shifted downward, and when it
+  enters the viewport it does a smooth fade + slide-up. EACH element is observed separately (a
+  single IntersectionObserver for all of them), so they appear ONE BY ONE as the user scrolls down.
+  The content is AGNOSTIC: a card, a row, an image, a text block…
+
+  WHEN TO USE IT:
+    - Lists/columns of cards that "appear" as you scroll (the most common case).
+    - Combine it with a FIXED column alongside (`.iw-sticky-col`) for the "fixed photo on the
+      left + cards revealing on the right" layout.
+
+  HEAVY VARIANT (optional): if you want a more expressive reveal (fade + translate + scale + rotate,
+  with parallax), use a separate class (e.g. `.iw-reveal-bottle`) with its own transition. Keep
+  THIS one (`.iw-rup`) for the understated "fade + slide-up only" case.
+
+  RULES (see interactive-patterns.md → "Rules common to all patterns"):
+    - `position:sticky` goes in INJECTED CSS, never inline — `build_page_arch` strips inline
+      sticky/fixed. That's why `.iw-sticky-col` is a footer class, not a style.
+    - inline `transition`/`transform`/`opacity` DO survive build; the `<style>`/`<script>` does NOT →
+      the block goes in once in `custom_code_footer` (or ir.asset).
+    - Inert if unused: with no `.iw-rup` elements on the page, the JS does `return` and does nothing.
+    - Respects `prefers-reduced-motion`: no animation, everything visible from the start.
+    - The observer uses `unobserve` after revealing → only once, no recalculation on every scroll.
+
+  === CSS + JS to inject ONCE (custom_code_footer or ir.asset) ===
+  <style id="iw-revealup">
+  .iw-rup{opacity:1;transform:none;}
+  @media (min-width:992px){.iw-sticky-col{position:sticky;top:24px;}}
+  @media (prefers-reduced-motion: no-preference){
+    .iw-rup{opacity:0;transform:translateY(40px);transition:opacity .7s ease, transform .8s cubic-bezier(.2,.75,.2,1);}
+    .iw-rup.iw-in{opacity:1;transform:none;}
+  }
+  </style>
+  <script id="iw-revealup-js">
+  (function(){
+    function init(){
+      var els=document.querySelectorAll('.iw-rup');
+      if(!els.length) return;
+      if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('iw-in');});return;}
+      var io=new IntersectionObserver(function(entries){
+        entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('iw-in'); io.unobserve(e.target);} });
+      },{rootMargin:'0px 0px -10% 0px',threshold:0.12});
+      els.forEach(function(e){io.observe(e);});
+    }
+    if(document.readyState!=='loading') init(); else document.addEventListener('DOMContentLoaded',init);
+  })();
+  </script>
+
+  Tweaks: slide distance → `translateY(40px)`; speed → `.7s/.8s`; when it triggers →
+  `rootMargin`/`threshold`. Fixed-column offset → `.iw-sticky-col{top:24px}`.
+  Optional STAGGER: if several cards enter at once and you want a cascade, add `style="transition-delay:.08s"`
+  (then .16s, .24s…) inline on each one — the inline delay survives build.
+  Neutral placeholders: explicit grey with `.wc-ph` (NOT `bg-light`, which is a palette color).
+-->
+<section class="s_text_block" data-snippet="s_text_block" data-name="Cases / reveal on scroll">
+  <div class="container">
+    <div class="row g-4 g-lg-5">
+      <!-- LEFT · fixed (sticky ≥lg) -->
+      <div class="col-lg-5">
+        <div class="iw-sticky-col">
+          <!-- min() cap: full 520px on desktop; on a phone (where this column stacks on top)
+               it shrinks (~66vw) instead of pushing the content a full screen down -->
+          <div class="wc-ph rounded-4 w-100" style="min-height:min(520px,66vw);"></div>
+        </div>
+      </div>
+      <!-- RIGHT · items that reveal one by one as you scroll down -->
+      <div class="col-lg-7">
+        <div class="d-flex flex-column gap-4">
+          <div class="iw-rup rounded-4 p-4 p-lg-5" style="background-color:#F7F8F9;">
+            <h3 class="fw-bold mb-2">Title</h3>
+            <p class="mb-0">Card text.</p>
+          </div>
+          <div class="iw-rup rounded-4 p-4 p-lg-5" style="background-color:#F7F8F9;">
+            <h3 class="fw-bold mb-2">Title</h3>
+            <p class="mb-0">Card text.</p>
+          </div>
+          <div class="iw-rup rounded-4 p-4 p-lg-5" style="background-color:#F7F8F9;">
+            <h3 class="fw-bold mb-2">Title</h3>
+            <p class="mb-0">Card text.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

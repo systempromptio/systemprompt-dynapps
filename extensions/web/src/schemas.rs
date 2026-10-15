@@ -13,8 +13,6 @@ pub(crate) const SCHEMA_ADMIN_DASHBOARD: &str = include_str!("../schema/10_admin
 pub(crate) const SCHEMA_MANAGEMENT: &str = include_str!("../schema/12_management.sql");
 pub(crate) const SCHEMA_WEB_SIDE_TABLES: &str = include_str!("../schema/13_web_side_tables.sql");
 pub(crate) const SCHEMA_USAGE_METRICS: &str = include_str!("../schema/17_usage_metrics.sql");
-pub(crate) const SCHEMA_SALESFORCE_IDENTITY: &str =
-    include_str!("../schema/21_salesforce_identity.sql");
 pub(crate) const SCHEMA_DEV_LOGIN_CODES: &str = include_str!("../schema/22_dev_login_codes.sql");
 pub(crate) const SCHEMA_GROUPS_PROJECTS: &str = include_str!("../schema/23_groups_projects.sql");
 pub(crate) const SCHEMA_SCOPE_DEFAULTS: &str = include_str!("../schema/24_scope_defaults.sql");
@@ -32,7 +30,6 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::sql_only(SCHEMA_MANAGEMENT),
         SchemaDefinition::sql_only(SCHEMA_WEB_SIDE_TABLES),
         SchemaDefinition::sql_only(SCHEMA_USAGE_METRICS),
-        SchemaDefinition::sql_only(SCHEMA_SALESFORCE_IDENTITY),
         SchemaDefinition::sql_only(SCHEMA_DEV_LOGIN_CODES),
         SchemaDefinition::sql_only(SCHEMA_GROUPS_PROJECTS),
         SchemaDefinition::sql_only(SCHEMA_SCOPE_DEFAULTS),
@@ -64,6 +61,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::sql_only(include_str!(
             "../schema/53_connector_machine_credentials.sql"
         )),
+        SchemaDefinition::sql_only(include_str!("../schema/54_connector_credential_audit.sql")),
     ]
 }
 

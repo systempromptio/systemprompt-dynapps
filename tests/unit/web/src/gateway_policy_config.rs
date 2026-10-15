@@ -50,21 +50,16 @@ fn the_scanners_are_in_warn_mode_and_block_nothing() {
     assert_eq!(default_quotas().spec.safety.mode, SafetyMode::Warn);
 }
 
-// Why: the quota windows are the third plane and the one most likely to be
-// forgotten — a $2/day clamp that ordinary development hits would have kept
-// answering 429 under a "warn mode" that only covered the other two.
+// Why: enforce (2026-10-14) refused active users with 429 at the $5/h window,
+// so on 2026-10-15 the quota plane returned to warning thresholds.
 #[test]
-fn the_quota_windows_are_in_warn_mode_and_answer_no_429() {
+fn the_quota_windows_are_warning_thresholds() {
     assert_eq!(default_quotas().spec.quota_mode, QuotaMode::Warn);
 }
 
-// Why: all three planes must flip together or "no governance is enforcing" is
-// not a true statement about the deployment. One test reads all three so a
-// stage put back to enforce is a visible change here, whichever file it is in.
 #[test]
-fn every_gateway_plane_is_in_warn_mode_together() {
+fn the_scanner_plane_and_governance_chain_stay_in_warn_mode() {
     let spec = default_quotas().spec;
-    assert!(spec.quota_mode.is_warn(), "quota windows");
     assert!(spec.safety.mode.is_warn(), "safety scanners");
     let governance = std::fs::read_to_string(repo_root().join("services/governance/config.yaml"))
         .expect("read the governance chain config");
@@ -138,16 +133,22 @@ fn request_history_is_not_rescanned() {
     assert_eq!(default_quotas().spec.safety.history, SafetyHistoryMode::Off);
 }
 
-// A warning threshold, not a ceiling (Ed, 2026-09-04: no clamp, only
-// warnings): under `quota_mode: warn` a day past $200 is reported and never
-// refused. The number is pinned so a change is review-visible.
-#[test]
-fn the_daily_instance_wide_warning_threshold_is_two_hundred_dollars() {
-    let window = default_quotas()
+// Ceilings sized for the pilot (Ed, 2026-10-14): about ten $0.50 farm runs an
+// hour per account, $40 a day for the whole installation. Pinned so raising
+// them is review-visible.
+fn window(subject: &str, seconds: i32) -> Option<i64> {
+    default_quotas()
         .spec
         .quota_windows
         .into_iter()
-        .find(|w| w.window_seconds == 86_400)
-        .expect("a daily quota window");
-    assert_eq!(window.max_cost_microdollars, Some(200_000_000));
+        .find(|w| w.subject == subject && w.window_seconds == seconds)
+        .and_then(|w| w.max_cost_microdollars)
+}
+
+#[test]
+fn the_cost_ceilings_are_pinned() {
+    assert_eq!(window("user", 3_600), Some(5_000_000));
+    assert_eq!(window("user", 86_400), Some(15_000_000));
+    assert_eq!(window("organization", 86_400), Some(40_000_000));
+    assert_eq!(window("organization", 2_678_400), Some(150_000_000));
 }

@@ -1,0 +1,16 @@
+{
+  "name": "odoo-mailing-creator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pipeline HTML -> MJML -> email-safe -> Odoo 19 Mass Mailing. Herramienta generica, agnostica de marca.",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "mjml": "4.18.0",
+    "juice": "8.1.0",
+    "html-minifier-terser": "7.2.0",
+    "cheerio": "1.0.0"
+  }
+}

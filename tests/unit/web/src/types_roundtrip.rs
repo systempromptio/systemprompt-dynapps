@@ -354,9 +354,9 @@ fn prompt_and_model_come_only_from_their_own_events() {
 
     let (start, _) = payload(serde_json::json!({
         "session_id": "s", "cwd": "/repo", "hook_event_name": "SessionStart",
-        "model": "claude-fable-5", "source": "startup",
+        "model": "claude-opus-5-5", "source": "startup",
     }));
-    assert_eq!(start.model(), Some("claude-fable-5"));
+    assert_eq!(start.model(), Some("claude-opus-5-5"));
     assert_eq!(start.prompt(), None);
 }
 

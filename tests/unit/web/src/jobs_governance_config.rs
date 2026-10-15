@@ -131,9 +131,8 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
     assert_eq!(report.active, 4, "all four stages must be enabled");
     assert_eq!(
         report.warning, 4,
-        "the shipped chain is in warn mode (2026-09-04 measurement window); every stage \
-         evaluates and audits and none refuses. Flipping a stage back to `mode: enforce` is a \
-         deliberate act and changes this number."
+        "the shipped chain is entirely in warn mode (tool plane returned to warn 2026-10-15). \
+         Flipping a stage back to `mode: enforce` is a deliberate act and changes this number."
     );
 
     let yaml = std::fs::read_to_string(services.join("governance/config.yaml")).unwrap();
@@ -146,7 +145,7 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
     assert_eq!(
         doc["governance"]["mode"].as_str(),
         Some("warn"),
-        "the warn-mode window is declared at the top level, not per policy"
+        "the warn-mode window is declared at the top level; only enforce overrides it per policy"
     );
     let entropy = &secret_scan["entropy"];
     assert_eq!(entropy["enabled"].as_bool(), Some(true));

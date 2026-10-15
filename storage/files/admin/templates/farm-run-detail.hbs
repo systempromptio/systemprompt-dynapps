@@ -37,6 +37,17 @@
       {{/inline}}
     {{/components/page-header}}
 
+    <p class="sp-farm-run__identity" aria-label="Who this run was for and as">
+      <span class="sp-farm-run__identity-item">{{> components/icon name="card"}} Client
+        {{#if identity.client_url}}<a href="{{identity.client_url}}">{{identity.client_name}}</a>{{else}}{{> components/badge tone="muted" text="No client"}}{{/if}}</span>
+      <span class="sp-farm-run__identity-item">{{> components/icon name="user"}} Triggered by
+        <a href="{{identity.launcher_url}}">{{identity.launcher_name}}</a>
+        {{> components/badge tone=header.trigger.tone text=header.trigger.text}}</span>
+      <span class="sp-farm-run__identity-item">{{> components/icon name="shield"}} Ran as
+        <a href="{{identity.run_as_url}}">{{identity.run_as_name}}</a>
+        {{#if identity.run_as_differs}}{{> components/badge tone="info" text="Service account"}}{{else}}{{> components/badge tone="muted" text="Launcher"}}{{/if}}</span>
+    </p>
+
     <details class="sp-farm-run__ids">
       <summary class="sp-farm-run__ids-summary">Identifiers and limits</summary>
       <dl class="sp-kv-list">
@@ -52,6 +63,9 @@
         {{/if}}
         {{#if header.claimed_by}}
         <div class="sp-kv-row"><dt>Claimed by</dt><dd><code class="sp-code-inline">{{header.claimed_by}}</code></dd></div>
+        {{/if}}
+        {{#if header.runner_machine_id}}
+        <div class="sp-kv-row"><dt>Runner machine</dt><dd><code class="sp-code-inline">{{header.runner_machine_id}}</code>{{#if header.runner_region}} · {{header.runner_region}}{{/if}}</dd></div>
         {{/if}}
         {{#if header.lease_until_local}}
         <div class="sp-kv-row"><dt>Lease until</dt><dd>{{header.lease_until_local}}</dd></div>
@@ -77,6 +91,8 @@
     <div class="sp-tabs" role="tablist" data-tabs="farm-run" aria-label="Run views">
       <button type="button" class="sp-tab sp-tab--active" role="tab" id="run-tab-timeline" aria-controls="run-panel-timeline" aria-selected="true" data-tab="timeline">Timeline</button>
       <button type="button" class="sp-tab" role="tab" id="run-tab-transcript" aria-controls="run-panel-transcript" aria-selected="false" tabindex="-1" data-tab="transcript">Transcript</button>
+      <button type="button" class="sp-tab" role="tab" id="run-tab-report" aria-controls="run-panel-report" aria-selected="false" tabindex="-1" data-tab="report">Report</button>
+      <button type="button" class="sp-tab" role="tab" id="run-tab-governance" aria-controls="run-panel-governance" aria-selected="false" tabindex="-1" data-tab="governance">Governance{{#if governance.total}} <span class="sp-tab-count">{{governance.total}}</span>{{/if}}</button>
       <button type="button" class="sp-tab" role="tab" id="run-tab-cost" aria-controls="run-panel-cost" aria-selected="false" tabindex="-1" data-tab="cost">Cost</button>
       <button type="button" class="sp-tab" role="tab" id="run-tab-artifacts" aria-controls="run-panel-artifacts" aria-selected="false" tabindex="-1" data-tab="artifacts">Artifacts</button>
     </div>
@@ -116,6 +132,108 @@
         </section>
         {{/each}}
       </article>
+    </div>
+
+    <div class="sp-tab-panel" id="run-panel-report" role="tabpanel" aria-labelledby="run-tab-report" hidden>
+      <dl class="sp-kv-list" aria-label="Run facts">
+        <div class="sp-kv-row"><dt>Trigger</dt><dd>{{> components/badge tone=report.facts.trigger.tone text=report.facts.trigger.text}}</dd></div>
+        <div class="sp-kv-row"><dt>Started</dt><dd>{{report.facts.started}}</dd></div>
+        <div class="sp-kv-row"><dt>Finished</dt><dd>{{report.facts.finished}}</dd></div>
+        <div class="sp-kv-row"><dt>Turns</dt><dd>{{report.facts.turns}}</dd></div>
+        <div class="sp-kv-row"><dt>Tokens</dt><dd>{{report.facts.tokens}}</dd></div>
+        <div class="sp-kv-row"><dt>Cost</dt><dd>{{report.facts.cost}}</dd></div>
+      </dl>
+      {{#if report.has_report}}
+      <p class="sp-farm-run__diff-stats">
+        {{> components/badge tone=report.completion.tone text=report.completion.text}}
+        {{> components/badge tone=report.eval.tone text=report.eval.text}}
+        {{> components/badge tone=report.delivery.tone text=report.delivery.text}}
+        <span class="sp-farm-run__muted">{{report.mcp_reads}} MCP reads · {{report.mcp_writes}} writes · {{report.governance_warnings}} governance warnings · recorded {{report.recorded_local}}</span>
+      </p>
+      {{#if report.summary}}
+      <section class="sp-farm-run__turn">
+        <h3 class="sp-farm-run__turn-head">Summary</h3>
+        <p class="sp-farm-run__prose">{{report.summary}}</p>
+      </section>
+      {{/if}}
+      {{#if report.final_message}}
+      <details class="sp-farm-run__ids">
+        <summary class="sp-farm-run__ids-summary">Final message</summary>
+        <p class="sp-farm-run__prose sp-farm-run__report-message">{{report.final_message}}</p>
+      </details>
+      {{/if}}
+      {{> components/section title="Artifacts" note="Files the run wrote, as the observer recorded them."}}
+      {{#if report.has_outputs}}
+      {{#> components/table caption="Files the run wrote" table_mode="scroll"}}
+        <thead><tr><th>Path</th><th class="sp-table__cell--num">Size</th><th>SHA-256</th></tr></thead>
+        <tbody>
+        {{#each report.outputs}}
+          <tr>
+            <td><code class="sp-code-inline">{{this.path}}</code></td>
+            <td class="sp-table__cell--num">{{this.size}}</td>
+            <td><code class="sp-code-inline" title="{{this.sha256}}">{{this.sha256}}</code></td>
+          </tr>
+        {{/each}}
+        </tbody>
+      {{/components/table}}
+      {{else}}
+        {{> components/empty-state compact=true heading="No artifacts" message="The run recorded no output files."}}
+      {{/if}}
+      {{> components/section title="MCP calls" note="The run's MCP calls per server, split into reads and writes; failed counts calls whose result was an error."}}
+      {{#if report.has_mcp_servers}}
+      {{#> components/table caption="MCP calls per server" table_mode="scroll"}}
+        <thead><tr><th>Server</th><th class="sp-table__cell--num">Reads</th><th class="sp-table__cell--num">Writes</th><th class="sp-table__cell--num">Failed</th></tr></thead>
+        <tbody>
+        {{#each report.mcp_servers}}
+          <tr>
+            <td><code class="sp-code-inline">{{this.server}}</code></td>
+            <td class="sp-table__cell--num">{{this.reads}}</td>
+            <td class="sp-table__cell--num">{{this.writes}}</td>
+            <td class="sp-table__cell--num">{{this.failed}}</td>
+          </tr>
+        {{/each}}
+        </tbody>
+      {{/components/table}}
+      {{else}}
+        {{> components/empty-state compact=true heading="No MCP calls" message="The run made no MCP calls."}}
+      {{/if}}
+      {{else}}
+        {{> components/empty-state heading="No completion report yet" message="The runner writes the report when the run reaches a terminal status."}}
+      {{/if}}
+    </div>
+
+    <div class="sp-tab-panel" id="run-panel-governance" role="tabpanel" aria-labelledby="run-tab-governance" hidden>
+      {{#if governance.has_rows}}
+      <p class="sp-farm-run__diff-stats">
+        {{> components/badge tone="ok" text=(concat governance.allowed " allowed")}}
+        {{> components/badge tone="warn" text=(concat governance.warned " warned")}}
+        {{> components/badge tone="err" text=(concat governance.denied " denied")}}
+      </p>
+      {{#> components/table caption="Governance decisions on this run's tool calls" table_mode="scroll"}}
+        <thead><tr>
+          <th class="sp-col-date">When</th>
+          <th>Tool</th>
+          <th class="sp-col-status">Decision</th>
+          <th>Policy</th>
+          <th>Reason</th>
+          <th>Actor</th>
+        </tr></thead>
+        <tbody>
+        {{#each governance.rows}}
+          <tr>
+            <td class="sp-col-date sp-table__cell--date"><a href="{{this.url}}">{{this.when}}</a></td>
+            <td><code class="sp-code-inline">{{this.tool_name}}</code></td>
+            <td class="sp-col-status">{{> components/badge tone=this.decision.tone text=this.decision.text}}</td>
+            <td><code class="sp-code-inline">{{this.policy}}</code></td>
+            <td>{{this.reason}}</td>
+            <td><code class="sp-code-inline">{{this.actor}}</code></td>
+          </tr>
+        {{/each}}
+        </tbody>
+      {{/components/table}}
+      {{else}}
+        {{> components/empty-state heading="No governance decisions" message="No governance_decisions row carries this run's gateway session, host session or context yet."}}
+      {{/if}}
     </div>
 
     <div class="sp-tab-panel" id="run-panel-cost" role="tabpanel" aria-labelledby="run-tab-cost" hidden>

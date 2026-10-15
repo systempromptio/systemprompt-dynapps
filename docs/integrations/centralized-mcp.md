@@ -1,7 +1,8 @@
 # Centralized MCP connections
 
-The development marketplace exposes Atlassian and Salesforce
-through the Systemprompt MCP gateway. Each employee links their own account on
+The Dynapps portal marketplaces expose the portal's hosted servers, Odoo
+(`dynapps-odoo`) and DynBrain (`dynbrain`), through the Systemprompt MCP
+gateway. Each employee links their own portal.dynapps.es account on
 `/admin/connectors`. The bridge displays the same server-owned
 connection model in its Profile view; **Manage on server** opens that page.
 Provider credentials are never placed in a marketplace bundle or desktop config.
@@ -17,11 +18,11 @@ account UI overlay.
 ## Provisioning
 
 Connector enablement uses `mcp_servers.<provider>.enabled` in
-`services/mcp/atlassian.yaml` and the per-org `services/mcp/salesforce-*.yaml`
-files. All are `true` and included by
-`services/config/config.yaml`. The Account page, bridge manifest, and credential
-accessor read the same loaded services configuration. Restart after changes.
-There is no separate enablement flag in secrets or environment variables.
+`services/mcp/dynapps-odoo.yaml` and `services/mcp/dynbrain.yaml`. Both are
+`true` and included by `services/config/config.yaml`. The Account page, bridge
+manifest, and credential accessor read the same loaded services configuration.
+Restart after changes. There is no separate enablement flag in secrets or
+environment variables.
 
 Store the application settings below in the active server profile's secret store
 or equivalent uppercase environment variables. Never put credentials in service
@@ -33,48 +34,16 @@ replace the encryption key used to recover provider tokens.
 | --- | --- |
 | `encryption_master_key` | Persistent 32-byte encryption key encoded as 64 hexadecimal characters; required to store OAuth grants, preserve it across restarts |
 | `mcp_credential_broker_secret` | Random server-only secret of at least 32 bytes; shared by core and the account accessor in the same instance |
-| `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Consumer key and secret of the packaged `Systemprompt` External Client App (the publishing source org); shared by every org that installs the package. An org running its own app names its own secrets in `services/config/salesforce-orgs.yaml` |
-| `salesforce_private_key` | JWT-bearer signing key when an org uses admin pre-authorization (`private_key_secret` per org) |
 
 Set `server.api_external_url` to the HTTPS origin of the deployment and provision
 its credentials independently. Local user grants are not copied into production.
-Register callbacks under that origin:
+Both servers use the generic OAuth connector (`connector.adapter: generic`): the
+portal publishes protected-resource metadata and supports dynamic client
+registration, so no client secret is stored. Callbacks are registered under that
+origin:
 
-- `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
-- `https://YOUR-SERVER/api/public/connectors/salesforce/callback` — one callback for
-  every Salesforce org; the org rides in the OAuth `state`
-
-Atlassian uses its hosted MCP authorization-server metadata and dynamic client
-registration. Its organization must allow the server callback domain and,
-where IP allowlisting is enabled, the server's outbound IP.
-
-Salesforce uses browser OAuth against one packaged **External Client App**. The
-app is created once in the source org with the callback above,
-PKCE, `mcp_api`, `refresh_token` and `openid` scopes, and JWT-based access
-tokens for named users; `deploy/salesforce/` holds it as an SFDX project and
-builds the managed package every other org installs (the README there is the
-runbook). Each org's administrator installs the package, assigns the
-`Systemprompt_MCP_Access` permission set and activates `sobject-all` in
-Setup → API Catalog → MCP Servers. Store `salesforce_mcp_client_id` and
-`salesforce_mcp_client_secret` once on the server. No signing certificate or
-private key is needed for browser OAuth. New app settings can take up to 30
-minutes to become available.
-
-The Salesforce connector is one server, `salesforce`, with a registry entry in
-`services/config/salesforce-orgs.yaml` (My Domain, environment, optional entitled
-groups) and a `services/mcp/<id>.yaml` whose endpoint matches the org's
-environment (`/platform/mcp/v1/sandbox/platform/sobject-all` for sandboxes).
-The gateway validates that pairing at boot and shows an org whose secrets are
-missing as "Not provisioned" rather than failing. After a sandbox refresh, `POST
-/api/public/admin/connectors/<id>/reprovision` resets every user on that org. See
-[Salesforce's endpoint documentation](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/postman.html).
-The `sobject-all` connector covers record operations and queries, not every
-Salesforce development or deployment workflow.
-
-Optional administrative provisioning instead maps the user's Salesforce username
-through the existing admin identity endpoint and uses pre-authorization plus the
-application's signing certificate. **Test connection** verifies that path.
-Disconnect prevents silent re-provisioning until the user reconnects.
+- `https://YOUR-SERVER/api/public/connectors/dynapps-odoo/callback`
+- `https://YOUR-SERVER/api/public/connectors/dynbrain/callback`
 
 The registry definitions stay enabled because enabled marketplace plugins must
 resolve their server references. The manifest filter independently requires
@@ -82,29 +51,15 @@ provider configuration, marketplace entitlement, and a verified connection befor
 publishing any connector to the employee. A registered server is not proof of a
 working provider connection.
 
-## Atlassian account check
+## Portal account check
 
-An Atlassian login alone is not proof of Jira/Confluence access. Open Jira from
-Atlassian Home and confirm an existing project loads. Use the
-organization's Atlassian site, for example `https://dynapps.atlassian.net`.
-
-Once this build is running, open Account → Connected accounts → Atlassian →
-Connect. Enter `https://dynapps.atlassian.net` in the site address field
-and approve the site in Atlassian's consent screen. The
-server checks that it belongs to the authorized resource list. Then use
-**Test connection** and sync the bridge.
-
-For the local profile, use `http://localhost:8080/admin/connectors`.
-The callback is `http://localhost:8080/api/public/connectors/atlassian/callback`.
+A portal.dynapps.es login is required; the portal refuses consent for anyone
+without one. For the local profile, use `http://localhost:8080/admin/connectors`.
+The callback is `http://localhost:8080/api/public/connectors/<server>/callback`.
 Use `localhost` consistently for login and consent so the session cookie is
-available when Atlassian redirects back. If the server runs on a remote development
+available when the portal redirects back. If the server runs on a remote development
 machine, forward port 8080 to the browser's machine before starting consent.
-
-A denied OAuth redirect suggests the application's domain is not allowed.
-Consent followed by denied tool access can indicate an IP restriction or missing
-product permissions. An organization administrator can inspect Atlassian
-Administration → Rovo → Rovo MCP server. Do not create a new organization merely
-to connect an existing employee account.
+After consent, use **Test** on the row to list the tools the account can call.
 
 ## Acceptance checks
 
@@ -121,9 +76,8 @@ to connect an existing employee account.
 7. Check manifests and local config for absence of provider tokens. Check audit
    identity and trace IDs for tool calls and governance denials.
 
-Atlassian personal API tokens can be submitted through the Account
-page as explicit fallbacks. They are verified and encrypted on the server. There
-is no automatic switch to shared application identity or direct desktop access.
+There is no fallback to a personal API token, no automatic switch to shared
+application identity and no direct desktop access.
 
 ## Verification and deployment
 

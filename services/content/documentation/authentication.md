@@ -1,14 +1,14 @@
 ---
 title: "Authentication"
-description: "The one way into the platform: Dynapps single sign-on (Microsoft Entra ID over SAML 2.0 or OpenID Connect, with Entra groups deciding roles). Covers the SSO provider model, reason codes, the sign-in audit table, operator recovery from the CLI, sessions, JWTs, and route protection."
+description: "The one way into the platform: Dynapps single sign-on (Microsoft Entra ID over OpenID Connect, with Entra groups deciding roles). Covers the SSO provider model, reason codes, the sign-in audit table, operator recovery from the CLI, sessions, JWTs, and route protection."
 author: "Dynapps"
 slug: "authentication"
-keywords: "authentication, login, sso, entra id, saml, oidc, openid connect, sso_login_events, session, JWT, security, provisioning"
+keywords: "authentication, login, sso, entra id, oidc, openid connect, sso_login_events, session, JWT, security, provisioning"
 kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
-updated_at: "2026-10-13"
+updated_at: "2026-10-15"
 after_reading_this:
   - "Sign in as a Dynapps user with Dynapps SSO"
   - "Understand how Entra ID groups become platform roles and entitlements"
@@ -32,7 +32,7 @@ related_playbooks:
 
 **TL;DR:** There is exactly one way into the platform in a browser, and it
 stores no password. Everyone signs in with **Dynapps SSO** (Microsoft Entra
-ID, over SAML 2.0 or OpenID Connect) and their **Entra groups** decide what
+ID, over OpenID Connect) and their **Entra groups** decide what
 they can do. There is no second login form, no self-registration, and no
 in-browser invite redemption; operator recovery happens from the **CLI**.
 
@@ -60,51 +60,45 @@ the identity policy, provisioning, the session and the audit row — belongs to
 the driver, so every provider gets the same guarantees and the same failure
 codes.
 
-Two providers are registered in this installation, both against Microsoft
-Entra ID. A provider whose config is disabled or incomplete is simply not
-registered; run one or the other against the same Entra groups.
+One provider is registered in this installation, against Microsoft Entra
+ID. A provider whose config is disabled or incomplete is simply not
+registered.
 
-| Provider id | Protocol | Config | Start | Callback | Metadata |
-|---|---|---|---|---|---|
-| `entra-saml` | SAML 2.0 (form-POST return) | `services/web/config/adfs.yaml` | `/admin/auth/adfs/start` | `POST /admin/auth/adfs/acs` | `/saml/metadata` |
-| `entra-oidc` | OpenID Connect, code flow with PKCE (query return) | `services/web/config/entra-oidc.yaml` | `/admin/auth/entra/start` | `GET /admin/auth/entra/callback` | — |
+| Provider id | Protocol | Config | Start | Callback |
+|---|---|---|---|---|
+| `entra-oidc` | OpenID Connect, code flow with PKCE (query return) | `services/web/config/entra-oidc.yaml` | `/admin/auth/entra/start` | `GET /admin/auth/entra/callback` |
 
 Core also mounts every registered provider generically at
 `/api/v1/core/sso/{id}/start`, `/api/v1/core/sso/{id}/callback` (query or
-form-POST) and `/api/v1/core/sso/{id}/metadata`. The `/admin/auth/*` and
-`/saml/metadata` paths above are aliases onto the same driver, kept because
-they are the URLs the Entra ID applications were registered with. The
+form-POST). The `/admin/auth/entra/*` paths above are aliases onto the same
+driver, kept because they are the URLs the Entra ID App Registration was
+registered with. The
 difference is only in failure handling: the aliases always send a refused or
 unconfigured sign-in to `/admin/login?sso=<reason>`.
 
-The login page shows **Sign in with Dynapps SSO (Microsoft Entra ID)** when
-`entra-saml` is registered and **Sign in with Microsoft** when `entra-oidc`
-is; a `?redirect=` on the login page is carried through the start.
+The login page shows **Sign in with Microsoft** when `entra-oidc` is
+registered; a `?redirect=` on the login page is carried through the start.
 
 ### What happens on a sign-in
 
 **Start.** The driver asks the provider for its redirect, then stores the
 attempt server-side in `sso_state_bindings`: the provider, the post-login
-destination, the protocol nonces (SAML request id; OIDC nonce and PKCE
-verifier), and a hash of a fresh **binder** value. The raw state and binder
+destination, the OIDC nonce and PKCE
+verifier, and a hash of a fresh **binder** value. The raw state and binder
 are never stored — both are keyed by HMAC-SHA-256 with the at-rest pepper. The
 row lives **600 seconds** and is **single-use**. The binder goes to the
 browser as the `sp_sso_bind` cookie (`HttpOnly`, `Path=` the provider's
 callback, `Max-Age=600`, `Secure` unless the API is served over plain
-`http`). SAML uses `SameSite=None`, because Entra ID posts the ACS
-cross-site; OIDC uses `SameSite=Lax`. The post-login destination must be a
+`http`), `SameSite=Lax`. The post-login destination must be a
 same-origin relative path; anything else falls back to `/admin`.
 
 **Callback.** The driver, for every provider:
 
-1. Correlates the return: the `state` (OIDC) or `RelayState` (SAML) must
+1. Correlates the return: the `state` must
    match an unconsumed, unexpired row for this provider, and the `sp_sso_bind`
-   cookie must match the row's binder. A return with no state is accepted only
-   when the provider allows unsolicited sign-ins — SAML's
-   `allow_idp_initiated` (My Apps tile); OIDC never does.
-2. Lets the provider validate the response. SAML: XML signature against the
-   tenant's signing certificate from its federation metadata, audience,
-   destination, validity window, and the request id it answers. OIDC: an
+   cookie must match the row's binder. A return with no state is refused:
+   OIDC never accepts unsolicited sign-ins.
+2. Lets the provider validate the response: an
    RS256 `id_token` from the tenant's JWKS, issuer, audience, `tid`, expiry
    and nonce.
 3. Requires a subject, then claims the assertion id in the **replay guard**
@@ -112,12 +106,11 @@ same-origin relative path; anything else falls back to `/admin`.
    one hour if the provider gives no expiry. A second sight of the same
    assertion is refused.
 4. Requires an email and lowercases it.
-5. Applies the provider's identity policy (`SsoIdentityPolicy`, the same for
-   both protocols): email domain, then group overage, then the group
+5. Applies the provider's identity policy (`SsoIdentityPolicy`): email domain, then group overage, then the group
    requirement, then group → role mapping. See
    [Groups as entitlements](#groups-as-entitlements).
 6. Resolves the local user by `(issuer, subject)`; if there is no link and
-   the policy sets `link_by_email` (both shipped configs do), links a verified,
+   the policy sets `link_by_email` (the shipped config does), links a verified,
    allow-listed email to the active, interactive local account that already
    owns it, so an operator created with `admin users create` signs in without
    a duplicate account. Otherwise, if `auto_provision` is on, provisions one.
@@ -127,7 +120,8 @@ same-origin relative path; anything else falls back to `/admin`.
 8. Records the outcome in `sso_login_events` and runs the installation's
    sign-in sink: the `login` activity and the directory group and project memberships
    (`services/web/config/groups.yaml`), replacing the directory-sourced rows
-   from the last sign-in (`source = 'adfs'`) and leaving dashboard-granted
+   from the last sign-in (`source = 'adfs'`, a historical label for directory
+   membership) and leaving dashboard-granted
    ones alone. An Entra group that maps to nothing leaves the person in the
    derived `unassigned` group.
 
@@ -158,13 +152,13 @@ deliberately coarse; the finer reason is on the audit row.
 
 | `?sso=` | Audit `reason` | Cause | Message shown on the login page |
 |---|---|---|---|
-| `unavailable` | `unavailable` | Provider not registered (disabled, incomplete config, OIDC client secret missing) or its IdP metadata/discovery is unreachable | Single sign-on is not configured on this instance yet. |
+| `unavailable` | `unavailable` | Provider not registered (disabled, incomplete config, OIDC client secret missing) or its OIDC discovery document is unreachable | Single sign-on is not configured on this instance yet. |
 | `correlation_lost` | `state_lost` | State missing, expired (600 s), already used, or the `sp_sso_bind` cookie does not match | Sent a sign-in this platform did not start. Start again. |
 | `correlation_lost` | `unsolicited` | A return with no state, for a provider that does not accept unsolicited sign-ins | (same) |
 | `invalid_assertion` | `invalid_assertion` | Signature, audience, destination, issuer, tenant, nonce or validity failed — or the user cancelled at Entra ID | Refused or cancelled the sign-in, or returned a response that could not be verified. |
 | `invalid_assertion` | `replayed` | The assertion id was already used | (same) |
-| `no_subject` | `no_subject` | No subject (SAML `NameID`, OIDC `sub`) | Did not identify your account. |
-| `no_email` | `no_email` | No email claim (and, for SAML, no email-format `NameID`; for OIDC, no address in `preferred_username`) | Did not return an email address. |
+| `no_subject` | `no_subject` | No subject (OIDC `sub`) | Did not identify your account. |
+| `no_email` | `no_email` | No email claim and no address in `preferred_username` | Did not return an email address. |
 | `forbidden` | `forbidden` | Email domain not in `allowed_email_domains` | Your account is not on an email domain this platform accepts. |
 | `group_overage` | `group_overage` | Entra ID sent an overage pointer instead of the group list | Your account is in too many Entra ID groups. |
 | `no_group` | `no_group` | No group at all and `deny_without_group: true` | Your account is not in a Systemprompt-* Entra ID group. |
@@ -202,8 +196,8 @@ Run them with `systemprompt infra db query "<sql>"` (see
 
 Two things read the Entra groups:
 
-- **Roles** — `group_roles` in the provider's config (`adfs.yaml` or
-  `entra-oidc.yaml`) maps a group to `platform_admin`,
+- **Roles** — `group_roles` in the provider's config (`entra-oidc.yaml`) maps an Entra group object id (from the
+  `groups` claim) to `platform_admin`,
   `admin`, `project_manager`, `developer`, `knowledge_worker` and/or `user`
   (`group_role_patterns` adds glob matches such as
   `Dynapps-Systemprompt-PM-*`). The directory half of the role set is
@@ -288,14 +282,10 @@ from an Entra group) if that operator also signs in through SSO. See
 
 ## Configuring SSO
 
-Each provider has one config file, and both embed the same identity policy
+The provider has one config file, which embeds the identity policy
 (`allowed_email_domains`, `group_roles`, `group_role_patterns`,
 `default_roles`, `deny_without_group`, `auto_provision`):
 
-- `services/web/config/adfs.yaml` — **SAML** (`entra-saml`): the IdP
-  federation metadata file or its URL (which supplies the signing
-  certificate), the claim URIs, `allow_idp_initiated`. There is no client
-  secret; our entity id and ACS URL derive from the profile's external URL.
 - `services/web/config/entra-oidc.yaml` — **OIDC** (`entra-oidc`): tenant id,
   client id, `redirect_path`, scopes, the groups claim. The client secret is
   not in the file: it is read from the secrets store under
@@ -366,7 +356,7 @@ To sign out, clear the `access_token` cookie.
 | Route | Access |
 |-------|--------|
 | `/admin/login` | Public |
-| `/admin/auth/adfs/*`, `/admin/auth/entra/*`, `/saml/metadata` | Public — the SSO start, callback and SP metadata |
+| `/admin/auth/entra/*` | Public — the SSO start and callback |
 | `/api/v1/core/sso/{id}/*` | Public — core's generic routes onto the same providers |
 | `/admin/profile`, `/admin/history`, `/admin/connect`, `/admin/connectors` | Any valid session, including a plain `user` |
 | `/admin/analysis/conversations`, `/admin/analysis/versions`, `/admin/sync` and the session, request, trace and context detail pages | A valid session with `admin` / `platform_admin`, **or** marketplace participation — scoped to the participant's marketplaces |
@@ -428,21 +418,19 @@ A dedicated "system" identity would be either a synthesized principal (impersona
 
 ## Service accounts and machine credentials
 
-A workflow that writes back to an external system (opening a GitHub pull request, updating a Salesforce record, commenting in Jira) acts as a **service account**, never as a shared global key. A service account is a `users` row with `account_kind = 'service'`. Core refuses every interactive login for it: session login, passkey, bridge code and OAuth authorization code. Each workflow definition names the account it runs as, and an agent farm names one with `run_as` in `services/web/config/agent-farms.yaml`: its runs mint their credentials for that account and carry the purpose `farm:<run_id>`.
+A workflow or farm run that writes to a provider with a machine credential acts as a **service account**, never as a shared global key. A service account is a `users` row with `account_kind = 'service'`. Core refuses every interactive login for it: session login, passkey, bridge code and OAuth authorization code. Each workflow definition names the account it runs as, and an agent farm names one with `run_as` in `services/web/config/agent-farms.yaml`: its runs mint their credentials for that account and carry the purpose `farm:<run_id>`.
 
 Administrators manage them at **People & access → Service accounts** (`/admin/identity/service-accounts`):
 
 1. **Create** the account with a name and an email. It starts with the plain `user` role.
-2. **Attach a machine credential** per provider, keyed by the MCP server id (`github`, `salesforce-<org>`, `atlassian`):
+2. **Attach a machine credential** per provider, keyed by the MCP server id:
 
 | Kind | Non-secret identifiers | Secret | What the broker returns |
 |------|------------------------|--------|-------------------------|
-| `github_app` | App ID, installation ID | App private key (PEM) | An installation token: core signs a 10-minute RS256 App JWT and exchanges it at `/app/installations/{id}/access_tokens`. |
-| `salesforce_client_credentials` | Instance URL, consumer key (client ID) | Client secret | An access token from the org's `client_credentials` grant. |
-| `atlassian_api_token` | Token owner email | API token | `Basic base64(email:token)`. |
+| `github_app` | App ID, installation ID, optional API URL | App private key (PEM) | A short-lived installation token core mints from the App key. |
 
 The secret is sealed with the platform master key in an envelope bound to the account and provider. It is never rendered or returned, and attaching again rotates it. Only a service account may hold a machine credential, and an account that still holds one cannot be deleted.
 
-When core's MCP client asks the credential broker (`/api/public/connectors/{provider}/token`) for a service account's bearer, the broker requires the `x-systemprompt-caller` purpose core forwards from the run. It issues a token only for `workflow:<definition_id>:write` or `farm:<id>`. Any other purpose, or none, is refused with 403 and logged under the `connector_broker` target with the account, provider and caller. The broker does not mint anything itself. It opens the sealed secret and hands it to core's machine grant (`connector_grant::MachineGrant`), the same code that serves core-managed connectors declared with `grant: app_installation` or `client_credentials`, so there is one App JWT signer, one token exchange and one token cache. Core caches a minted token until two minutes before it expires; the cache key includes the credential's rotation time, so a rotated credential never serves the previous token. People keep the per-user OAuth path unchanged.
+When core's MCP client asks the credential broker (`/api/public/connectors/{provider}/token`) for a service account's bearer, the broker requires the `x-systemprompt-caller` purpose core forwards from the run. It issues a token only for `workflow:<definition_id>:write` or `farm:<id>`. Any other purpose, or none, is refused with 403 and logged under the `connector_broker` target with the account, provider and caller. The broker does not mint anything itself. It opens the sealed secret and hands it to core's machine grant (`connector_grant::MachineGrant`), the same code that serves core-managed connectors declared with `grant: app_installation` or `client_credentials`, so there is one token exchange and one token cache. Core caches a minted token until two minutes before it expires; the cache key includes the credential's rotation time, so a rotated credential never serves the previous token. People keep the per-user OAuth path unchanged.
 
-GitHub's hosted MCP server is declared in `services/mcp/github.yaml` for this purpose. No plugin enables it. `services/access-control/rules.yaml` grants it, and the Atlassian and Salesforce servers, to the `service-accounts` group that every new service account joins; among people only administrators reach GitHub.
+`services/access-control/rules.yaml` grants the Dynapps portal servers to the `service-accounts` group that every new service account joins; a service account reaches those through the portal OAuth grant an admin connects on its page, not a machine credential. Odoo itself is reached only through the hosted `dynapps-odoo` server, as the caller's own portal account.

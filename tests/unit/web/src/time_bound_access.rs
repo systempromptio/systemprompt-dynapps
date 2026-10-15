@@ -96,13 +96,13 @@ fn project(yaml: &str) -> DeclaredSet {
 fn key(rule_type: &str, value: &str) -> DeclaredKey {
     DeclaredKey {
         entity_type: "mcp_server".to_owned(),
-        entity_id: "atlassian".to_owned(),
+        entity_id: "dynbrain".to_owned(),
         rule_type: rule_type.to_owned(),
         rule_value: value.to_owned(),
     }
 }
 
-const WINDOWED: &str = "entities:\n  - entity: mcp_server/atlassian\n    why: pilot\n    valid_until: 2026-12-31T00:00:00Z\n    allow:\n      group: [uk]\n";
+const WINDOWED: &str = "entities:\n  - entity: mcp_server/dynbrain\n    why: pilot\n    valid_until: 2026-12-31T00:00:00Z\n    allow:\n      group: [uk]\n";
 
 #[test]
 fn valid_until_lands_on_every_rule_of_the_entity_and_changes_the_hash() {
@@ -111,7 +111,7 @@ fn valid_until_lands_on_every_rule_of_the_entity_and_changes_the_hash() {
     assert_eq!(rule.valid_until, Some(at("2026-12-31T00:00:00Z")));
 
     let open = project(
-        "entities:\n  - entity: mcp_server/atlassian\n    why: pilot\n    allow:\n      group: [uk]\n",
+        "entities:\n  - entity: mcp_server/dynbrain\n    why: pilot\n    allow:\n      group: [uk]\n",
     );
     assert_eq!(open.rules[&key("group", "uk")].valid_until, None);
     assert_ne!(open.declared_hash(), windowed.declared_hash());
@@ -125,7 +125,7 @@ fn a_declaration_past_its_window_is_dropped_but_the_entity_stays_governed() {
     set.drop_expired(at("2027-01-01T00:00:00Z"));
     assert_eq!(set.rule_count(), 0);
     assert!(
-        set.governs("mcp_server", "atlassian"),
+        set.governs("mcp_server", "dynbrain"),
         "the sweep's deletion of the expired row must not read as dashboard drift"
     );
 }
@@ -134,7 +134,7 @@ fn db_row(valid_until: Option<DateTime<Utc>>) -> BandRuleRow {
     BandRuleRow {
         id: "r1".to_owned(),
         entity_type: "mcp_server".to_owned(),
-        entity_id: "atlassian".to_owned(),
+        entity_id: "dynbrain".to_owned(),
         rule_type: "group".to_owned(),
         rule_value: "uk".to_owned(),
         access: Access::Allow,
@@ -149,7 +149,7 @@ fn a_window_that_differs_between_code_and_database_is_drift() {
     let declared = project(WINDOWED);
     let entities = [EntityDefaultRow {
         entity_type: "mcp_server".to_owned(),
-        entity_id: "atlassian".to_owned(),
+        entity_id: "dynbrain".to_owned(),
         default_included: false,
         source: "yaml".to_owned(),
     }];
@@ -174,7 +174,7 @@ fn the_export_writes_the_window_back_and_the_document_round_trips() {
     let rows = [db_row(Some(at("2026-12-31T00:00:00Z")))];
     let entities = [EntityDefaultRow {
         entity_type: "mcp_server".to_owned(),
-        entity_id: "atlassian".to_owned(),
+        entity_id: "dynbrain".to_owned(),
         default_included: false,
         source: "yaml".to_owned(),
     }];

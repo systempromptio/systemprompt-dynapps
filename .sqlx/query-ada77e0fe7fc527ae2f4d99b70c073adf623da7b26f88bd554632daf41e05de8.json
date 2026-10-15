@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Terminal runs that never got a completion report: runs that finished\n-- before reports existed, or whose observer stopped before writing one.\nSELECT r.id AS \"id!: FarmRunId\"\nFROM agent_farm_runs r\nLEFT JOIN agent_farm_run_reports rr ON rr.run_id = r.id\nWHERE rr.run_id IS NULL\n  AND r.status IN ('succeeded', 'failed', 'cancelled', 'timed_out')\nORDER BY r.created_at\nLIMIT $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: FarmRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ada77e0fe7fc527ae2f4d99b70c073adf623da7b26f88bd554632daf41e05de8"
+}

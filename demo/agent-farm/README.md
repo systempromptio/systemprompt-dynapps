@@ -1,37 +1,37 @@
-# Agent Farm end-to-end
+# Night audit end-to-end
 
-Proves the whole Agent Farm path on a local instance: the kit is signed and
-published to GHCR, pinned and imported, a user with a PAT starts a run over the
-public API, the run's gateway, hook and governance trail lands in Postgres, and
-every `/admin/farm*` page renders it.
+Proves the nightly accounting audit on the agent farm against a live instance
+(default the staging tenant, `https://dynapps.systemprompt.io`): the
+`dynapps-night-audit` farm runs `accounting_night_audit` as Ed, reads Odoo only
+through the hosted `dynapps-odoo` MCP, writes the dashboard and the 11-section
+report, publishes a summary to DynBrain, and a morning Claude Code session
+through the bridge picks it up and proposes one fix.
 
 ```bash
-export BUNDLE_SIGNING_SEED=...        # or BUNDLE_SIGNING_SEED_FILE=path
-./demo/agent-farm/run-all.sh          # all steps, stops at the first failure
-FROM=50 ./demo/agent-farm/run-all.sh  # resume (kit already published/imported)
-SKIP="10" ./demo/agent-farm/run-all.sh
+export ED_PAT=...                       # Ed's PAT on the target; never written to disk
+systemprompt admin session switch production && systemprompt admin session login
+./demo/agent-farm/run-all.sh            # 00 → 40, then 90 (always)
+APPROVE_FIX=1 ./demo/agent-farm/run-all.sh   # also apply the proposed fix
+FROM=30 ./demo/agent-farm/run-all.sh    # re-assert the last run
+SKIP="40" ./demo/agent-farm/run-all.sh  # no bridge-configured claude here
 ```
 
 | Step | What it proves |
 |------|----------------|
-| `00-keys.sh` | the signing seed derives the key recorded in `deploy/kit/known-kits.json` |
-| `10-publish-kit.sh` | kit imports `--strict`, validates, packs signed, publishes `:vX.Y.Z` and `:stable` (`SKIP_PUBLISH=1` stops after packing) |
-| `20-pin.sh` | the local profile pins `dynapps-agent-farm@stable` (idempotent) |
-| `30-start-and-import.sh` | server up; `POST /api/v1/admin/services/refresh` imports the bundle |
-| `40-verify-catalog.sh` | `/admin/marketplaces/dynapps-agent-farm` and `/admin/sync` show the kit |
-| `50-mint-user.sh` | farm user exists, is in project `odoo-delivery`, holds a PAT |
-| `60-farm-sync.sh` | farm sync succeeds; the user lists the four agents |
-| `70-run.sh` | a PAT-started run reaches `succeeded` with no failed assertions |
-| `80-assert-db.sh` | `ai_requests` with `api_key_id`, `plugin_usage_events` for the plugin, governance decisions |
-| `90-dashboard.sh` | every farm page answers 200 and shows the run, agent and user |
+| `00-preflight.sh` | target up; Ed exists; his `dynapps-odoo` and `dynbrain` grants are on file and not revoked; he is entitled to the farm marketplace, both servers and `indaws-management`; his PAT lists the agent |
+| `10-run.sh` | the `farm_scheduled_run` job, run remotely on the tenant, queues the run as Ed with `triggered_via = scheduler` (`RUN_VIA=api` launches over the API with Ed's PAT instead, recorded as `api`; set `TRIGGER=api` for 30) |
+| `20-wait.sh` | the run reaches `succeeded`; run, report and events are saved under `.state/` |
+| `30-assert.sh` | outputs hold `out/dashboard.md`, `out/DELIVERY.md` and `out/informe_auditoria_Dynapps_YYYY_MM.md`; the eval passed; every `dynapps-odoo` call was a read and governance saw no write attempt; `ai_requests` and MCP trace rows exist; a `dynbrain` `docs_create` succeeded |
+| `40-followup.sh` | `claude -p` as Ed fetches the DynBrain article and proposes ONE fix with no write tool; with `APPROVE_FIX=1` the session is resumed with `orm_write` only, and the write is found in `mcp_tool_executions` and `governance_decisions` |
+| `90-report.sh` | `evals/night-audit/<date>/metrics.json` and `report.md`: duration, turns, tokens, cost, MCP read/write per server, governance warnings, artifacts, delivery, eval score, pass/fail per assertion |
 
-Environment: `KIT_DIR` (default `../systemprompt-agent-farm`), `VERSION`,
-`GHCR_USER`, `CASE` (default: first case in `farm/evals/odoo_module_reviewer.yaml`),
-`FARM_AGENT`, `FARM_MODEL` (override the agent's model), `FARM_USER_EMAIL`, `ADMIN_EMAIL`, `RUN_TIMEOUT` (900 s),
-`FARM_ADMIN_AUTH` (an admin PAT instead of the CLI session JWT), `ROTATE=1`
-(new PAT), `PROFILE`, `BASE_URL`.
+Environment: `TARGET` (or `BASE_URL`), `PROFILE` (default `production`),
+`ED_EMAIL`, `ED_PAT`, `FARM_ID`, `FARM_AGENT`, `CASE`, `TRIGGER`,
+`RUN_VIA` (`scheduler` or `api`), `RUN_TIMEOUT` (2400 s), `DYNBRAIN_PARENT_ID` (where the summary is published),
+`APPROVE_FIX`, `FOLLOWUP_MODEL`, `ODOO_TOOL_PREFIX`, `BRAIN_TOOL_PREFIX`,
+`OUT_DIR`, `LOG_DIR`, `FROM`, `SKIP`.
 
-State (tokens, cookie jar, digest, run id) is written beside the scripts and is
-gitignored by `.gitignore` here. The dashboard is fetched with a cookie from
-`systemprompt-dev-login`, so it only works on a development profile.
-Publishing needs `gh auth login` with `write:packages`.
+Database checks go through `systemprompt infra db query` with the profile's
+admin session, so the production profile needs `database.external_db_access:
+true` (see CLAUDE.md, "Operating on production"). The farm itself, its agent
+and eval live in `systempromptio/systemprompt-agent-farm` (`farm/`).

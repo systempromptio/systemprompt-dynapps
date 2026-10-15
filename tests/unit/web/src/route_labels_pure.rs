@@ -67,7 +67,7 @@ routes:
   model_pattern: claude-*
   provider: anthropic
 default_provider: anthropic
-default_model: claude-sonnet-5
+default_model: claude-sonnet-5-5
 ",
     )
     .expect("gateway spec parses");

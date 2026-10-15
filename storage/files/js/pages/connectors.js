@@ -28,7 +28,7 @@ function facts(account) {
 }
 function actionsFor(account) {
     const actions = element('div', '', 'sp-connector__actions');
-    const order = ['test', 'connect', 'reconnect', 'disconnect', 'manual_token'];
+    const order = ['test', 'connect', 'reconnect', 'disconnect'];
     for (const action of order.filter(name => account.actions.includes(name))) {
         const button = element('button', actionLabels[action], `sp-btn sp-btn--sm ${variant(action, account.status)}`); button.type = 'button'; button.dataset.action = action;
         actions.append(button);
@@ -122,35 +122,9 @@ async function refresh() {
         render(data); lastChecked = new Date().toLocaleTimeString(); message(callbackNotice, callbackNotice ? 'err' : '');
     } catch (error) { message(`Last known state${lastChecked ? ` (${lastChecked})` : ''}. ${error.message}`, 'warn'); }
 }
-function field(form, label, name, type = 'text') {
-    const wrapper = element('label', label); const input = element('input', '', 'sp-field-input'); input.name = name; input.type = type;
-    input.autocomplete = 'off'; wrapper.append(input); form.append(wrapper); return input;
-}
-function formFor(provider, action, user) {
-    const row = root.querySelector(`#connector-${provider}`);
-    if (row.querySelector('form')) return;
-    const form = element('form', '', 'sp-connector__form');
-    if (action === 'manual_token') {
-        field(form, 'Personal token', 'token', 'password').required = true;
-        if (provider === 'atlassian') field(form, 'Atlassian account email', 'email', 'email').required = true;
-    }
-    if (provider === 'atlassian') {
-        const site = field(form, 'Atlassian site address', 'resource_id', 'url');
-        site.value = 'https://dynapps.atlassian.net'; site.required = true;
-    }
-    const actions = element('div', '', 'sp-connector__actions'); form.append(actions);
-    const submit = element('button', action === 'manual_token' ? 'Verify and save' : 'Continue to Atlassian', 'sp-btn sp-btn--sm sp-btn--primary'); submit.type = 'submit'; actions.append(submit);
-    const cancel = element('button', 'Cancel', 'sp-btn sp-btn--sm sp-btn--ghost'); cancel.type = 'button'; cancel.addEventListener('click', () => form.remove()); actions.append(cancel);
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault(); const values = Object.fromEntries(new FormData(form));
-        if (action !== 'manual_token') { connect(provider, user, values.resource_id); return; }
-        await mutate(provider, 'manual-token', values); form.reset(); form.remove(); await refresh();
-    }); row.append(form);
-}
-function connect(provider, user, resource = '') {
+function connect(provider, user) {
     const url = new URL(`/api/public/connectors/${provider}/start`, window.location.origin);
     url.searchParams.set('expected_user', user);
-    if (resource) url.searchParams.set('resource_id', resource);
     window.location.assign(url);
 }
 async function mutate(provider, action, body) {
@@ -225,7 +199,6 @@ async function test(provider, user) {
 async function perform(provider, action, user) {
     if (pending) return;
     if (action === 'test') { await test(provider, user); return; }
-    if (action === 'manual_token' || (provider === 'atlassian' && ['connect', 'reconnect'].includes(action))) { formFor(provider, action, user); return; }
     if (['connect', 'reconnect'].includes(action)) { connect(provider, user); return; }
     if (action === 'disconnect') { await showConfirmDialog('Disconnect account', `Disconnect ${names[provider] || provider} on every enrolled device?`, 'Disconnect', () => mutate(provider, action)); return; }
     await mutate(provider, action);

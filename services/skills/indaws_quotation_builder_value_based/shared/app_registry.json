@@ -1,0 +1,568 @@
+{
+  "_comment": "Canonical, locale-agnostic key contract for the quotation-builder-value-based engine. Keys here are STABLE identifiers used across every locale pack; locales map them to display prose but NEVER rename these ids. New countries add values with NAMESPACED ids (e.g. fr.chorus_pro) — see _namespacing. Derived from proposal_data.py (APP_DESCRIPTIONS), fill_spreadsheet.py (APP_TO_SHEET / APP_NAMES), generate_spreadsheet_template.py (APPS, SHEET_CATEGORIES, CAT_ORDER/CAT_NAMES), generate_proposal.py (APP_COLORS / APP_OUTCOME / APP_ICON_FILES, VA_EXCLUSIVO / VA_ADDONS / VA_POC, gantt phase codes, RECURRENT_DEFAULTS).",
+  "schema_version": 1,
+  "_namespacing": {
+    "rule": "Canonical ids are bare (e.g. 'crm'). A country-specific primitive not in the shared set is added with a locale-prefixed id: '<locale>.<id>' (e.g. 'fr.chorus_pro'). The validator accepts namespaced extras but rejects bare-key drift.",
+    "reserved_prefixes": [
+      "es",
+      "fr",
+      "nl",
+      "en"
+    ]
+  },
+  "apps": {
+    "config_general": {
+      "es_display_name": "Configuraciones Generales",
+      "sheet_display_name": "Configuraciones Generales",
+      "category": "config_general",
+      "icon": "settings.svg",
+      "es_color": "#951CF3",
+      "always_included": true,
+      "process": "transversal"
+    },
+    "crm": {
+      "es_display_name": "CRM",
+      "sheet_display_name": "CRM",
+      "category": "comercial",
+      "icon": "crm.svg",
+      "es_color": "#951CF3",
+      "always_included": false,
+      "process": "o2c"
+    },
+    "ventas": {
+      "es_display_name": "Ventas",
+      "sheet_display_name": "Ventas",
+      "category": "comercial",
+      "icon": "sale_management.svg",
+      "es_color": "#FF575D",
+      "always_included": false,
+      "process": "o2c"
+    },
+    "compras": {
+      "es_display_name": "Compras",
+      "sheet_display_name": "Compras",
+      "category": "operaciones",
+      "icon": "purchase.svg",
+      "es_color": "#FF7759",
+      "always_included": false,
+      "process": "p2p"
+    },
+    "inventario": {
+      "es_display_name": "Inventario",
+      "sheet_display_name": "Inventario",
+      "category": "operaciones",
+      "icon": "stock.svg",
+      "es_color": "#FF7E23",
+      "always_included": false,
+      "process": "p2p"
+    },
+    "fabricacion": {
+      "es_display_name": "Fabricación (MRP)",
+      "sheet_display_name": "Fabricación (MRP)",
+      "category": "operaciones",
+      "icon": "mrp.svg",
+      "es_color": "#FF575D",
+      "always_included": false,
+      "process": "p2p"
+    },
+    "facturacion": {
+      "es_display_name": "Facturación",
+      "sheet_display_name": "Facturación",
+      "category": "finanzas",
+      "icon": "account.svg",
+      "es_color": "#951CF3",
+      "always_included": false,
+      "process": "o2c"
+    },
+    "contabilidad": {
+      "es_display_name": "Contabilidad",
+      "sheet_display_name": "Contabilidad",
+      "category": "finanzas",
+      "icon": "account_accountant.svg",
+      "es_color": "#951CF3",
+      "always_included": false,
+      "accounting_from_fiscal": true,
+      "process": "r2r"
+    },
+    "proyecto": {
+      "es_display_name": "Proyecto",
+      "sheet_display_name": "Proyecto",
+      "category": "servicios",
+      "icon": "project.svg",
+      "es_color": "#FF7759",
+      "always_included": false,
+      "js_cond_key": "Proyecto",
+      "process": "transversal"
+    },
+    "helpdesk": {
+      "es_display_name": "Helpdesk",
+      "sheet_display_name": "Helpdesk",
+      "category": "servicios",
+      "icon": "helpdesk.svg",
+      "es_color": "#FF7E23",
+      "always_included": false,
+      "process": "o2c"
+    },
+    "website": {
+      "es_display_name": "Website / eCommerce",
+      "sheet_display_name": "Website / eCommerce",
+      "category": "web_marketing",
+      "icon": "website.svg",
+      "es_color": "#951CF3",
+      "always_included": false,
+      "process": "o2c"
+    },
+    "marketing_email": {
+      "es_display_name": "Marketing por email",
+      "sheet_display_name": "Marketing por email",
+      "category": "web_marketing",
+      "icon": "mass_mailing.svg",
+      "es_color": "#FF575D",
+      "always_included": false,
+      "process": "o2c"
+    },
+    "rrhh": {
+      "es_display_name": "RRHH",
+      "sheet_display_name": "RRHH",
+      "category": "otras",
+      "icon": "hr.svg",
+      "es_color": "#FF7E23",
+      "always_included": false,
+      "process": "transversal"
+    },
+    "inbuilt": {
+      "es_display_name": "Dynapps Construcción",
+      "sheet_display_name": "Dynapps Construcción",
+      "category": "vertical_construccion",
+      "icon": "inbuilt.svg",
+      "es_color": "#951CF3",
+      "always_included": false,
+      "process": "transversal"
+    }
+  },
+  "_apps_order": [
+    "config_general",
+    "crm",
+    "ventas",
+    "compras",
+    "inventario",
+    "fabricacion",
+    "facturacion",
+    "contabilidad",
+    "proyecto",
+    "helpdesk",
+    "website",
+    "marketing_email",
+    "rrhh",
+    "inbuilt"
+  ],
+  "app_js_cond_map": {
+    "_comment": "app_id -> the display literal the web-template JS compares against (appOn('CRM')/appOn('Proyecto')) and generate_proposal.py req_map. These are CONTROL-FLOW literals: for es they must stay byte-identical (BLOCKER B3). 'cond' fields in pricing.json reference the app_id, resolved to this literal at runtime.",
+    "crm": "CRM",
+    "proyecto": "Proyecto"
+  },
+  "js_cond_variants": {
+    "_comment": "generate_proposal.py COND_VARIANTS — tolerant name matching, mirrors appOn() in the web template. Keyed by the js_cond literal.",
+    "CRM": [
+      "CRM"
+    ],
+    "Proyecto": [
+      "Proyecto",
+      "Project",
+      "Proyectos"
+    ]
+  },
+  "processes": {
+    "_comment": "End-to-end process taxonomy for the proposal's process view (P2P/O2C/R2R + residual). Canonical keys; es_display_name/es_tagline are the byte-frozen Spanish labels - locales translate via strings.sections.proc_<key>_name/_tag. Mapping rationale + literature (APQC PCF, SAP Signavio E2E, big-4 usage) in references/process_taxonomy.md. apps[*].process assigns each app to ONE process; changing the mapping = editing this JSON, never code. _order is the flow/render order (client-required header order: P2P, O2C, R2R, then the residual group).",
+    "_order": [
+      "p2p",
+      "o2c",
+      "r2r",
+      "transversal"
+    ],
+    "p2p": {
+      "es_display_name": "Procure-to-Pay",
+      "es_tagline": "De la compra al pago: aprovisionamiento, stock y producción"
+    },
+    "o2c": {
+      "es_display_name": "Order-to-Cash",
+      "es_tagline": "Del pedido al cobro: capta, vende, factura y atiende"
+    },
+    "r2r": {
+      "es_display_name": "Record-to-Report",
+      "es_tagline": "Del registro al cierre: contabilidad y reporting"
+    },
+    "transversal": {
+      "es_display_name": "People & support",
+      "es_tagline": "Hire-to-Retire y procesos transversales",
+      "residual": true
+    }
+  },
+  "flows": {
+    "_comment": "The Odoo Enterprise METRO MAP for the process view: the FULL network is always drawn; what the deal implements lights up (lit = in scope+selected, fase2 = in scope not preselected, ghost = Odoo has it, this proposal doesn't). Station slots: an app_id (resolves from the registry/locale catalog and can LIGHT UP), '~<ghost_id>' (curated Odoo Enterprise app NOT sellable as a line item here: entry in 'ghosts' below, icon from assets/odoo-icons, label via strings.sections.metro_app_<id>; always unlit, not clickable) or '@<milestone_id>' (process event; label via strings.sections.metro_ms_<id>). 'joins': the line flows INTO that app's station (mkt -> crm; crm renders as interchange). 'naming' = smart renaming for l2c (first LIT rule wins). A line is LIT iff >= 1 station is on. No prices on the map. Colors/geometry are engine constants; curation rationale in references/process_taxonomy.md (POS/Suscripciones/Alquiler/PLM and the productivity apps are deliberately left off to keep the map readable - add a ghost here + icon + 4 labels to extend).",
+    "_order": [
+      "mkt",
+      "l2c",
+      "p2p",
+      "r2r",
+      "h2r",
+      "serv"
+    ],
+    "ghosts": {
+      "social": {
+        "icon": "social.svg"
+      },
+      "automation": {
+        "icon": "marketing_automation.svg"
+      },
+      "eventos": {
+        "icon": "event.svg"
+      },
+      "encuestas": {
+        "icon": "survey.svg"
+      },
+      "calidad": {
+        "icon": "quality.svg"
+      },
+      "mantenimiento": {
+        "icon": "maintenance.svg"
+      },
+      "seleccion": {
+        "icon": "hr_recruitment.svg"
+      },
+      "asistencias": {
+        "icon": "hr_attendance.svg"
+      },
+      "ausencias": {
+        "icon": "hr_holidays.svg"
+      },
+      "valoraciones": {
+        "icon": "hr_appraisal.svg"
+      },
+      "gastos": {
+        "icon": "hr_expense.svg"
+      },
+      "partes_horas": {
+        "icon": "hr_timesheet.svg"
+      },
+      "planificacion": {
+        "icon": "planning.svg"
+      },
+      "field_service": {
+        "icon": "industry_fsm.svg"
+      }
+    },
+    "mkt": {
+      "stations": [
+        "~social",
+        "marketing_email",
+        "~automation",
+        "~eventos",
+        "~encuestas"
+      ],
+      "joins": "crm"
+    },
+    "l2c": {
+      "stations": [
+        "website",
+        "crm",
+        "ventas",
+        "facturacion"
+      ],
+      "naming": [
+        [
+          "website",
+          "click"
+        ],
+        [
+          "marketing_email",
+          "lead"
+        ],
+        [
+          "crm",
+          "lead"
+        ],
+        [
+          "ventas",
+          "quote"
+        ],
+        [
+          "facturacion",
+          "order"
+        ]
+      ]
+    },
+    "p2p": {
+      "stations": [
+        "compras",
+        "inventario",
+        "fabricacion",
+        "~calidad",
+        "~mantenimiento"
+      ]
+    },
+    "r2r": {
+      "stations": [
+        "contabilidad"
+      ]
+    },
+    "h2r": {
+      "stations": [
+        "~seleccion",
+        "rrhh",
+        "~asistencias",
+        "~ausencias",
+        "~valoraciones",
+        "~gastos"
+      ]
+    },
+    "serv": {
+      "stations": [
+        "proyecto",
+        "~partes_horas",
+        "~planificacion",
+        "~field_service",
+        "helpdesk",
+        "inbuilt"
+      ],
+      "joins": "ventas"
+    }
+  },
+  "categories": {
+    "_comment": "Sheet categories from generate_spreadsheet_template.py SHEET_CATEGORIES. Keys are canonical; es_display_name is the current Spanish sheet label. A category with \"vertical\": true is OPT-IN: generate_spreadsheet_template.py NEVER emits its sheet in a plain template (no leak to the general base id=72/1); it only appears when the generator is called with --vertical <cat|app>, or when a sheet is seeded by hand (insert_vertical_sheet.py) into the construction base id=76 / a construction deal. Runtime resolution (generate_proposal / fill_spreadsheet) still treats these as first-class apps via app_registry.apps[*].",
+    "_order": [
+      "config_general",
+      "comercial",
+      "operaciones",
+      "finanzas",
+      "servicios",
+      "web_marketing",
+      "otras",
+      "vertical_construccion"
+    ],
+    "config_general": {
+      "es_display_name": "General Config"
+    },
+    "comercial": {
+      "es_display_name": "Comercial"
+    },
+    "operaciones": {
+      "es_display_name": "Operaciones"
+    },
+    "finanzas": {
+      "es_display_name": "Finanzas"
+    },
+    "servicios": {
+      "es_display_name": "Servicios"
+    },
+    "web_marketing": {
+      "es_display_name": "Web y Marketing"
+    },
+    "otras": {
+      "es_display_name": "Otras"
+    },
+    "vertical_construccion": {
+      "es_display_name": "Vertical Construcción",
+      "vertical": true
+    }
+  },
+  "app_to_sheet_group": {
+    "_comment": "fill_spreadsheet.py / generate_spreadsheet_template.py APP_TO_SHEET — which SHEET a marked app writes into. Since v4.19 the sheets GROUP BY END-TO-END PROCESS (language-neutral canon tab names: Order-to-Cash / Procure-to-Pay / Record-to-Report + People & support), consolidating the WP1 process view into the co-signed workbook. General Config and the vertical keep their own tabs. Tab names are ENGLISH in every locale (the group works in English internally); readers resolve the pre-v4.24 Spanish names by alias, see proposal_data / fill_spreadsheet.LEGACY_SHEET_ALIASES. LEGACY: workbooks created before v4.19 use the old category tabs (Comercial/Operaciones/Finanzas/Servicios/Web y Marketing/Otras) — fill_spreadsheet keeps a fallback map for them; the deployed base templates (ids 1/72/16/71) need a re-deploy to get process tabs.",
+    "config_general": "General Config",
+    "crm": "Order-to-Cash",
+    "ventas": "Order-to-Cash",
+    "compras": "Procure-to-Pay",
+    "inventario": "Procure-to-Pay",
+    "fabricacion": "Procure-to-Pay",
+    "facturacion": "Order-to-Cash",
+    "contabilidad": "Record-to-Report",
+    "proyecto": "People & support",
+    "helpdesk": "Order-to-Cash",
+    "website": "Order-to-Cash",
+    "marketing_email": "Order-to-Cash",
+    "rrhh": "People & support",
+    "inbuilt": "Construction Vertical"
+  },
+  "func_categories": {
+    "_comment": "Per-app catalog sub-category keys (generate_spreadsheet_template.py CAT_ORDER/CAT_NAMES). Keyed canonically; es_display_name = current sheet label. 'dynapps_core' is the group Core-module category (label varies per entity via instance.core_module_label).",
+    "_order": [
+      "funcionalidades",
+      "migraciones",
+      "formaciones",
+      "dynapps_core",
+      "personalizaciones"
+    ],
+    "funcionalidades": {
+      "es_display_name": "Funcionalidades"
+    },
+    "migraciones": {
+      "es_display_name": "Migraciones de datos"
+    },
+    "formaciones": {
+      "es_display_name": "Formaciones"
+    },
+    "dynapps_core": {
+      "es_display_name": "Dynapps Core",
+      "is_core_module_category": true
+    },
+    "personalizaciones": {
+      "es_display_name": "Personalizaciones"
+    }
+  },
+  "phases": {
+    "_comment": "Project/proposal phase codes. 'proposal_phases' = the 4 phases shown on the web/pdf proposal timeline (generate_proposal.py:711-714). 'gantt_phases' = the 5 codes used by the internal gantt/legend (generate_proposal.py:729-737). es labels are byte-frozen; locales translate via strings.json phases[*].label.",
+    "proposal_phases_order": [
+      "analisis",
+      "impl",
+      "form",
+      "golive"
+    ],
+    "proposal_phases": {
+      "analisis": {
+        "es_num": "01",
+        "es_label": "Análisis funcional"
+      },
+      "impl": {
+        "es_num": "02",
+        "es_label": "Implantación"
+      },
+      "form": {
+        "es_num": "03",
+        "es_label": "Formación"
+      },
+      "golive": {
+        "es_num": "04",
+        "es_label": "Salida a producción"
+      }
+    },
+    "gantt_phases_order": [
+      "analisis",
+      "impl",
+      "dev",
+      "test",
+      "golive"
+    ],
+    "gantt_phases": {
+      "analisis": {
+        "es_label": "Análisis"
+      },
+      "impl": {
+        "es_label": "Implantación"
+      },
+      "dev": {
+        "es_label": "Desarrollos"
+      },
+      "test": {
+        "es_label": "Pruebas + formación"
+      },
+      "golive": {
+        "es_label": "Salida a producción"
+      }
+    }
+  },
+  "devs": {
+    "_comment": "Custom-development ids. Derived from proposal_data.py DEV_DESCRIPTIONS. es_display_name = the exact key used today; description prose lives in the locale pack (strings/apps_catalog). Matching in proposal_data.py is accent-normalized + parenthetical-tolerant; dev_fallback used when no id matches.",
+    "integracion_fabricacion_api": {
+      "es_display_name": "Integración app fabricación (API)"
+    },
+    "conector_shopify_facturacion": {
+      "es_display_name": "Conector Shopify (facturación)"
+    },
+    "integracion_transportistas_comparador": {
+      "es_display_name": "Integración transportistas + comparador"
+    }
+  },
+  "complements": {
+    "_comment": "Named app extras that carry cross-file semantics (detection signals, fiscal coupling, or standalone pricing). Derived from generate_spreadsheet_template.py APPS[*].extras and fiscal detection. Most spreadsheet extras stay inline in the sheet catalog; the ids listed here are the ones the plan (§2.2 pricing.complement_prices / fiscal.tax_filings) promotes to first-class join keys. es_display_name = current sheet extra label. fiscal:true means the complement is jurisdiction-specific and its copy/signals come from fiscal.json.",
+    "sii": {
+      "es_display_name": "SII (Suministro Inmediato AEAT)",
+      "app": "contabilidad",
+      "fiscal": true
+    },
+    "sepa": {
+      "es_display_name": "Domiciliación SEPA",
+      "app": "contabilidad",
+      "fiscal": true
+    },
+    "modelo_349": {
+      "es_display_name": "Intrastat / modelo 349",
+      "app": "contabilidad",
+      "fiscal": true
+    },
+    "multi_company": {
+      "es_display_name": "Multi-compañía (250€/empresa adicional)",
+      "app": "config_general",
+      "fiscal": false
+    }
+  },
+  "ia_products": {
+    "_comment": "AI value-add catalog (generate_proposal.py VA_EXCLUSIVO / VA_ADDONS / VA_POC). product_id values are Odoo-DB-specific and MUST be verify_from_odoo per country (they are the es DB ids today). 'exclusive' = radio group (choose 1); 'addons' = multi-select. 'cond' references an app_id (resolved via app_js_cond_map).",
+    "exclusive_order": [
+      "mcp",
+      "starter_ia"
+    ],
+    "exclusive": {
+      "mcp": {
+        "es_display_name": "MCP Odoo",
+        "es_product_id": "345"
+      },
+      "starter_ia": {
+        "es_display_name": "Starter Pack IA — Formación e Infraestructura",
+        "es_product_id": "339"
+      }
+    },
+    "addons_order": [
+      "ocr_facturas",
+      "ocr_nominas",
+      "ocr_albaranes",
+      "field_service"
+    ],
+    "addons": {
+      "ocr_facturas": {
+        "es_display_name": "OCR Facturas",
+        "es_product_id": "328",
+        "cond": null
+      },
+      "ocr_nominas": {
+        "es_display_name": "OCR Nóminas",
+        "es_product_id": "343",
+        "cond": null
+      },
+      "ocr_albaranes": {
+        "es_display_name": "OCR Albaranes",
+        "es_product_id": "344",
+        "cond": null
+      },
+      "field_service": {
+        "es_display_name": "Field Service / Apps móviles",
+        "es_product_id": "212",
+        "cond": "proyecto"
+      }
+    },
+    "poc": {
+      "es_display_name": "POC: Flujo Esencial",
+      "es_product_id": "347"
+    }
+  },
+  "recurrent_lines": {
+    "_comment": "Recurring-cost line ids (proposal_data.py RECURRENT_DEFAULTS / RECURRENT_DESCS). id 'dyn_cloud' has display name 'Dyn Cloud' in code. Pre-rebrand, the ES spreadsheet cell emitted 'Indaws Cloud' on the live path -> desc lookup MISSED -> desc='' (B1, byte-frozen). Post-rebrand, Odoo emits 'Dyn Cloud' (== es_sheet_title below), so the lookup HITS and B1 is resolved. odoo_license is Odoo-SA-set -> verify_from_odoo.",
+    "order": [
+      "dyn_cloud",
+      "maintenance",
+      "odoo_license"
+    ],
+    "dyn_cloud": {
+      "es_display_name": "Dyn Cloud",
+      "es_sheet_title": "Dyn Cloud"
+    },
+    "maintenance": {
+      "es_display_name": "Mantenimiento",
+      "es_sheet_title": "Mantenimiento"
+    },
+    "odoo_license": {
+      "es_display_name": "Licencia Odoo",
+      "es_sheet_title": "Licencia Odoo",
+      "verify_from_odoo": true
+    }
+  }
+}

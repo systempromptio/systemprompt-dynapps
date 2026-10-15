@@ -11,7 +11,7 @@ use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::
 
 fn declared() -> DeclaredSet {
     let doc = parse_rules_doc(
-        "entities:\n  - entity: mcp_server/atlassian\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs]\n",
+        "entities:\n  - entity: mcp_server/dynbrain\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs]\n",
     )
     .expect("parses");
     build_declared_set(
@@ -64,9 +64,9 @@ fn identical_state_is_clean() {
     let drift = compute_drift(
         &declared(),
         &[
-            row("atlassian", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row("dynbrain", "role", "admin", Access::Allow, "pilot", "yaml"),
             row(
-                "atlassian",
+                "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
@@ -74,7 +74,7 @@ fn identical_state_is_clean() {
                 "yaml",
             ),
         ],
-        &[entity("atlassian", false)],
+        &[entity("dynbrain", false)],
     );
     assert!(drift.is_clean(), "{drift:?}");
 }
@@ -84,9 +84,9 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
     let drift = compute_drift(
         &declared(),
         &[
-            row("atlassian", "role", "admin", Access::Deny, "pilot", "yaml"),
+            row("dynbrain", "role", "admin", Access::Deny, "pilot", "yaml"),
             row(
-                "atlassian",
+                "dynbrain",
                 "group",
                 "uk",
                 Access::Allow,
@@ -94,7 +94,7 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
                 DASHBOARD_SOURCE,
             ),
             row(
-                "atlassian",
+                "dynbrain",
                 "project",
                 "storefront",
                 Access::Allow,
@@ -110,7 +110,7 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
                 DASHBOARD_SOURCE,
             ),
         ],
-        &[entity("atlassian", true)],
+        &[entity("dynbrain", true)],
     );
     let counts = drift.counts();
     assert_eq!(counts.missing_in_db, 1, "india-devs is declared and absent");
@@ -121,11 +121,11 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
     assert_eq!(counts.only_in_db_bundle, 0);
     assert_eq!(
         counts.only_in_db_retire, 2,
-        "both atlassian orphans go: one is governed, one code wrote"
+        "both dynbrain orphans go: one is governed, one code wrote"
     );
     assert_eq!(
         counts.only_in_db_console_retire, 1,
-        "the console row on atlassian"
+        "the console row on dynbrain"
     );
     assert_eq!(
         counts.only_in_db_kept, 1,
@@ -140,9 +140,9 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
     assert!(!github.governed);
     assert!(!github.retire);
     assert_eq!(github.origin, OrphanOrigin::Console);
-    assert!(drift.touches("mcp_server", "atlassian"));
+    assert!(drift.touches("mcp_server", "dynbrain"));
     assert!(drift.touches("mcp_server", "github"));
-    assert!(!drift.touches("mcp_server", "salesforce"));
+    assert!(!drift.touches("mcp_server", "dynapps-odoo"));
 }
 
 #[test]
@@ -150,9 +150,9 @@ fn code_written_rows_on_a_dropped_entity_are_retired_but_bundle_rows_are_kept() 
     let drift = compute_drift(
         &declared(),
         &[
-            row("atlassian", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row("dynbrain", "role", "admin", Access::Allow, "pilot", "yaml"),
             row(
-                "atlassian",
+                "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
@@ -169,7 +169,7 @@ fn code_written_rows_on_a_dropped_entity_are_retired_but_bundle_rows_are_kept() 
                 "bundle:sfnext",
             ),
         ],
-        &[entity("atlassian", false)],
+        &[entity("dynbrain", false)],
     );
     let counts = drift.counts();
     assert_eq!(counts.only_in_db, 2);
@@ -202,7 +202,7 @@ fn a_different_justification_alone_is_drift_and_user_rows_are_invisible() {
         &declared(),
         &[
             row(
-                "atlassian",
+                "dynbrain",
                 "role",
                 "admin",
                 Access::Allow,
@@ -210,7 +210,7 @@ fn a_different_justification_alone_is_drift_and_user_rows_are_invisible() {
                 "yaml",
             ),
             row(
-                "atlassian",
+                "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
@@ -218,7 +218,7 @@ fn a_different_justification_alone_is_drift_and_user_rows_are_invisible() {
                 "yaml",
             ),
             row(
-                "atlassian",
+                "dynbrain",
                 "user",
                 "someone",
                 Access::Deny,
@@ -226,7 +226,7 @@ fn a_different_justification_alone_is_drift_and_user_rows_are_invisible() {
                 DASHBOARD_SOURCE,
             ),
         ],
-        &[entity("atlassian", false)],
+        &[entity("dynbrain", false)],
     );
     let counts = drift.counts();
     assert_eq!(counts.changed, 1);
@@ -247,19 +247,19 @@ fn an_uncatalogued_declared_entity_is_reported() {
 fn unknown_means_the_declaration_could_not_be_compared_and_nothing_else() {
     let empty_db = compute_drift(&declared(), &[], &[]);
     assert_eq!(
-        EntityState::for_entity(Some(&empty_db), "mcp_server", "atlassian"),
+        EntityState::for_entity(Some(&empty_db), "mcp_server", "dynbrain"),
         EntityState::Drift
     );
     assert_eq!(
-        EntityState::for_entity(None, "mcp_server", "atlassian"),
+        EntityState::for_entity(None, "mcp_server", "dynbrain"),
         EntityState::Unknown
     );
     let in_step = compute_drift(
         &declared(),
         &[
-            row("atlassian", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row("dynbrain", "role", "admin", Access::Allow, "pilot", "yaml"),
             row(
-                "atlassian",
+                "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
@@ -267,10 +267,10 @@ fn unknown_means_the_declaration_could_not_be_compared_and_nothing_else() {
                 "yaml",
             ),
         ],
-        &[entity("atlassian", false)],
+        &[entity("dynbrain", false)],
     );
     assert_eq!(
-        EntityState::for_entity(Some(&in_step), "mcp_server", "atlassian"),
+        EntityState::for_entity(Some(&in_step), "mcp_server", "dynbrain"),
         EntityState::InSync
     );
     assert_eq!(EntityState::Unknown.label(), "Unknown");

@@ -12,12 +12,11 @@ use crate::repositories::access_rules::rules::LedgerRuleRow;
 use crate::repositories::sync::access_control_rows::band_label;
 use crate::types::access_control::AccessDecision;
 
-const BAND_ORDER: [&str; 7] = [
+const BAND_ORDER: [&str; 6] = [
     "user",
     "project",
     "group",
     "connector",
-    "salesforce",
     "role",
     "organization",
 ];

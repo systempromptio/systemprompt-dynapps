@@ -1,10 +1,12 @@
 //! Queries over eval suites, cases, eval runs and per-case results.
 
+mod history;
 mod matrix;
 mod results;
 mod runs;
 mod suites;
 
+pub use history::list_eval_history;
 pub use matrix::list_latest_results_matrix;
 pub use results::{
     EvalOutcomeUpdate, find_eval_result, insert_eval_result, list_eval_results,

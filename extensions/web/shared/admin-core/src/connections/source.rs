@@ -1,12 +1,12 @@
 //! Where a user's [`ConnectionSnapshot`] comes from.
 //!
-//! Building a snapshot reads connector credentials, the Salesforce org
-//! registry and group entitlement, none of which this crate owns. The crate
+//! Building a snapshot reads connector credentials and entitlement, neither
+//! of which this crate owns. The crate
 //! that does registers one [`ConnectionSnapshotSource`] with
 //! `inventory::submit!`, and every reader here calls [`get_connections`].
 //! The same source names a connector for display
-//! ([`connector_display_name`]), since the label is read from the org
-//! registry too.
+//! ([`connector_display_name`]), since the label is read from the server's
+//! connector settings too.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;

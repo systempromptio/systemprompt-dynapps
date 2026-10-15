@@ -1,9 +1,9 @@
 //! A held machine credential as core's [`MachineGrant`].
 //!
 //! Core owns every minting step: the GitHub App JWT and installation-token
-//! exchange, the Salesforce client-credentials exchange, the Basic pair for an
-//! Atlassian API token, and the expiry cache. This module only maps a stored
-//! row's non-secret `config` and its opened secret onto the grant.
+//! exchange and the expiry cache. This
+//! module only maps a stored row's non-secret `config` and its opened secret
+//! onto the grant.
 
 // JSON: a credential's `config` is per-kind JSONB; each field is read by name
 // and refused when absent.
@@ -16,7 +16,7 @@ use super::MachineKind;
 const GITHUB_API: &str = "https://api.github.com";
 
 // Why: plain HTTP is allowed only to a loopback host, which is how the test
-// workspace stands in for GitHub and Salesforce.
+// workspace stands in for GitHub.
 #[must_use]
 pub fn endpoint_allowed(value: &str) -> bool {
     let Ok(url) = reqwest::Url::parse(value) else {
@@ -66,19 +66,6 @@ pub(super) fn grant(
             ),
             app_id: field(config, "app_id")?,
             private_key_pem: secret,
-        },
-        MachineKind::SalesforceClientCredentials => MachineGrant::ClientCredentials {
-            token_url: format!(
-                "{}/services/oauth2/token",
-                origin(config, "instance_url", None)?
-            ),
-            client_id: field(config, "consumer_key")?,
-            client_secret: secret,
-            scopes: Vec::new(),
-        },
-        MachineKind::AtlassianApiToken => MachineGrant::ApiToken {
-            email: field(config, "email")?,
-            api_token: secret,
         },
     })
 }

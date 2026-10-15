@@ -26,7 +26,7 @@
 //! now authenticates with the one `vertex` service-account secret.
 //!
 //! These tests pin the served id set and its twins, the Sonnet 5 rate that was
-//! wrong here until 2026-09-04, the Opus 5.5 and Fable 5.1 rate cards on both
+//! wrong here until 2026-09-04, the Opus 5.5 rate cards on both
 //! providers, and the fact that the gateway's default model resolves inside
 //! the catalog through the `claude-*` route. Changing any of them is then a
 //! deliberate, review-visible edit rather than a one-line drift.
@@ -38,14 +38,7 @@ use systemprompt::manifest::services::{
 
 use crate::support::repo_root;
 
-const SERVED: [&str; 6] = [
-    "claude-opus-5-5",
-    "claude-opus-5",
-    "claude-sonnet-5",
-    "claude-fable-5-1",
-    "claude-fable-5",
-    "claude-haiku-4-5",
-];
+const SERVED: [&str; 3] = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"];
 
 // Rate-card figures are written as decimal literals in the YAML and parsed to
 // the same `f64`, so exact comparison is the right check here; the helper keeps
@@ -125,15 +118,8 @@ fn every_served_claude_model_has_an_anthropic_api_twin_to_fail_over_to() {
         .iter()
         .map(|m| m.id.as_str().to_owned())
         .collect();
-    let mut expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
-    expected.push("anthropic-claude-haiku-4-5-20251001".to_owned());
+    let expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
     assert_eq!(twins, expected);
-    let dated = model(&anthropic.models, "anthropic-claude-haiku-4-5-20251001");
-    assert_eq!(
-        dated.upstream_model.as_deref(),
-        Some("claude-haiku-4-5-20251001")
-    );
-    assert!(dated.hidden);
 
     for id in SERVED {
         let twin = anthropic
@@ -174,6 +160,12 @@ fn the_retired_dated_ids_are_gone() {
             "claude-sonnet-4-6",
             "claude-opus-4-7",
             "claude-opus-4-8",
+            "claude-haiku-4-5",
+            "claude-haiku-4-5-20251001",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-fable-5",
+            "claude-fable-5-1",
         ] {
             assert!(
                 !models.iter().any(|m| m.matches(retired)),
@@ -185,33 +177,33 @@ fn the_retired_dated_ids_are_gone() {
 }
 
 #[test]
-fn the_dated_aliases_that_clients_still_pin_keep_resolving() {
-    let models = provider("vertex-anthropic").models;
-    // The catalog refresh left one dated id that shipped clients still pin.
-    let alias = "claude-haiku-4-5-20251001";
-    let haiku = models
-        .iter()
-        .find(|m| m.matches(alias))
-        .unwrap_or_else(|| panic!("{alias} is pinned by shipped clients and must stay an alias"));
-    assert_eq!(haiku.id.as_str(), "claude-haiku-4-5");
-    assert_eq!(
-        haiku.upstream_model.as_deref(),
-        Some("claude-haiku-4-5@20251001")
-    );
-}
-
-#[test]
-fn sonnet_5_carries_the_current_rate_card() {
+fn sonnet_5_5_carries_the_current_rate_card() {
     let vertex = provider("vertex-anthropic").models;
     let anthropic = provider("anthropic").models;
-    assert_rate_card(model(&vertex, "claude-sonnet-5"), 2.0, 10.0, 0.2, 2.5);
+    assert_rate_card(model(&vertex, "claude-sonnet-5-5"), 2.0, 10.0, 0.2, 2.5);
     assert_rate_card(
-        model(&anthropic, "anthropic-claude-sonnet-5"),
+        model(&anthropic, "anthropic-claude-sonnet-5-5"),
         2.0,
         10.0,
         0.2,
         2.5,
     );
+}
+
+// Why: haiku-5-5 is tiered at 100K prompt tokens; the catalog carries the
+// lower tier, and the >100K tier is $0.50 / $2.50.
+#[test]
+fn haiku_5_5_carries_its_base_tier_rate_card() {
+    let vertex = provider("vertex-anthropic").models;
+    let anthropic = provider("anthropic").models;
+    for haiku in [
+        model(&vertex, "claude-haiku-5-5"),
+        model(&anthropic, "anthropic-claude-haiku-5-5"),
+    ] {
+        assert_rate_card(haiku, 0.1, 0.5, 0.01, 0.125);
+        assert_eq!(haiku.limits.context_window, 1_000_000);
+        assert_eq!(haiku.limits.max_output_tokens, 128_000);
+    }
 }
 
 #[test]
@@ -228,57 +220,40 @@ fn opus_5_5_carries_its_launch_rate_card() {
     }
 }
 
+// Why: since 2026-10-14 the gateway is Anthropic-only (a client's key, no
+// Vertex): the default model routes to `anthropic` with no failover, and the
+// provider serves the bare id through its hidden twin's `upstream_model`.
 #[test]
-fn fable_5_1_is_priced_and_sized_as_the_frontier_model() {
-    let vertex = provider("vertex-anthropic").models;
-    let anthropic = provider("anthropic").models;
-    // Vertex publishes a lower cache-read rate for Fable 5.1 than Anthropic's
-    // own API; each provider bills at its own card.
-    assert_rate_card(model(&vertex, "claude-fable-5-1"), 10.0, 50.0, 0.25, 12.5);
-    assert_rate_card(
-        model(&anthropic, "anthropic-claude-fable-5-1"),
-        10.0,
-        50.0,
-        1.0,
-        12.5,
-    );
-    for fable in [
-        model(&vertex, "claude-fable-5-1"),
-        model(&anthropic, "anthropic-claude-fable-5-1"),
-    ] {
-        assert_eq!(fable.limits.context_window, 1_000_000);
-        assert_eq!(fable.limits.max_output_tokens, 128_000);
-    }
-}
-
-#[test]
-fn the_gateway_default_model_is_a_catalog_entry() {
+fn the_gateway_default_model_is_served_by_anthropic_only() {
     let spec = gateway();
     let default_model = spec.default_model.clone().expect("gateway.default_model");
-    assert_eq!(default_model, "claude-sonnet-5[1m]");
+    assert_eq!(default_model, "claude-sonnet-5-5[1m]");
 
     let route = spec
         .routes
         .iter()
         .find(|r| r.matches(&default_model) && r.when.is_none())
         .expect("a route for the default model");
-    assert_eq!(route.provider.as_str(), "vertex-anthropic");
-    assert_eq!(
-        route
-            .fallbacks
-            .iter()
-            .map(|deployment| deployment.provider.as_str())
-            .collect::<Vec<_>>(),
-        vec!["vertex-anthropic-eu"]
-    );
+    assert_eq!(route.provider.as_str(), "anthropic");
+    assert!(route.fallbacks.is_empty(), "no failover off Anthropic");
     assert!(
-        provider(route.provider.as_str())
-            .models
-            .iter()
-            .any(|m| m.matches(&default_model)),
-        "the default model must be listed: allow_unlisted_models is false, so \
-         an unlisted default is a 403 for every request that omits a model"
+        provider("anthropic")
+            .find_served_model(&default_model)
+            .is_some(),
+        "anthropic must serve the default model by upstream name"
     );
+}
+
+#[test]
+fn every_route_goes_to_anthropic() {
+    for route in &gateway().routes {
+        assert!(
+            matches!(route.provider.as_str(), "anthropic" | "e2e-mock"),
+            "route {:?} reaches {}: the gateway is Anthropic-only",
+            route.name,
+            route.provider.as_str()
+        );
+    }
 }
 
 #[test]
@@ -315,8 +290,10 @@ fn every_vertex_provider_shares_the_vertex_secret() {
     }
 }
 
+// Declared for a later restore, but unreachable while the gateway is
+// Anthropic-only.
 #[test]
-fn the_current_open_models_are_declared_and_routed_to_maas() {
+fn the_open_models_stay_declared_but_unrouted() {
     let spec = gateway();
     let maas = provider("vertex-maas").models;
     for id in [
@@ -326,11 +303,9 @@ fn the_current_open_models_are_declared_and_routed_to_maas() {
         "qwen.qwen3-coder-480b",
     ] {
         assert!(maas.iter().any(|m| m.matches(id)), "{id} is not declared");
-        let route = spec
-            .routes
-            .iter()
-            .find(|r| r.matches(id))
-            .unwrap_or_else(|| panic!("no route for {id}"));
-        assert_eq!(route.provider.as_str(), "vertex-maas", "{id}");
+        assert!(
+            !spec.routes.iter().any(|r| r.matches(id)),
+            "{id} must not be routable while the gateway is Anthropic-only"
+        );
     }
 }

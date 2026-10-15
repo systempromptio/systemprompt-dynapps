@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indaws — Guía de Consultoría Completa</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Montserrat', Verdana, sans-serif; background: #f5f6fa; color: #1C265D; }
+
+/* Colors */
+:root {
+  --blue-space: #1C265D;
+  --blue-lilac: #6B68FA;
+  --warm-yellow: #E5B92B;
+  --light-sky: #8AC2DB;
+  --green: #27ae60;
+  --orange: #e67e22;
+  --red-soft: #e74c3c;
+  --white: #ffffff;
+  --gray-light: #f0f1f5;
+  --gray: #8e99a4;
+  --analysis: #7b1fa2;
+  --preproject: #4527a0;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--blue-space) 0%, #2a3a7d 100%);
+  color: white;
+  padding: 40px 60px;
+}
+.header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+.header p { font-size: 1rem; opacity: 0.8; font-weight: 400; }
+.header .gen-date { font-size: 0.75rem; opacity: 0.5; margin-top: 8px; }
+
+/* Navigation */
+.nav {
+  background: white;
+  padding: 16px 60px;
+  display: flex;
+  gap: 12px;
+  border-bottom: 2px solid var(--gray-light);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+.nav button {
+  padding: 10px 24px;
+  border: 2px solid var(--blue-lilac);
+  background: white;
+  color: var(--blue-lilac);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nav button.active, .nav button:hover {
+  background: var(--blue-lilac);
+  color: white;
+}
+.nav button.new-tab {
+  border-color: var(--warm-yellow);
+  color: var(--warm-yellow);
+}
+.nav button.new-tab.active, .nav button.new-tab:hover {
+  background: var(--warm-yellow);
+  color: var(--blue-space);
+}
+
+/* Sections */
+.section { display: none; padding: 40px 60px; }
+.section.active { display: block; }
+
+/* ==================== VIEW 1: OVERVIEW ==================== */
+.overview-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 40px 0;
+  flex-wrap: wrap;
+}
+.phase-card {
+  flex: 1;
+  padding: 24px;
+  border-radius: 12px;
+  position: relative;
+  min-height: 260px;
+  min-width: 180px;
+}
+.phase-card::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-left: 20px solid var(--blue-space);
+  border-top: 20px solid transparent;
+  border-bottom: 20px solid transparent;
+  z-index: 2;
+}
+.phase-card:last-child::after { display: none; }
+.phase-card.sales { background: linear-gradient(135deg, #1a237e 0%, #283593 100%); }
+.phase-card.sales::after { border-left-color: #283593; }
+.phase-card.analysis { background: linear-gradient(135deg, #6a1b9a 0%, #8e24aa 100%); }
+.phase-card.analysis::after { border-left-color: #8e24aa; }
+.phase-card.preproject { background: linear-gradient(135deg, #4527a0 0%, #5e35b1 100%); }
+.phase-card.preproject::after { border-left-color: #5e35b1; }
+.phase-card.execution { background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%); }
+.phase-card.execution::after { border-left-color: #1976d2; }
+.phase-card.postproject { background: linear-gradient(135deg, #00695c 0%, #00897b 100%); }
+.phase-card .phase-icon { font-size: 2rem; margin-bottom: 12px; }
+.phase-card h3 { color: white; font-size: 1.05rem; margin-bottom: 6px; }
+.phase-card .phase-subtitle { color: rgba(255,255,255,0.7); font-size: 0.78rem; margin-bottom: 16px; }
+.phase-card .skill-list { list-style: none; }
+.phase-card .skill-list li {
+  color: rgba(255,255,255,0.9);
+  font-size: 0.75rem;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.phase-card .skill-list li:last-child { border: none; }
+.phase-card .skill-list li.manual-item { color: rgba(255,255,255,0.6); font-style: italic; }
+.phase-card .skill-count {
+  position: absolute;
+  bottom: 16px; right: 16px;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.phase-spacer { width: 24px; flex-shrink: 0; }
+
+/* Repo badges */
+.repo-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.repo-badge.sales { background: var(--warm-yellow); color: var(--blue-space); }
+.repo-badge.consultant { background: var(--light-sky); color: var(--blue-space); }
+.repo-badge.common { background: #ddd; color: #555; }
+
+/* ==================== VIEW 2: DETAILED ==================== */
+.detail-phase { margin-bottom: 48px; }
+.detail-phase-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid var(--blue-lilac);
+}
+.detail-phase-header h2 { font-size: 1.4rem; }
+.detail-phase-header .phase-num {
+  background: var(--blue-lilac);
+  color: white;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Flow steps - vertical timeline */
+.flow-timeline { position: relative; padding-left: 40px; }
+.flow-timeline::before {
+  content: '';
+  position: absolute;
+  left: 15px; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, var(--blue-lilac), var(--light-sky));
+  border-radius: 2px;
+}
+.flow-step { position: relative; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 16px; }
+.flow-step:last-child { margin-bottom: 0; }
+.step-number {
+  position: absolute; left: -40px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.75rem;
+  flex-shrink: 0; z-index: 1;
+}
+.step-number.skill-step { background: var(--blue-lilac); color: white; }
+.step-number.manual-step-num { background: var(--warm-yellow); color: var(--blue-space); }
+.step-number.loop-step { background: var(--orange); color: white; }
+.step-content { flex: 1; max-width: 700px; }
+
+.skill-node {
+  background: white;
+  border: 2px solid #e0e3eb;
+  border-radius: 10px;
+  padding: 16px;
+  position: relative;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.skill-node:hover { border-color: var(--blue-lilac); box-shadow: 0 4px 16px rgba(107,104,250,0.15); transform: translateY(-2px); }
+.skill-node h4 { font-size: 0.85rem; color: var(--blue-space); margin-bottom: 6px; }
+.skill-node .skill-desc { font-size: 0.72rem; color: var(--gray); line-height: 1.4; margin-bottom: 8px; }
+.skill-node .io-row { display: flex; gap: 8px; font-size: 0.65rem; flex-wrap: wrap; }
+.io-tag { padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+.io-tag.input { background: #e8f5e9; color: #2e7d32; }
+.io-tag.output { background: #e3f2fd; color: #1565c0; }
+
+.manual-step { background: #fff8e1; border: 2px dashed var(--warm-yellow); border-radius: 10px; padding: 16px; }
+.manual-step h4 { color: var(--orange); font-size: 0.85rem; margin-bottom: 4px; }
+.manual-step p { font-size: 0.72rem; color: #8d6e00; line-height: 1.4; }
+
+.loop-step-box { background: #fbe9e7; border: 2px dashed var(--orange); border-radius: 10px; padding: 16px; }
+.loop-step-box h4 { color: var(--orange); font-size: 0.85rem; margin-bottom: 4px; }
+.loop-step-box p { font-size: 0.72rem; color: #bf360c; line-height: 1.4; }
+
+.multi-skill { display: flex; gap: 12px; flex-wrap: wrap; }
+.multi-skill .skill-node { flex: 1; min-width: 240px; }
+
+.skill-node.future { border: 2px dashed #b0b0b0; background: #fafafa; opacity: 0.85; }
+.skill-node.future h4 { color: #888; }
+.skill-node.future::after {
+  content: 'FUTURO';
+  position: absolute; top: -8px; right: 12px;
+  background: var(--orange); color: white;
+  padding: 1px 8px; border-radius: 3px; font-size: 0.6rem; font-weight: 700;
+}
+
+.parallel-group {
+  border: 2px dashed var(--light-sky);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex; flex-wrap: wrap; gap: 12px;
+  position: relative;
+}
+.parallel-group::before {
+  content: attr(data-label);
+  position: absolute; top: -10px; left: 16px;
+  background: var(--light-sky); color: var(--blue-space);
+  padding: 2px 10px; border-radius: 4px; font-size: 0.65rem; font-weight: 700;
+}
+
+/* ==================== VIEW 3: REFERENCE ==================== */
+.ref-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.ref-table th { background: var(--blue-space); color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+.ref-table td { padding: 10px 14px; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+.ref-table tr:hover td { background: #f8f9ff; }
+.ref-table .phase-col { font-weight: 600; white-space: nowrap; }
+
+/* Stats bar */
+.stats-bar {
+  display: flex; gap: 32px;
+  margin: 24px 0 40px;
+  padding: 20px 32px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  flex-wrap: wrap;
+}
+.stat-item { text-align: center; }
+.stat-item .stat-num { font-size: 2rem; font-weight: 700; color: var(--blue-lilac); }
+.stat-item .stat-label { font-size: 0.75rem; color: var(--gray); margin-top: 4px; }
+
+/* ==================== VIEW 4: METHODOLOGY ==================== */
+.methodology-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: 20px;
+}
+.methodology-card h3 { font-size: 1.1rem; color: var(--blue-space); margin-bottom: 12px; }
+.methodology-card .pilar-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.methodology-card .pilar-badge.dark { background: var(--blue-space); color: var(--warm-yellow); }
+.methodology-card .pilar-badge.light { background: var(--gray-light); color: var(--blue-lilac); }
+.methodology-card ul { list-style: none; padding: 0; }
+.methodology-card li {
+  position: relative;
+  padding: 6px 0 6px 20px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  border-bottom: 1px solid #f0f1f5;
+}
+.methodology-card li:last-child { border: none; }
+.methodology-card li::before {
+  content: '';
+  position: absolute; left: 0; top: 12px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--blue-lilac);
+}
+.decision-ladder {
+  display: flex;
+  gap: 0;
+  margin: 24px 0;
+}
+.ladder-step {
+  flex: 1;
+  padding: 20px;
+  text-align: center;
+  position: relative;
+  color: white;
+}
+.ladder-step:first-child { border-radius: 10px 0 0 10px; }
+.ladder-step:last-child { border-radius: 0 10px 10px 0; }
+.ladder-step h4 { font-size: 0.9rem; margin-bottom: 6px; }
+.ladder-step p { font-size: 0.72rem; opacity: 0.85; }
+.ladder-step::after {
+  content: '→';
+  position: absolute;
+  right: -12px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  z-index: 2;
+}
+.ladder-step:last-child::after { display: none; }
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+/* ==================== VIEW 5: STANDARDS ==================== */
+.standard-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  transition: all 0.2s;
+}
+.standard-row:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+.standard-row .std-num {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.standard-row .std-num.blocking { background: var(--red-soft); color: white; }
+.standard-row .std-num.warning { background: var(--orange); color: white; }
+.standard-row .std-info { flex: 1; }
+.standard-row .std-info h4 { font-size: 0.9rem; margin-bottom: 4px; }
+.standard-row .std-info p { font-size: 0.75rem; color: var(--gray); line-height: 1.4; }
+.standard-row .std-severity {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.std-severity.blocking { background: #ffebee; color: var(--red-soft); }
+.std-severity.warning { background: #fff3e0; color: var(--orange); }
+.standard-row .std-skill {
+  font-size: 0.72rem;
+  color: var(--blue-lilac);
+  font-weight: 600;
+}
+
+/* ==================== VIEW 6: KNOWLEDGE ==================== */
+.knowledge-tree {
+  background: white;
+  border-radius: 12px;
+  padding: 24px 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.knowledge-tree .tree-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f1f5;
+}
+.knowledge-tree .tree-item:last-child { border: none; }
+.knowledge-tree .tree-item.child { padding-left: 32px; }
+.tree-icon { font-size: 1.2rem; }
+.tree-tag {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.tree-tag.obligatorio { background: #e8f5e9; color: #2e7d32; }
+.tree-tag.condicional { background: #fff3e0; color: #e65100; }
+.tree-tag.opcional { background: #f0f1f5; color: var(--gray); }
+.tree-name { font-size: 0.88rem; font-weight: 600; flex: 1; }
+.tree-desc { font-size: 0.72rem; color: var(--gray); }
+
+@media (max-width: 1200px) {
+  .overview-flow { flex-wrap: wrap; }
+  .phase-card::after { display: none; }
+  .phase-spacer { display: none; }
+  .phase-card { min-width: 250px; margin-bottom: 16px; }
+  .section { padding: 24px; }
+  .header { padding: 24px; }
+  .nav { padding: 12px 24px; }
+  .decision-ladder { flex-direction: column; }
+  .ladder-step { border-radius: 10px !important; }
+  .ladder-step::after { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Indaws — Guía de Consultoría Completa</h1>
+  <p>De la oportunidad comercial al soporte post-implantación — Metodología, skills y estándares</p>
+  <div class="gen-date">Generado: {{DATE}} | {{SKILL_COUNT}} skills en el ecosistema</div>
+</div>
+
+<div class="nav">
+  <button class="active" onclick="showSection('overview')">Vista General</button>
+  <button onclick="showSection('detailed')">Flujo Detallado</button>
+  <button onclick="showSection('reference')">Referencia Skills</button>
+  <button class="new-tab" onclick="showSection('methodology')">Metodología</button>
+  <button class="new-tab" onclick="showSection('standards')">Estándares</button>
+  <button class="new-tab" onclick="showSection('knowledge')">Knowledge</button>
+</div>
+
+<!-- ==================== VIEW 1: OVERVIEW ==================== -->
+<div id="overview" class="section active">
+  <div class="stats-bar">
+    {{STATS}}
+  </div>
+
+  <div class="overview-flow">
+    <!-- Phase cards se generan dinámicamente en modo GENERAR -->
+    <p style="text-align:center; color:var(--gray); font-size:0.85rem; width:100%; padding:40px;">
+      Este contenido se genera automáticamente leyendo los SKILL.md del ecosistema.<br>
+      Ejecuta el modo GENERAR del skill consultant-assistant para rellenar esta sección.
+    </p>
+  </div>
+</div>
+
+<!-- ==================== VIEW 2: DETAILED ==================== -->
+<div id="detailed" class="section">
+  <p style="text-align:center; color:var(--gray); font-size:0.85rem; padding:40px;">
+    El flujo detallado se genera automáticamente desde los datos del skill_flow_diagrams.html existente.<br>
+    Ejecuta el modo GENERAR del skill consultant-assistant para rellenar esta sección.
+  </p>
+</div>
+
+<!-- ==================== VIEW 3: REFERENCE ==================== -->
+<div id="reference" class="section">
+  <h2 style="margin-bottom:8px;">Referencia completa de Skills</h2>
+  <p style="font-size:0.78rem; color:var(--gray); margin-bottom:20px;">
+    Esta tabla se genera leyendo los SKILL.md reales del ecosistema.
+  </p>
+  <table class="ref-table">
+    <thead>
+      <tr>
+        <th>Fase</th>
+        <th>Skill</th>
+        <th>Descripción</th>
+        <th>Versión</th>
+        <th>Repo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Se genera dinámicamente -->
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== VIEW 4: METHODOLOGY ==================== -->
+<div id="methodology" class="section">
+
+  <h2 style="margin-bottom:8px;">Metodología Indaws</h2>
+  <p style="font-size:0.82rem; color:var(--gray); margin-bottom:24px;">
+    Los principios fundamentales que guían nuestro trabajo como consultores Odoo
+  </p>
+
+  <!-- Decision Ladder -->
+  <h3 style="font-size:1rem; margin-bottom:12px;">Escalera de Decisión</h3>
+  <div class="decision-ladder">
+    <div class="ladder-step" style="background: var(--green);">
+      <h4>1. Odoo Estándar</h4>
+      <p>Agotar configuración nativa</p>
+    </div>
+    <div class="ladder-step" style="background: var(--warm-yellow); color: var(--blue-space);">
+      <h4>2. Indaws Core</h4>
+      <p>40+ paquetes propios</p>
+    </div>
+    <div class="ladder-step" style="background: var(--red-soft);">
+      <h4>3. Desarrollo Custom</h4>
+      <p>Cuando la lógica no es trivial</p>
+    </div>
+  </div>
+  <p style="font-size:0.78rem; color:var(--gray); text-align:center; margin-bottom:32px;">
+    Solo pasas al siguiente escalón cuando el anterior no cubre la necesidad. Cada paso añade complejidad y coste de mantenimiento.
+  </p>
+
+  <!-- 6 Pilares -->
+  <h3 style="font-size:1rem; margin-bottom:16px;">Los 6 Pilares</h3>
+  <div class="bento-grid">
+    <div class="methodology-card" style="background: var(--blue-space); color: white;">
+      <span class="pilar-badge dark">Pilar 1</span>
+      <h3 style="color: white;">Filosofía de Implementación</h3>
+      <ul>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Aprovechar estándar y Core antes de reinventar; código gobernado para lógica no trivial</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Revisar Indaws Core antes de proponer desarrollo a medida</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">No sobrecomplicar: simplicidad ante todo</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Entender la necesidad de negocio, no solo el ticket</li>
+      </ul>
+    </div>
+
+    <div class="methodology-card">
+      <span class="pilar-badge light">Pilar 2</span>
+      <h3>Planificación y Ejecución</h3>
+      <ul>
+        <li>Planificar tareas técnicas con antelación</li>
+        <li>Documentar antes de entrar en planificación</li>
+        <li>Mantener tareas y checklists siempre al día</li>
+        <li>Ayudar a los TLs a reservar tus horas</li>
+        <li>Preguntar por carga del equipo de desarrollo</li>
+      </ul>
+    </div>
+
+    <div class="methodology-card">
+      <span class="pilar-badge light">Pilar 3</span>
+      <h3>Relación con el Cliente</h3>
+      <ul>
+        <li><strong>OBLIGATORIO</strong>: Enviar informe semanal al cliente</li>
+        <li>Decir "no" a tiempo antes que prometer de más</li>
+        <li>Traducir tecnicismos al lenguaje de negocio</li>
+        <li>Si una llamada de 5 min resuelve antes, llama</li>
+      </ul>
+    </div>
+
+    <div class="methodology-card" style="background: var(--blue-space); color: white;">
+      <span class="pilar-badge dark">Pilar 4</span>
+      <h3 style="color: white;">Ética Financiera</h3>
+      <ul>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Vigilar el presupuesto constantemente</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Solicitar traspaso de horas si cambia el rol</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Registrar horas en el timesheet cada día</li>
+      </ul>
+    </div>
+
+    <div class="methodology-card" style="background: var(--blue-space); color: white;">
+      <span class="pilar-badge dark">Pilar 5</span>
+      <h3 style="color: white;">Organización Interna</h3>
+      <ul>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Mantener a los PMs informados de todo</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Apoyarte en PMs de otros equipos si lo necesitas</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">No justificar tu trabajo ante otros departamentos sin indicación</li>
+        <li style="color:rgba(255,255,255,0.85); border-color:rgba(255,255,255,0.15);">Calendario y planificación siempre actualizados</li>
+      </ul>
+    </div>
+
+    <div class="methodology-card">
+      <span class="pilar-badge light">Pilar 6</span>
+      <h3>Calidad y Crecimiento</h3>
+      <ul>
+        <li>Probar en staging con datos reales (UAT)</li>
+        <li>Verificar flujos completos, no solo funcionalidades aisladas</li>
+        <li>Comprobar permisos de usuario para cada rol</li>
+        <li>Documentar errores complejos en la base de conocimiento</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Prácticas obligatorias -->
+  <div style="margin-top:32px; padding:24px; background:white; border-radius:12px; border-top:4px solid var(--warm-yellow); box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+    <h3 style="font-size:1rem; color:var(--orange); margin-bottom:16px;">2 Prácticas Obligatorias</h3>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:280px;">
+        <h4 style="font-size:0.9rem; margin-bottom:6px;">Weekly Updates</h4>
+        <p style="font-size:0.78rem; color:var(--gray); line-height:1.5;">
+          Informe semanal al cliente, sin excepción. Contenido: tareas completadas, en curso, próximos pasos, bloqueos, decisiones pendientes.
+        </p>
+      </div>
+      <div style="flex:1; min-width:280px;">
+        <h4 style="font-size:0.9rem; margin-bottom:6px;">Timesheets Diarios</h4>
+        <p style="font-size:0.78rem; color:var(--gray); line-height:1.5;">
+          Registrar horas cada día con descripciones precisas. No dejar para el viernes: la memoria falla. Si tus partes son detallados, los weekly updates se preparan solos.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cita -->
+  <div style="margin-top:32px; padding:32px; background:linear-gradient(135deg, var(--blue-space) 0%, #2a3a7d 100%); border-radius:12px; text-align:center; color:white;">
+    <p style="font-size:1.2rem; font-weight:600; line-height:1.4; opacity:0.95;">
+      "La calidad de una implementación de Odoo se mide por lo poco que el cliente necesita llamarnos después de la puesta en marcha."
+    </p>
+    <p style="font-size:0.75rem; opacity:0.6; margin-top:12px;">Equipo de Consultoría INDAWS</p>
+  </div>
+</div>
+
+<!-- ==================== VIEW 5: STANDARDS ==================== -->
+<div id="standards" class="section">
+
+  <h2 style="margin-bottom:8px;">Estándares de Proyecto</h2>
+  <p style="font-size:0.82rem; color:var(--gray); margin-bottom:24px;">
+    12 estándares de calidad que todo proyecto Odoo de Indaws debe cumplir
+  </p>
+
+  <div style="display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap;">
+    <div style="padding:12px 20px; background:#ffebee; border-radius:8px; font-size:0.8rem;">
+      <strong style="color:var(--red-soft);">BLOCKING</strong>: El proyecto NO puede considerarse correctamente configurado
+    </div>
+    <div style="padding:12px 20px; background:#fff3e0; border-radius:8px; font-size:0.8rem;">
+      <strong style="color:var(--orange);">WARNING</strong>: El proyecto funciona pero tiene riesgos de calidad
+    </div>
+  </div>
+
+  <!-- Standard 1 -->
+  <div class="standard-row">
+    <div class="std-num blocking">1</div>
+    <div class="std-info">
+      <h4>partner_id asignado</h4>
+      <p>El proyecto debe tener un cliente (partner_id) asignado en project.project</p>
+    </div>
+    <span class="std-severity blocking">BLOCKING</span>
+    <span class="std-skill">—</span>
+  </div>
+
+  <!-- Standard 2 -->
+  <div class="standard-row">
+    <div class="std-num blocking">2</div>
+    <div class="std-info">
+      <h4>Knowledge configurado</h4>
+      <p>El campo x_studio_knowledge debe estar vinculado a un artículo Knowledge</p>
+    </div>
+    <span class="std-severity blocking">BLOCKING</span>
+    <span class="std-skill">project-odoo-creator</span>
+  </div>
+
+  <!-- Standard 3 -->
+  <div class="standard-row">
+    <div class="std-num warning">3</div>
+    <div class="std-info">
+      <h4>Estructura Knowledge completa</h4>
+      <p>El artículo raíz debe tener los 7 hijos esperados (Análisis, Actas, Desarrollos, etc.)</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">—</span>
+  </div>
+
+  <!-- Standard 4 -->
+  <div class="standard-row">
+    <div class="std-num warning">4</div>
+    <div class="std-info">
+      <h4>Tareas ≥5h tienen checklists</h4>
+      <p>Las tareas con allocated_hours ≥ 5 deben tener al menos 1 item en xx.checklist.item</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">odoo-configurator</span>
+  </div>
+
+  <!-- Standard 5 -->
+  <div class="standard-row">
+    <div class="std-num warning">5</div>
+    <div class="std-info">
+      <h4>Tareas activas tienen deadline</h4>
+      <p>Todas las tareas activas deben tener date_deadline definido</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">project-health-fixer</span>
+  </div>
+
+  <!-- Standard 6 -->
+  <div class="standard-row">
+    <div class="std-num warning">6</div>
+    <div class="std-info">
+      <h4>Sin tareas vencidas sin acción</h4>
+      <p>Las tareas con deadline pasado deben tener timesheet o mensaje reciente (últimos 7 días)</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">project-health-fixer</span>
+  </div>
+
+  <!-- Standard 7 -->
+  <div class="standard-row">
+    <div class="std-num warning">7</div>
+    <div class="std-info">
+      <h4>Client requests generadas</h4>
+      <p>Deben existir peticiones (x_client_request) para las tareas activas del proyecto</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">client-request-manager</span>
+  </div>
+
+  <!-- Standard 8 -->
+  <div class="standard-row">
+    <div class="std-num warning">8</div>
+    <div class="std-info">
+      <h4>Health check ejecutado</h4>
+      <p>Debe existir al menos 1 project.update con x_studio_health_score</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">project-health-monitor</span>
+  </div>
+
+  <!-- Standard 9 -->
+  <div class="standard-row">
+    <div class="std-num warning">9</div>
+    <div class="std-info">
+      <h4>Weekly updates recientes</h4>
+      <p>El último project.update debe tener menos de 14 días de antigüedad</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">project-weekly-update</span>
+  </div>
+
+  <!-- Standard 10 -->
+  <div class="standard-row">
+    <div class="std-num warning">10</div>
+    <div class="std-info">
+      <h4>Timesheets registrados</h4>
+      <p>Deben existir registros en account.analytic.line en los últimos 7 días</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">—</span>
+  </div>
+
+  <!-- Standard 11 -->
+  <div class="standard-row">
+    <div class="std-num warning">11</div>
+    <div class="std-info">
+      <h4>Sin checklists duplicados</h4>
+      <p>No deben existir items con mismo (name, task_id) en xx.checklist.item</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">—</span>
+  </div>
+
+  <!-- Standard 12 -->
+  <div class="standard-row">
+    <div class="std-num warning">12</div>
+    <div class="std-info">
+      <h4>Horas tareas ≈ horas proyecto</h4>
+      <p>La suma de allocated_hours de tareas debe ser ±10% del total del proyecto</p>
+    </div>
+    <span class="std-severity warning">WARNING</span>
+    <span class="std-skill">project-health-fixer</span>
+  </div>
+
+</div>
+
+<!-- ==================== VIEW 6: KNOWLEDGE ==================== -->
+<div id="knowledge" class="section">
+
+  <h2 style="margin-bottom:8px;">Estructura Knowledge</h2>
+  <p style="font-size:0.82rem; color:var(--gray); margin-bottom:24px;">
+    Estructura de artículos Knowledge que todo proyecto de Indaws debe tener
+  </p>
+
+  <div style="display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap;">
+    <div style="padding:8px 16px; background:#e8f5e9; border-radius:6px; font-size:0.78rem;">
+      <strong style="color:#2e7d32;">OBLIGATORIO</strong>: Debe existir siempre
+    </div>
+    <div style="padding:8px 16px; background:#fff3e0; border-radius:6px; font-size:0.78rem;">
+      <strong style="color:#e65100;">CONDICIONAL</strong>: Si se cumple la condición
+    </div>
+    <div style="padding:8px 16px; background:#f0f1f5; border-radius:6px; font-size:0.78rem;">
+      <strong style="color:var(--gray);">OPCIONAL</strong>: Recomendado pero no requerido
+    </div>
+  </div>
+
+  <div class="knowledge-tree">
+    <!-- Root -->
+    <div class="tree-item">
+      <span class="tree-icon">📁</span>
+      <span class="tree-name">{Nombre del proyecto}</span>
+      <span class="tree-tag obligatorio">RAÍZ</span>
+      <span class="tree-desc">Vinculado via x_studio_knowledge en project.project</span>
+    </div>
+
+    <!-- Kick-Off -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Kick-Off</span>
+      <span class="tree-tag opcional">OPCIONAL</span>
+      <span class="tree-desc">Notas y presentación del kick-off</span>
+    </div>
+
+    <!-- Análisis -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Análisis</span>
+      <span class="tree-tag obligatorio">OBLIGATORIO</span>
+      <span class="tree-desc">Sub-artículos por app — generado por project-analysis</span>
+    </div>
+
+    <!-- Cuestionarios -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Cuestionarios de Análisis</span>
+      <span class="tree-tag opcional">OPCIONAL</span>
+      <span class="tree-desc">Si se generaron con questionnaire-generator</span>
+    </div>
+
+    <!-- Actas -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Actas de reunión</span>
+      <span class="tree-tag obligatorio">OBLIGATORIO</span>
+      <span class="tree-desc">Un registro por reunión relevante — project-meeting-minutes</span>
+    </div>
+
+    <!-- Desarrollos -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Desarrollos</span>
+      <span class="tree-tag condicional">CONDICIONAL</span>
+      <span class="tree-desc">Si hay tareas [DEV] — odoo-module-documenter</span>
+    </div>
+
+    <!-- Adaptaciones -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Adaptaciones</span>
+      <span class="tree-tag condicional">CONDICIONAL</span>
+      <span class="tree-desc">Si hay items STUDIO/AUTO — odoo-configurator</span>
+    </div>
+
+    <!-- Formaciones -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Plan de Formaciones</span>
+      <span class="tree-tag condicional">CONDICIONAL</span>
+      <span class="tree-desc">Si hay tareas de formación — training-planner</span>
+    </div>
+
+    <!-- Interno -->
+    <div class="tree-item child">
+      <span class="tree-icon">📄</span>
+      <span class="tree-name">Interno</span>
+      <span class="tree-tag opcional">OPCIONAL</span>
+      <span class="tree-desc">Notas internas del equipo de consultoría</span>
+    </div>
+  </div>
+
+  <!-- Cuándo crear cada uno -->
+  <div style="margin-top:32px;">
+    <h3 style="font-size:1rem; margin-bottom:16px;">¿Cuándo crear cada artículo?</h3>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+      <div style="background:white; border-radius:10px; padding:16px; border-left:4px solid var(--green); box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+        <h4 style="font-size:0.85rem; color:var(--green); margin-bottom:4px;">Al crear el proyecto</h4>
+        <p style="font-size:0.75rem; color:var(--gray);">Artículo raíz + Análisis + Actas</p>
+      </div>
+      <div style="background:white; border-radius:10px; padding:16px; border-left:4px solid var(--analysis); box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+        <h4 style="font-size:0.85rem; color:var(--analysis); margin-bottom:4px;">Al completar el análisis</h4>
+        <p style="font-size:0.75rem; color:var(--gray);">Sub-artículos por app bajo Análisis</p>
+      </div>
+      <div style="background:white; border-radius:10px; padding:16px; border-left:4px solid var(--orange); box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+        <h4 style="font-size:0.85rem; color:var(--orange); margin-bottom:4px;">Al iniciar configuración</h4>
+        <p style="font-size:0.75rem; color:var(--gray);">Adaptaciones (si hay items STUDIO), Desarrollos (si hay items DEV)</p>
+      </div>
+      <div style="background:white; border-radius:10px; padding:16px; border-left:4px solid var(--blue-lilac); box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+        <h4 style="font-size:0.85rem; color:var(--blue-lilac); margin-bottom:4px;">Al planificar formación</h4>
+        <p style="font-size:0.75rem; color:var(--gray);">Plan de Formaciones</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>

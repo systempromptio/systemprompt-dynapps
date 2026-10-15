@@ -1,3 +1,0 @@
-# Nothing here is ignored on retrieve: .retrieved/ (the consumer key and secret)
-# is kept out of git by .gitignore instead.
-package.xml

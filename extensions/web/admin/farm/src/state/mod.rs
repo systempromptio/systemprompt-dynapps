@@ -5,6 +5,7 @@
 //! `agent_runs` table, claimed by
 //! [`crate::services::runner::FarmRunnerService`].
 
+mod judge;
 mod limits;
 mod paths;
 
@@ -12,8 +13,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use sqlx::PgPool;
+use systemprompt::ai::AiService;
 use systemprompt::config::AppPaths;
 
+pub use judge::{JudgeSource, read_evals_config};
 pub use limits::RunnerLimits;
 pub use paths::FarmPaths;
 
@@ -41,6 +44,7 @@ pub struct FarmState {
     pub paths: FarmPaths,
     pub gateway: GatewayEndpoints,
     pub limits: RunnerLimits,
+    pub judge: JudgeSource,
 }
 
 #[must_use]
@@ -50,11 +54,23 @@ pub fn build_farm_state(
     gateway: GatewayEndpoints,
     limits: RunnerLimits,
 ) -> Arc<FarmState> {
+    build_farm_state_with_judge(pool, paths, gateway, limits, JudgeSource::default())
+}
+
+#[must_use]
+pub fn build_farm_state_with_judge(
+    pool: Arc<PgPool>,
+    paths: FarmPaths,
+    gateway: GatewayEndpoints,
+    limits: RunnerLimits,
+    judge: JudgeSource,
+) -> Arc<FarmState> {
     Arc::new(FarmState {
         pool,
         paths,
         gateway,
         limits,
+        judge,
     })
 }
 
@@ -63,11 +79,26 @@ pub fn build_farm_state_from_app(
     pool: Arc<PgPool>,
     app_paths: Option<&AppPaths>,
 ) -> Arc<FarmState> {
-    build_farm_state(
+    build_farm_state_with_ai(pool, app_paths, None)
+}
+
+#[must_use]
+pub fn build_farm_state_with_ai(
+    pool: Arc<PgPool>,
+    app_paths: Option<&AppPaths>,
+    ai: Option<Arc<AiService>>,
+) -> Arc<FarmState> {
+    let paths = farm_paths(app_paths);
+    let judge = JudgeSource {
+        config: read_evals_config(&paths.composed_services_root),
+        ai,
+    };
+    build_farm_state_with_judge(
         pool,
-        farm_paths(app_paths),
+        paths,
         gateway_endpoints(),
         RunnerLimits::default(),
+        judge,
     )
 }
 

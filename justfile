@@ -283,12 +283,12 @@ _test-bridge-uncoordinated:
 
 # Unit tests: the unit crates of the tests/ workspace.
 # If sqlx offline errors appear, run `just prepare` first to refresh .sqlx.
-# Emergency Salesforce hotfix: exact token boundary and connection regressions.
+# Emergency connector hotfix: exact token boundary and connection regressions.
 test-hotfix:
     @bash scripts/build-coordinator.sh run test-hotfix "" -- just _test-hotfix-uncoordinated
 
 _test-hotfix-uncoordinated:
-    SQLX_OFFLINE=true cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p web-unit-tests -E 'test(connector_oauth::) | test(connector_token_expiry::) | test(connector_cards::) | test(salesforce_orgs::)'
+    SQLX_OFFLINE=true cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p web-unit-tests -E 'test(connector_oauth::) | test(connector_cards::)'
 
 test-unit:
     @scripts/build-coordinator.sh run test-unit "" -- {{just_executable()}} _test-unit-uncoordinated

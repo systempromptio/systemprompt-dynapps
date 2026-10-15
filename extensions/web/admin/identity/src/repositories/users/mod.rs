@@ -6,6 +6,7 @@ mod federated_provision;
 pub mod mutations;
 pub mod queries;
 pub mod revocation;
+pub mod role_grants;
 pub mod roles;
 pub mod roster;
 pub mod sessions;

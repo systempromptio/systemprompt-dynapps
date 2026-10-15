@@ -84,9 +84,9 @@ fn windows_accept_relative_and_absolute_shapes_only() {
 #[test]
 fn conversation_list_pages_by_offset_and_filters_by_dashed_skill() {
     let command = conversation_list_command(&conversations(
-        json!({"skill": "admin_ai_usage", "offset": 25, "limit": 10}),
+        json!({"skill": "systemprompt_cli", "offset": 25, "limit": 10}),
     ))
     .expect("valid");
-    assert!(command.contains("%admin-ai-usage%"));
+    assert!(command.contains("%systemprompt-cli%"));
     assert!(command.ends_with("--limit 10 --offset 25"));
 }

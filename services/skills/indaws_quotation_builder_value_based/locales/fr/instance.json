@@ -1,0 +1,55 @@
+{
+  "odoo_url": "<<VERIFY: FR entity Odoo base URL>>",
+  "odoo_db": "<<VERIFY: FR entity Odoo DB name>>",
+  "impl_template_name": "Implantación v2",
+  "impl_template_id": null,
+  "sales_url_pattern": "{odoo_url}/odoo/sales/{id}",
+  "cases_base_url": "https://www.dynapps.be/fr/cases",
+  "_cases_base_url_note": "Belgium deployment: French case pages on dynapps.be/fr/cases (verified HTTP 200, 2026-07). match_cases composes url = cases_base_url + slug.",
+  "industries": {
+    "manufacturing": "Fabrication",
+    "food-beverage": "Alimentation et boissons",
+    "pharma-biotech": "Pharmacie et biotechnologies",
+    "laboratories": "Laboratoires",
+    "logistics": "Logistique",
+    "retail-wholesale": "Vente au détail et en gros",
+    "professional-services": "Services professionnels",
+    "financial-services": "Services financiers",
+    "energy-utilities": "Énergie et services publics"
+  },
+  "_industries_note": "Taxonomie EXACTE de dynapps.be/fr (nav, vérifié en direct 2026-07-17). SANS 'construction' : dynapps.be ne propose pas cette industrie. Ids canoniques dans shared/industries.json. Les cartes de référence affichent le libellé tel quel — jamais traduit/paraphrasé.",
+  "team_email_domain": "<<VERIFY: FR team email domain, e.g. dynapps.fr>>",
+  "core_module_label": "<<VERIFY: FR Core module set label (or Dynapps Core)>>",
+  "core_module_set_exists": false,
+  "contact": {
+    "email": "<<VERIFY: FR contact email>>",
+    "web": "<<VERIFY: FR web>>",
+    "tel": "<<VERIFY: FR phone>>"
+  },
+  "odoo_partner_manager": {
+    "source": "verify_from_odoo",
+    "name": "<<VERIFY: Odoo SA partner manager name for FR entity>>",
+    "email": "<<VERIFY: Odoo SA partner manager email for FR entity>>"
+  },
+  "legal_entity": {
+    "name": "<<VERIFY: FR selling legal entity name>>",
+    "vat": "<<VERIFY: FR entity VAT number>>",
+    "address": "<<VERIFY: FR registered address>>",
+    "governing_law": "France"
+  },
+  "offices": [
+    "Belgique",
+    "Pays-Bas",
+    "France",
+    "Suisse",
+    "Espagne"
+  ],
+  "local_country": "France",
+  "credibility": {
+    "implementations": 900,
+    "claims_text": "<<VERIFY: FR credibility claim reviewed for DGCCRF advertising law — do not reuse unqualified 'Nº1 mondial'>>",
+    "experts": 280,
+    "countries": 52,
+    "iso27001": true
+  }
+}

@@ -4,9 +4,7 @@
 //! for the user — the same [`Connection::readiness`] the bridge manifest
 //! gates on — so a rule written at `rule_value = <server id>` opens an entity
 //! only to the people whose calls to that server will actually work, and the
-//! manifest never carries a server the rule would refuse. It differs from
-//! the `salesforce` band, which is the admin-linked Salesforce Username used
-//! for JWT-bearer minting rather than a consented OAuth grant.
+//! manifest never carries a server the rule would refuse.
 //!
 //! [`Connection::readiness`]: crate::connections::Connection::readiness
 

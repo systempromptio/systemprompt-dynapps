@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt::identifiers::{AgentRunId, ContextId, UserId};
 
-use crate::types::{FarmAgentId, FarmId, FarmRunId};
+use crate::types::{ClientId, FarmAgentId, FarmId, FarmRunId};
 
 #[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
 pub struct RunRow {
@@ -39,4 +39,5 @@ pub struct RunRow {
     pub cancel_requested_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub client_id: Option<ClientId>,
 }

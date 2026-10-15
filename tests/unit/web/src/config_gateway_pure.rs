@@ -26,8 +26,8 @@ fn route(id: &str, pattern: &str, provider: &str) -> GatewayRouteView {
 fn glob_match_enforces_prefix_suffix_and_length() {
     assert!(glob_match("claude-*-latest", "claude-3-latest"));
     assert!(!glob_match("claude-*-latest", "claude-3-preview"));
-    assert!(glob_match("*sonnet*", "claude-sonnet-4"));
-    assert!(!glob_match("*sonnet*", "claude-opus-4"));
+    assert!(glob_match("*sonnet*", "claude-sonnet-5-5"));
+    assert!(!glob_match("*sonnet*", "claude-opus-5-5"));
     assert!(glob_match("abc*def", "abcdef"));
     assert!(
         !glob_match("abc*bc", "abc"),

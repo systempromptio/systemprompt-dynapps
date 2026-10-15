@@ -51,7 +51,7 @@ async fn publication_history_and_bundle_expose_the_reviewed_generation() {
         "SELECT r.id, v.id
          FROM managed_resources r
          JOIN managed_revisions v ON v.owner_id = r.owner_id AND v.resource_id = r.id
-         WHERE r.owner_id = $1 AND r.resource_key = 'admin_daily_brief'
+         WHERE r.owner_id = $1 AND r.resource_key = 'systemprompt_cli'
          ORDER BY v.created_at DESC LIMIT 1",
     )
     .bind(owner.as_str())

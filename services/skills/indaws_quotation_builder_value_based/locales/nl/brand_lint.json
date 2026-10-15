@@ -1,0 +1,95 @@
+{
+  "_comment": "Mechanische regels (DASH/MARCA/IDIOMA/REGISTRO/PRESION/EXCL/PASIVA) en vermijdlijsten geïmporteerd uit dynapps-voice draft 2026-07-17 (references/dutch-nl.md + dutch-be.md: BE-only verboden zinnen leven hier, in het basistaalpack — overlap aanvaard).",
+  "acronyms_extra": [],
+  "brochure": [
+    "innovatief", "innovatieve", "baanbrekend", "toonaangevend", "marktleider", "marktleidend",
+    "toonaangevende", "state-of-the-art", "best-of-breed", "wereldklasse", "van wereldklasse",
+    "end-to-end", "end to end", "360-oplossing", "360º", "kant-en-klaar", "sleutelklaar",
+    "best-in-class", "best in class", "synergie", "holistisch", "disruptief", "revolutionair",
+    "compleet ecosysteem", "krachtig en flexibel", "volledig op maat van uw wensen",
+    "unieke oplossingen", "innovatieve aanpak", "krachtige tools", "slimme software",
+    "naadloze integratie", "360-graden aanpak", "holistische aanpak",
+    "end-to-end oplossing", "end-to-end begeleiding", "gepassioneerd team",
+    "gedreven medewerkers", "cutting-edge technologie", "schaalbare architectuur"
+  ],
+  "jargon": [
+    "pipeline", "lead", "leads", "workflow", "backlog", "dashboard", "deadline",
+    "core business", "partner"
+  ],
+  "slop": [
+    "versterken", "een boost geven", "maximaliseren", "revolutioneren", "radicaal transformeren",
+    "een breed scala aan", "een waaier aan", "een hele wereld aan", "de snelle wereld van",
+    "de verwachtingen overtreffen", "naar een hoger niveau tillen",
+    "delve", "leverage", "elevate", "tapestry", "testament", "beacon", "synergize",
+    "groundbreaking", "seamless", "cutting-edge", "unlock", "unleash", "empower",
+    "game-changer", "robuuste oplossing", "ontketenen", "ontgrendelen",
+    "uniek", "naadloos", "transformatief", "passioneel", "digitale transformatie",
+    "waarde toevoegen", "toegevoegde waarde", "optimaliseren van uw processen",
+    "optimaliseren van jouw processen", "ontzorgen"
+  ],
+  "fluff": [
+    "in een steeds", "in het digitale tijdperk", "in de wereld van vandaag", "tegenwoordig",
+    "vandaag de dag", "het is belangrijk om op te merken", "het is de moeite waard om te vermelden",
+    "het is belangrijk te benadrukken", "het is belangrijk om te vermelden", "zonder enige twijfel",
+    "kortom", "samengevat", "ter conclusie", "tot slot", "uiteindelijk",
+    "verheugd te melden", "trots om te delen", "blij te kunnen aankondigen",
+    "we zijn er trots op dat", "we zijn trots om te melden", "met trots kondigen wij aan",
+    "blij te kunnen delen", "graag stellen wij voor",
+    "neem gerust contact op", "aarzel niet om contact op te nemen",
+    "voor meer informatie", "ontdek onze oplossingen",
+    "in samenspraak met", "in nauw overleg met", "een traject op maat",
+    "wij begeleiden je doorheen", "wij nemen je bij de hand",
+    "op maat van jouw behoeften", "op maat van uw noden"
+  ],
+  "stopwords": [
+    "de", "het", "een", "en", "van", "in", "op", "met", "voor", "niet", "is", "zijn",
+    "was", "waren", "wordt", "worden", "je", "jij", "jouw", "we", "wij", "ons", "onze",
+    "dat", "dit", "die", "deze", "er", "ook", "als", "dan", "maar", "om", "te", "bij",
+    "uit", "over", "naar", "al", "nog", "wel", "geen", "meer", "heel", "hoe", "wat",
+    "wie", "waar", "wanneer", "omdat", "door", "zodat"
+  ],
+  "leak_denylist": [
+    "por usuario", "análisis funcional", "salida a producción", "incluido", "incluida",
+    "precio cerrado", "puesta en marcha", "presupuesto", "implantación", "formación",
+    "cronograma", "cuota mensual", "cuota anual", "desde el primer día",
+    "equipo funcional", "sesiones de análisis", "alcance del proyecto",
+    "según tus necesidades", "fase de análisis", "a medida de"
+  ],
+  "register": [
+    { "avoid": "\\bu\\b", "use": "je/jij" },
+    { "avoid": "\\buw\\b", "use": "je/jouw" }
+  ],
+  "passive_patterns": [
+    "\\b(?:wordt|worden|werd|werden)\\b[^.!?]{0,60}?\\bge\\w+[dt]\\b",
+    "\\bge\\w+[dt]\\b[^.!?]{0,40}?\\b(?:wordt|worden|werd|werden)\\b",
+    "\\bis\\s+ge\\w+[dt]\\s+door\\b"
+  ],
+  "pressure": [
+    "laatste kans", "alleen tot", "enkel tot", "beperkte tijd", "tijdelijke aanbieding",
+    "mis het niet", "wacht niet langer", "grijp nu", "voor het te laat is",
+    "beperkte plaatsen", "er zijn er nog maar", "profiteer nu"
+  ],
+  "word_charclass": "A-Za-zëïöüéèáàäóâêîôûçñÉÈËÏÖÜ0-9./-",
+  "messages": {
+    "ok": "✓ brand_lint: geen bevindingen. Toon en hoofdlettergebruik OK.",
+    "warn": "⚠️  brand_lint: {n} waarschuwing(en) — controleer vóór het genereren:\n",
+    "finding_line": "  [{kind:7}] {path}: «{token}»  {tip}",
+    "tips": {
+      "CAPS": "→ gebruik zinshoofdletters (alleen de 1e letter)",
+      "SLOP": "→ AI-opvulling: zeg het in gewone woorden (anti-slop-regel)",
+      "FLUFF": "→ intro/outro-opvulling: kom to the point, geen samenvatting",
+      "FOLLETO": "→ schrap het brochure-bijvoeglijk naamwoord (Golden Rule 10)",
+      "RITMO": "→ varieer de lengte: wissel korte en lange zinnen af",
+      "JERGA": "→ gebruik liever de sectorterm (zie sector_glossary)",
+      "JERGA!": "→ staat in glossary.evitar: vervang door de sectorterm",
+      "DASH": "→ geen kastlijntje: gebruik , . ( ) of ->  (half kastlijntje alleen in numerieke reeksen)",
+      "MARCA": "→ schrijf \"Dynapps\" (hoofdletter D; kleine letter alleen in het woordmerk)",
+      "IDIOMA": "→ taallek: schrijf in de taal van het pack",
+      "REGISTRO": "→ register: gebruik je/jij/jouw, nooit u/uw",
+      "PRESION": "→ verkoopdruk: presenteer urgentie als planningstransparantie",
+      "EXCL": "→ geen uitroeptekens in de bodytekst (warn)",
+      "PASIVA": "→ mogelijke lijdende vorm: herschrijf actief (warn, heuristiek)"
+    },
+    "monotony_finding": "{run} opeenvolgende zinnen van ~{avg} woorden"
+  }
+}

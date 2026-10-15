@@ -1,0 +1,33 @@
+{
+  "vat_label": "VAT",
+  "seller_vat_number": "verify_from_odoo",
+  "einvoicing": {
+    "mandate_status": "none",
+    "authority": null,
+    "network": [],
+    "formats": ["UBL", "PEPPOL BIS", "Factur-X"],
+    "phase_dates": [],
+    "tolerances": null,
+    "threshold": null,
+    "detection_signals": ["invoice", "e-invoice", "electronic invoice", "peppol"],
+    "copy_render": "Native electronic invoicing, integrated with sales and accounting and adaptable to your jurisdiction's e-invoicing requirements."
+  },
+  "chart_of_accounts": {
+    "code": "IFRS",
+    "copy": "Integrated accounting with your local chart of accounts and VAT rules: automatic bank reconciliation, fixed-asset management, assisted period closings and all statutory reports (balance sheet, P&L, general ledger, tax filings)."
+  },
+  "tax_filings": [],
+  "reverse_charge_clause": "Intra-community / cross-border supply: reverse charge applies where relevant.",
+  "cross_border_notes": "OSS/IOSS relevant for intra-EU eCommerce where applicable.",
+  "carriers": [],
+  "payment_terms": {
+    "validity_days": 30,
+    "default_payment_method": "bank transfer",
+    "late_payment_clause": null,
+    "mandatory_mentions": []
+  },
+  "fineprint_web": "* Prices in {currency_code_label}, {vat_label} not included. The analysis is invoiced at the start; the implementation is billed monthly during the process. Payment method: {forma_pago}. Proposal valid for {validity_days} days.",
+  "fineprint_pdf": "* Prices in {currency_code_label}, {vat_label} not included. The analysis is invoiced at the start; the implementation is billed monthly during the process. Payment method: {forma_pago}. Proposal valid for {validity_days} days.",
+  "travel_clause": "Terms and conditions. On-site days may incur additional charges for travel and expenses outside the usual working area, to be quoted separately.",
+  "acronyms_fiscal": ["VAT", "TIN", "EORI", "INTRASTAT", "PEPPOL", "UBL", "OSS", "IOSS", "SAF-T", "IFRS", "GAAP"]
+}

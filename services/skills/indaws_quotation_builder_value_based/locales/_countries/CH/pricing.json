@@ -1,0 +1,6 @@
+{
+  "_layer": "country",
+  "_authoring": "AUTORAR con el market owner CH. Misma estructura de claves que locales/es/pricing.json. Moneda CHF (importes en CHF, NO convertir EUR). Todos los importes <<VERIFY>>.",
+  "_currency": "CHF",
+  "_verify": "Rellenar TODOS los importes desde el pricing de mercado CH + product ids/licencia (en CHF) desde el Odoo CH. No heredar es."
+}

@@ -1,28 +1,10 @@
 //! OAuth token exchange and refresh, using only bound destinations.
+use super::Grant;
 use super::failure::{FailureKind, FlowFailure, FlowResult};
 use super::token_response::{Tokens, accepted_tokens};
 use super::transport::client;
-use super::{Grant, Provider};
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Utc;
-use serde::Deserialize;
 use systemprompt_web_admin_core::error::AdminResult;
-
-const SALESFORCE_OPAQUE_TOKEN_SECONDS: i64 = 900;
-
-#[derive(Deserialize)]
-struct JwtExpiry {
-    exp: i64,
-}
-
-fn unverified_jwt_exp(token: &str) -> Option<i64> {
-    let payload = token.split('.').nth(1)?;
-    let bytes = URL_SAFE_NO_PAD.decode(payload).ok()?;
-    serde_json::from_slice::<JwtExpiry>(&bytes)
-        .ok()
-        .map(|claims| claims.exp)
-}
 
 async fn request_with_client(
     grant: &mut Grant,
@@ -42,9 +24,7 @@ async fn request_with_client(
         {
             form.append_pair("client_secret", &grant.client_secret);
         }
-        if grant.provider == Provider::Atlassian || matches!(grant.provider, Provider::Generic(_)) {
-            form.append_pair("resource", &grant.provider.endpoint());
-        }
+        form.append_pair("resource", &grant.provider.endpoint());
         form.finish()
     };
     let mut request = http.post(&grant.token_endpoint);
@@ -87,8 +67,9 @@ async fn request_with_client(
 
 
 fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResult<()> {
-    // Why: Salesforce rotation has already occurred before response validation.
-    // Save the replacement even when the access token or its expiry is invalid.
+    // Why: a provider that rotates refresh tokens has already rotated before
+    // response validation, so save the replacement even when the access token
+    // or its expiry is invalid.
     let replacement_received = tokens.refresh_token.is_some();
     let invalid = if refreshing && !replacement_received {
         FailureKind::RefreshUncertain
@@ -114,7 +95,7 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResu
         .token_type
         .as_deref()
         .is_some_and(|kind| !kind.eq_ignore_ascii_case("bearer"))
-        || (matches!(grant.provider, Provider::Generic(_)) && tokens.token_type.is_none())
+        || tokens.token_type.is_none()
     {
         return Err(token_validation_failure(
             grant,
@@ -129,31 +110,19 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResu
     let seconds = match tokens.expires_in {
         Some(seconds) if seconds > 0 && seconds <= 31_536_000 => Some(seconds),
         Some(_) => None,
-        None => undeclared_expiry_seconds(&grant.provider, &grant.access_token),
+        None => Some(0),
     }
     .ok_or_else(|| token_validation_failure(grant, invalid, "invalid_expiry"))?;
-    grant.expires_at = if seconds == 0 && matches!(grant.provider, Provider::Generic(_)) {
+    grant.expires_at = if seconds == 0 {
         i64::MAX
     } else {
         Utc::now().timestamp().saturating_add(seconds)
     };
-    if grant.provider.is_salesforce()
-        && let Some(expiry) = unverified_jwt_exp(&grant.access_token)
-    {
-        grant.expires_at = grant.expires_at.min(expiry);
-    }
     if grant.expires_at <= Utc::now().timestamp() {
         return Err(token_validation_failure(
             grant,
             invalid,
             "expired_access_token",
-        ));
-    }
-    if grant.refresh_token.is_none() && !matches!(grant.provider, Provider::Generic(_)) {
-        return Err(token_validation_failure(
-            grant,
-            FailureKind::Permission,
-            "missing_refresh_authorization",
         ));
     }
     Ok(())
@@ -163,24 +132,6 @@ fn token_validation_failure(grant: &Grant, kind: FailureKind, reason: &'static s
     tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
         stage = "token", reason, classification = kind.code(), "token response validation failed");
     FlowFailure::new(kind)
-}
-
-// Why: Salesforce omits `expires_in`; treating its token as expired would
-// rotate the refresh token on every broker call and break the MCP proxy's
-// session binding after `initialize`, so read the JWT `exp` or assume a short
-// life.
-fn undeclared_expiry_seconds(provider: &Provider, access_token: &str) -> Option<i64> {
-    match provider {
-        Provider::Salesforce(_) => Some(
-            unverified_jwt_exp(access_token)
-                .map_or(SALESFORCE_OPAQUE_TOKEN_SECONDS, |exp| {
-                    exp.saturating_sub(Utc::now().timestamp())
-                })
-                .min(31_536_000),
-        ),
-        Provider::Generic(_) => Some(0),
-        Provider::Atlassian => None,
-    }
 }
 
 pub async fn exchange(grant: &mut Grant, code: &str) -> AdminResult<()> {
@@ -250,14 +201,12 @@ pub(super) async fn refresh_classified(
     grant: &mut Grant,
     http: &reqwest::Client,
 ) -> FlowResult<()> {
-    if matches!(grant.provider, Provider::Generic(_)) {
-        super::generic::validate_refresh(grant, http)
-            .await
-            .map_err(|error| FlowFailure {
-                kind: FailureKind::Configuration,
-                error,
-            })?;
-    }
+    super::generic::validate_refresh(grant, http)
+        .await
+        .map_err(|error| FlowFailure {
+            kind: FailureKind::Configuration,
+            error,
+        })?;
     let token = grant
         .refresh_token
         .clone()

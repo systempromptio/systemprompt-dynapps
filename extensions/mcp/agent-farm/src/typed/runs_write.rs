@@ -2,7 +2,9 @@
 //!
 //! `run_start` goes through the farm's own launch service, so limits,
 //! prompts, credentials and the `agent_farm_runs` row are resolved exactly as
-//! the dashboard resolves them; it never waits for the run. `run_cancel`
+//! the dashboard resolves them; it never waits for the run. With a `case` it
+//! is also an eval of that case, judged by the farms file's configured
+//! judge once the run finishes. `run_cancel`
 //! goes through the farm's cancel for a farm run, and straight to core's row
 //! for any other origin.
 
@@ -29,7 +31,7 @@ impl McpToolHandler for RunStartHandler<'_> {
         "run_start"
     }
     fn description(&self) -> &'static str {
-        "Queue one headless agent run on a farm and return at once with its run id. The run executes under the farm's limits unless you set tighter ones; poll `run_status`, read `run_events`. You must hold the farm's workspace."
+        "Queue one headless agent run on a farm and return at once with its run id. The run executes under the farm's limits unless you set tighter ones; poll `run_status`, read `run_events`. Name a `client` slug to attribute the run to a client other than the farm's. Name an eval `case` to have the run evaluated when it finishes (`eval_run_id` in the result; read it with `farm_eval_results`). You must hold the farm's workspace."
     }
     async fn handle(
         &self,
@@ -66,15 +68,11 @@ fn workflow_unavailable() -> ToolError {
 }
 
 #[cfg(feature = "farm")]
-async fn start_farm_run(
+fn check_run_project(
     ctx: &ToolCtx<'_>,
-    input: RunStartInput,
-) -> ToolResult<(RunStartOutput, String)> {
-    use systemprompt_web_admin_farm::services::runs::{LaunchRequest, launch};
-    use systemprompt_web_admin_farm::types::{FarmAgentId, TriggeredVia};
-
-    let farm = super::farm_access::entitled_farm(ctx, &input.farm).await?;
-    let project = input.project.trim();
+    farm: &systemprompt_web_admin_farm::repositories::rows::FarmRow,
+    project: &str,
+) -> ToolResult<()> {
     if !project.is_empty() && !ctx.viewer.is_admin && !ctx.viewer.is_member_of(project) {
         return Err(ToolError::Forbidden(format!(
             "you are not a member of project {project}"
@@ -92,29 +90,58 @@ async fn start_farm_run(
             farm.project_id.as_ref().map_or("", |p| p.as_str())
         )));
     }
+    Ok(())
+}
+
+#[cfg(feature = "farm")]
+async fn start_farm_run(
+    ctx: &ToolCtx<'_>,
+    input: RunStartInput,
+) -> ToolResult<(RunStartOutput, String)> {
+    use std::sync::Arc;
+    use systemprompt_web_admin_farm::services::evals::{CaseLaunch, start_case_eval};
+    use systemprompt_web_admin_farm::services::runs::{LaunchRequest, launch, resolve_client};
+    use systemprompt_web_admin_farm::types::{FarmAgentId, TriggeredVia};
+
+    let farm = super::farm_access::entitled_farm(ctx, &input.farm).await?;
+    check_run_project(ctx, &farm, input.project.trim())?;
     let state = ctx.env()?.farm_state()?;
+    let client_id = resolve_client(&state.pool, Some(input.client.as_str())).await?;
     let max_turns =
         (input.max_turns > 0).then(|| i32::try_from(input.max_turns).unwrap_or(i32::MAX));
     let timeout_seconds = (input.timeout_seconds > 0)
         .then(|| i32::try_from(input.timeout_seconds).unwrap_or(i32::MAX));
-    let row = launch(
-        state,
-        LaunchRequest {
-            farm_id: farm.id,
-            agent_id: FarmAgentId::new(super::non_empty("agent", &input.agent)?),
-            user_id: ctx.viewer.user_id.clone(),
-            triggered_via: TriggeredVia::Api,
-            prompt: Some(input.prompt).filter(|p| !p.trim().is_empty()),
-            case_prompt: None,
-            fixture: None,
-            model: None,
-            max_turns,
-            max_budget_usd: (input.max_budget_usd > 0.0).then_some(input.max_budget_usd),
-            timeout_seconds,
-            eval_result_id: None,
-        },
-    )
-    .await?;
+    let request = LaunchRequest {
+        farm_id: farm.id,
+        agent_id: FarmAgentId::new(super::non_empty("agent", &input.agent)?),
+        user_id: ctx.viewer.user_id.clone(),
+        triggered_via: TriggeredVia::Mcp,
+        prompt: Some(input.prompt).filter(|p| !p.trim().is_empty()),
+        case_prompt: None,
+        fixture: None,
+        model: None,
+        max_turns,
+        max_budget_usd: (input.max_budget_usd > 0.0).then_some(input.max_budget_usd),
+        timeout_seconds,
+        eval_result_id: None,
+        client_id,
+    };
+    let case_id = input.case.trim();
+    let (row, eval_run_id) = if case_id.is_empty() {
+        (launch(state, request).await?, None)
+    } else {
+        let judge = state.judge.judge_for(None, &ctx.viewer.user_id);
+        let launched = start_case_eval(
+            Arc::clone(state),
+            judge,
+            CaseLaunch {
+                request,
+                case_id: case_id.to_owned(),
+            },
+        )
+        .await?;
+        (launched.run, Some(launched.eval_run.id.as_str().to_owned()))
+    };
     let summary = format!(
         "queued run {} on {}/{}",
         row.agent_run_id, row.farm_id, row.agent_id
@@ -125,6 +152,7 @@ async fn start_farm_run(
             origin: "farm".to_owned(),
             farm_run_id: row.id.as_str().to_owned(),
             status: row.status,
+            eval_run_id,
             hint: "Poll `run_status` until `terminal`; `run_events` streams the transcript."
                 .to_owned(),
         },

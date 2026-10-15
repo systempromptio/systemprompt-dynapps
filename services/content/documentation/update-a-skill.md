@@ -39,7 +39,7 @@ The two paths differ, and picking the wrong one wastes a day.
 | | **Kit skill** | **Base skill** |
 |---|---|---|
 | lives in | its own repository — `plugins/<plugin>/skills/<skill>/SKILL.md` | this repository — `services/skills/<skill_id>/` |
-| examples | any skill a pinned kit ships (none today) | the skills of the marketplaces this repository declares — `dynapps-commons`, `dynapps-salesforce`, `dynapps-super-admin` |
+| examples | any skill a pinned kit ships (none today) | the skills of the marketplaces this repository declares — `dynapps-commons`, `dynapps-super-admin`, `dynapps-portal` |
 | to ship a change | merge a pull request; CI publishes; press Import | deploy the instance |
 | takes effect | in place, no restart | at the next deploy |
 | who can ship it | anyone with write access to the kit | a platform maintainer |

@@ -230,7 +230,7 @@ SESSION=$(curl -fsS -X POST https://ai.example.com/api/public/gateway/sessions \
 curl -fsS -X POST https://ai.example.com/v1/messages \
   -H "authorization: Bearer $PAT" -H "x-session-id: $SESSION" \
   -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' \
-  -d '{"model":"claude-haiku-4-5","max_tokens":16,"messages":[{"role":"user","content":"Reply pong."}]}'
+  -d '{"model":"claude-haiku-5-5","max_tokens":16,"messages":[{"role":"user","content":"Reply pong."}]}'
 docker compose exec -e SYSTEMPROMPT_PROFILE=/app/.systemprompt/profiles/self-host/profile.yaml app \
   systemprompt infra logs request list --limit 3                                 # the call, its cost, its user
 ```

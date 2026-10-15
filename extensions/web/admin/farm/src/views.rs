@@ -22,6 +22,12 @@ pub mod curl {
     pub use crate::handlers::ssr::curl::{launch_body, remote_commands};
 }
 
+pub mod eval_history {
+    pub use crate::handlers::ssr::shared::eval_history::{
+        EvalRunItemView, EvalTrendRowView, eval_run_items, eval_trend_rows,
+    };
+}
+
 pub mod eval_matrix {
     pub use crate::handlers::ssr::farm_evals::matrix::{eval_matrix, score_tone};
 }

@@ -25,23 +25,11 @@ MISMATCHES = []
 
 # Error classes, matched against tool RESULT bodies only (never inputs).
 ERROR_CLASSES = {
-    "sf_invalid_field": r"INVALID_FIELD|No such column",
-    "sf_invalid_type": r"INVALID_TYPE|sObject type '[^']+' is not supported",
-    "sf_malformed": r"MALFORMED_QUERY|ValidationError",
-    "sf_access": r'errorCode\W+INSUFFICIENT_ACCESS',
-    "sf_5xx": r'"status_code"\W*5\d\d|UNKNOWN_EXCEPTION',
     "google_iam": r"mcp\.googleapis\.com/tools\.call' denied|Permission '[^']*' denied",
     "google_bad_args": r"Invalid JSON payload|Invalid value at 'query'|does not match \[a-z",
     "timeout": r"timed out",
     "tool_missing": r"No such tool available|tool not found",
 }
-RECORD_QUERY = re.compile(
-    r"FROM\s+(Account|Opportunity|Contact|Lead|Task|Event|Case)\b"
-    r"|uiapi\W+query\W+\{?\W*(Account|Opportunity|Contact|Lead|Task|Event|Case)\b",
-    re.I,
-)
-# A query pinned to one record by id is scoped by construction.
-ID_PINNED = re.compile(r"\b(Id|AccountId|WhatId|WhoId|OpportunityId)\W+(=|eq|IN)\W", re.I)
 WRITE_TOOL = re.compile(r"create|update|delete|upsert|send|insert", re.I)
 
 # Super-admin checks. A day, a total or an hours figure drawn while the last
@@ -53,10 +41,10 @@ CONVERSATION_TOOLS = ("user_activity", "conversation_list", "conversation_audit"
 METRICS = [
     "invoked", "completed", "success", "turns", "requests", "input_tokens",
     "output_tokens", "cache_read_tokens", "cache_creation_tokens", "cost_usd",
-    "duration_s", "p95_latency_ms", "mcp_calls", "sf_calls", "google_calls",
-    "builtin_calls", "failed_calls", "unscoped_queries", "writes",
+    "duration_s", "p95_latency_ms", "mcp_calls", "google_calls",
+    "builtin_calls", "failed_calls", "writes",
     "answer_chars", "widgets", "mock_mentions", "attempts",
-    "conversation_tool_calls", "request_log_calls", "atlassian_calls",
+    "conversation_tool_calls", "request_log_calls",
     "single_page_conclusions", "invented_causes", "cross_tool_mismatch",
     "connector_calls", "schema_errors", "access_errors", "upstream_errors",
     "bad_arguments", "timeouts", "console_success", "repeated_calls",
@@ -133,16 +121,9 @@ def skill_metrics(raw, skill, manifest):
             continue
         m["mcp_calls"] += 1
         tool = name.split("__")[-1]
-        if "salesforce" in name:
-            m["sf_calls"] += 1
-            if tool == "dispatch_readonly" and RECORD_QUERY.search(inp) \
-                    and "MCP TEST" not in inp.upper() and not ID_PINNED.search(inp):
-                m["unscoped_queries"] += 1
-            if tool != "dispatch_readonly" and tool != "display_widget" and WRITE_TOOL.search(tool):
-                m["writes"] += 1
-            if re.search(r'"method": "(POST|PATCH|PUT|DELETE)"', inp):
-                m["writes"] += 1
-        elif "google" in name:
+        if WRITE_TOOL.search(tool) or re.search(r'"method": "(POST|PATCH|PUT|DELETE)"', inp):
+            m["writes"] += 1
+        if "google" in name:
             m["google_calls"] += 1
     admin = admin_checks(uses, results)
     m.update(admin)
@@ -178,12 +159,9 @@ def skill_metrics(raw, skill, manifest):
         m.update(console)
     m["completed"] = int(bool(m["completed"]) and bool(m["invoked"]))
     m["console_success"] = int(bool(m["success"]) and bool(m["invoked"]))
-    if manifest["plugin"] != "dynapps-salesforce":
-        m["success"] = int(m["console_success"] and m["single_page_conclusions"] == 0
-                           and m["invented_causes"] == 0 and m["cross_tool_mismatch"] == 0
-                           and m["writes"] == 0)
-        return m
-    m["success"] = int(m["console_success"] and m["unscoped_queries"] == 0)
+    m["success"] = int(m["console_success"] and m["single_page_conclusions"] == 0
+                       and m["invented_causes"] == 0 and m["cross_tool_mismatch"] == 0
+                       and m["writes"] == 0)
     return m
 
 
@@ -191,14 +169,12 @@ def admin_checks(uses, results):
     """Tool mix, whether the last request_log page was left open, and whether a
     user's usage_by_user spend disagrees with a request_log read to its end."""
     by_id = {u.get("id"): u for u in uses}
-    out = {"conversation_tool_calls": 0, "request_log_calls": 0, "atlassian_calls": 0,
+    out = {"conversation_tool_calls": 0, "request_log_calls": 0,
            "cross_tool_mismatch": 0, "_last_log_open": False}
     usage, logs = {}, {}
     for u in uses:
         name = u.get("name", "")
-        if "atlassian" in name:
-            out["atlassian_calls"] += 1
-        elif name.endswith(CONVERSATION_TOOLS):
+        if name.endswith(CONVERSATION_TOOLS):
             out["conversation_tool_calls"] += 1
         elif name.endswith("__request_log"):
             out["request_log_calls"] += 1
@@ -291,20 +267,20 @@ def main():
     lines += ["| metric | value | Δ |", "|---|---|---|"]
     for k in ["skills", "console_success_rate", "success_rate", "completed_rate", "cost_usd", "avg_cost_usd", "avg_input_tokens",
               "avg_output_tokens", "avg_cache_read_tokens", "avg_turns", "avg_mcp_calls", "failed_calls",
-              "unscoped_queries", "writes", "conversation_tool_calls", "request_log_calls",
-              "atlassian_calls", "single_page_conclusions", "invented_causes",
+              "writes", "conversation_tool_calls", "request_log_calls",
+              "single_page_conclusions", "invented_causes",
               "cross_tool_mismatch", *ERROR_CLASSES]:
         lines.append(f"| {k} | {t.get(k)} | {d.get(k, '')} |")
     judged = [r for r in rows if r.get("console_success") is not None]
     if judged:
         agree = sum(r["console_success"] == r["success"] for r in judged)
         lines += ["", f"console Evaluation tab agrees on {agree}/{len(judged)} conversations"]
-    lines += ["", "| case | invoked | success | turns | cost $ | in tok | mcp | failed | conv | req_log | jira | 1-page | invented |",
-              "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    lines += ["", "| case | invoked | success | turns | cost $ | in tok | mcp | failed | conv | req_log | 1-page | invented |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         lines.append(f"| {r['skill']} | {r['invoked']} | {r['success']} | {r['turns']} | {r['cost_usd']} "
                      f"| {r['input_tokens']} | {r['mcp_calls']} | {r['failed_calls']} | {r['conversation_tool_calls']} "
-                     f"| {r['request_log_calls']} | {r['atlassian_calls']} | {r['single_page_conclusions']} "
+                     f"| {r['request_log_calls']} | {r['single_page_conclusions']} "
                      f"| {r['invented_causes']} |")
     json.dump(out, open(run_dir / "metrics.json", "w"), indent=2)
     with open(run_dir / "metrics.csv", "w", newline="") as f:

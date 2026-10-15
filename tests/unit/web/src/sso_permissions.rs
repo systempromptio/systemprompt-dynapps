@@ -1,5 +1,5 @@
 //! The permission set every browser sign-in session is minted with — Entra
-//! ID SAML and OIDC through core's driver, and the development login link.
+//! ID OIDC through core's driver, and the development login link.
 //!
 //! The JWT is checked on `permissions`, not on the roles stored beside them, so
 //! a mapping that disagrees with the account's AD groups signs a token for a

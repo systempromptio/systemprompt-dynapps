@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ARRAY(\n                SELECT jsonb_array_elements_text(COALESCE(r.request->'allowed_tools', '[]'::jsonb))\n            ) AS \"tools!\"\n           FROM agent_runs r\n           JOIN agent_farm_runs f ON f.agent_run_id = r.id\n           WHERE r.gateway_session_id = $1\n           ORDER BY r.created_at DESC\n           LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tools!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "852fff41a807e10b1cbbc5a5a8bed796f79684c6da8a978250fe4005f719445f"
+}

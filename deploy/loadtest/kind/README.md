@@ -35,7 +35,7 @@ curl -s localhost:18080/v1/models          # only the mock ids
 IFS=, read -r T S < deploy/loadtest/kind/.tokens/u100.csv
 curl -s localhost:18080/v1/messages -H "Authorization: Bearer $T" -H "x-session-id: $S" \
   -H 'content-type: application/json' -H 'anthropic-version: 2023-06-01' \
-  -d '{"model":"claude-sonnet-5","max_tokens":32,"messages":[{"role":"user","content":"ping"}]}'
+  -d '{"model":"claude-sonnet-5-5","max_tokens":32,"messages":[{"role":"user","content":"ping"}]}'
 ```
 
 ## Running

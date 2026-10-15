@@ -21,7 +21,7 @@ fn rule(rule_type: RuleType, value: &str, access: AccessDecision) -> AccessContr
     AccessControlRule {
         id: format!("{rule_type}-{value}"),
         entity_type: "mcp_server".to_owned(),
-        entity_id: "atlassian".to_owned(),
+        entity_id: "dynbrain".to_owned(),
         rule_type,
         rule_value: value.to_owned(),
         access,
@@ -58,7 +58,7 @@ fn run(subject: &MatrixSubject) -> Explanation {
     explain(&ExplainInput {
         rules: &rules,
         entity_type: "mcp_server",
-        entity_id: "atlassian",
+        entity_id: "dynbrain",
         subject,
         dimensions: &dimensions,
         default_open: false,

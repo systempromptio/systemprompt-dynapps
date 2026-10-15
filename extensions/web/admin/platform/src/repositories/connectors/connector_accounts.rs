@@ -2,8 +2,7 @@
 //!
 //! Session liveness is read from the primary database on every action — UI
 //! polling and JWT expiry never enforce revocation, and `ended_at` (analytics
-//! inactivity) does not end authorisation. A provider-wide reprovision is one
-//! statement so every affected user is told before any tool call finds out.
+//! inactivity) does not end authorisation.
 
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Postgres, Transaction};
@@ -123,34 +122,4 @@ pub async fn is_live_session(
     )
     .fetch_one(pool)
     .await
-}
-
-pub async fn reprovision_provider(
-    tx: &mut Transaction<'_, Postgres>,
-    provider: &str,
-    error_code: &str,
-) -> Result<u64, sqlx::Error> {
-    let result = sqlx::query!(
-        "UPDATE mcp_connector_accounts SET status = 'reconnect_required', error_code = $2,
-        verified_at = NULL, generation = generation + 1,
-        revision = nextval('mcp_connector_revision') WHERE provider = $1",
-        provider,
-        error_code
-    )
-    .execute(&mut **tx)
-    .await?;
-    Ok(result.rows_affected())
-}
-
-pub async fn delete_all_pending(
-    tx: &mut Transaction<'_, Postgres>,
-    provider: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        "DELETE FROM mcp_connector_oauth_states WHERE provider = $1",
-        provider
-    )
-    .execute(&mut **tx)
-    .await?;
-    Ok(())
 }

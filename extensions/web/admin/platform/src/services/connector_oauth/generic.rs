@@ -1,8 +1,10 @@
 //! OAuth for configured MCP resources with explicitly trusted authorization
 //! origins.
 
+pub use super::generic_discovery::{
+    authorization_response_issuer_matches, same_issuer, validate_endpoint,
+};
 use super::generic_discovery::{bounded_json, metadata, trusted_endpoint};
-pub use super::generic_discovery::{same_issuer, validate_endpoint};
 use super::transport::client;
 use super::{Grant, Provider, config};
 use base64::Engine;
@@ -29,14 +31,12 @@ pub fn binding(provider: &Provider) -> AdminResult<String> {
 }
 
 pub fn validate_grant(grant: &Grant) -> AdminResult<()> {
-    if matches!(grant.provider, Provider::Generic(_)) {
-        if grant.configuration_binding != binding(&grant.provider)? {
-            return Err(AdminError::Unauthorized(
-                "Connector configuration changed; reconnect required".into(),
-            ));
-        }
-        trusted_endpoint(&grant.provider, &grant.token_endpoint)?;
+    if grant.configuration_binding != binding(&grant.provider)? {
+        return Err(AdminError::Unauthorized(
+            "Connector configuration changed; reconnect required".into(),
+        ));
     }
+    trusted_endpoint(&grant.provider, &grant.token_endpoint)?;
     Ok(())
 }
 

@@ -1,0 +1,102 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#> components/page-header title=title subtitle=subtitle}}
+      {{#*inline "header_meta"}}
+        <code class="sp-code-inline">{{slug}}</code>
+      {{/inline}}
+      {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm/clients">All clients</a>
+      {{/inline}}
+    {{/components/page-header}}
+
+    <div class="sp-farm-clients">
+      {{> components/tabs tabs=tabs nav_label="Window"}}
+
+      <section class="sp-kpi-grid sp-kpi-grid--compact" aria-label="Client outcomes">
+        {{#each kpis}}
+          {{> components/kpi key=this.key label=this.label icon=this.icon value=this.value note=this.note
+              hint=this.hint tone=this.tone spark=this.spark}}
+        {{/each}}
+      </section>
+
+      <section class="sp-farm-clients__trends" aria-label="Trends">
+        {{> components/svg-line-chart runs_chart}}
+        {{> components/svg-line-chart rates_chart}}
+      </section>
+
+      <section aria-label="Agents">
+        {{> components/section title="Agents" note="Each farm agent that ran for this client in the window."}}
+        {{#if has_agents}}
+        {{#> components/table caption="Outcomes per agent" table_mode="scroll"}}
+          <thead><tr>
+            <th scope="col">Agent</th>
+            <th scope="col" class="sp-table__cell--num">Runs</th>
+            <th scope="col">Success</th>
+            <th scope="col" class="sp-table__cell--num">Completed</th>
+            <th scope="col" class="sp-table__cell--num">Eval</th>
+            <th scope="col" class="sp-table__cell--num">Infra failures</th>
+            <th scope="col" class="sp-table__cell--num">Cost</th>
+            <th scope="col" class="sp-col-date">Last run</th>
+          </tr></thead>
+          <tbody>
+          {{#each agents}}
+            <tr>
+              <td><a class="sp-farm-clients__name" href="{{this.url}}">{{this.label}}</a></td>
+              <td class="sp-table__cell--num">{{this.runs}}</td>
+              <td><span class="sp-farm-clients__share">{{> components/share-bar share_pct=this.share_pct label=(concat this.success " succeeded")}}{{> components/badge tone=this.success_tone text=this.success}}</span></td>
+              <td class="sp-table__cell--num">{{this.completed}}</td>
+              <td class="sp-table__cell--num">{{this.eval}}</td>
+              <td class="sp-table__cell--num">{{this.infra_failures}}</td>
+              <td class="sp-table__cell--num sp-u-mono">{{this.cost}}</td>
+              <td class="sp-col-date sp-table__cell--date">{{this.last_run}}</td>
+            </tr>
+          {{/each}}
+          </tbody>
+        {{/components/table}}
+        {{else}}
+          {{> components/empty-state compact=true heading="No runs in this window" message="Pick a longer window, or launch one of the farm's agents for this client."}}
+        {{/if}}
+      </section>
+
+      <section aria-label="Recent runs">
+        {{> components/section title="Recent runs" note="The latest runs for this client with their completion report and eval verdict."}}
+        {{#if has_runs}}
+        {{#> components/table caption="Recent runs for this client" table_mode="scroll"}}
+          <thead><tr>
+            <th scope="col" class="sp-col-date">When</th>
+            <th scope="col">Run</th>
+            <th scope="col">Agent</th>
+            <th scope="col">Launched by</th>
+            <th scope="col">Trigger</th>
+            <th scope="col">Status</th>
+            <th scope="col">Report</th>
+            <th scope="col">Eval</th>
+            <th scope="col">Summary</th>
+            <th scope="col" class="sp-table__cell--num">Cost</th>
+          </tr></thead>
+          <tbody>
+          {{#each runs}}
+            <tr>
+              <td class="sp-col-date sp-table__cell--date" title="{{this.created_local}}">{{this.created}}</td>
+              <td><a href="{{this.url}}"><code class="sp-code-inline">{{this.run_id_short}}</code></a></td>
+              <td>{{this.agent_label}}</td>
+              <td><a href="/admin/users/{{this.user_id}}">{{this.user_id}}</a></td>
+              <td>{{> components/badge tone=this.trigger.tone text=this.trigger.text}}</td>
+              <td>{{> components/badge tone=this.status.tone text=this.status.text}}</td>
+              <td>{{> components/badge tone=this.completion.tone text=this.completion.text}}</td>
+              <td>{{> components/badge tone=this.eval.tone text=this.eval.text}}</td>
+              <td class="sp-farm-clients__summary">{{this.summary}}</td>
+              <td class="sp-table__cell--num sp-u-mono">{{this.cost}}</td>
+            </tr>
+          {{/each}}
+          </tbody>
+        {{/components/table}}
+        {{else}}
+          {{> components/empty-state compact=true heading="No runs yet" message="This client has no farm runs."}}
+        {{/if}}
+      </section>
+    </div>
+    {{/inline}}
+{{/layout}}

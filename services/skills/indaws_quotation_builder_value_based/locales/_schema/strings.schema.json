@@ -1,0 +1,335 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "strings.schema.json",
+  "title": "strings.json",
+  "description": "ALL runtime UI labels (web/pdf/cli/sheet), phases, recurrent display names+descs, dev fallback (plan §2.2). Translator-owned. Keys are STABLE across locales; only values change. UI strings are the ONLY class allowed to fall back (→ locale.fallback → hard error). The copy-to-clipboard JSON payload keys (aplicaciones/desarrollos/ia_addons/totales.*) are a MACHINE CONTRACT and are NOT in this file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "web",
+    "pdf",
+    "phases",
+    "why",
+    "recurrent_names",
+    "recurrent_descs",
+    "dev_fallback",
+    "cli"
+  ],
+  "properties": {
+    "web": {
+      "type": "object",
+      "description": "Web-template UI strings. Placeholders like {cliente} allowed.",
+      "required": [
+        "doc_title",
+        "logo_alt",
+        "hero_sub_pre",
+        "hero_sub_accent",
+        "hero_sub_post",
+        "footer",
+        "none",
+        "copied",
+        "empty_value",
+        "zero_amount"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "doc_title": {
+          "type": "string"
+        },
+        "logo_alt": {
+          "type": "string"
+        },
+        "hero_sub_pre": {
+          "type": "string"
+        },
+        "hero_sub_accent": {
+          "type": "string"
+        },
+        "hero_sub_post": {
+          "type": "string"
+        },
+        "footer": {
+          "type": "string"
+        },
+        "none": {
+          "type": "string",
+          "description": "es='ninguna'."
+        },
+        "copied": {
+          "type": "string",
+          "description": "es='✅ Copiado'."
+        },
+        "empty_value": {
+          "type": "string",
+          "description": "es='—'."
+        },
+        "zero_amount": {
+          "type": "string",
+          "description": "es='0 €'."
+        }
+      }
+    },
+    "pdf": {
+      "type": "object",
+      "required": [
+        "doc_title",
+        "cover_sub",
+        "meta_quote",
+        "meta_date",
+        "meta_partner"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "doc_title": {
+          "type": "string"
+        },
+        "cover_sub": {
+          "type": "string"
+        },
+        "meta_quote": {
+          "type": "string",
+          "description": "es='Presupuesto'."
+        },
+        "meta_date": {
+          "type": "string",
+          "description": "es='Fecha'."
+        },
+        "meta_partner": {
+          "type": "string",
+          "description": "es='Tu partner'."
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "Proposal timeline phases; code matches app_registry.phases.proposal_phases_order.",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "label",
+          "desc"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "analisis",
+              "impl",
+              "form",
+              "golive"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "desc": {
+            "type": "string"
+          }
+        }
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "why": {
+      "type": "object",
+      "required": [
+        "world_rank",
+        "offices_title",
+        "local_note",
+        "team_pillar"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "world_rank": {
+          "type": "string"
+        },
+        "offices_title": {
+          "type": "string",
+          "description": "Placeholder {n}."
+        },
+        "local_note": {
+          "type": "string",
+          "description": "Placeholder {local_country}."
+        },
+        "team_pillar": {
+          "type": "string",
+          "description": "Placeholder {implementations}."
+        }
+      }
+    },
+    "sheet": {
+      "type": "object",
+      "description": "Spreadsheet-template labels (generate_spreadsheet_template.py). INTERNAL chrome: English in every locale, carried by the `en` pack only and inherited by the rest through the display-string fallback chain — hence optional here, like `params`. Its keys are NOT required here: a pack may legitimately declare only the client-facing ones (see CLIENT_FACING_SHEET_KEYS) and inherit the rest. validate_locale.check_reference_carries_inherited enforces the full set on the reference pack, which is where the guarantee actually belongs.",
+      "additionalProperties": true,
+      "properties": {
+        "extra_hdr": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "es=['','Extra','Precio ud.','Subtotal']."
+        },
+        "total_app": {
+          "type": "string",
+          "description": "Placeholder {nombre}. es='TOTAL {nombre}'."
+        },
+        "subtotal_extras": {
+          "type": "string",
+          "description": "es='Subtotal Extras'."
+        },
+        "analisis_funcional": {
+          "type": "string",
+          "description": "es='Análisis Funcional'."
+        }
+      },
+      "x-reference-required": [
+        "extra_hdr",
+        "total_app",
+        "subtotal_extras",
+        "analisis_funcional"
+      ]
+    },
+    "params": {
+      "type": "object",
+      "description": "Parameters-sheet chrome (generate_spreadsheet_template.build_params). The workbook is an INTERNAL tool, so this block is English in every locale: only the `en` pack carries it and the rest inherit through the display-string fallback chain. Optional here for exactly that reason.",
+      "required": [
+        "title",
+        "hdr",
+        "groups",
+        "labels",
+        "descs",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "hdr": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[label, value, description, key]. Index 3 names the KEY column and index 1 the VALUE column: that is the contract with proposal_data.sheet_overrides, pinned by tests/params_sheet_contract_smoke.py. Change it here and the parser silently reads the human labels as technical keys."
+        },
+        "groups": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "group id -> section header shown on the sheet."
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "technical key -> human label (column A)."
+        },
+        "descs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "technical key -> what it does (column C)."
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "footnotes under the table."
+        }
+      }
+    },
+    "recurrent_names": {
+      "type": "object",
+      "description": "Display name per recurrent id (registry recurrent_lines). Used on the =ODOO.LIST fallback path only.",
+      "required": [
+        "dyn_cloud",
+        "maintenance",
+        "odoo_license"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "dyn_cloud": {
+          "type": "string",
+          "description": "es='Dyn Cloud'."
+        },
+        "maintenance": {
+          "type": "string",
+          "description": "es='Mantenimiento'."
+        },
+        "odoo_license": {
+          "type": "string",
+          "description": "es='Licencia Odoo'."
+        }
+      }
+    },
+    "recurrent_descs": {
+      "type": "object",
+      "description": "Desc per recurrent id. NOTE (B1, RESOLVED by the Indaws->Dynapps rebrand): the live path looks desc up by the SHEET TITLE verbatim; pre-rebrand the es sheet emitted 'Indaws Cloud' so the lookup MISSED → desc=''; post-rebrand it emits 'Dyn Cloud', which matches, so the lookup HITS. These descs apply only on the =ODOO.LIST fallback path.",
+      "required": [
+        "dyn_cloud",
+        "maintenance",
+        "odoo_license"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "dyn_cloud": {
+          "type": "string"
+        },
+        "maintenance": {
+          "type": "string"
+        },
+        "odoo_license": {
+          "type": "string"
+        }
+      }
+    },
+    "dev_descriptions": {
+      "type": "object",
+      "description": "Per-dev-id prose (registry devs ids). proposal_data matches the sheet dev display name to a dev id (accent-normalized, parenthetical-tolerant) via app_registry.devs[*].es_display_name; dev_fallback used when no id matches.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "dev_fallback": {
+      "type": "string",
+      "description": "Fallback dev description when no dev_id matches. es='Desarrollo a medida para cubrir necesidades específicas de tu negocio.'"
+    },
+    "cli": {
+      "type": "object",
+      "description": "CLI stdout strings for sibling scripts.",
+      "additionalProperties": true
+    },
+    "apps": {
+      "type": "object",
+      "description": "App-catalog UI strings (e.g. default_outcome when an app has no outcome).",
+      "additionalProperties": true
+    },
+    "phase_flow": {
+      "type": "object",
+      "description": "Proposal phase-flow labels/durations: weeks ('{n} weeks'), in_parallel, nums.",
+      "additionalProperties": true
+    },
+    "ia": {
+      "type": "object",
+      "description": "AI value-add catalog display names/descriptions keyed by id (exclusive/addons/poc).",
+      "additionalProperties": true
+    },
+    "fill": {
+      "type": "object",
+      "description": "fill_spreadsheet.py Gantt/legend labels (task names, legend header + full/short legend entries). Keys stable across locales.",
+      "additionalProperties": true
+    },
+    "sections": {
+      "type": "object",
+      "description": "Free-form section labels used by the proposal/spreadsheet flow. Keys stable across locales.",
+      "additionalProperties": true
+    }
+  }
+}

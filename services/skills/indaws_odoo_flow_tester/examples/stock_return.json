@@ -1,0 +1,189 @@
+{
+  "flow_id": "CHAIN_STOCK_RETURN",
+  "flow_name": "Devolucion de mercancia completa",
+  "description": "Crear pedido de venta, confirmar, validar entrega, crear devolucion via wizard, validar devolucion y verificar stock restaurado",
+  "odoo_version": "18.0",
+  "environment": "staging",
+  "data": {
+    "partner_name": "Distribuciones Levante S.L.",
+    "product_name": "Silla Ergonomica Pro",
+    "qty": 10,
+    "price_unit": 320.00
+  },
+  "preconditions": [
+    {
+      "model": "res.partner",
+      "domain": [["name", "ilike", "Distribuciones Levante"], ["customer_rank", ">", 0]],
+      "fields": ["id", "name"],
+      "save_as": "partner_id",
+      "min_records": 1
+    },
+    {
+      "model": "product.product",
+      "domain": [["name", "ilike", "Silla Ergonomica"], ["type", "=", "product"], ["sale_ok", "=", true]],
+      "fields": ["id", "name", "list_price"],
+      "save_as": "product_id",
+      "min_records": 1
+    },
+    {
+      "model": "stock.quant",
+      "domain": [["product_id", "=", "{pre.product_id}"], ["location_id.usage", "=", "internal"], ["quantity", ">=", 10]],
+      "fields": ["id", "quantity", "location_id"],
+      "save_as": "quant_id",
+      "min_records": 1,
+      "note": "Necesitamos stock suficiente para entregar las 10 unidades"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "name": "Crear pedido de venta",
+      "action": "create",
+      "model": "sale.order",
+      "values": {
+        "partner_id": "{pre.partner_id}",
+        "order_line": [[0, 0, {
+          "product_id": "{pre.product_id}",
+          "product_uom_qty": "{data.qty}",
+          "price_unit": "{data.price_unit}"
+        }]]
+      },
+      "save_as": "sale_order_id",
+      "verify": {"field": "state", "expected": "draft"}
+    },
+    {
+      "step": 2,
+      "name": "Confirmar pedido de venta",
+      "action": "execute",
+      "model": "sale.order",
+      "method": "action_confirm",
+      "ids": ["{result.sale_order_id}"],
+      "verify": {"field": "state", "expected": "sale"}
+    },
+    {
+      "step": 3,
+      "name": "Detectar albaran de salida",
+      "action": "search",
+      "model": "stock.picking",
+      "domain": [["origin", "=", "{result.sale_order_name}"], ["picking_type_code", "=", "outgoing"]],
+      "fields": ["id", "name", "state"],
+      "save_as": "picking_out_id",
+      "verify": {"field": "state", "expected": "assigned"}
+    },
+    {
+      "step": 4,
+      "name": "Validar albaran de salida (entrega al cliente)",
+      "action": "execute",
+      "model": "stock.picking",
+      "method": "button_validate",
+      "ids": ["{result.picking_out_id}"],
+      "context": {"skip_backorder": true, "picking_ids_not_to_backorder": ["{result.picking_out_id}"]},
+      "verify": {"field": "state", "expected": "done"}
+    },
+    {
+      "step": 5,
+      "name": "Verificar stock despues de entrega",
+      "action": "search",
+      "model": "stock.quant",
+      "domain": [["product_id", "=", "{pre.product_id}"], ["location_id.usage", "=", "internal"]],
+      "fields": ["quantity"],
+      "save_as": "quant_after_delivery",
+      "note": "Registrar la cantidad actual en stock tras la entrega"
+    },
+    {
+      "step": 6,
+      "name": "Crear wizard de devolucion",
+      "action": "create",
+      "model": "stock.return.picking",
+      "values": {
+        "picking_id": "{result.picking_out_id}"
+      },
+      "context": {"active_id": "{result.picking_out_id}", "active_model": "stock.picking"},
+      "save_as": "return_wizard_id",
+      "note": "El wizard stock.return.picking se inicializa con default_get a partir del picking original"
+    },
+    {
+      "step": 7,
+      "name": "Ejecutar devolucion (crear picking de retorno)",
+      "action": "execute",
+      "model": "stock.return.picking",
+      "method": "action_create_returns",
+      "ids": ["{result.return_wizard_id}"],
+      "detect_cascade": {
+        "model": "stock.picking",
+        "domain": [["origin", "like", "Return of"], ["origin", "like", "{result.picking_out_name}"]],
+        "save_as": "return_picking_id"
+      },
+      "note": "El wizard llama a _create_return() que copia el picking con cantidades invertidas"
+    },
+    {
+      "step": 8,
+      "name": "Validar picking de devolucion",
+      "action": "execute",
+      "model": "stock.picking",
+      "method": "button_validate",
+      "ids": ["{result.return_picking_id}"],
+      "context": {"skip_backorder": true, "picking_ids_not_to_backorder": ["{result.return_picking_id}"]},
+      "verify": {"field": "state", "expected": "done"}
+    },
+    {
+      "step": 9,
+      "name": "Verificar stock restaurado tras devolucion",
+      "action": "search",
+      "model": "stock.quant",
+      "domain": [["product_id", "=", "{pre.product_id}"], ["location_id.usage", "=", "internal"]],
+      "fields": ["quantity"],
+      "save_as": "quant_after_return",
+      "verify_custom": "quant_after_return.quantity == quant_after_delivery.quantity + data.qty",
+      "note": "El stock debe haberse incrementado en la cantidad devuelta"
+    }
+  ],
+  "revert": [
+    {
+      "step": 9,
+      "action": "noop",
+      "note": "Verificacion — sin rollback"
+    },
+    {
+      "step": 8,
+      "action": "return_picking",
+      "model": "stock.picking",
+      "ids": ["{result.return_picking_id}"],
+      "note": "Crear devolucion de la devolucion para revertir stock al estado post-entrega"
+    },
+    {
+      "step": 7,
+      "action": "noop",
+      "note": "El picking de devolucion ya se gestiono en paso 8"
+    },
+    {
+      "step": 6,
+      "action": "noop",
+      "note": "Wizard transient — se limpia automaticamente"
+    },
+    {
+      "step": 5,
+      "action": "noop",
+      "note": "Verificacion — sin rollback"
+    },
+    {
+      "step": 4,
+      "action": "noop",
+      "note": "El picking original done se revierte con la devolucion (pasos 6-8 del flujo principal)"
+    },
+    {
+      "step": 2,
+      "action": "execute",
+      "model": "sale.order",
+      "method": "action_cancel",
+      "ids": ["{result.sale_order_id}"],
+      "context": {"disable_cancel_warning": true}
+    },
+    {
+      "step": 1,
+      "action": "delete",
+      "model": "sale.order",
+      "ids": ["{result.sale_order_id}"]
+    }
+  ]
+}

@@ -42,7 +42,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && mkdir -p /out/bin \
     && cp target/release/systemprompt /out/bin/ \
     && cp target/release/systemprompt-mcp-agent /out/bin/ \
-    && cp target/release/systemprompt-mcp-agent-farm /out/bin/
+    && cp target/release/systemprompt-mcp-agent-farm /out/bin/ \
+    && cp target/release/systemprompt-farm-worker /out/bin/
 
 # Binaries only — `docker build --target artifacts --output type=local,dest=…`
 # gives the release job its server tarball from the same compile.
@@ -89,12 +90,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl3 \
     postgresql-client \
     lsof \
+    git \
+    procps \
     jq \
     python3 \
     libreoffice-writer \
     libreoffice-calc \
     libreoffice-impress \
     fonts-dejavu-core \
+    nftables \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=awscli /usr/local/aws-cli /usr/local/aws-cli
@@ -140,13 +144,26 @@ COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh /app/bin/* \
     && chown -R app:app /app
 
+# Agent farm runner confinement (farm crate: runner::fly::egress). The worker
+# is setuid root and executable only by the `app` group, so on a runner
+# machine it can load the nftables egress allowlist, then drops every id to
+# `farm-agent` (not in that group) before the agent starts: the agent can
+# neither flush the rules nor re-run the worker to regain root.
+RUN useradd --system --create-home --uid 10001 --shell /usr/sbin/nologin farm-agent \
+    && chown root:app /app/bin/systemprompt-farm-worker \
+    && chmod 4750 /app/bin/systemprompt-farm-worker \
+    && chmod 0755 /home/app
+
 USER app
+# Why: the agent farm spawns Claude Code (`claude`) for every run; the native
+# installer puts it under ~/.local/bin for the app user.
+RUN curl -fsSL https://claude.ai/install.sh | bash
 EXPOSE 8080
 
 ENV HOST=0.0.0.0 \
     PORT=8080 \
     RUST_LOG=info \
-    PATH="/app/bin:${PATH}" \
+    PATH="/app/bin:/home/app/.local/bin:${PATH}" \
     SYSTEMPROMPT_SERVICES_PATH=/app/services \
     SYSTEMPROMPT_MCP_PATH=/app/bin \
     SYSTEMPROMPT_PROFILE=/app/.systemprompt/profiles/docker/profile.yaml \

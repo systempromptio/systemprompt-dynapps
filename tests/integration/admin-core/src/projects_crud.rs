@@ -189,10 +189,10 @@ async fn an_empty_practice_clears_it_and_a_new_one_replaces_it() {
         cost_centre: None,
         practice: Some(practice.to_owned()),
     };
-    let replaced = update_project(&db.pool, &request.id, &edit(" Salesforce "))
+    let replaced = update_project(&db.pool, &request.id, &edit(" Odoo "))
         .await
         .expect("replace practice");
-    assert_eq!(replaced.practice.as_deref(), Some("Salesforce"));
+    assert_eq!(replaced.practice.as_deref(), Some("Odoo"));
     assert_eq!(
         replaced.cost_centre.as_deref(),
         Some("CC-4100"),

@@ -1,0 +1,2985 @@
+{
+  "date": "2026-02-02T13:46:21.689578Z",
+  "description": "SEO baseline post-optimization. ~140 changes applied: meta descriptions, title tags, H1 fixes, redirect 301, duplicate cleanup.",
+  "summary": {
+    "total_changes": 140,
+    "meta_descriptions_added": 50,
+    "title_tags_fixed": 60,
+    "h1_fixes": 22,
+    "redirects": 1,
+    "duplicates_removed": 1,
+    "audit_score": 81
+  },
+  "rankings": {
+    "date": "2026-02-02",
+    "total": 214,
+    "keywords": [
+      {
+        "keyword": "odoo",
+        "position": 7,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 49500,
+        "cpc": 2.299999952316284,
+        "difficulty": null
+      },
+      {
+        "keyword": "factusol",
+        "position": 49,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-factusol-la-mejor-solucion-para-tu-sistema-de-facturacion-198",
+        "volume": 12100,
+        "cpc": 3.2100000381469727,
+        "difficulty": null
+      },
+      {
+        "keyword": "módulos",
+        "position": 54,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/top-modulos-de-odoo-352",
+        "volume": 6600,
+        "cpc": 1.0199999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "abertis",
+        "position": 27,
+        "url": "https://www.indaws.es/proyecto-abertis",
+        "volume": 2400,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo que es",
+        "position": 8,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 2400,
+        "cpc": 2.299999952316284,
+        "difficulty": null
+      },
+      {
+        "keyword": "que es odoo",
+        "position": 5,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 2400,
+        "cpc": 1.8199999332427979,
+        "difficulty": null
+      },
+      {
+        "keyword": "erp software odoo",
+        "position": 6,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 1900,
+        "cpc": 3.369999885559082,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo app",
+        "position": 11,
+        "url": "https://www.indaws.es/apps-odoo",
+        "volume": 1900,
+        "cpc": 4.720000267028809,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo apps",
+        "position": 10,
+        "url": "https://www.indaws.es/apps-odoo",
+        "volume": 1900,
+        "cpc": 4.039999961853027,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo erp",
+        "position": 7,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 1900,
+        "cpc": 3.450000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo erp software",
+        "position": 7,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 1900,
+        "cpc": 3.450000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo open erp",
+        "position": 7,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 1900,
+        "cpc": 3.450000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu es obligatorio",
+        "position": 30,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/quien-esta-obligado-a-usar-verifactu-522",
+        "volume": 1900,
+        "cpc": 1.2200000286102295,
+        "difficulty": null
+      },
+      {
+        "keyword": "d oo",
+        "position": 94,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 1600,
+        "cpc": 5.849999904632568,
+        "difficulty": null
+      },
+      {
+        "keyword": "entregadas",
+        "position": 67,
+        "url": "https://www.indaws.es/slides/slide/factura-sobre-albaranes-cantidades-entregadas-572",
+        "volume": 1300,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo verifactu",
+        "position": 16,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-verifactu-597",
+        "volume": 1300,
+        "cpc": 3.2200000286102295,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo crm",
+        "position": 11,
+        "url": "https://www.indaws.es/odoo-crm",
+        "volume": 1000,
+        "cpc": 5.650000095367432,
+        "difficulty": null
+      },
+      {
+        "keyword": "odu",
+        "position": 21,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 1000,
+        "cpc": 5.369999885559082,
+        "difficulty": null
+      },
+      {
+        "keyword": "balance de sumas y saldos",
+        "position": 34,
+        "url": "https://www.indaws.es/slides/slide/balance-de-sumas-y-saldos-502",
+        "volume": 880,
+        "cpc": 1.4600000381469727,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo precios",
+        "position": 5,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-plan-precios-401",
+        "volume": 880,
+        "cpc": 3.4800000190734863,
+        "difficulty": null
+      },
+      {
+        "keyword": "precio odoo",
+        "position": 6,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-plan-precios-401",
+        "volume": 880,
+        "cpc": 3.4800000190734863,
+        "difficulty": null
+      },
+      {
+        "keyword": "precios odoo",
+        "position": 4,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-plan-precios-401",
+        "volume": 880,
+        "cpc": 3.4800000190734863,
+        "difficulty": null
+      },
+      {
+        "keyword": "asiento de apertura",
+        "position": 61,
+        "url": "https://www.indaws.es/slides/slide/asiento-de-apertura-517",
+        "volume": 720,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "asientos de apertura",
+        "position": 54,
+        "url": "https://www.indaws.es/ca_ES/slides/slide/asiento-de-apertura-608",
+        "volume": 720,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "control horario trabajadores gratis",
+        "position": 24,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/control-horario-trabajadores-gratis-540",
+        "volume": 720,
+        "cpc": 3.009999990463257,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo partner",
+        "position": 12,
+        "url": "https://www.indaws.es/",
+        "volume": 720,
+        "cpc": 7.070000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo sh",
+        "position": 6,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoosh-analisis-tecnico-2026-55",
+        "volume": 720,
+        "cpc": 1.159999966621399,
+        "difficulty": null
+      },
+      {
+        "keyword": "partner odoo",
+        "position": 15,
+        "url": "https://www.indaws.es/",
+        "volume": 720,
+        "cpc": 7.070000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "partners odoo",
+        "position": 15,
+        "url": "https://www.indaws.es/",
+        "volume": 720,
+        "cpc": 7.070000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "reglamento verifactu",
+        "position": 22,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/reglamento-verifactu-2025-490",
+        "volume": 720,
+        "cpc": 1.7699999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "roturas de stock",
+        "position": 94,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/roturas-de-stock-en-odoo-deja-de-adivinar-y-automatiza-tus-maximos-y-minimos-580",
+        "volume": 720,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "software control horario",
+        "position": 100,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/software-control-horario-542",
+        "volume": 720,
+        "cpc": 12.59000015258789,
+        "difficulty": null
+      },
+      {
+        "keyword": "analiticas contabilidad",
+        "position": 10,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/contabilidad-analitica-que-es-ejemplos-y-diferencias-con-la-financiera-247",
+        "volume": 590,
+        "cpc": 4.269999980926514,
+        "difficulty": null
+      },
+      {
+        "keyword": "asiento nómina",
+        "position": 71,
+        "url": "https://www.indaws.es/slides/slide/asientos-de-nominas-604",
+        "volume": 590,
+        "cpc": 3.700000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "contabilidad analitico",
+        "position": 14,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/contabilidad-analitica-que-es-ejemplos-y-diferencias-con-la-financiera-247",
+        "volume": 590,
+        "cpc": 2,
+        "difficulty": null
+      },
+      {
+        "keyword": "erp odoo",
+        "position": 8,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 590,
+        "cpc": 2.2100000381469727,
+        "difficulty": null
+      },
+      {
+        "keyword": "importacion y exportación",
+        "position": 62,
+        "url": "https://www.indaws.es/odoo-importacion-exportacion",
+        "volume": 590,
+        "cpc": 2.7699999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "importación/exportación",
+        "position": 51,
+        "url": "https://www.indaws.es/odoo-importacion-exportacion",
+        "volume": 590,
+        "cpc": 2.7699999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo logo",
+        "position": 92,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 590,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "partners significado",
+        "position": 81,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/significado-gold-partner-odoo-476",
+        "volume": 590,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu odoo",
+        "position": 17,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-verifactu-520",
+        "volume": 590,
+        "cpc": 2.630000114440918,
+        "difficulty": null
+      },
+      {
+        "keyword": "cantera la belonga",
+        "position": 24,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-canteras-la-belonga-715",
+        "volume": 480,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "canteras la belonga",
+        "position": 15,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-canteras-la-belonga-715",
+        "volume": 480,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "casos de éxito",
+        "position": 76,
+        "url": "https://www.indaws.es/casos-de-exito",
+        "volume": 480,
+        "cpc": 4.630000114440918,
+        "difficulty": null
+      },
+      {
+        "keyword": "erp para pymes",
+        "position": 107,
+        "url": "https://www.indaws.es/ca_ES/blog/blog-indaws-1/descubre-la-importancia-de-un-erp-en-tu-pyme-138",
+        "volume": 480,
+        "cpc": 13.859999656677246,
+        "difficulty": null
+      },
+      {
+        "keyword": "facturación verifactu",
+        "position": 81,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 480,
+        "cpc": 4.380000114440918,
+        "difficulty": null
+      },
+      {
+        "keyword": "holded factura",
+        "position": 77,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-es-el-mejor-erp-para-impulsar-y-gestionar-tu-negocio-194",
+        "volume": 480,
+        "cpc": 2.0899999141693115,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo españa",
+        "position": 15,
+        "url": "https://www.indaws.es/",
+        "volume": 480,
+        "cpc": 7.690000057220459,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo valencia",
+        "position": 7,
+        "url": "https://www.indaws.es/",
+        "volume": 480,
+        "cpc": 5.429999828338623,
+        "difficulty": null
+      },
+      {
+        "keyword": "transformacion digital en las empresas",
+        "position": 68,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/proceso-de-transformacion-digital-que-es-y-como-implementarlo-en-tu-empresa-331",
+        "volume": 480,
+        "cpc": 4.949999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "transformación digital en las empresas",
+        "position": 73,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/proceso-de-transformacion-digital-que-es-y-como-implementarlo-en-tu-empresa-331",
+        "volume": 480,
+        "cpc": 4.949999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "contabilidad analitica que es",
+        "position": 14,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-contabilidad-analitica-y-para-que-sirve-247",
+        "volume": 390,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "contabilidad analítica que es",
+        "position": 17,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-contabilidad-analitica-y-para-que-sirve-247",
+        "volume": 390,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "demo odoo",
+        "position": 20,
+        "url": "https://www.indaws.es/demo-odoo",
+        "volume": 390,
+        "cpc": 4.929999828338623,
+        "difficulty": null
+      },
+      {
+        "keyword": "demo openerp",
+        "position": 27,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/openerp-erp-ventajas-389",
+        "volume": 390,
+        "cpc": 4.929999828338623,
+        "difficulty": null
+      },
+      {
+        "keyword": "indaws",
+        "position": 1,
+        "url": "https://www.indaws.es/",
+        "volume": 390,
+        "cpc": 0.23000000417232513,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo demo",
+        "position": 6,
+        "url": "https://www.indaws.es/demo-odoo",
+        "volume": 390,
+        "cpc": 4.610000133514404,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo openerp",
+        "position": 7,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/openerp-a-odoo-419",
+        "volume": 390,
+        "cpc": 3.950000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo opiniones",
+        "position": 43,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 390,
+        "cpc": 4.340000152587891,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo software",
+        "position": 7,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 390,
+        "cpc": 3.950000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "open erp demo",
+        "position": 30,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/openerp-erp-ventajas-389",
+        "volume": 390,
+        "cpc": 4.929999828338623,
+        "difficulty": null
+      },
+      {
+        "keyword": "openerp odoo",
+        "position": 8,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/openerp-erp-ventajas-389",
+        "volume": 390,
+        "cpc": 3.950000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "opiniones odoo",
+        "position": 48,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 390,
+        "cpc": 3.7899999618530273,
+        "difficulty": null
+      },
+      {
+        "keyword": "plasticos ferrando",
+        "position": 25,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-plasticos-ferrando-718",
+        "volume": 390,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "plásticos ferrando",
+        "position": 24,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-plasticos-ferrando-718",
+        "volume": 390,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "programa control horario",
+        "position": 102,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/software-control-horario-542",
+        "volume": 390,
+        "cpc": 11.8100004196167,
+        "difficulty": null
+      },
+      {
+        "keyword": "que es la contabilidad analítica",
+        "position": 12,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/contabilidad-analitica-que-es-ejemplos-y-diferencias-con-la-financiera-247",
+        "volume": 390,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "runbot odoo",
+        "position": 4,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-runbot-como-usarlo-391",
+        "volume": 390,
+        "cpc": 7.320000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "software de control horario",
+        "position": 97,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/software-control-horario-542",
+        "volume": 390,
+        "cpc": 12.850000381469727,
+        "difficulty": null
+      },
+      {
+        "keyword": "sucemart",
+        "position": 29,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-sucemart-671",
+        "volume": 390,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "tefralux",
+        "position": 10,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-tefralux-680",
+        "volume": 390,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "anticipos de clientes",
+        "position": 81,
+        "url": "https://www.indaws.es/slides/slide/facturas-de-anticipo-575",
+        "volume": 320,
+        "cpc": 0.7099999785423279,
+        "difficulty": null
+      },
+      {
+        "keyword": "asiento de nomina",
+        "position": 46,
+        "url": "https://www.indaws.es/slides/slide/asientos-de-nominas-604",
+        "volume": 320,
+        "cpc": 1.7699999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "caravaning pirineos",
+        "position": 9,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-caravaning-pirineos-702",
+        "volume": 320,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "crm para pyme",
+        "position": 99,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-crm-pymes-413",
+        "volume": 320,
+        "cpc": 11.75,
+        "difficulty": null
+      },
+      {
+        "keyword": "firma por orden",
+        "position": 33,
+        "url": "https://www.indaws.es/odoo-firma-electronica",
+        "volume": 320,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "firmado por orden",
+        "position": 69,
+        "url": "https://www.indaws.es/odoo-firma-electronica",
+        "volume": 320,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "oca odoo",
+        "position": 7,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-oca-como-funciona-393",
+        "volume": 320,
+        "cpc": 2.819999933242798,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo pricing",
+        "position": 69,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-plan-precios-401",
+        "volume": 320,
+        "cpc": 6.720000267028809,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo soporte",
+        "position": 9,
+        "url": "https://www.indaws.es/odoo-asistencia",
+        "volume": 320,
+        "cpc": 5.380000114440918,
+        "difficulty": null
+      },
+      {
+        "keyword": "recibo sepa",
+        "position": 58,
+        "url": "https://www.indaws.es/slides/slide/recibos-domiciliados-sepa-610",
+        "volume": 320,
+        "cpc": 0.9700000286102295,
+        "difficulty": null
+      },
+      {
+        "keyword": "recibos sepa",
+        "position": 29,
+        "url": "https://www.indaws.es/ca_ES/slides/slide/recibos-domiciliados-sepa-610",
+        "volume": 320,
+        "cpc": 0.9700000286102295,
+        "difficulty": null
+      },
+      {
+        "keyword": "soporte odoo",
+        "position": 10,
+        "url": "https://www.indaws.es/odoo-asistencia",
+        "volume": 320,
+        "cpc": 5.380000114440918,
+        "difficulty": null
+      },
+      {
+        "keyword": "sumas y saldos",
+        "position": 50,
+        "url": "https://www.indaws.es/slides/slide/balance-de-sumas-y-saldos-502",
+        "volume": 320,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu obligatorio",
+        "position": 54,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/quien-esta-obligado-a-usar-verifactu-522",
+        "volume": 320,
+        "cpc": 1.2999999523162842,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu y factura electronica",
+        "position": 53,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 320,
+        "cpc": 0.8999999761581421,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu y factura electrónica",
+        "position": 36,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 320,
+        "cpc": 0.8999999761581421,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu y facturacion electronica",
+        "position": 38,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 320,
+        "cpc": 0.8700000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "balance sumas y saldos",
+        "position": 52,
+        "url": "https://www.indaws.es/slides/slide/balance-de-sumas-y-saldos-502",
+        "volume": 260,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "balances sumas y saldos",
+        "position": 56,
+        "url": "https://www.indaws.es/slides/slide/balance-de-sumas-y-saldos-502",
+        "volume": 260,
+        "cpc": 1.690000057220459,
+        "difficulty": null
+      },
+      {
+        "keyword": "commo crm",
+        "position": 36,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-un-crm-y-por-que-es-esencial-para-tu-empresa-219",
+        "volume": 260,
+        "cpc": 3.8499999046325684,
+        "difficulty": null
+      },
+      {
+        "keyword": "contabilidad odoo",
+        "position": 32,
+        "url": "https://www.indaws.es/odoo-contabilidad",
+        "volume": 260,
+        "cpc": 8.1899995803833,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo 18",
+        "position": 10,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/novedades-en-odoo-18-303",
+        "volume": 260,
+        "cpc": 1.3899999856948853,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo 19",
+        "position": 20,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-19-para-empresas-552",
+        "volume": 260,
+        "cpc": 2.4200000762939453,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo contabilidad",
+        "position": 27,
+        "url": "https://www.indaws.es/odoo-contabilidad",
+        "volume": 260,
+        "cpc": 8.1899995803833,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo enterprise",
+        "position": 11,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-community-vs-enterprise-269",
+        "volume": 260,
+        "cpc": 3.680000066757202,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo facturacion",
+        "position": 16,
+        "url": "https://www.indaws.es/odoo-facturacion",
+        "volume": 260,
+        "cpc": 4.840000152587891,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo facturación",
+        "position": 10,
+        "url": "https://www.indaws.es/odoo-facturacion",
+        "volume": 260,
+        "cpc": 4.840000152587891,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo facturas",
+        "position": 13,
+        "url": "https://www.indaws.es/odoo-facturacion",
+        "volume": 260,
+        "cpc": 4.840000152587891,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo programa",
+        "position": 4,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 260,
+        "cpc": 2.1600000858306885,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo runbot",
+        "position": 4,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-runbot-como-usarlo-391",
+        "volume": 260,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo studio",
+        "position": 10,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/conoce-que-es-odoo-studio-50",
+        "volume": 260,
+        "cpc": 2.9800000190734863,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo support",
+        "position": 16,
+        "url": "https://www.indaws.es/odoo-asistencia",
+        "volume": 260,
+        "cpc": 5.989999771118164,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo web",
+        "position": 10,
+        "url": "https://www.indaws.es/odoo-diseno-web",
+        "volume": 260,
+        "cpc": 5.320000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo website",
+        "position": 13,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 260,
+        "cpc": 5.320000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo: contabilidad",
+        "position": 27,
+        "url": "https://www.indaws.es/odoo-contabilidad",
+        "volume": 260,
+        "cpc": 8.1899995803833,
+        "difficulty": null
+      },
+      {
+        "keyword": "picking list",
+        "position": 15,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/picking-list-odoo-399",
+        "volume": 260,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "programa odoo",
+        "position": 13,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 260,
+        "cpc": 2.9200000762939453,
+        "difficulty": null
+      },
+      {
+        "keyword": "tunergia",
+        "position": 30,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-tunergia-713",
+        "volume": 260,
+        "cpc": 8.140000343322754,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu para autonomos",
+        "position": 34,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-para-autonomos-528",
+        "volume": 260,
+        "cpc": 2.3899998664855957,
+        "difficulty": null
+      },
+      {
+        "keyword": "web odoo",
+        "position": 24,
+        "url": "https://www.indaws.es/odoo-diseno-web",
+        "volume": 260,
+        "cpc": 5.320000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "website odoo",
+        "position": 16,
+        "url": "https://www.indaws.es/https/www-indaws-es/marketing-odoo-promociones",
+        "volume": 260,
+        "cpc": 5.320000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "características principales",
+        "position": 35,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/conoce-las-5-caracteristicas-de-odoo-que-te-enamoraran-135",
+        "volume": 210,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "ecommerce barcelona",
+        "position": 55,
+        "url": "https://www.indaws.es/odoo-ecommerce",
+        "volume": 210,
+        "cpc": 0.7900000214576721,
+        "difficulty": null
+      },
+      {
+        "keyword": "erp pyme",
+        "position": 93,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/ventajas-de-utilizar-un-erp-para-la-gestion-de-tu-pyme-66",
+        "volume": 210,
+        "cpc": 16.020000457763672,
+        "difficulty": null
+      },
+      {
+        "keyword": "erp pymes",
+        "position": 86,
+        "url": "https://www.indaws.es/ca_ES/blog/blog-indaws-1/descubre-la-importancia-de-un-erp-en-tu-pyme-138",
+        "volume": 210,
+        "cpc": 15.430000305175781,
+        "difficulty": null
+      },
+      {
+        "keyword": "factura electronica odoo",
+        "position": 37,
+        "url": "https://www.indaws.es/odoo-facturacion",
+        "volume": 210,
+        "cpc": 4.699999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "factura electrónica y verifactu",
+        "position": 33,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 210,
+        "cpc": 1.2899999618530273,
+        "difficulty": null
+      },
+      {
+        "keyword": "facturacion electronica odoo",
+        "position": 28,
+        "url": "https://www.indaws.es/odoo-facturacion",
+        "volume": 210,
+        "cpc": 4.699999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "homeserve servicios para la energia",
+        "position": 12,
+        "url": "https://www.indaws.es/proyecto-homeserve",
+        "volume": 210,
+        "cpc": 12.039999961853027,
+        "difficulty": null
+      },
+      {
+        "keyword": "oca que significa",
+        "position": 76,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-oca-como-funciona-393",
+        "volume": 210,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "oca qué es",
+        "position": 42,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-oca-como-funciona-393",
+        "volume": 210,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo factura electronica",
+        "position": 47,
+        "url": "https://www.indaws.es/odoo-facturacion",
+        "volume": 210,
+        "cpc": 11.25,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo facturacion electronica",
+        "position": 29,
+        "url": "https://www.indaws.es/odoo-facturacion",
+        "volume": 210,
+        "cpc": 11.25,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo oca",
+        "position": 6,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-oca-como-funciona-393",
+        "volume": 210,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo online",
+        "position": 20,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 210,
+        "cpc": 5.21999979019165,
+        "difficulty": null
+      },
+      {
+        "keyword": "plazos verifactu",
+        "position": 63,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 210,
+        "cpc": 1.559999942779541,
+        "difficulty": null
+      },
+      {
+        "keyword": "pyme erp",
+        "position": 107,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/ventajas-de-utilizar-un-erp-para-la-gestion-de-tu-pyme-66",
+        "volume": 210,
+        "cpc": 15.430000305175781,
+        "difficulty": null
+      },
+      {
+        "keyword": "pymes erp",
+        "position": 43,
+        "url": "https://www.indaws.es/ca_ES/blog/blog-indaws-1/descubre-la-importancia-de-un-erp-en-tu-pyme-138",
+        "volume": 210,
+        "cpc": 15.430000305175781,
+        "difficulty": null
+      },
+      {
+        "keyword": "que es oca",
+        "position": 42,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-oca-como-funciona-393",
+        "volume": 210,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "que significa oca",
+        "position": 38,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-oca-como-funciona-393",
+        "volume": 210,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu cuando es obligatorio",
+        "position": 27,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/quien-esta-obligado-a-usar-verifactu-522",
+        "volume": 210,
+        "cpc": 0.8700000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "agencia de viajes software",
+        "position": 67,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-programa-gestion-para-agencias-viajes-287",
+        "volume": 170,
+        "cpc": 9.390000343322754,
+        "difficulty": null
+      },
+      {
+        "keyword": "anticipo clientes",
+        "position": 80,
+        "url": "https://www.indaws.es/slides/slide/facturas-de-anticipo-575",
+        "volume": 170,
+        "cpc": 0.3199999928474426,
+        "difficulty": null
+      },
+      {
+        "keyword": "anticipos a clientes",
+        "position": 79,
+        "url": "https://www.indaws.es/slides/slide/facturas-de-anticipo-575",
+        "volume": 170,
+        "cpc": 0.3199999928474426,
+        "difficulty": null
+      },
+      {
+        "keyword": "anticipos clientes",
+        "position": 93,
+        "url": "https://www.indaws.es/slides/slide/facturas-de-anticipo-575",
+        "volume": 170,
+        "cpc": 1.059999942779541,
+        "difficulty": null
+      },
+      {
+        "keyword": "aplicaciones controles",
+        "position": 109,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/control-horario-trabajadores-gratis-540",
+        "volume": 170,
+        "cpc": 0.8899999856948853,
+        "difficulty": null
+      },
+      {
+        "keyword": "diferencia entre verifactu y factura electrónica",
+        "position": 33,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 170,
+        "cpc": 0.3799999952316284,
+        "difficulty": null
+      },
+      {
+        "keyword": "e commerce tienda online",
+        "position": 92,
+        "url": "https://www.indaws.es/odoo-ecommerce",
+        "volume": 170,
+        "cpc": 3.450000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "la facturación",
+        "position": 61,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/la-evolucion-de-la-facturacion-electronica-ventajas-y-desafio-217",
+        "volume": 170,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo help",
+        "position": 5,
+        "url": "https://www.indaws.es/odoo-asistencia",
+        "volume": 170,
+        "cpc": 5.139999866485596,
+        "difficulty": null
+      },
+      {
+        "keyword": "plazos facturacion electronica",
+        "position": 31,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 170,
+        "cpc": 0.9900000095367432,
+        "difficulty": null
+      },
+      {
+        "keyword": "previline",
+        "position": 15,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-previline-689",
+        "volume": 170,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "programa de control horario",
+        "position": 103,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/control-horario-trabajadores-gratis-540",
+        "volume": 170,
+        "cpc": 14.25,
+        "difficulty": null
+      },
+      {
+        "keyword": "punto de venta software",
+        "position": 19,
+        "url": "https://www.indaws.es/punto-de-venta",
+        "volume": 170,
+        "cpc": 11.979999542236328,
+        "difficulty": null
+      },
+      {
+        "keyword": "software agencias de viaje",
+        "position": 90,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-programa-gestion-para-agencias-viajes-287",
+        "volume": 170,
+        "cpc": 7.119999885559082,
+        "difficulty": null
+      },
+      {
+        "keyword": "software agencias de viajes",
+        "position": 106,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-programa-gestion-para-agencias-viajes-287",
+        "volume": 170,
+        "cpc": 7.119999885559082,
+        "difficulty": null
+      },
+      {
+        "keyword": "software de agencias de viajes",
+        "position": 99,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-programa-gestion-para-agencias-viajes-287",
+        "volume": 170,
+        "cpc": 7.119999885559082,
+        "difficulty": null
+      },
+      {
+        "keyword": "software de punto de venta",
+        "position": 18,
+        "url": "https://www.indaws.es/punto-de-venta",
+        "volume": 170,
+        "cpc": 11.979999542236328,
+        "difficulty": null
+      },
+      {
+        "keyword": "software de punto de ventas",
+        "position": 114,
+        "url": "https://www.indaws.es/punto-de-venta",
+        "volume": 170,
+        "cpc": 11.979999542236328,
+        "difficulty": null
+      },
+      {
+        "keyword": "software punto de venta",
+        "position": 66,
+        "url": "https://www.indaws.es/punto-de-venta",
+        "volume": 170,
+        "cpc": 11.979999542236328,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu plazos",
+        "position": 71,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 170,
+        "cpc": 0.8299999833106995,
+        "difficulty": null
+      },
+      {
+        "keyword": "agente digitalizador valencia",
+        "position": 80,
+        "url": "https://www.indaws.es/kit-digital-odoo",
+        "volume": 140,
+        "cpc": 16.059999465942383,
+        "difficulty": null
+      },
+      {
+        "keyword": "curso odoo",
+        "position": 13,
+        "url": "https://www.indaws.es/slides/curso-completo-odoo-v18-36",
+        "volume": 140,
+        "cpc": 3.3299999237060547,
+        "difficulty": null
+      },
+      {
+        "keyword": "definir prepararse",
+        "position": 58,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/como-prepararse-para-una-crisis-113",
+        "volume": 140,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "empresa de importacion y exportacion",
+        "position": 34,
+        "url": "https://www.indaws.es/odoo-importacion-exportacion",
+        "volume": 140,
+        "cpc": 5.070000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "empresa de importación y exportación",
+        "position": 54,
+        "url": "https://www.indaws.es/odoo-importacion-exportacion",
+        "volume": 140,
+        "cpc": 5.070000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "empresas de importacion y exportacion",
+        "position": 50,
+        "url": "https://www.indaws.es/odoo-importacion-exportacion",
+        "volume": 140,
+        "cpc": 5.070000171661377,
+        "difficulty": null
+      },
+      {
+        "keyword": "factura de anticipo",
+        "position": 56,
+        "url": "https://www.indaws.es/slides/slide/facturas-de-anticipo-575",
+        "volume": 140,
+        "cpc": 0.46000000834465027,
+        "difficulty": null
+      },
+      {
+        "keyword": "factura holded",
+        "position": 77,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-es-el-mejor-erp-para-impulsar-y-gestionar-tu-negocio-194",
+        "volume": 140,
+        "cpc": 2.2300000190734863,
+        "difficulty": null
+      },
+      {
+        "keyword": "ingeniatic sl",
+        "position": 30,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-ingeniatic-734",
+        "volume": 140,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo 17",
+        "position": 9,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-17-descubre-las-novedades-179",
+        "volume": 140,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo aplicaciones",
+        "position": 15,
+        "url": "https://www.indaws.es/apps-odoo",
+        "volume": 140,
+        "cpc": 2.440000057220459,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo inventory",
+        "position": 25,
+        "url": "https://www.indaws.es/odoo-inventario",
+        "volume": 140,
+        "cpc": 9.710000038146973,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo kit digital",
+        "position": 19,
+        "url": "https://www.indaws.es/kit-digital-odoo",
+        "volume": 140,
+        "cpc": 3.7899999618530273,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo learn",
+        "position": 22,
+        "url": "https://www.indaws.es/curso-odoo-indaws-academy",
+        "volume": 140,
+        "cpc": 4.710000038146973,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo learning",
+        "position": 14,
+        "url": "https://www.indaws.es/curso-odoo-indaws-academy",
+        "volume": 140,
+        "cpc": 4.710000038146973,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo pos",
+        "position": 8,
+        "url": "https://www.indaws.es/punto-de-venta",
+        "volume": 140,
+        "cpc": 8.699999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo tpv",
+        "position": 17,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-para-restaurantes-solucion-integral-para-tu-negocio-265",
+        "volume": 140,
+        "cpc": 4.739999771118164,
+        "difficulty": null
+      },
+      {
+        "keyword": "openerp",
+        "position": 6,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/openerp-erp-ventajas-389",
+        "volume": 140,
+        "cpc": 3.0999999046325684,
+        "difficulty": null
+      },
+      {
+        "keyword": "resuinsa club",
+        "position": 13,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-resuinsa-677",
+        "volume": 140,
+        "cpc": 8.09000015258789,
+        "difficulty": null
+      },
+      {
+        "keyword": "software facturación verifactu",
+        "position": 75,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 140,
+        "cpc": 4.769999980926514,
+        "difficulty": null
+      },
+      {
+        "keyword": "stock minimo",
+        "position": 19,
+        "url": "https://www.indaws.es/ca_ES/slides/slide/reglas-de-stock-minimo-723",
+        "volume": 140,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "stock mínimo",
+        "position": 37,
+        "url": "https://www.indaws.es/ca_ES/slides/slide/reglas-de-stock-minimo-723",
+        "volume": 140,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu 2025",
+        "position": 9,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/reglamento-verifactu-2025-490",
+        "volume": 140,
+        "cpc": 1.7599999904632568,
+        "difficulty": null
+      },
+      {
+        "keyword": "verifactu quien esta obligado",
+        "position": 21,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/quien-esta-obligado-a-usar-verifactu-522",
+        "volume": 140,
+        "cpc": 0.6200000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "aplicaciones fichaje",
+        "position": 85,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/control-horario-trabajadores-gratis-540",
+        "volume": 110,
+        "cpc": 14.5,
+        "difficulty": null
+      },
+      {
+        "keyword": "balance de sumas y saldos ejemplo",
+        "position": 44,
+        "url": "https://www.indaws.es/slides/slide/balance-de-sumas-y-saldos-502",
+        "volume": 110,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "contabilidad analítica o de costes",
+        "position": 31,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/que-es-contabilidad-analitica-y-para-que-sirve-247",
+        "volume": 110,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "contabilidad anticipo de clientes",
+        "position": 106,
+        "url": "https://www.indaws.es/slides/slide/facturas-de-anticipo-575",
+        "volume": 110,
+        "cpc": 1,
+        "difficulty": null
+      },
+      {
+        "keyword": "crm para agencias de viajes",
+        "position": 62,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-programa-gestion-para-agencias-viajes-287",
+        "volume": 110,
+        "cpc": 20.190000534057617,
+        "difficulty": null
+      },
+      {
+        "keyword": "estrategias de e mail marketing",
+        "position": 73,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/la-importancia-del-email-marketing-190",
+        "volume": 110,
+        "cpc": 3.7200000286102295,
+        "difficulty": null
+      },
+      {
+        "keyword": "factura electrónica verifactu",
+        "position": 59,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 110,
+        "cpc": 1.8899999856948853,
+        "difficulty": null
+      },
+      {
+        "keyword": "factura proveedor",
+        "position": 27,
+        "url": "https://www.indaws.es/slides/slide/factura-de-proveedor-577",
+        "volume": 110,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "facturae y verifactu",
+        "position": 31,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-factura-electronica-496",
+        "volume": 110,
+        "cpc": 2.799999952316284,
+        "difficulty": null
+      },
+      {
+        "keyword": "factusol que es",
+        "position": 25,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-factusol-la-mejor-solucion-para-tu-sistema-de-facturacion-198",
+        "volume": 110,
+        "cpc": 0.9399999976158142,
+        "difficulty": null
+      },
+      {
+        "keyword": "golden partner",
+        "position": 19,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/significado-gold-partner-odoo-476",
+        "volume": 110,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "maximice events group",
+        "position": 16,
+        "url": "https://www.indaws.es/blog/referencias-indaws-16/indaws-x-maximice-events-group-754",
+        "volume": 110,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo ecommerce",
+        "position": 8,
+        "url": "https://www.indaws.es/odoo-ecommerce",
+        "volume": 110,
+        "cpc": 4.21999979019165,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo español",
+        "position": 8,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 110,
+        "cpc": 6.449999809265137,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo partners españa",
+        "position": 6,
+        "url": "https://www.indaws.es/",
+        "volume": 110,
+        "cpc": 5.679999828338623,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo sistema",
+        "position": 3,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 110,
+        "cpc": 2.9600000381469727,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo vs holded",
+        "position": 10,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-es-el-mejor-erp-para-impulsar-y-gestionar-tu-negocio-194",
+        "volume": 110,
+        "cpc": 3.759999990463257,
+        "difficulty": null
+      },
+      {
+        "keyword": "programa de transportes",
+        "position": 106,
+        "url": "https://www.indaws.es/programa-de-modernizacion-de-empresas-privadas-de-transporte-de-viajeros-y-mercancias-por-carretera",
+        "volume": 110,
+        "cpc": 7.75,
+        "difficulty": null
+      },
+      {
+        "keyword": "programas de fichajes",
+        "position": 111,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/software-control-horario-542",
+        "volume": 110,
+        "cpc": 18.989999771118164,
+        "difficulty": null
+      },
+      {
+        "keyword": "que es factusol",
+        "position": 31,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-factusol-la-mejor-solucion-para-tu-sistema-de-facturacion-198",
+        "volume": 110,
+        "cpc": 0.9399999976158142,
+        "difficulty": null
+      },
+      {
+        "keyword": "que es on-premise",
+        "position": 43,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/erp-en-la-nube-vs-erp-on-premise-cual-es-la-mejor-opcion-para-tu-empresa-241",
+        "volume": 110,
+        "cpc": 0.20000000298023224,
+        "difficulty": null
+      },
+      {
+        "keyword": "shopify verifactu",
+        "position": 40,
+        "url": "https://www.indaws.es/verifactu-guia-completa",
+        "volume": 110,
+        "cpc": 3.4800000190734863,
+        "difficulty": null
+      },
+      {
+        "keyword": "sistema odoo",
+        "position": 5,
+        "url": "https://www.indaws.es/que-es-odoo",
+        "volume": 110,
+        "cpc": 2.9600000381469727,
+        "difficulty": null
+      },
+      {
+        "keyword": "software de gestion de la calidad",
+        "position": 80,
+        "url": "https://www.indaws.es/odoo-gestion-calidad",
+        "volume": 110,
+        "cpc": 37.290000915527344,
+        "difficulty": null
+      },
+      {
+        "keyword": "software gestion de la calidad",
+        "position": 91,
+        "url": "https://www.indaws.es/odoo-gestion-calidad",
+        "volume": 110,
+        "cpc": 37.290000915527344,
+        "difficulty": null
+      },
+      {
+        "keyword": "ticketbai obligatorio españa",
+        "position": 32,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/verifactu-vs-ticketbai-similitudes-y-diferencias-526",
+        "volume": 110,
+        "cpc": 0.03999999910593033,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo 16",
+        "position": 14,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-15-vs-odoo-16-todas-las-novedades-de-la-nueva-version-61",
+        "volume": 90,
+        "cpc": 0.8700000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo community edition",
+        "position": 24,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-community-vs-enterprise-269",
+        "volume": 90,
+        "cpc": 7.190000057220459,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo inventario",
+        "position": 15,
+        "url": "https://www.indaws.es/odoo-inventario",
+        "volume": 90,
+        "cpc": 5.380000114440918,
+        "difficulty": null
+      },
+      {
+        "keyword": "odoo: inventario",
+        "position": 12,
+        "url": "https://www.indaws.es/odoo-inventario",
+        "volume": 90,
+        "cpc": 5.380000114440918,
+        "difficulty": null
+      },
+      {
+        "keyword": "software de control de presencia",
+        "position": 107,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/software-control-horario-542",
+        "volume": 90,
+        "cpc": 6.529999732971191,
+        "difficulty": null
+      },
+      {
+        "keyword": "software de gestion calidad",
+        "position": 101,
+        "url": "https://www.indaws.es/odoo-gestion-calidad",
+        "volume": 90,
+        "cpc": 40.599998474121094,
+        "difficulty": null
+      },
+      {
+        "keyword": "software gestión de calidad",
+        "position": 99,
+        "url": "https://www.indaws.es/odoo-gestion-calidad",
+        "volume": 90,
+        "cpc": 40.599998474121094,
+        "difficulty": null
+      },
+      {
+        "keyword": "software gestión de la calidad",
+        "position": 87,
+        "url": "https://www.indaws.es/odoo-gestion-calidad",
+        "volume": 90,
+        "cpc": 40.599998474121094,
+        "difficulty": null
+      },
+      {
+        "keyword": "tryton erp",
+        "position": 38,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-tryton-488",
+        "volume": 90,
+        "cpc": 4.619999885559082,
+        "difficulty": null
+      },
+      {
+        "keyword": "sdelsol factusol",
+        "position": 42,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-factusol-la-mejor-solucion-para-tu-sistema-de-facturacion-198",
+        "volume": 40,
+        "cpc": 2.450000047683716,
+        "difficulty": null
+      },
+      {
+        "keyword": "plantilla kit consulting",
+        "position": 63,
+        "url": "https://www.indaws.es/servicios-asesoria-digital",
+        "volume": 20,
+        "cpc": null,
+        "difficulty": null
+      },
+      {
+        "keyword": "modulo vs",
+        "position": 48,
+        "url": "https://www.indaws.es/blog/blog-indaws-1/personalizacion-de-odoo-la-guia-definitiva-studio-vs-modulos-a-medida-570",
+        "volume": 10,
+        "cpc": null,
+        "difficulty": null
+      }
+    ]
+  },
+  "gsc_traffic": {
+    "metadata": {
+      "site_url": "sc-domain:indaws.es",
+      "start_date": "2026-01-01",
+      "end_date": "2026-01-30",
+      "dimensions": [
+        "page"
+      ],
+      "search_type": "web",
+      "total_rows": 50,
+      "row_limit": 50,
+      "start_row": 0
+    },
+    "data": [
+      {
+        "page": "https://www.indaws.es/que-es-odoo",
+        "clicks": 490,
+        "impressions": 241954,
+        "ctr": 0.2,
+        "position": 6
+      },
+      {
+        "page": "https://www.indaws.es/",
+        "clicks": 242,
+        "impressions": 6015,
+        "ctr": 4.02,
+        "position": 16.7
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-modulos-427",
+        "clicks": 59,
+        "impressions": 3837,
+        "ctr": 1.54,
+        "position": 6.9
+      },
+      {
+        "page": "https://www.indaws.es/helpdesk/soporte-1",
+        "clicks": 57,
+        "impressions": 220,
+        "ctr": 25.91,
+        "position": 19.7
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-plan-precios-401",
+        "clicks": 56,
+        "impressions": 10755,
+        "ctr": 0.52,
+        "position": 5.4
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/integrar-redsys-odoo-593",
+        "clicks": 47,
+        "impressions": 610,
+        "ctr": 7.7,
+        "position": 6.2
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-para-principiante-293",
+        "clicks": 42,
+        "impressions": 3360,
+        "ctr": 1.25,
+        "position": 9
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/top-modulos-de-odoo-352",
+        "clicks": 29,
+        "impressions": 2182,
+        "ctr": 1.33,
+        "position": 10.5
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-18-chatgpt-457",
+        "clicks": 27,
+        "impressions": 583,
+        "ctr": 4.63,
+        "position": 6.4
+      },
+      {
+        "page": "https://www.indaws.es/odoo-asistencia",
+        "clicks": 27,
+        "impressions": 2265,
+        "ctr": 1.19,
+        "position": 18.3
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-oca-como-funciona-393",
+        "clicks": 26,
+        "impressions": 3308,
+        "ctr": 0.79,
+        "position": 7.7
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-19-guia-maestra-para-importar-productos-masivamente-sin-romper-tu-stock-762",
+        "clicks": 25,
+        "impressions": 1098,
+        "ctr": 2.28,
+        "position": 7.1
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/primeros-pasos-con-odoo-451",
+        "clicks": 25,
+        "impressions": 2296,
+        "ctr": 1.09,
+        "position": 10.3
+      },
+      {
+        "page": "https://www.indaws.es/curso-odoo-indaws-academy",
+        "clicks": 25,
+        "impressions": 1222,
+        "ctr": 2.05,
+        "position": 21.8
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-erpnext-482",
+        "clicks": 22,
+        "impressions": 934,
+        "ctr": 2.36,
+        "position": 16.4
+      },
+      {
+        "page": "https://www.indaws.es/slides/curso-completo-odoo-v18-36",
+        "clicks": 22,
+        "impressions": 717,
+        "ctr": 3.07,
+        "position": 9.8
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/digitalizacion-en-la-educacion-ventajas-de-usar-odoo-en-colegios-y-universidades-343",
+        "clicks": 21,
+        "impressions": 966,
+        "ctr": 2.17,
+        "position": 7.2
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-community-vs-enterprise-269",
+        "clicks": 19,
+        "impressions": 2484,
+        "ctr": 0.76,
+        "position": 10.3
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/digitaliza-cv-2026hasta-175000-para-tu-erp-779",
+        "clicks": 18,
+        "impressions": 1699,
+        "ctr": 1.06,
+        "position": 8.5
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/empresas-que-utilizan-odoo-474",
+        "clicks": 18,
+        "impressions": 2831,
+        "ctr": 0.64,
+        "position": 6.7
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/que-es-odoo-runbot-como-usarlo-391",
+        "clicks": 18,
+        "impressions": 3629,
+        "ctr": 0.5,
+        "position": 6.4
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-soluciones-open-source-pros-y-contras-524",
+        "clicks": 16,
+        "impressions": 1967,
+        "ctr": 0.81,
+        "position": 15.3
+      },
+      {
+        "page": "https://www.indaws.es/demo-odoo",
+        "clicks": 16,
+        "impressions": 1628,
+        "ctr": 0.98,
+        "position": 11.6
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/gestion-de-tickets-en-odoo-como-generar-asignar-y-validar-incidencias-con-exito-759",
+        "clicks": 15,
+        "impressions": 531,
+        "ctr": 2.82,
+        "position": 12.2
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/software-control-horario-542",
+        "clicks": 15,
+        "impressions": 12999,
+        "ctr": 0.12,
+        "position": 34.3
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-17-vs-18-433",
+        "clicks": 13,
+        "impressions": 1509,
+        "ctr": 0.86,
+        "position": 9.7
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-programa-gestion-para-agencias-viajes-287",
+        "clicks": 13,
+        "impressions": 2058,
+        "ctr": 0.63,
+        "position": 41
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-19-y-chatgpt-576",
+        "clicks": 12,
+        "impressions": 603,
+        "ctr": 1.99,
+        "position": 9.6
+      },
+      {
+        "page": "https://www.indaws.es/verifactu-guia-completa",
+        "clicks": 12,
+        "impressions": 1846,
+        "ctr": 0.65,
+        "position": 25.3
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-para-autonomos-la-herramienta-perfecta-para-gestionar-negocio-277",
+        "clicks": 11,
+        "impressions": 513,
+        "ctr": 2.14,
+        "position": 15.3
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/hosting-odoo-472",
+        "clicks": 10,
+        "impressions": 1320,
+        "ctr": 0.76,
+        "position": 10.6
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/jornada-laboral-2026-544",
+        "clicks": 10,
+        "impressions": 1581,
+        "ctr": 0.63,
+        "position": 9.2
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-para-constructoras-429",
+        "clicks": 10,
+        "impressions": 491,
+        "ctr": 2.04,
+        "position": 20.2
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-permisos-431",
+        "clicks": 10,
+        "impressions": 1541,
+        "ctr": 0.65,
+        "position": 7.1
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-vs-otros-erp-comparativa-y-evolucion-del-mercado-67",
+        "clicks": 10,
+        "impressions": 1754,
+        "ctr": 0.57,
+        "position": 34.5
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/guia-paso-a-paso-para-configurar-odoo-en-tu-restaurante-329",
+        "clicks": 9,
+        "impressions": 680,
+        "ctr": 1.32,
+        "position": 12.2
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/inteligencia-artificial-en-odoo-19-358",
+        "clicks": 9,
+        "impressions": 295,
+        "ctr": 3.05,
+        "position": 14.9
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-19-para-empresas-552",
+        "clicks": 9,
+        "impressions": 859,
+        "ctr": 1.05,
+        "position": 8.7
+      },
+      {
+        "page": "https://www.indaws.es/casos-de-exito",
+        "clicks": 9,
+        "impressions": 512,
+        "ctr": 1.76,
+        "position": 17
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/como-integrar-whatsapp-con-odoo-mejorar-comunicacion-con-clientes-271",
+        "clicks": 8,
+        "impressions": 1888,
+        "ctr": 0.42,
+        "position": 8.3
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/control-horario-odoo-548",
+        "clicks": 8,
+        "impressions": 1079,
+        "ctr": 0.74,
+        "position": 16.3
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/inteligencia-artificial-en-odoo-la-guia-definitiva-v18-y-v19-para-usar-gpt-4o-y-gemini-578",
+        "clicks": 8,
+        "impressions": 490,
+        "ctr": 1.63,
+        "position": 10.6
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/las-claves-para-gestionar-tu-tienda-online-con-odoo-ecommerce-235",
+        "clicks": 8,
+        "impressions": 920,
+        "ctr": 0.87,
+        "position": 11.8
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/migracion-a-odoo-18-362",
+        "clicks": 8,
+        "impressions": 308,
+        "ctr": 2.6,
+        "position": 6.6
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/odoo-inteligencia-artificial-769",
+        "clicks": 8,
+        "impressions": 308,
+        "ctr": 2.6,
+        "position": 15
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/openerp-erp-ventajas-389",
+        "clicks": 8,
+        "impressions": 1334,
+        "ctr": 0.6,
+        "position": 12.9
+      },
+      {
+        "page": "https://www.indaws.es/odoo-alicante",
+        "clicks": 8,
+        "impressions": 542,
+        "ctr": 1.48,
+        "position": 23.3
+      },
+      {
+        "page": "https://www.indaws.es/odoo-barcelona",
+        "clicks": 8,
+        "impressions": 1688,
+        "ctr": 0.47,
+        "position": 25
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/contabilidad-analitica-que-es-ejemplos-y-diferencias-con-la-financiera-247",
+        "clicks": 7,
+        "impressions": 2201,
+        "ctr": 0.32,
+        "position": 7
+      },
+      {
+        "page": "https://www.indaws.es/blog/blog-indaws-1/funcionamiento-odoo-crm-478",
+        "clicks": 7,
+        "impressions": 2124,
+        "ctr": 0.33,
+        "position": 17
+      }
+    ]
+  },
+  "modified_pages": [
+    {
+      "id": 654,
+      "url": "/odoo-fabricacion",
+      "name": "Odoo Fabricación",
+      "website_meta_title": "Odoo Fabricación: Software MRP para Producción | Indaws",
+      "website_meta_description": "Odoo ERP ➕ Haz seguimiento a tus clientes ➕ Cierra oportunidades ➕ Optimiza tus ofertas ➕ Gestiona el flujo completo de tus ventas. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 124,
+      "url": "/odoo-alicante",
+      "name": "Odoo Alicante",
+      "website_meta_title": "Odoo Alicante 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 666,
+      "url": "/chatbot-indy",
+      "name": "CHATBOT INDY",
+      "website_meta_title": "Chatbot Odoo Inteligente: Indy | Indaws",
+      "website_meta_description": "Indy, el chatbot inteligente de Indaws. Resuelve tus dudas sobre Odoo al instante con asistencia automatizada 24/7.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 136,
+      "url": "/odoo-asturias",
+      "name": "Odoo Asturias",
+      "website_meta_title": "Odoo Asturias 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 123,
+      "url": "/odoo-castellon",
+      "name": "Odoo Castellón",
+      "website_meta_title": "Odoo Castellón 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 129,
+      "url": "/odoo-coruna",
+      "name": "Odoo coruña",
+      "website_meta_title": "Odoo A Coruña 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 117,
+      "url": "/odoo-jaen",
+      "name": "Odoo Jaén",
+      "website_meta_title": "Odoo Jaén 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 62,
+      "url": "/odoo-leon",
+      "name": "Odoo León",
+      "website_meta_title": "Odoo León 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 121,
+      "url": "/odoo-malaga",
+      "name": "Odoo Málaga",
+      "website_meta_title": "Odoo Málaga 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 132,
+      "url": "/odoo-ponferrada",
+      "name": "Odoo Ponferrada",
+      "website_meta_title": "Odoo Ponferrada 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 130,
+      "url": "/odoo-pontevedra",
+      "name": "Odoo Pontevedra",
+      "website_meta_title": "Odoo Pontevedra 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 122,
+      "url": "/odoo-sevilla",
+      "name": "Odoo Sevilla",
+      "website_meta_title": "Odoo Sevilla 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 40,
+      "url": "/odoo-asistencia",
+      "name": "Odoo Asistencia",
+      "website_meta_title": "Odoo Helpdesk: Software de Atención al Cliente | Indaws",
+      "website_meta_description": "Odoo soporte ➕ Organiza la comunicación ➕ Resuelve las solicitudes de asistencia de tus clientes ➕ De la forma más rápida y eficiente ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 32,
+      "url": "/demo-odoo",
+      "name": "Demo Odoo",
+      "website_meta_title": "Demo Odoo Gratis: Solicita tu Demostración | Indaws",
+      "website_meta_description": "Solicita una demo gratuita de Odoo. Te mostramos en directo cómo el ERP puede transformar la gestión de tu empresa. Sin compromiso.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 29,
+      "url": "/odoo-ventas",
+      "name": "Odoo Ventas",
+      "website_meta_title": "Odoo Ventas: Software de Gestión Comercial | Indaws",
+      "website_meta_description": "Odoo CRM ventas➕ Aumenta tus ventas ➕ Maximiza tus beneficios ➕ Envía cotizaciones ➕ Agiliza tus ventas con la firma y pago online  ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 30,
+      "url": "/odoo-suscripciones",
+      "name": "Odoo Suscripciones",
+      "website_meta_title": "Odoo Suscripciones: Facturación Recurrente | Indaws",
+      "website_meta_description": "Automatiza la gestión de tus suscripciones ➕ Estrategia de ventas ➕ Consigue clientes satisfechos ➕ Inscripción sencilla ➕ Facturación automática ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 31,
+      "url": "/odoo-inventario",
+      "name": "Odoo Inventario",
+      "website_meta_title": "Odoo Inventario: Gestión de Almacén y Stock | Indaws",
+      "website_meta_description": "Odoo Inventario ➕ Optimiza tu almacén ➕ Controla tu stock ➕ Ahorra tiempo ➕ Gestión completa de inventario, rápida y fácil ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 33,
+      "url": "/odoo-contabilidad",
+      "name": "Odoo Contabilidad",
+      "website_meta_title": "Odoo Contabilidad: Software Contable para Empresas | Indaws",
+      "website_meta_description": "Odoo Contabilidad ➕ Obtén los datos contables de tu empresa ➕ Máxima precissión ➕ En el menor tiempo posible. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 34,
+      "url": "/odoo-facturacion",
+      "name": "Odoo Facturación",
+      "website_meta_title": "Odoo Facturación: Software de Facturación Online | Indaws",
+      "website_meta_description": "Odoo facturación ➕ Crea y envía facturas automáticamente ➕ Facturas a clientes y proveedores ➕ Agiliza los procesos de cobro. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 35,
+      "url": "/odoo-aplicacion-control-gastos",
+      "name": "Odoo Aplicación control gastos",
+      "website_meta_title": "Odoo Gastos: Control y Gestión de Gastos | Indaws",
+      "website_meta_description": "Registra los gastos de tus empleados ➕ Administra los gastos de tus empleados y tu empresa ➕ Todo desde un mismo lugar. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 37,
+      "url": "/odoo-app-control-horario",
+      "name": "Odoo App Control Horario",
+      "website_meta_title": "Odoo Control Horario: Registro de Jornada Laboral | Indaws",
+      "website_meta_description": "App de control horario de Odoo ➕ Planea actividades ➕ Factura por horas ➕ Monitoriza el tiempo trabajado por cada empleado y en cada proyecto ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 39,
+      "url": "/odoo-compras",
+      "name": "Odoo Compras",
+      "website_meta_title": "Odoo Compras: Gestión de Aprovisionamiento | Indaws",
+      "website_meta_description": "Odoo compras ➕ Administra, planifica y analiza tus compras ➕ Mejora tu producción ➕ Optimiza la cadena de suministros ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 38,
+      "url": "/odoo-proyectos",
+      "name": "Odoo Proyectos",
+      "website_meta_title": "Odoo Proyectos: Gestión de Tareas y Equipos | Indaws",
+      "website_meta_description": "Odoo Proyectos ➕ Gestiona tus proyectos ➕ Asigna recursos y tareas a tu equipo ➕ Analiza resultados ➕ Controla tiempos de entrega. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 45,
+      "url": "/odoo-ecommerce",
+      "name": "Odoo ecommerce",
+      "website_meta_title": "Odoo eCommerce: Tienda Online Integrada con ERP | Indaws",
+      "website_meta_description": "Odoo ecommerce. ➕ Crea tu tienda online ➕ Diseña tus páginas de producto  ➕ Haz nuevos clientes ➕ Aumenta tus ventas. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 394,
+      "url": "/plan-de-carrera-consultor",
+      "name": "Plan de carrera consultor",
+      "website_meta_title": false,
+      "website_meta_description": "Plan de carrera para consultores Odoo en Indaws. Niveles, responsabilidades, formación y oportunidades de crecimiento profesional.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 67,
+      "url": "/aviso-legal",
+      "name": "Aviso Legal",
+      "website_meta_title": false,
+      "website_meta_description": "Aviso legal de Indaws. Información sobre el titular del sitio web, condiciones de uso y responsabilidades legales.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 49,
+      "url": "/politica-de-privacidad",
+      "name": "Política de Privacidad",
+      "website_meta_title": false,
+      "website_meta_description": "Política de privacidad de Indaws. Información sobre el tratamiento de datos personales conforme al RGPD y la LOPDGDD.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 474,
+      "url": "/mantenimiento",
+      "name": "mantenimiento",
+      "website_meta_title": "Servicio de Mantenimiento Odoo | SLA y Soporte | Indaws",
+      "website_meta_description": "Servicio de mantenimiento Odoo de Indaws. SLA, soporte técnico, resolución de incidencias y mejoras continuas para tu ERP.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 395,
+      "url": "/roles",
+      "name": "roles",
+      "website_meta_title": false,
+      "website_meta_description": "Roles profesionales en Indaws. Características, niveles, responsabilidades y expectativas para cada puesto del equipo.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 94,
+      "url": "/odoo-redes-sociales",
+      "name": "Odoo Redes Sociales",
+      "website_meta_title": "Odoo Redes Sociales: Marketing Social Integrado | Indaws",
+      "website_meta_description": "En inDAWS somos expertos en implantación Odoo en Valencia y Madrid ➕ Especialistas en páginas web, tiendas online y posicionamiento SEO➕ ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 52,
+      "url": "/odoo-software-oficinas-despachos",
+      "name": "Odoo Software Oficinas y Despachos",
+      "website_meta_title": "Odoo para Oficinas y Despachos Profesionales | Indaws",
+      "website_meta_description": "Odoo Proyectos ➕ Gestiona tus proyectos ➕ Asigna recursos y tareas a tu equipo ➕ Analiza resultados ➕ Controla tiempos de entrega. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 156,
+      "url": "/odoo-empresas-construccion",
+      "name": "Odoo Empresas Construcción",
+      "website_meta_title": "Odoo para Empresas de Construcción: ERP Obra | Indaws",
+      "website_meta_description": "Odoo Proyectos ➕ Gestiona tus proyectos ➕ Asigna recursos y tareas a tu equipo ➕ Analiza resultados ➕ Controla tiempos de entrega. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 137,
+      "url": "/odoo-empresas-mobiliario",
+      "name": "Odoo Empresas Mobiliario",
+      "website_meta_title": "Odoo para Empresas de Mobiliario y Muebles | Indaws",
+      "website_meta_description": "Odoo Proyectos ➕ Gestiona tus proyectos ➕ Asigna recursos y tareas a tu equipo ➕ Analiza resultados ➕ Controla tiempos de entrega. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 523,
+      "url": "/odoo-girona",
+      "name": "Odoo Girona",
+      "website_meta_title": "Odoo Girona 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 731,
+      "url": "/verifactu-guia-completa",
+      "name": "verifactu guía completa",
+      "website_meta_title": "Guía Completa Verifactu 2026: Facturación Electrónica | Indaws",
+      "website_meta_description": "Implementa Verifactu en Odoo. Conoce tus responsabilidades, sanciones, y el paso a paso sobre cómo utilizar verifactu en Odoo.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 27,
+      "url": "/odoo-crm",
+      "name": "Odoo CRM",
+      "website_meta_title": "Odoo CRM: Gestión Comercial y Ventas | Indaws",
+      "website_meta_description": "Odoo ERP ➕ Haz seguimiento a tus clientes ➕ Cierra oportunidades ➕ Optimiza tus ofertas ➕ Gestiona el flujo completo de tus ventas. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 524,
+      "url": "/odoo-lleida",
+      "name": "Odoo Lleida",
+      "website_meta_title": "Odoo Lleida 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 525,
+      "url": "/odoo-tarragona",
+      "name": "Odoo Tarragona",
+      "website_meta_title": "Odoo Tarragona 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 516,
+      "url": "/plan-de-carrera-devs",
+      "name": "Plan de carrera desarrolladores",
+      "website_meta_title": false,
+      "website_meta_description": "Plan de carrera para desarrolladores Odoo en Indaws. Niveles técnicos, habilidades requeridas y progresión profesional.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 514,
+      "url": "/roles_dev",
+      "name": "roles_dev",
+      "website_meta_title": false,
+      "website_meta_description": "Roles de desarrollo en Indaws. Niveles técnicos, responsabilidades y expectativas para desarrolladores Odoo junior a senior.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 519,
+      "url": "/usuariogithub",
+      "name": "UsuarioGitHub",
+      "website_meta_title": false,
+      "website_meta_description": "Configuración de usuario GitHub para desarrolladores y consultores de Indaws. Guía de acceso al repositorio del equipo.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 131,
+      "url": "/odoo-ourense",
+      "name": "odoo ourense",
+      "website_meta_title": "Odoo Ourense 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 571,
+      "url": "/curso-odoo-indaws-academy",
+      "name": "INDAWS ACADEMY",
+      "website_meta_title": "Formación Odoo en Español: Cursos Online | Indaws Academy",
+      "website_meta_description": "Descubre trucos, consejos y tutoriales para dominar todas las aplicaciones de este ERP y optimizar su uso. Aprende a tu ritmo y transforma tu comprensión de Odoo.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 600,
+      "url": "/proyecto-homeserve",
+      "name": "HomeServe",
+      "website_meta_title": "inDAWS - Especialistas en Odoo",
+      "website_meta_description": "Caso de éxito: implantación de Odoo en HomeServe. Gestión de servicios, técnicos y facturación con el ERP líder.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 550,
+      "url": "/odoo-conectores-web",
+      "name": "Odoo Conectores Web",
+      "website_meta_title": "Conectores Web y APIs para Odoo | Indaws",
+      "website_meta_description": "Odoo Proyectos ➕ Gestiona tus proyectos ➕ Asigna recursos y tareas a tu equipo ➕ Analiza resultados ➕ Controla tiempos de entrega. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": false
+    },
+    {
+      "id": 622,
+      "url": "/construccion-odoo",
+      "name": "Construcción Odoo",
+      "website_meta_title": "Odoo para Construcción: ERP Especializado | Indaws",
+      "website_meta_description": "Odoo para construcción. Gestiona obras, subcontratas, presupuestos y certificaciones con un ERP especializado. Descubre la solución de Indaws.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 658,
+      "url": "/odoo-espana",
+      "name": "Odoo España",
+      "website_meta_title": "Odoo España 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 656,
+      "url": "/partners-indaws",
+      "name": "Partners INDAWS",
+      "website_meta_title": "Partners Tecnológicos de Odoo | Indaws",
+      "website_meta_description": "Partners tecnológicos de Indaws. Conoce nuestro ecosistema de colaboradores y alianzas para ofrecer soluciones integrales con Odoo.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 552,
+      "url": "/odoo-oviedo",
+      "name": "Odoo Oviedo",
+      "website_meta_title": "Odoo Oviedo 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 127,
+      "url": "/odoo-vigo",
+      "name": "Odoo Vigo",
+      "website_meta_title": "Odoo Vigo 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 627,
+      "url": "/odoo-cestas-y-lotes",
+      "name": "Odoo Cestas y Lotes",
+      "website_meta_title": "Odoo Cestas y Lotes: Gestión de Packs | Indaws",
+      "website_meta_description": "Gestiona cestas, lotes y packs de productos en Odoo. Configuración de kits, composiciones y gestión avanzada de inventario con Indaws.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 628,
+      "url": "/odoo-fabricacion-y-montaje",
+      "name": "Odoo Fabricación y Montaje",
+      "website_meta_title": "Odoo Fabricación y Montaje: ERP Industrial | Indaws",
+      "website_meta_description": "Gestiona fabricación y montaje con Odoo. Listas de materiales, órdenes de producción y trazabilidad completa. Solución Indaws.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 626,
+      "url": "/odoo-franquicias",
+      "name": "Odoo Franquicias",
+      "website_meta_title": "Odoo para Franquicias: ERP Multiempresa | Indaws",
+      "website_meta_description": "Odoo para redes de franquicias. Gestión centralizada multiempresa, control de royalties, reporting consolidado y expansión escalable.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 623,
+      "url": "/odoo-importacion-exportacion",
+      "name": "Odoo Importación Exportación",
+      "website_meta_title": "Odoo Importación y Exportación: Comercio Exterior | Indaws",
+      "website_meta_description": "Gestiona importaciones y exportaciones con Odoo. Aranceles, documentación aduanera, costes de envío y trazabilidad internacional.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 625,
+      "url": "/odoo-placas-solares",
+      "name": "Odoo Placas Solares",
+      "website_meta_title": "Odoo para Instaladores de Placas Solares | Indaws",
+      "website_meta_description": "ERP Odoo para empresas de energía solar. Gestiona proyectos de instalación, presupuestos, stock de paneles y servicio postventa.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 573,
+      "url": "/proyecto-abertis",
+      "name": "Proyecto Abertis",
+      "website_meta_title": "inDAWS - Especialistas en Odoo",
+      "website_meta_description": "Caso de éxito: implementación de Odoo en Abertis. Descubre cómo Indaws transformó la gestión de una de las grandes empresas españolas.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 41,
+      "url": "/odoo-firma-electronica",
+      "name": "Odoo App Firmas",
+      "website_meta_title": "Odoo Firma Electrónica: Firma Digital de Documentos | Indaws",
+      "website_meta_description": "Odoo soporte ➕ Organiza la comunicación ➕ Resuelve las solicitudes de asistencia de tus clientes ➕ De la forma más rápida y eficiente ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 47,
+      "url": "/odoo-diseno-web",
+      "name": "Odoo Diseño web",
+      "website_meta_title": "Odoo Diseño Web: Creador de Sitios Web | Indaws",
+      "website_meta_description": "En inDAWS somos expertos en implantación Odoo en Valencia y Madrid ➕ Especialistas en páginas web, tiendas online y posicionamiento SEO➕ ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 665,
+      "url": "/odoo-empleados",
+      "name": "odoo empleados",
+      "website_meta_title": "Odoo Empleados: Gestión de RRHH y Personal | Indaws",
+      "website_meta_description": "Odoo ERP ➕ Haz seguimiento a tus clientes ➕ Cierra oportunidades ➕ Optimiza tus ofertas ➕ Gestiona el flujo completo de tus ventas. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 655,
+      "url": "/odoo-gestion-calidad",
+      "name": "Odoo Calidad",
+      "website_meta_title": "Odoo Calidad: Control de Calidad y Auditorías | Indaws",
+      "website_meta_description": "Odoo ERP ➕ Haz seguimiento a tus clientes ➕ Cierra oportunidades ➕ Optimiza tus ofertas ➕ Gestiona el flujo completo de tus ventas. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 653,
+      "url": "/odoo-mantenimiento",
+      "name": "Odoo Mantenimiento",
+      "website_meta_title": "Odoo Mantenimiento: Gestión de Equipos y Activos | Indaws",
+      "website_meta_description": "Odoo ERP ➕ Haz seguimiento a tus clientes ➕ Cierra oportunidades ➕ Optimiza tus ofertas ➕ Gestiona el flujo completo de tus ventas. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 663,
+      "url": "/odoo-hojas-de-calculo",
+      "name": "Odoo hojas de cálculo ",
+      "website_meta_title": "Odoo Hojas de Cálculo: Dashboards y Reportes | Indaws",
+      "website_meta_description": "Odoo ERP ➕ Haz seguimiento a tus clientes ➕ Cierra oportunidades ➕ Optimiza tus ofertas ➕ Gestiona el flujo completo de tus ventas. ¡Descúbrelo! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 78,
+      "url": "/",
+      "name": "INDAWS - Especialistas en Odoo",
+      "website_meta_title": "Indaws | Partner Gold Odoo Nº1 en España",
+      "website_meta_description": "Indaws, partner gold Odoo líder en España. Implementación, consultoría y formación ERP para empresas. +200 proyectos exitosos. Solicita tu demo gratis.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 517,
+      "url": "/formacion",
+      "name": "formacion",
+      "website_meta_title": "Formación Odoo Online y Presencial | Indaws Academy",
+      "website_meta_description": "Formación Odoo online y presencial. Cursos para usuarios, consultores y desarrolladores. Aprende con los expertos de Indaws Academy.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 721,
+      "url": "/indawscore",
+      "name": "indawscore",
+      "website_meta_title": "IndawsCore: Módulos Propios para Odoo | Indaws",
+      "website_meta_description": "IndawsCore: módulos propios desarrollados por Indaws para potenciar Odoo. Funcionalidades exclusivas para empresas españolas.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 69,
+      "url": "/casos-de-exito",
+      "name": "Casos de éxito",
+      "website_meta_title": "Casos de Éxito con Odoo en España | Indaws",
+      "website_meta_description": "Casos de éxito reales de empresas que han transformado su gestión con Odoo e Indaws. Descubre resultados en distintos sectores.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 688,
+      "url": "/la-ventaja-de-la-ia-25-aplicaciones-esenciales-para-transformar-tu-pyme",
+      "name": "La Ventaja de la IA:  25 Aplicaciones Esenciales para Transformar tu PYME",
+      "website_meta_title": false,
+      "website_meta_description": "25 aplicaciones de inteligencia artificial esenciales para transformar tu pyme. Guía práctica de herramientas IA para empresas.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 128,
+      "url": "/odoo-lugo",
+      "name": "Odoo Lugo",
+      "website_meta_title": "Odoo Lugo 2026 | Partner Gold Oficial | Indaws",
+      "website_meta_description": "inDAWS tu partner Odoo en Palma de Mallorca. Consúltanos cualquier duda sobre Odoo, nuestra empresa, presupuestos, fechas de demos... ☎ 963 81 64 34 > info@indaws.es ¡Contacta con nosotros! ⭐",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 717,
+      "url": "/verifactu",
+      "name": "Verifactu",
+      "website_meta_title": "Verifactu con Odoo: Facturación Electrónica | Indaws",
+      "website_meta_description": "En indaws te ayudamos a solicitar el kit digital: inscripción rápida, tramitación completa y soporte experto. aprovecha tu bono digital sin complicaciones.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 720,
+      "url": "/odoo-erp-para-manufactura",
+      "name": "Odoo ERP para Manufactura",
+      "website_meta_title": "Odoo para Manufactura: ERP Industrial | Indaws",
+      "website_meta_description": "En indaws te ayudamos a solicitar el kit digital: inscripción rápida, tramitación completa y soporte experto. aprovecha tu bono digital sin complicaciones.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 719,
+      "url": "/odoo-para-transformacion-digital",
+      "name": "Odoo para Transformación Digital",
+      "website_meta_title": "Transformación Digital con Odoo | Indaws",
+      "website_meta_description": "En indaws te ayudamos a solicitar el kit digital: inscripción rápida, tramitación completa y soporte experto. aprovecha tu bono digital sin complicaciones.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 420,
+      "url": "/blog",
+      "name": "BLOG",
+      "website_meta_title": "Blog Odoo: Guías, Tutoriales y Novedades | Indaws",
+      "website_meta_description": "Blog de Indaws: guías, tutoriales y novedades sobre Odoo. Aprende a sacar el máximo partido al ERP con artículos de expertos.",
+      "is_published": true,
+      "website_indexed": true
+    },
+    {
+      "id": 580,
+      "url": "/seo-para-odoo",
+      "name": "SEO para Odoo",
+      "website_meta_title": false,
+      "website_meta_description": "Guía SEO para Odoo: optimiza el posicionamiento web de tu tienda y sitio Odoo. Títulos, meta descriptions, URLs y más.",
+      "is_published": true,
+      "website_indexed": true
+    }
+  ],
+  "modified_blogs": [
+    {
+      "id": 778,
+      "name": "Odoo vs Competidores: Comparativa Definitiva de ERPs 2026",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Comparativa Odoo vs SAP, Holded, A3 y otros ERPs en 2026. Precios, funcionalidades y cuál elegir según tu tamaño de empresa.",
+      "website_url": "/blog/indaws-blog-1/odoo-vs-competidores-comparativa-definitiva-de-erps-2026-778"
+    },
+    {
+      "id": 762,
+      "name": "Odoo 19: Guía Maestra para Importar Productos Masivamente sin Romper tu Stock",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Guía definitiva para importar productos masivamente en Odoo 19. Plantillas, campos obligatorios y trucos para no romper tu stock.",
+      "website_url": "/blog/indaws-blog-1/odoo-19-guia-maestra-para-importar-productos-masivamente-sin-romper-tu-stock-762"
+    },
+    {
+      "id": 761,
+      "name": "Cómo Crear un Producto en Odoo: Guía Paso a Paso para no Fallar en Inventario",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Guía paso a paso para crear productos en Odoo correctamente. Evita errores en inventario, contabilidad y ventas desde el primer día.",
+      "website_url": "/blog/indaws-blog-1/como-crear-un-producto-en-odoo-guia-paso-a-paso-para-no-fallar-en-inventario-761"
+    },
+    {
+      "id": 760,
+      "name": "Odoo para Bares: Solución a Errores Críticos en el Punto de Venta (POS)",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Odoo POS para bares y restaurantes. Soluciones a errores críticos del punto de venta: configuración, pagos y gestión de mesas.",
+      "website_url": "/blog/indaws-blog-1/odoo-para-bares-solucion-a-errores-criticos-en-el-punto-de-venta-pos-760"
+    },
+    {
+      "id": 759,
+      "name": "Gestión de Tickets en Odoo: Cómo Generar, Asignar y Validar Incidencias con Éxito",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Guía completa de gestión de tickets en Odoo Helpdesk. Aprende a generar, asignar y validar incidencias con flujos eficientes.",
+      "website_url": "/blog/indaws-blog-1/gestion-de-tickets-en-odoo-como-generar-asignar-y-validar-incidencias-con-exito-759"
+    },
+    {
+      "id": 758,
+      "name": "¿Trazabilidad rota en Odoo? Automatiza la numeración de tus Lotes y Series y olvídate del caos manual",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Automatiza la numeración de lotes y números de serie en Odoo. Guía para implementar trazabilidad completa sin errores manuales.",
+      "website_url": "/blog/indaws-blog-1/trazabilidad-rota-en-odoo-automatiza-la-numeracion-de-tus-lotes-y-series-y-olvidate-del-caos-manual-758"
+    },
+    {
+      "id": 757,
+      "name": "¿Tu catálogo en Odoo es un caos? Cómo gestionar Marcas y Etiquetas sin perder la cabeza",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Organiza tu catálogo en Odoo con marcas y etiquetas. Guía práctica para gestionar productos sin perder el control del inventario.",
+      "website_url": "/blog/indaws-blog-1/tu-catalogo-en-odoo-es-un-caos-como-gestionar-marcas-y-etiquetas-sin-perder-la-cabeza-757"
+    },
+    {
+      "id": 725,
+      "name": "INDAWS X INMOCABRA",
+      "seo_name": false,
+      "website_meta_title": "INDAWS X INMOCABRA | INDAWS",
+      "website_meta_description": "Caso de éxito: Inmocabra digitalizó su gestión inmobiliaria con Odoo e Indaws. Resultados reales de la implantación ERP.",
+      "website_url": "/blog/referencias-indaws-16/indaws-x-inmocabra-725"
+    },
+    {
+      "id": 655,
+      "name": "Email Marketing en Odoo: Cómo Crear Campañas que Convierten",
+      "seo_name": false,
+      "website_meta_title": "Email Marketing en Odoo: Cómo Crear Campañas que Convierten",
+      "website_meta_description": "Guía completa de email marketing en Odoo. Aprende a crear campañas que convierten: segmentación, automatización y métricas clave.",
+      "website_url": "/blog/indaws-blog-1/email-marketing-en-odoo-como-crear-campanas-que-convierten-655"
+    },
+    {
+      "id": 648,
+      "name": "INDAWS X FERIA PALACE",
+      "seo_name": false,
+      "website_meta_title": "INDAWS X FERIA PALACE | INDAWS",
+      "website_meta_description": "Caso de éxito: Feria Palace optimizó su gestión hotelera y de eventos con Odoo e Indaws. Descubre los resultados.",
+      "website_url": "/blog/referencias-indaws-16/indaws-x-feria-palace-648"
+    },
+    {
+      "id": 646,
+      "name": "INDAWS X ATOMIC TOYS",
+      "seo_name": false,
+      "website_meta_title": "INDAWS X ATOMIC TOYS | INDAWS",
+      "website_meta_description": "Caso de éxito: Atomic Toys integró ventas, inventario y eCommerce con Odoo e Indaws. Resultados de la transformación digital.",
+      "website_url": "/blog/referencias-indaws-16/indaws-x-atomic-toys-646"
+    },
+    {
+      "id": 644,
+      "name": "INDAWS X SALVADOR CARDONA",
+      "seo_name": false,
+      "website_meta_title": "INDAWS X SALVADOR CARDONA | INDAWS",
+      "website_meta_description": "Caso de éxito: Salvador Cardona modernizó su gestión empresarial con Odoo e Indaws. Descubre cómo transformaron sus procesos.",
+      "website_url": "/blog/referencias-indaws-16/indaws-x-salvador-cardona-644"
+    },
+    {
+      "id": 643,
+      "name": "INDAWS X MT SOLICITORS",
+      "seo_name": false,
+      "website_meta_title": "INDAWS X MT SOLICITORS | INDAWS",
+      "website_meta_description": "Caso de éxito: MT Solicitors digitalizó su despacho con Odoo e Indaws. Gestión integral de clientes, facturación y proyectos.",
+      "website_url": "/blog/referencias-indaws-16/indaws-x-mt-solicitors-643"
+    },
+    {
+      "id": 638,
+      "name": "ECOLOG",
+      "seo_name": false,
+      "website_meta_title": "INDAWS X ECOLOG | INDAWS",
+      "website_meta_description": "Caso de éxito: Ecolog transformó sus procesos de negocio con Odoo e Indaws. Descubre los resultados de la implementación.",
+      "website_url": "/blog/referencias-indaws-16/ecolog-638"
+    },
+    {
+      "id": 637,
+      "name": "INDAWS X LISANT",
+      "seo_name": false,
+      "website_meta_title": "INDAWS X LISANT | INDAWS",
+      "website_meta_description": "Caso de éxito: cómo Lisant optimizó su gestión empresarial con Odoo e Indaws. Resultados reales de la implantación ERP.",
+      "website_url": "/blog/referencias-indaws-16/indaws-x-lisant-637"
+    },
+    {
+      "id": 591,
+      "name": "Top Módulos Odoo para eCommerce: La Integración ERP que tu Tienda Online Necesita (El Enfoque INDAWS)",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Los mejores módulos Odoo para eCommerce. Integra tu tienda online con el ERP y automatiza pedidos, stock y facturación.",
+      "website_url": "/blog/indaws-blog-1/top-modulos-odoo-para-ecommerce-la-integracion-erp-que-tu-tienda-online-necesita-el-enfoque-indaws-591"
+    },
+    {
+      "id": 584,
+      "name": "Black Friday Logística Odoo: Cómo Garantizar la Continuidad Operativa (y no detener tu almacén)",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Prepara tu almacén Odoo para el Black Friday. Claves para garantizar la continuidad operativa y gestionar picos de demanda sin colapsar.",
+      "website_url": "/blog/indaws-blog-1/black-friday-logistica-odoo-como-garantizar-la-continuidad-operativa-y-no-detener-tu-almacen-584"
+    },
+    {
+      "id": 582,
+      "name": "Odoo Web V19, - Comarativa con Wordpress y WIX",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Comparativa Odoo Web v19 vs WordPress vs Wix. Descubre qué plataforma web se adapta mejor a tu negocio y por qué Odoo es diferente.",
+      "website_url": "/blog/indaws-blog-1/odoo-web-v19-comarativa-con-wordpress-y-wix-582"
+    },
+    {
+      "id": 580,
+      "name": "¿Roturas de Stock en Odoo? Deja de adivinar y automatiza tus Máximos y Mínimos",
+      "seo_name": false,
+      "website_meta_title": false,
+      "website_meta_description": "Automatiza los máximos y mínimos de stock en Odoo. Guía práctica para evitar roturas de stock y optimizar tu inventario.",
+      "website_url": "/blog/indaws-blog-1/roturas-de-stock-en-odoo-deja-de-adivinar-y-automatiza-tus-maximos-y-minimos-580"
+    }
+  ],
+  "modified_slides": [
+    {
+      "id": 28,
+      "name": "Introducción a Odoo",
+      "website_url": "/slides/introduccion-a-odoo-28",
+      "website_meta_title": "Curso Introducción a Odoo Gratis | Indaws Academy",
+      "website_meta_description": "Curso gratuito de introducción a Odoo. Aprende la interfaz, navegación y conceptos básicos del ERP paso a paso."
+    },
+    {
+      "id": 29,
+      "name": "CRM",
+      "website_url": "/slides/crm-29",
+      "website_meta_title": "Curso Odoo CRM Gratis: Gestión Comercial | Indaws Academy",
+      "website_meta_description": "Curso gratuito de CRM en Odoo. Leads, oportunidades, equipos de ventas y reporting comercial paso a paso."
+    },
+    {
+      "id": 30,
+      "name": "Ventas",
+      "website_url": "/slides/ventas-30",
+      "website_meta_title": "Curso Odoo Ventas Gratis: Presupuestos y Pedidos | Indaws",
+      "website_meta_description": "Curso gratuito de ventas en Odoo. Presupuestos, tarifas, descuentos, tipos de pedido e informes comerciales."
+    },
+    {
+      "id": 31,
+      "name": "Compras",
+      "website_url": "/slides/compras-31",
+      "website_meta_title": "Curso Odoo Compras Gratis: Aprovisionamiento | Indaws",
+      "website_meta_description": "Curso gratuito de compras en Odoo. Proveedores, pedidos de compra, comparativas y reglas de stock mínimo."
+    },
+    {
+      "id": 32,
+      "name": "Inventario",
+      "website_url": "/slides/inventario-32",
+      "website_meta_title": "Curso Odoo Inventario Gratis: Gestión de Almacén | Indaws",
+      "website_meta_description": "Curso gratuito de inventario en Odoo. Almacenes, ubicaciones, albaranes, trazabilidad y valoración de stock."
+    },
+    {
+      "id": 33,
+      "name": "Facturación",
+      "website_url": "/slides/facturacion-33",
+      "website_meta_title": "Curso Odoo Facturación Gratis: Facturas y Cobros | Indaws",
+      "website_meta_description": "Curso gratuito de facturación en Odoo. Facturas de cliente, proveedor, rectificativas, anticipos y análisis."
+    },
+    {
+      "id": 34,
+      "name": "Contabilidad",
+      "website_url": "/slides/contabilidad-34",
+      "website_meta_title": "Curso Odoo Contabilidad Gratis: Plan Contable España | Indaws",
+      "website_meta_description": "Curso gratuito de contabilidad en Odoo para España. Plan de cuentas, impuestos, conciliación bancaria, IVA y modelos fiscales."
+    },
+    {
+      "id": 35,
+      "name": "V18",
+      "website_url": "/slides/v18-35",
+      "website_meta_title": "Curso Odoo v18: CRM, Ventas e Inventario | Indaws",
+      "website_meta_description": "Curso completo de Odoo v18 gratis. Aprende a gestionar tu empresa paso a paso: CRM, ventas, compras, inventario y contabilidad."
+    },
+    {
+      "id": 36,
+      "name": "V18",
+      "website_url": "/slides/v18-36",
+      "website_meta_title": "Curso Completo Odoo v18 Gratis Online | Indaws Academy",
+      "website_meta_description": false
+    }
+  ],
+  "changelog_ref": "seo-manager/data/changelog.json",
+  "notable_fixes": [
+    "16 city pages had 'Palma de Mallorca' in title",
+    "Homepage had 'Inventario' meta description",
+    "3 pages had 'kit digital' title on wrong pages",
+    "~40 app pages had generic 'Aplicaciones Odoo | INDAWS' title",
+    "/partners 404 → 301 redirect to /partners-indaws",
+    "/demo-odoo duplicate (ID 463) unpublished",
+    "22 pages with multiple H1 → fixed to single H1"
+  ]
+}

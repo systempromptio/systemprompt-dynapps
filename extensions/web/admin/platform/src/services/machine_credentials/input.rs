@@ -11,23 +11,15 @@ use super::grant::endpoint_allowed;
 #[serde(rename_all = "snake_case")]
 pub enum MachineKind {
     GithubApp,
-    SalesforceClientCredentials,
-    AtlassianApiToken,
 }
 
 impl MachineKind {
-    pub const ALL: [Self; 3] = [
-        Self::GithubApp,
-        Self::SalesforceClientCredentials,
-        Self::AtlassianApiToken,
-    ];
+    pub const ALL: [Self; 1] = [Self::GithubApp];
 
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::GithubApp => "github_app",
-            Self::SalesforceClientCredentials => "salesforce_client_credentials",
-            Self::AtlassianApiToken => "atlassian_api_token",
         }
     }
 
@@ -35,8 +27,6 @@ impl MachineKind {
     pub const fn label(self) -> &'static str {
         match self {
             Self::GithubApp => "GitHub App installation",
-            Self::SalesforceClientCredentials => "Salesforce client credentials",
-            Self::AtlassianApiToken => "Atlassian API token",
         }
     }
 
@@ -58,12 +48,6 @@ pub struct AttachCredential {
     pub installation_id: String,
     #[serde(default)]
     pub api_url: String,
-    #[serde(default)]
-    pub instance_url: String,
-    #[serde(default)]
-    pub consumer_key: String,
-    #[serde(default)]
-    pub email: String,
     #[serde(default)]
     pub secret: String,
 }
@@ -119,17 +103,6 @@ impl AttachCredential {
                     config["api_url"] = Value::String(endpoint(&self.api_url, "API URL")?);
                 }
                 config
-            },
-            MachineKind::SalesforceClientCredentials => json!({
-                "instance_url": endpoint(&self.instance_url, "Instance URL")?,
-                "consumer_key": plain(&self.consumer_key, "Consumer key")?,
-            }),
-            MachineKind::AtlassianApiToken => {
-                let email = plain(&self.email, "Email")?;
-                if !email.contains('@') || email.contains(':') {
-                    return Err(AdminError::BadRequest("Email must be an address".into()));
-                }
-                json!({ "email": email })
             },
         };
         Ok((self.kind, config, self.secret))

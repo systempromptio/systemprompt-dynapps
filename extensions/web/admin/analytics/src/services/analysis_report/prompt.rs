@@ -1,4 +1,4 @@
-//! The reporter's one structured-output call: the system prompt, the JSON
+//! The reporter's one JSON-answer call: the system prompt, the JSON
 //! schema the provider enforces, and the normalisation of what comes back.
 //! The model is given only the deterministic digest and asked for ids, never
 //! URLs; every evidence link is rebuilt here from those ids.
@@ -119,7 +119,10 @@ fn clip(value: &str, max_chars: usize) -> String {
 }
 
 pub(crate) fn parse_findings(content: &str) -> Result<ReportFindings, serde_json::Error> {
-    let raw: RawFindings = serde_json::from_str(content)?;
+    let start = content.find('{').unwrap_or(0);
+    let end = content.rfind('}').map_or(content.len(), |i| i + 1);
+    let json = content.get(start..end).unwrap_or(content);
+    let raw: RawFindings = serde_json::from_str(json)?;
     let themes = raw
         .themes
         .into_iter()

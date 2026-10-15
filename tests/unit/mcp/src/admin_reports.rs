@@ -23,9 +23,8 @@ fn report_input_cannot_override_command_or_identity() {
         );
     }
     // An unknown report kind is refused at the discriminator.
-    // Every kind but `costs` is gone: Jira and Confluence are read by the
-    // client directly, so a request naming them must be refused rather than
-    // silently treated as a cost report.
+    // Every kind but `costs` is gone, so a request naming one must be refused
+    // rather than silently treated as a cost report.
     for gone in ["operations", "users", "projects", "brief", "activity"] {
         assert!(
             serde_json::from_value::<ReportInput>(json!({ "report": gone })).is_err(),
@@ -92,7 +91,7 @@ fn report_data_renders_as_a_deterministic_mcp_asset() {
     // brand. "Dynapps" is the required display name (CLAUDE.md rule 5).
     assert!(html.contains("Dynapps"));
     // The page must not claim to show delivery health: its data is the audit
-    // tables, and Jira never reaches it.
+    // tables, and no third-party system reaches it.
     assert!(html.contains("AI Usage"));
     assert!(!html.contains("traffic light"));
     assert!(html.contains("admin-read-"));
@@ -190,7 +189,7 @@ fn a_payload_that_is_not_a_report_fails_loudly() {
 #[test]
 fn every_microdollar_cell_gains_a_dollar_sibling() {
     let rows = with_dollar_siblings(vec![
-        json!({"model":"claude-sonnet-5","total_cost_microdollars":15_150_809,"request_count":320}),
+        json!({"model":"claude-sonnet-5-5","total_cost_microdollars":15_150_809,"request_count":320}),
         json!({"heading":"total_cost_microdollars","content":30_569_751}),
         json!({"heading":"total_requests","content":2524}),
         json!("not an object"),

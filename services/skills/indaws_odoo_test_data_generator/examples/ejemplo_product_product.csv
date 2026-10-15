@@ -1,0 +1,5 @@
+id,name,default_code,type,categ_id/id,list_price,standard_price,uom_id/id,uom_po_id/id
+__demo__producto_sofa_valencia,Sofá Modelo Valencia 3 plazas tela gris,SOF-VAL-3P-GRS,product,product.product_category_all,899.00,450.00,uom.product_uom_unit,uom.product_uom_unit
+__demo__producto_mesa_roble,Mesa comedor roble macizo 180x90 cm,MES-COM-ROB180,product,product.product_category_all,1250.00,625.00,uom.product_uom_unit,uom.product_uom_unit
+__demo__producto_silla_ergo,Silla oficina ergonómica con reposabrazos negra,SIL-ERG-NEG,product,product.product_category_all,189.00,95.00,uom.product_uom_unit,uom.product_uom_unit
+__demo__producto_armario_blanco,Armario puertas correderas 200x180 blanco mate,ARM-COR-200-BLN,product,product.product_category_all,675.00,340.00,uom.product_uom_unit,uom.product_uom_unit

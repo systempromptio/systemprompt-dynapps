@@ -140,12 +140,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "config/blog.yaml",
     ),
     file(
-        "salesforce_orgs",
-        "Salesforce orgs",
-        "the org registry behind the per-org MCP servers",
-        "config/salesforce-orgs.yaml",
-    ),
-    file(
         "agent_farms",
         "Agent farms",
         "the Git-sourced agent farms this instance syncs and runs",
@@ -164,28 +158,16 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "web/metadata.yaml",
     ),
     file(
-        "adfs",
+        "entra_oidc",
         "Entra ID sign-in",
-        "the SAML relying party the console signs in through",
-        "web/config/adfs.yaml",
-    ),
-    file(
-        "adfs_metadata",
-        "Entra ID federation metadata",
-        "the identity provider's pinned certificate and endpoints",
-        "web/config/entra-federation-metadata.xml",
+        "the OpenID Connect app registration the console signs in through",
+        "web/config/entra-oidc.yaml",
     ),
     file(
         "security",
         "Security policy",
         "session, token and origin rules",
         "web/config/security.yaml",
-    ),
-    file(
-        "salesforce",
-        "Salesforce sign-in",
-        "the connected app the account linking uses",
-        "web/config/salesforce.yaml",
     ),
     file(
         "homepage",

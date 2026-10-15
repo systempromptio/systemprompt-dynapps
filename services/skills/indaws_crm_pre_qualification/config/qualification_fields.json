@@ -1,0 +1,111 @@
+{
+  "sections": {
+    "actividad": {
+      "label": "Actividad del Negocio",
+      "options": ["Distribucion", "Fabricacion", "Proyectos", "Construccion", "Instalacion"],
+      "odoo_field": "industry_id",
+      "einforma_field": "cnae_description",
+      "keywords": ["distribucion", "fabricacion", "manufactur", "proyecto", "construccion", "instalacion", "logistic", "almacen", "transport"]
+    },
+    "dimensionamiento": {
+      "label": "Dimensionamiento",
+      "fields": {
+        "facturacion": {
+          "odoo_field": "expected_revenue",
+          "einforma_field": "turnover",
+          "partner_field": null
+        },
+        "empleados": {
+          "odoo_field": null,
+          "einforma_field": "employees",
+          "partner_field": "employee"
+        },
+        "usuarios": {
+          "odoo_field": null,
+          "einforma_field": null,
+          "partner_field": null,
+          "keywords": ["usuario", "licencia", "puesto", "seat"]
+        }
+      }
+    },
+    "sistema_actual": {
+      "label": "Sistema Actual",
+      "options": ["Odoo", "Excels", "Varios sistemas", "ERP tercero"],
+      "keywords": {
+        "odoo": ["odoo", "openerp"],
+        "excels": ["excel", "hoja de calculo", "spreadsheet"],
+        "varios_sistemas": ["varios sistema", "multiples herramienta", "diferentes programa"],
+        "erp_tercero": ["sap", "dynamics", "navision", "sage", "a3", "holded", "factusol", "contaplus", "oracle", "netsuite", "primavera"]
+      },
+      "odoo_subfields": {
+        "edicion": ["Community", "Enterprise"],
+        "version": null,
+        "partner": null
+      }
+    },
+    "pain_points": {
+      "label": "Pain Points Identificados",
+      "options": [
+        {"id": "dispersos", "title": "Datos dispersos en multiples herramientas", "keywords": ["dispersos", "multiple", "herramienta", "separado", "desconectado"]},
+        {"id": "manuales", "title": "Procesos manuales que generan errores", "keywords": ["manual", "error", "duplica", "repetir", "doble entrada"]},
+        {"id": "reportes", "title": "Reportes que llegan tarde o son poco confiables", "keywords": ["reporte", "informe", "dato", "fiable", "tardio"]},
+        {"id": "caro", "title": "ERP actual demasiado caro", "keywords": ["caro", "coste", "licencia", "precio", "pagar"]},
+        {"id": "escala", "title": "Sistema actual que ya no escala", "keywords": ["escala", "limite", "crecimiento", "capacidad", "obsoleto"]},
+        {"id": "integracion", "title": "Falta de integracion con herramientas modernas", "keywords": ["integracion", "conectar", "api", "ecommerce", "marketplace"]},
+        {"id": "dependencia", "title": "Dependencia total del proveedor o TI", "keywords": ["dependencia", "proveedor", "consultor", "esperar", "personalizar"]},
+        {"id": "inventario", "title": "Inventario descontrolado", "keywords": ["inventario", "stock", "almacen", "rotura", "sobreinventario"]},
+        {"id": "experiencia", "title": "Mala experiencia del equipo", "keywords": ["lento", "dificil", "complejo", "interfaz", "usabilidad"]},
+        {"id": "visibilidad", "title": "Sin visibilidad del estado real", "keywords": ["visibilidad", "seguimiento", "trazabilidad", "estado", "pedido"]}
+      ]
+    },
+    "modulos": {
+      "label": "Modulos de Interes",
+      "options": ["CRM", "Ventas", "Compras", "Inventario", "Contabilidad", "Facturacion", "Fabricacion (MRP)", "Proyectos", "SAT (Servicio Posventa)", "Suscripciones", "Recursos Humanos", "Control Horario", "eCommerce", "Punto de Venta (POS)", "Marketing / Emailing"],
+      "keywords": {
+        "CRM": ["crm", "cliente", "oportunidad", "pipeline"],
+        "Ventas": ["venta", "presupuesto", "pedido", "comercial"],
+        "Compras": ["compra", "proveedor", "aprovisionamiento"],
+        "Inventario": ["inventario", "almacen", "stock", "logistica"],
+        "Contabilidad": ["contabilidad", "contable", "asiento", "balance"],
+        "Facturacion": ["factura", "cobro", "pago"],
+        "Fabricacion (MRP)": ["fabricacion", "produccion", "mrp", "bom"],
+        "Proyectos": ["proyecto", "tarea", "planificacion"],
+        "SAT (Servicio Posventa)": ["sat", "posventa", "mantenimiento", "reparacion"],
+        "Suscripciones": ["suscripcion", "recurrente", "mensual"],
+        "Recursos Humanos": ["rrhh", "nomina", "empleado", "recurso humano"],
+        "Control Horario": ["horario", "fichaje", "asistencia", "jornada"],
+        "eCommerce": ["ecommerce", "tienda online", "web", "b2b"],
+        "Punto de Venta (POS)": ["pos", "punto de venta", "tpv", "caja"],
+        "Marketing / Emailing": ["marketing", "email", "campana", "newsletter"]
+      }
+    },
+    "presupuesto": {
+      "label": "Presupuesto & Timeline",
+      "options_presupuesto": ["Inversion definida", "Fase comparativa"],
+      "keywords_presupuesto": {
+        "definida": ["presupuesto", "inversion", "aprobado", "asignado"],
+        "comparativa": ["comparar", "evaluar", "alternativa", "propuesta"]
+      },
+      "keywords_timeline": ["urgente", "plazo", "fecha", "trimestre", "semestre", "mes"]
+    },
+    "decisores": {
+      "label": "Mapa de Decisores",
+      "roles": ["Decision Maker", "Champion", "Influencer", "Blocker"],
+      "keywords": ["director", "gerente", "ceo", "cto", "cfo", "responsable", "jefe"]
+    }
+  },
+  "confidence_badges": {
+    "auto": {"label": "AUTO", "color": "#28a745", "description": "Dato verificado de API"},
+    "parcial": {"label": "PARCIAL", "color": "#ffc107", "description": "Dato inferido de emails"},
+    "pendiente": {"label": "PENDIENTE", "color": "#dc3545", "description": "Dato no disponible"}
+  },
+  "branding": {
+    "primary": "#714B67",
+    "secondary": "#00A09D",
+    "bg_section": "#F3F0F5",
+    "border": "#D9D0E3",
+    "pain_bg": "#FFF8F0",
+    "pain_border": "#E8A020",
+    "next_step_bg": "#E8F7F7"
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "flow_id": "CHAIN_EXPENSE_TO_PAY",
+  "flow_name": "Gasto de empleado hasta pago completo",
+  "description": "Crear gasto, agrupar en informe, enviar, aprobar, contabilizar y pagar al empleado",
+  "odoo_version": "18.0",
+  "environment": "staging",
+  "data": {
+    "expense_description": "Viaje cliente Barcelona - hotel + dietas",
+    "expense_amount": 185.50,
+    "expense_qty": 1,
+    "sheet_name": "Gastos viaje Barcelona - Marzo 2026"
+  },
+  "preconditions": [
+    {
+      "model": "hr.employee",
+      "domain": [["active", "=", true]],
+      "fields": ["id", "name", "address_home_id", "expense_manager_id"],
+      "save_as": "employee_id",
+      "min_records": 1
+    },
+    {
+      "model": "product.product",
+      "domain": [["can_be_expensed", "=", true], ["active", "=", true]],
+      "fields": ["id", "name", "standard_price"],
+      "save_as": "expense_product_id",
+      "min_records": 1
+    },
+    {
+      "model": "account.journal",
+      "domain": [["type", "=", "purchase"]],
+      "fields": ["id", "name"],
+      "save_as": "expense_journal_id",
+      "min_records": 1
+    },
+    {
+      "model": "account.journal",
+      "domain": [["type", "=", "bank"]],
+      "fields": ["id", "name"],
+      "save_as": "bank_journal_id",
+      "min_records": 1
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "name": "Crear gasto del empleado",
+      "action": "create",
+      "model": "hr.expense",
+      "values": {
+        "employee_id": "{pre.employee_id}",
+        "product_id": "{pre.expense_product_id}",
+        "name": "{data.expense_description}",
+        "total_amount_currency": "{data.expense_amount}",
+        "quantity": "{data.expense_qty}"
+      },
+      "save_as": "expense_id",
+      "verify": {"field": "state", "expected": "draft"}
+    },
+    {
+      "step": 2,
+      "name": "Crear informe de gastos",
+      "action": "create",
+      "model": "hr.expense.sheet",
+      "values": {
+        "employee_id": "{pre.employee_id}",
+        "name": "{data.sheet_name}",
+        "expense_line_ids": [[4, "{result.expense_id}", 0]]
+      },
+      "save_as": "sheet_id",
+      "verify": {"field": "state", "expected": "draft"}
+    },
+    {
+      "step": 3,
+      "name": "Enviar informe para aprobacion",
+      "action": "execute",
+      "model": "hr.expense.sheet",
+      "method": "action_submit_sheet",
+      "ids": ["{result.sheet_id}"],
+      "verify": {"field": "approval_state", "expected": "submit"}
+    },
+    {
+      "step": 4,
+      "name": "Aprobar informe de gastos",
+      "action": "execute",
+      "model": "hr.expense.sheet",
+      "method": "action_approve_expense_sheets",
+      "ids": ["{result.sheet_id}"],
+      "verify": {"field": "approval_state", "expected": "approve"}
+    },
+    {
+      "step": 5,
+      "name": "Contabilizar gastos (generar asiento contable)",
+      "action": "execute",
+      "model": "hr.expense.sheet",
+      "method": "action_sheet_move_post",
+      "ids": ["{result.sheet_id}"],
+      "detect_cascade": {
+        "model": "account.move",
+        "domain": [["expense_sheet_id", "=", "{result.sheet_id}"]],
+        "save_as": "move_id"
+      },
+      "verify": {"field": "state", "expected": "post"}
+    },
+    {
+      "step": 6,
+      "name": "Crear pago al empleado",
+      "action": "create",
+      "model": "account.payment",
+      "values": {
+        "payment_type": "outbound",
+        "partner_type": "supplier",
+        "partner_id": "{result.employee_address_home_id}",
+        "amount": "{data.expense_amount}",
+        "journal_id": "{pre.bank_journal_id}",
+        "date": "{today}"
+      },
+      "save_as": "payment_id",
+      "verify": {"field": "state", "expected": "draft"}
+    },
+    {
+      "step": 7,
+      "name": "Confirmar pago",
+      "action": "execute",
+      "model": "account.payment",
+      "method": "action_post",
+      "ids": ["{result.payment_id}"],
+      "verify": {"field": "state", "expected_any": ["in_process", "paid"]}
+    }
+  ],
+  "revert": [
+    {
+      "step": 7,
+      "action": "execute",
+      "model": "account.payment",
+      "method": "action_cancel",
+      "ids": ["{result.payment_id}"]
+    },
+    {
+      "step": 6,
+      "action": "delete",
+      "model": "account.payment",
+      "ids": ["{result.payment_id}"]
+    },
+    {
+      "step": 5,
+      "action": "execute",
+      "model": "hr.expense.sheet",
+      "method": "action_reset_expense_sheets",
+      "ids": ["{result.sheet_id}"],
+      "note": "Resetea sheet a draft y cancela/revierte el asiento contable generado"
+    },
+    {
+      "step": 4,
+      "action": "noop",
+      "note": "Sheet ya vuelto a draft tras reset en paso anterior"
+    },
+    {
+      "step": 3,
+      "action": "noop",
+      "note": "Sheet ya vuelto a draft tras reset en paso anterior"
+    },
+    {
+      "step": 2,
+      "action": "delete",
+      "model": "hr.expense.sheet",
+      "ids": ["{result.sheet_id}"]
+    },
+    {
+      "step": 1,
+      "action": "delete",
+      "model": "hr.expense",
+      "ids": ["{result.expense_id}"]
+    }
+  ]
+}

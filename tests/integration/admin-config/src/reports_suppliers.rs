@@ -21,7 +21,7 @@ async fn seed(pool: &sqlx::PgPool) {
     insert_request(pool, &seed).await;
 
     let mut seed = RequestSeed::new("r-2", &user, at(2001, 3, 6, 9));
-    seed.model = Some("claude-opus-4-5-20251101");
+    seed.model = Some("claude-opus-5-5");
     seed.provider = Some("cerebras");
     seed.input_tokens = 100;
     seed.output_tokens = 20;
@@ -94,9 +94,9 @@ async fn list_model_month_costs_breaks_the_same_bill_down_by_model() {
         .expect("list model costs");
 
     assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0].key, "claude-sonnet-4-5-20250929");
+    assert_eq!(rows[0].key, "claude-sonnet-5-5");
     assert_eq!(rows[0].cost_microdollars, 600_000);
-    assert_eq!(rows[1].key, "claude-opus-4-5-20251101");
+    assert_eq!(rows[1].key, "claude-opus-5-5");
     assert_eq!(rows[1].requests, 1);
 
     db.cleanup().await;

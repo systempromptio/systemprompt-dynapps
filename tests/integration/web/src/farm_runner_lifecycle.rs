@@ -56,7 +56,9 @@ pub(crate) async fn seed(pool: &Arc<PgPool>) -> Seeded {
             max_budget_usd: 2.0,
             model: None,
             run_as_user_id: None,
+            run_as_mode: None,
             project_id: None,
+            client_id: None,
         },
     )
     .await
@@ -69,7 +71,7 @@ pub(crate) async fn seed(pool: &Arc<PgPool>) -> Seeded {
             id: agent.clone(),
             name: "reviewer".to_owned(),
             description: "reviews".to_owned(),
-            model: Some("claude-sonnet-5".to_owned()),
+            model: Some("claude-sonnet-5-5".to_owned()),
             host: "codex-cli".to_owned(),
             tools: vec!["Read".to_owned()],
             plugin_id: PluginId::new("lifecycle-plugin"),
@@ -121,6 +123,7 @@ pub(crate) async fn launch_one(seeded: &Seeded) -> RunRow {
             max_budget_usd: None,
             timeout_seconds: None,
             eval_result_id: None,
+            client_id: None,
         },
     )
     .await
@@ -156,7 +159,7 @@ async fn launch_queues_an_agent_run_and_a_farm_row_that_references_it() {
     assert_eq!(agent_run.host, "codex-cli");
     assert_eq!(agent_run.user_id, seeded.user);
     assert_eq!(agent_run.request["prompt"], "Review the module.");
-    assert_eq!(agent_run.request["model"], "claude-sonnet-5");
+    assert_eq!(agent_run.request["model"], "claude-sonnet-5-5");
     db.cleanup().await;
 }
 
@@ -260,7 +263,7 @@ async fn the_finish_observer_stamps_a_reclaimed_runs_attempt() {
 
 // The executor finishes the core row; the farm observer then stamps the
 // outcome onto the farm row from that record.
-async fn observe_finish(state: &Arc<FarmState>, run: &RunRow, outcome: &RunOutcome) {
+pub(crate) async fn observe_finish(state: &Arc<FarmState>, run: &RunRow, outcome: &RunOutcome) {
     let finished = AgentRunRepository::from_pool(Arc::clone(&state.pool))
         .finish(&run.agent_run_id, outcome, None)
         .await

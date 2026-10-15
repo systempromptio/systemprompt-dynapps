@@ -21,10 +21,11 @@ pub enum Role {
     ProjectManager,
     KnowledgeWorker,
     SuperAdmin,
+    OdooWriter,
 }
 
 impl Role {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::PlatformAdmin,
         Self::Admin,
         Self::Developer,
@@ -32,6 +33,7 @@ impl Role {
         Self::ProjectManager,
         Self::KnowledgeWorker,
         Self::SuperAdmin,
+        Self::OdooWriter,
     ];
 
     #[must_use]
@@ -44,6 +46,7 @@ impl Role {
             Self::ProjectManager => "project_manager",
             Self::KnowledgeWorker => "knowledge_worker",
             Self::SuperAdmin => "super_admin",
+            Self::OdooWriter => "odoo_writer",
         }
     }
 
@@ -57,6 +60,7 @@ impl Role {
             Self::ProjectManager => "Project manager",
             Self::KnowledgeWorker => "Knowledge worker",
             Self::SuperAdmin => "Super Admin",
+            Self::OdooWriter => "Odoo writer",
         }
     }
 }
@@ -120,7 +124,7 @@ impl fmt::Display for RoleChangeRefusal {
             Self::UnknownRole(role) => write!(
                 f,
                 "Unknown role '{role}'; valid roles are platform_admin, admin, developer, user, \
-                 project_manager, knowledge_worker, super_admin"
+                 project_manager, knowledge_worker, super_admin, odoo_writer"
             ),
             Self::DirectoryRole(role) => write!(
                 f,

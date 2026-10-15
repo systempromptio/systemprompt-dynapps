@@ -140,7 +140,7 @@ pub(crate) async fn launch_run_action(
         farm_id: farm.id.clone(),
         agent_id: agent.id.clone(),
         user_id: shell.user.user_id.clone(),
-        triggered_via: TriggeredVia::Dashboard,
+        triggered_via: TriggeredVia::Console,
         prompt: Some(checked.prompt),
         case_prompt: None,
         fixture: checked.fixture,
@@ -149,6 +149,7 @@ pub(crate) async fn launch_run_action(
         max_budget_usd: None,
         timeout_seconds: i32::try_from(checked.timeout_seconds).ok(),
         eval_result_id: None,
+        client_id: None,
     };
     match launch(&state, request).await {
         Ok(run) => Ok(redirect_with_flash(
