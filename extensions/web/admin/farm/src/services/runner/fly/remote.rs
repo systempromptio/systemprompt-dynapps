@@ -6,7 +6,7 @@
 //! never makes contact within `start_timeout_seconds`; it goes silent for
 //! `heartbeat_timeout_seconds`; the run's wall clock (plus the start
 //! allowance) runs out; or a cancel is not acknowledged within
-//! [`CANCEL_GRACE`]. Every way stops the machine, so no runner bills past
+//! `CANCEL_GRACE`. Every way stops the machine, so no runner bills past
 //! its run.
 
 use std::time::{Duration, Instant};

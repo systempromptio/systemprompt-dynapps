@@ -69,7 +69,8 @@ pub struct EntraOidcConfig {
     pub discovery_url: Option<String>,
     #[serde(default = "default_jwks_allowed_hosts")]
     pub jwks_allowed_hosts: Vec<String>,
-    /// Treat a guest or external-IdP `email` as verified, so it links by email.
+    // Why: Entra ID marks a guest or external-IdP `email` unverified; this
+    // installation trusts it so such users link by email.
     #[serde(default)]
     pub trust_guest_email: bool,
     #[serde(flatten)]

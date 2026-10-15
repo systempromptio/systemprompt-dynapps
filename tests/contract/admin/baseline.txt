@@ -96,6 +96,8 @@ GET    /admin/export/transcripts/{context_id}                anonymous=307 non-a
 GET    /admin/export/{dataset}                               anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/export/{dataset}/preview                       anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/farm                                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/farm/clients                                   anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/farm/clients/{client_id}                       anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/farm/evals                                     anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/farm/evals/runs/{eval_run_id}                  anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/farm/people                                    anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
@@ -210,6 +212,7 @@ GET    /api/public/agent-farm/evals/suites/{suite_id}/runs   anonymous=401 non-a
 GET    /api/public/agent-farm/runs                           anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /api/public/agent-farm/runs/{run_id}                  anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 GET    /api/public/agent-farm/runs/{run_id}/events           anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
+GET    /api/public/agent-farm/runs/{run_id}/report           anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 PATCH  /api/public/admin/access-control/entity/{entity_type}/{entity_id}/default anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PATCH  /api/public/admin/gateway                             anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 PATCH  /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=403 knowledge-worker=403

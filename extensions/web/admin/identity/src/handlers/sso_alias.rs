@@ -12,7 +12,8 @@ use std::sync::Arc;
 use axum::Extension;
 use axum::extract::Query;
 use axum::extract::rejection::QueryRejection;
-use axum::http::HeaderMap;
+use axum::http::header::SET_COOKIE;
+use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -140,7 +141,33 @@ async fn finish(
             },
         )
         .await;
-    Ok(into_response(outcome))
+    let mut response = into_response(outcome);
+    relax_session_cookie(&mut response);
+    Ok(response)
+}
+
+// Why: core 0.68 sets the session cookie `SameSite=Strict`, which Chrome
+// withholds on the redirect chain started by the IdP's cross-site POST/GET
+// back to us, so the first `/admin` arrives without it. Drop once core's
+// `session_cookie_redirect` ships `SameSite=Lax`.
+fn relax_session_cookie(response: &mut Response) {
+    let relaxed: Vec<HeaderValue> = response
+        .headers()
+        .get_all(SET_COOKIE)
+        .iter()
+        .map(|value| match value.to_str() {
+            Ok(text) if text.starts_with("access_token=") => {
+                HeaderValue::from_str(&text.replace("SameSite=Strict", "SameSite=Lax"))
+                    .unwrap_or_else(|_| value.clone())
+            },
+            _ => value.clone(),
+        })
+        .collect();
+    let headers = response.headers_mut();
+    headers.remove(SET_COOKIE);
+    for value in relaxed {
+        headers.append(SET_COOKIE, value);
+    }
 }
 
 pub(crate) async fn oidc_start(

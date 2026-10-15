@@ -87,6 +87,15 @@ impl Reply {
             self.cookie("access_token").is_some(),
             "success sets access_token: {self:?}"
         );
+        let session = self
+            .set_cookies
+            .iter()
+            .find(|c| c.starts_with("access_token="))
+            .expect("session cookie");
+        assert!(
+            session.contains("SameSite=Lax") && session.contains("HttpOnly"),
+            "the session cookie survives the IdP's cross-site redirect: {session}"
+        );
     }
 }
 
