@@ -119,8 +119,11 @@ async fn an_inactive_account_is_refused_at_consent_and_at_the_broker() {
     // as unauthenticated before any entitlement check.
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert!(location.is_none(), "no redirect to the portal");
+    // The broker's person path runs the same live-session check
+    // (`is_live_session` requires `users.status = 'active'`), so it refuses
+    // the same way.
     let (status, bearer) = h.broker_token(&carol.jwt, "dynapps-odoo", None).await;
-    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert!(bearer.is_none(), "no credential material is returned");
     assert_eq!(
         h.env.portal.requests().len(),
