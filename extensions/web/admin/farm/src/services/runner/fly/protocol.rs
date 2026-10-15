@@ -84,6 +84,8 @@ pub struct WorkerSpec {
     pub track_url: String,
     pub seq_after: Option<i64>,
     pub heartbeat_seconds: u64,
+    #[serde(default)]
+    pub egress: super::egress::EgressPolicy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -38,6 +38,7 @@ pub mod counts;
 pub mod decision_calls;
 pub mod decision_log;
 pub mod decisions;
+pub mod farm_allowlist;
 pub mod findings;
 pub mod hook_events;
 pub mod rankings;

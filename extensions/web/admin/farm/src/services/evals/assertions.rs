@@ -13,7 +13,7 @@ use systemprompt::agent_runs::{AgentRunRow, RunEvent};
 use crate::services::farm_sync::eval_yaml::Assertion;
 use crate::types::RunEventPayload;
 
-const SKILL_TOOL: &str = "Skill";
+use systemprompt_web_admin_core::util::tool_allowlist::{SKILL_TOOL, tool_permitted};
 
 #[derive(Debug)]
 pub struct AssertionContext<'a> {
@@ -148,17 +148,6 @@ fn output_check(
 
 fn payloads(events: &[RunEvent]) -> impl Iterator<Item = RunEventPayload> + '_ {
     events.iter().map(|e| e.payload.clone())
-}
-
-fn tool_permitted(tool: &str, allowlist: &[String]) -> bool {
-    tool == SKILL_TOOL
-        || allowlist.iter().any(|entry| {
-            let base = entry.split('(').next().unwrap_or(entry).trim();
-            if let Some(prefix) = base.strip_suffix('*') {
-                return tool.starts_with(prefix);
-            }
-            tool == base || (base.starts_with("mcp__") && tool.starts_with(&format!("{base}__")))
-        })
 }
 
 fn tool_allowlist(ctx: &AssertionContext<'_>) -> AssertionResult {

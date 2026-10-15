@@ -17,6 +17,7 @@ use systemprompt_web_admin_farm::config::{
 use systemprompt_web_admin_farm::services::runner::fly::api::{
     MachineLaunch, auth_header, machine_config,
 };
+use systemprompt_web_admin_farm::services::runner::fly::egress::EgressPolicy;
 use systemprompt_web_admin_farm::services::runner::fly::pool::{private_api_base, run_env};
 use systemprompt_web_admin_farm::services::runner::fly::protocol::{
     Bundle, BundleFile, WorkerCredentials, WorkerResult, WorkerSpec, collect_bundle,
@@ -219,6 +220,7 @@ fn spec(run_id: &str) -> WorkerSpec {
         track_url: "http://h:8080/api/public/hooks/track".to_owned(),
         seq_after: Some(2),
         heartbeat_seconds: 10,
+        egress: EgressPolicy::default(),
     }
 }
 

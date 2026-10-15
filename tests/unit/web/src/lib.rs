@@ -433,6 +433,10 @@ mod farm_eval_judge_config;
 #[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]
+mod farm_egress;
+#[cfg(test)]
 mod farm_fly_runner;
 #[cfg(test)]
 mod farm_run_events_view;
+#[cfg(test)]
+mod farm_tool_allowlist;

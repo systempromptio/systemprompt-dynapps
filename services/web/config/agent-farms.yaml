@@ -55,6 +55,15 @@ runner:
     pool_size: 2
     cpus: 2
     memory_mb: 2048
+    # Outbound allowlist of a runner machine (host names, IPs or CIDRs).
+    # Loopback, Fly's private network (fdaa::/16: API, gateway, DNS) and the
+    # host of every URL the run names (worker API, gateway, hooks, MCP
+    # servers) are always allowed; everything else is rejected. Odoo is
+    # reached through the API's odoo MCP server, never from the runner, and
+    # the image is pulled by Fly, not the machine, so neither is listed.
+    # api.anthropic.com covers Claude Code's own non-inference calls.
+    egress_allow:
+      - api.anthropic.com
 
 # The model that judges a rubric case after its run finishes. Every trigger
 # (public API, MCP, console, demo) builds the same judge from this block; the
