@@ -5531,7 +5531,7 @@ dependencies = [
  "futures",
  "indicatif",
  "inventory",
- "quick-xml 0.42.0",
+ "quick-xml",
  "serde",
  "serde_json",
  "serde_yaml_ng",

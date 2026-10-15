@@ -1,8 +1,6 @@
 # Dynapps SSO (Microsoft Entra ID) — OpenID Connect relying party.
 #
-# The alternative to the SAML trust in adfs.yaml: an App Registration with a
-# client secret instead of an Enterprise Application with federation metadata.
-# Run one or the other, not both, against the same Entra groups.
+# The only sign-in on this instance: an App Registration with a client secret.
 #
 # ENABLED 2026-10-14; admin consent, groups claim and real group ids in place
 # 2026-10-15. Original steps:
