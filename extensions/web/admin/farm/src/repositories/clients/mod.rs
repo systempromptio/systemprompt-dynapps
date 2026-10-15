@@ -5,7 +5,9 @@
 //! run's report, identities and governance decisions. Every rollup takes an
 //! optional client and an optional launching user, so the admin pages (all
 //! runs) and the dashboard tool (a non-admin caller's own runs) read the same
-//! numbers.
+//! numbers. [`pooled_eval_mean`] combines rows' eval means weighted by the
+//! runs each scored, so a day with one scored run never counts as much as a
+//! day with fifty.
 
 mod catalog;
 mod rows;
@@ -21,6 +23,17 @@ pub use rows::{
     AgentOutcomeRow, ClientSummaryRow, DailyOutcomeRow, ReportRunRow, RunDecisionRow,
     RunIdentityRow, RunReportViewRow,
 };
+
+#[must_use]
+pub fn pooled_eval_mean(rows: &[DailyOutcomeRow]) -> Option<f64> {
+    let (sum, scored) = rows
+        .iter()
+        .filter_map(|r| r.eval_mean.map(|mean| (mean, r.eval_scored)))
+        .fold((0.0, 0i64), |(sum, n), (mean, scored)| {
+            (mean.mul_add(scored as f64, sum), n + scored)
+        });
+    (scored > 0).then(|| sum / scored as f64)
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct ReportScope<'a> {

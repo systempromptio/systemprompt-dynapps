@@ -394,6 +394,8 @@ mod farm_host_kind;
 #[cfg(test)]
 mod farm_clients;
 #[cfg(test)]
+mod farm_eval_mean;
+#[cfg(test)]
 mod farm_run_as;
 
 #[cfg(test)]

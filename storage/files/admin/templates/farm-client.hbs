@@ -37,6 +37,7 @@
             <th scope="col">Success</th>
             <th scope="col" class="sp-table__cell--num">Completed</th>
             <th scope="col" class="sp-table__cell--num">Eval</th>
+            <th scope="col" class="sp-table__cell--num">Infra failures</th>
             <th scope="col" class="sp-table__cell--num">Cost</th>
             <th scope="col" class="sp-col-date">Last run</th>
           </tr></thead>
@@ -48,6 +49,7 @@
               <td><span class="sp-farm-clients__share">{{> components/share-bar share_pct=this.share_pct label=(concat this.success " succeeded")}}{{> components/badge tone=this.success_tone text=this.success}}</span></td>
               <td class="sp-table__cell--num">{{this.completed}}</td>
               <td class="sp-table__cell--num">{{this.eval}}</td>
+              <td class="sp-table__cell--num">{{this.infra_failures}}</td>
               <td class="sp-table__cell--num sp-u-mono">{{this.cost}}</td>
               <td class="sp-col-date sp-table__cell--date">{{this.last_run}}</td>
             </tr>

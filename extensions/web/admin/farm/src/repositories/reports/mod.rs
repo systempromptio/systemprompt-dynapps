@@ -73,3 +73,18 @@ pub async fn find_run_report(
     .fetch_optional(pool)
     .await
 }
+
+pub async fn list_runs_missing_report(
+    pool: &PgPool,
+    limit: i64,
+) -> Result<Vec<FarmRunId>, sqlx::Error> {
+    Ok(sqlx::query_file!(
+        "src/repositories/reports/list_runs_missing_report.sql",
+        limit
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|row| row.id)
+    .collect())
+}

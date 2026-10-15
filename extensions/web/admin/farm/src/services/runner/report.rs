@@ -5,6 +5,9 @@
 //! files under the agent's `output_path` in the run workspace, and upserts
 //! `agent_farm_run_reports`, whose SQL joins the Odoo audit rows and the eval
 //! verdict. An eval settles later, so [`refresh_report_eval`] re-reads it.
+//! [`backfill_missing_reports`] writes, once at boot, the report of every
+//! terminal run that has none; a run with a report is never selected again,
+//! and one whose agent run is gone is skipped, so the pass is idempotent.
 
 use std::io::Read;
 use std::path::Path;
@@ -25,6 +28,7 @@ use crate::types::{EvalResultId, FarmRunId, RunEvent};
 const EVENT_PAGE: i64 = 1_000;
 const SUMMARY_CAP_CHARS: usize = 500;
 const MAX_OUTPUT_FILES: usize = 200;
+const BACKFILL_LIMIT: i64 = 1_000;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct OutputFile {
@@ -153,4 +157,25 @@ pub async fn refresh_report_eval(pool: &PgPool, result_id: &EvalResultId) {
     if let Err(error) = reports::update_report_eval(pool, result_id).await {
         tracing::warn!(%error, result = result_id.as_str(), "run report eval verdict not refreshed");
     }
+}
+
+pub async fn backfill_missing_reports(pool: &Arc<PgPool>) -> usize {
+    let missing = match reports::list_runs_missing_report(pool, BACKFILL_LIMIT).await {
+        Ok(ids) => ids,
+        Err(error) => {
+            tracing::warn!(%error, "listing runs missing a report");
+            return 0;
+        },
+    };
+    let mut written = 0;
+    for run_id in &missing {
+        match write_run_report(pool, run_id).await {
+            Ok(true) => written += 1,
+            Ok(false) => {},
+            Err(error) => {
+                tracing::warn!(%error, run = run_id.as_str(), "run report backfill failed");
+            },
+        }
+    }
+    written
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO agent_farm_eval_runs (id, suite_id, farm_id, agent_id, user_id, triggered_via,\n                                  client_id)\nVALUES ($1, $2, $3, $4, $5, $6, (SELECT client_id FROM agent_farms WHERE id = $3))\nRETURNING id AS \"id: EvalRunId\", suite_id AS \"suite_id: EvalSuiteId\", farm_id AS \"farm_id: FarmId\",\n       agent_id AS \"agent_id: FarmAgentId\", user_id AS \"user_id: UserId\", status, started_at,\n       finished_at, passed, failed, errored, mean_score, cost_microdollars, created_at,\n       triggered_via\n",
+  "query": "INSERT INTO agent_farm_eval_runs (id, suite_id, farm_id, agent_id, user_id, triggered_via,\n                                  client_id)\nVALUES ($1, $2, $3, $4, $5, $6,\n        COALESCE($7::text, (SELECT client_id FROM agent_farms WHERE id = $3)))\nRETURNING id AS \"id: EvalRunId\", suite_id AS \"suite_id: EvalSuiteId\", farm_id AS \"farm_id: FarmId\",\n       agent_id AS \"agent_id: FarmAgentId\", user_id AS \"user_id: UserId\", status, started_at,\n       finished_at, passed, failed, errored, mean_score, cost_microdollars, created_at,\n       triggered_via\n",
   "describe": {
     "columns": [
       {
@@ -176,6 +176,7 @@
         "Text",
         "Text",
         "Text",
+        "Text",
         "Text"
       ]
     },
@@ -197,5 +198,5 @@
       false
     ]
   },
-  "hash": "3e5d2f8695bccd5f38d397987ded1eab0b1e4a4aee1d37a53f151fdf2f7be1fa"
+  "hash": "08d5be9eadbb61d94461ff388cde2910d76975fa4c5d2f5b5e0e2ae3cb3a0004"
 }

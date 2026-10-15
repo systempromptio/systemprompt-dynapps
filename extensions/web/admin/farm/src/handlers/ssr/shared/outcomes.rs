@@ -15,7 +15,7 @@ use systemprompt_web_admin_core::ssr::types::svg_line::{
 use systemprompt_web_shared::format::format_cost;
 
 use crate::handlers::ssr::farm_overview::activity::KpiTile;
-use crate::repositories::clients::DailyOutcomeRow;
+use crate::repositories::clients::{DailyOutcomeRow, pooled_eval_mean};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
 pub(crate) struct OutcomeTotals {
@@ -24,19 +24,21 @@ pub(crate) struct OutcomeTotals {
     pub finished: i64,
     pub cost_microdollars: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
     pub completed: Option<(i64, i64)>,
 }
 
 impl OutcomeTotals {
     pub(crate) fn from_days(days: &[DailyOutcomeRow]) -> Self {
-        let scores: Vec<f64> = days.iter().filter_map(|d| d.eval_mean).collect();
         Self {
             runs: days.iter().map(|d| d.runs).sum(),
             succeeded: days.iter().map(|d| d.succeeded).sum(),
             finished: days.iter().map(|d| d.finished).sum(),
             cost_microdollars: days.iter().map(|d| d.cost_microdollars).sum(),
-            eval_mean: (!scores.is_empty())
-                .then(|| scores.iter().sum::<f64>() / scores.len() as f64),
+            eval_mean: pooled_eval_mean(days),
+            eval_scored: days.iter().map(|d| d.eval_scored).sum(),
+            infra_failures: days.iter().map(|d| d.infra_failures).sum(),
             completed: None,
         }
     }
@@ -128,12 +130,16 @@ pub(crate) fn outcome_kpis(
         ),
         KpiTile {
             tone: rate_tone(totals.eval_mean),
+            hint: "Infrastructure failures (host crash, connector unavailable, eval errored) are left out of the mean".to_owned(),
             ..tile(
                 "eval",
                 "Eval score",
                 "judge",
                 score_display(totals.eval_mean),
-                "mean judge score, 0–100".to_owned(),
+                format!(
+                    "{} scored · {} infra failures",
+                    totals.eval_scored, totals.infra_failures
+                ),
             )
         },
     ];

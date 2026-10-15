@@ -205,7 +205,7 @@ function render(d) {
   $('kpis').innerHTML = kpi('Runs', t.runs.toLocaleString(), t.finished + ' finished')
     + kpi('Success rate', pct(t.success_pct), t.succeeded + ' of ' + t.finished + ' succeeded', tone(t.success_pct))
     + kpi('Task completion', pct(completion), t.completed + ' of ' + t.reported + ' reported', tone(completion))
-    + kpi('Eval score', score(t.eval_mean), 'mean judge score, 0–100', tone(t.eval_mean))
+    + kpi('Eval score', score(t.eval_mean), t.eval_scored + ' scored · ' + t.infra_failures + ' infra failures', tone(t.eval_mean))
     + kpi('Cost', usd(t.cost_microdollars), 'gateway spend');
   $('trend').innerHTML = trend(d.daily);
   $('trend-note').textContent = d.daily.length + ' days';
@@ -218,22 +218,22 @@ function render(d) {
   const total = d.clients.reduce((a, c) => a + c.runs, 0);
   $('clients-note').textContent = d.clients.length + ' clients';
   $('clients').innerHTML = table(
-    ['Client', 'Runs', 'Success', 'Completion', 'Eval', 'People', 'Cost', 'Last run'], d.clients, c => {
+    ['Client', 'Runs', 'Success', 'Completion', 'Eval', 'Infra failures', 'People', 'Cost', 'Last run'], d.clients, c => {
       const s = share(c.runs, total) || 0, comp = share(c.completed, c.reported);
       return '<tr><td><strong>' + esc(c.name) + '</strong> <code>' + esc(c.client) + '</code></td>'
         + '<td class="num"><span class="bar"><span style="width:' + s.toFixed(1) + '%"></span></span>' + c.runs + '</td>'
         + '<td>' + pill(pct(c.success_pct), tone(c.success_pct)) + '</td>'
-        + '<td class="num">' + pct(comp) + '</td><td class="num">' + score(c.eval_mean) + '</td>'
+        + '<td class="num">' + pct(comp) + '</td><td class="num">' + score(c.eval_mean) + '</td><td class="num">' + c.infra_failures + '</td>'
         + '<td class="num">' + c.people + '</td><td class="num">' + usd(c.cost_microdollars) + '</td>'
         + '<td>' + when(c.last_run_at) + '</td></tr>';
     }, 'No clients declared.');
 
   $('agents-note').textContent = d.agents.length + ' agents';
   $('agents').innerHTML = table(
-    ['Agent', 'Runs', 'Success', 'Completed', 'Eval', 'Cost', 'Last run'], d.agents, a =>
+    ['Agent', 'Runs', 'Success', 'Completed', 'Eval', 'Infra failures', 'Cost', 'Last run'], d.agents, a =>
       '<tr><td>' + esc(a.farm) + ' › <strong>' + esc(a.agent) + '</strong></td><td class="num">' + a.runs + '</td>'
       + '<td><span class="bar"><span style="width:' + (a.success_pct || 0).toFixed(1) + '%"></span></span>' + pill(pct(a.success_pct), tone(a.success_pct)) + '</td>'
-      + '<td class="num">' + a.completed + '</td><td class="num">' + score(a.eval_mean) + '</td>'
+      + '<td class="num">' + a.completed + '</td><td class="num">' + score(a.eval_mean) + '</td><td class="num">' + a.infra_failures + '</td>'
       + '<td class="num">' + usd(a.cost_microdollars) + '</td><td>' + when(a.last_run_at) + '</td></tr>',
     'No runs in this window.');
 

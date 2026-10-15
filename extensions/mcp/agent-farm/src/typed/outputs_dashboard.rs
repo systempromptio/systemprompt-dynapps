@@ -1,6 +1,8 @@
 //! Output contract for `farm_dashboard`: the figures the agent-farm dashboard
 //! artifact draws. Timestamps are RFC 3339 strings and money is integer
-//! microdollars, the same units the admin pages format.
+//! microdollars, the same units the admin pages format. `eval_mean` averages
+//! the runs with a settled eval verdict (`eval_scored` of them);
+//! infrastructure failures are left out of it and counted in `infra_failures`.
 
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -15,6 +17,8 @@ pub struct DashboardTotals {
     pub success_pct: Option<f64>,
     pub cost_microdollars: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
     pub completed: i64,
     pub reported: i64,
 }
@@ -32,6 +36,8 @@ pub struct DashboardClient {
     pub completed: i64,
     pub reported: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
     pub cost_microdollars: i64,
     pub last_run_at: Option<String>,
 }
@@ -46,6 +52,8 @@ pub struct DashboardAgent {
     pub success_pct: Option<f64>,
     pub completed: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
     pub cost_microdollars: i64,
     pub last_run_at: String,
 }
@@ -58,6 +66,8 @@ pub struct DashboardDay {
     pub finished: i64,
     pub cost_microdollars: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]

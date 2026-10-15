@@ -24,6 +24,7 @@ use systemprompt_web_admin_farm::routes::worker::agent_farm_worker_routes;
 use systemprompt_web_admin_farm::services::farm_sync::boot::sync_missing_checkouts;
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
+use systemprompt_web_admin_farm::services::runner::report::backfill_missing_reports;
 use systemprompt_web_admin_farm::state::{FarmState, build_farm_state_from_app};
 use tokio_util::sync::CancellationToken;
 
@@ -79,6 +80,8 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
         }
         let restored = sync_missing_checkouts(&state).await;
         tracing::info!(farms = restored, "agent farm checkouts restored");
+        let reported = backfill_missing_reports(&state.pool).await;
+        tracing::info!(runs = reported, "missing farm run reports backfilled");
     });
 }
 

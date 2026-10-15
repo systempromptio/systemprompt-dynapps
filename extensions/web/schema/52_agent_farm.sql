@@ -233,3 +233,25 @@ SELECT c.id AS client_id,
 FROM clients c
 LEFT JOIN agent_farm_runs r ON r.client_id = c.id
 GROUP BY c.id, c.name, c.slug;
+
+-- One row per run: its eval score and whether it was an infrastructure
+-- failure. The score is the run's own eval result (the judge score, else 100
+-- for passed and 0 for failed); it is NULL with no settled verdict and for
+-- an infrastructure failure (the host crashed, a connector was unavailable,
+-- or the eval errored), which the rollups count separately instead.
+CREATE OR REPLACE VIEW agent_farm_run_eval_scores AS
+SELECT r.id AS run_id,
+       COALESCE(r.error_class IN ('host_crashed', 'connector_unavailable')
+                OR x.status = 'errored', false) AS infra_failure,
+       CASE WHEN x.status IN ('passed', 'failed')
+             AND COALESCE(r.error_class IN ('host_crashed', 'connector_unavailable'), false) = false
+            THEN COALESCE(x.judge_score, CASE WHEN x.status = 'passed' THEN 100.0 ELSE 0.0 END)
+       END AS score
+FROM agent_farm_runs r
+LEFT JOIN LATERAL (
+    SELECT e.status, e.judge_score
+    FROM agent_farm_eval_results e
+    WHERE e.run_id = r.id
+    ORDER BY e.updated_at DESC
+    LIMIT 1
+) x ON true;

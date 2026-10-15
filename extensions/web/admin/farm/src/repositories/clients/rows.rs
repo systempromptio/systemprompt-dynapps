@@ -23,6 +23,8 @@ pub struct ClientSummaryRow {
     pub completed: i64,
     pub reported: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
     pub last_run_at: Option<DateTime<Utc>>,
 }
 
@@ -34,6 +36,8 @@ pub struct DailyOutcomeRow {
     pub finished: i64,
     pub cost_microdollars: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -46,6 +50,8 @@ pub struct AgentOutcomeRow {
     pub cost_microdollars: i64,
     pub completed: i64,
     pub eval_mean: Option<f64>,
+    pub eval_scored: i64,
+    pub infra_failures: i64,
     pub last_run_at: DateTime<Utc>,
 }
 
