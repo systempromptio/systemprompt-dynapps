@@ -94,6 +94,7 @@ pub(crate) struct Callback {
     state: String,
     code: Option<String>,
     error: Option<String>,
+    iss: Option<String>,
 }
 
 pub(crate) async fn callback(
@@ -137,6 +138,14 @@ async fn complete(
     if grant.session != user.session_id.as_ref().map(ToString::to_string) {
         return Err(AdminError::Unauthorized(
             "Login changed during connector consent".into(),
+        ));
+    }
+    if !oauth::generic::authorization_response_issuer_matches(
+        params.iss.as_deref(),
+        &grant.authorization_issuer,
+    ) {
+        return Err(AdminError::Unauthorized(
+            "Connector consent came back from a different authorization server".into(),
         ));
     }
     if params.error.is_some() {

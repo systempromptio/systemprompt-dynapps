@@ -38,6 +38,17 @@ pub fn same_issuer(advertised: &str, declared: &str) -> bool {
         && b.fragment().is_none()
 }
 
+// Why: RFC 9207 §2.4 — an `iss` on the authorization response must be the
+// issuer the request went to (mix-up defence). Most servers send none, and
+// fixed-provider grants record no issuer; both cases are accepted.
+#[must_use]
+pub fn authorization_response_issuer_matches(iss: Option<&str>, recorded: &str) -> bool {
+    match iss {
+        Some(iss) if !recorded.is_empty() => same_issuer(iss, recorded),
+        _ => true,
+    }
+}
+
 pub(super) fn trusted_endpoint(provider: &Provider, value: &str) -> AdminResult<Url> {
     let settings = provider
         .settings()

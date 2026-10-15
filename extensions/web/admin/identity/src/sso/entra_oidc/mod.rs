@@ -36,7 +36,7 @@ pub use claims::IdTokenClaims;
 pub use config::{EntraOidcConfig, ID, install_config};
 pub use discovery::OidcDiscovery;
 pub use token::ClientSecretSource;
-pub use verify::identity_from_claims;
+pub use verify::{identity_from_claims, resolve_issuer_template};
 
 use discovery::DiscoverySource;
 use token::{CodeRedemption, redeem_code};
@@ -85,6 +85,19 @@ pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
         '?'
     };
     format!("{}{separator}{query}", req.authorization_endpoint)
+}
+
+// Why: RFC 9207 §2.4 — an `iss` on the authorization response must name the
+// issuer the request went to; its absence is allowed, since Entra ID does not
+// advertise `authorization_response_iss_parameter_supported`.
+#[must_use]
+pub fn authorization_response_issuer_matches(
+    iss: &str,
+    discovered_issuer: &str,
+    configured_issuer: &str,
+    tenant: &str,
+) -> bool {
+    iss == resolve_issuer_template(discovered_issuer, tenant) || iss == configured_issuer
 }
 
 #[must_use]
@@ -240,6 +253,16 @@ impl SsoProvider for EntraOidcProvider {
         };
         let redirect_uri = self.redirect_uri("");
         let discovery = self.discovery.current().await?;
+        if let Some(iss) = ret.param("iss")
+            && !authorization_response_issuer_matches(
+                iss,
+                &discovery.issuer,
+                &self.issuer,
+                &self.cfg.entra_tenant_id,
+            )
+        {
+            return Err(SsoError::InvalidAssertion("iss".to_owned()));
+        }
         let client_secret = self.client_secret.current().ok_or_else(|| {
             SsoError::Unavailable(
                 "Entra OIDC client secret missing from the secrets store".to_owned(),

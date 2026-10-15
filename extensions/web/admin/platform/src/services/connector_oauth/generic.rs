@@ -1,8 +1,10 @@
 //! OAuth for configured MCP resources with explicitly trusted authorization
 //! origins.
 
+pub use super::generic_discovery::{
+    authorization_response_issuer_matches, same_issuer, validate_endpoint,
+};
 use super::generic_discovery::{bounded_json, metadata, trusted_endpoint};
-pub use super::generic_discovery::{same_issuer, validate_endpoint};
 use super::transport::client;
 use super::{Grant, Provider, config};
 use base64::Engine;

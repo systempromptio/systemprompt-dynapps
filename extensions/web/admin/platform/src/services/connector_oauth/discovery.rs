@@ -67,7 +67,7 @@ pub(super) async fn atlassian_metadata() -> AdminResult<Metadata> {
         .map_err(|_redacted_error| {
             AdminError::Unavailable("Invalid Atlassian authorization metadata".into())
         })?;
-    if metadata.issuer != issuer.as_str() {
+    if !super::generic_discovery::same_issuer(&metadata.issuer, issuer.as_str()) {
         return Err(AdminError::Unavailable(
             "Atlassian authorization issuer mismatch".into(),
         ));

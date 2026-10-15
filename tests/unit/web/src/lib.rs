@@ -217,6 +217,8 @@ mod sso_config_files;
 #[cfg(test)]
 mod sso_oidc_claims;
 #[cfg(test)]
+mod sso_oidc_compliance;
+#[cfg(test)]
 mod sso_permissions;
 #[cfg(test)]
 mod sso_policy;

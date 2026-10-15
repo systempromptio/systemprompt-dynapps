@@ -26,6 +26,14 @@ pub(super) async fn validate_id_token(
     expected_nonce: &str,
 ) -> Result<ExternalIdentity, SsoError> {
     let header = decode_header(id_token).map_err(SsoProviderError::IdTokenHeader)?;
+    // Why: RFC 7515 §4.1.11 — `jsonwebtoken` does not enforce `crit`, and no
+    // extension it could name is understood here.
+    if header.crit.is_some() {
+        return Err(SsoError::InvalidAssertion(
+            "id_token crit header".to_owned(),
+        ));
+    }
+
     if header.alg != Algorithm::RS256 {
         return Err(SsoError::InvalidAssertion(
             "id_token must be RS256-signed".to_owned(),
@@ -39,10 +47,12 @@ pub(super) async fn validate_id_token(
     let key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e).map_err(SsoError::internal)?;
 
     let configured_issuer = cfg.issuer();
+    let discovered_issuer = resolve_issuer_template(&discovery.issuer, &cfg.entra_tenant_id);
     let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[discovery.issuer.as_str(), configured_issuer.as_str()]);
+    validation.set_issuer(&[discovered_issuer.as_str(), configured_issuer.as_str()]);
     validation.set_audience(&[cfg.entra_client_id.as_str()]);
-    validation.set_required_spec_claims(&["exp", "iat", "iss", "aud"]);
+    validation.set_required_spec_claims(&["exp", "iss", "aud"]);
+    validation.validate_nbf = true;
     validation.leeway = cfg.clock_skew_seconds;
 
     let raw = decode::<Value>(id_token, &key, &validation)
@@ -73,6 +83,9 @@ pub fn identity_from_claims(
     if claims.sub.trim().is_empty() {
         return Err(SsoError::NoSubject);
     }
+    if claims.aud.len() > 1 && claims.azp.as_deref() != Some(cfg.entra_client_id.as_str()) {
+        return Err(SsoError::InvalidAssertion("azp".to_owned()));
+    }
 
     let groups = raw
         .get(&cfg.groups_claim)
@@ -85,13 +98,14 @@ pub fn identity_from_claims(
                 .collect()
         })
         .unwrap_or_default();
-    let groups_overage = claims
-        .claim_names
-        .as_ref()
-        .is_some_and(|names| names.contains_key(&cfg.groups_claim));
+    let groups_overage = claims.hasgroups
+        || claims
+            .claim_names
+            .as_ref()
+            .is_some_and(|names| names.contains_key(&cfg.groups_claim));
 
     let asserted_email = claims.email.clone().filter(|email| !email.is_empty());
-    let email_verified = asserted_email.is_some();
+    let email_verified = asserted_email.is_some() && email_is_vouched_for(claims, cfg);
     let email = asserted_email.or_else(|| {
         claims
             .preferred_username
@@ -111,4 +125,25 @@ pub fn identity_from_claims(
         assertion_expires_at: DateTime::<Utc>::from_timestamp(claims.exp, 0),
         raw_claims: raw,
     })
+}
+
+// Why: Entra ID's `email` is a mutable directory attribute and Entra never
+// sends OIDC's `email_verified`, so it vouches for linking only via the
+// optional `xms_edov` claim, or for a user homed in the pinned tenant (no
+// `idp`, or `idp` naming it), whose administrators own the attribute. A guest
+// or external-IdP account carries a foreign `idp` and is left unverified.
+fn email_is_vouched_for(claims: &IdTokenClaims, cfg: &EntraOidcConfig) -> bool {
+    claims.email_verified
+        || claims.xms_edov
+        || claims
+            .idp
+            .as_deref()
+            .is_none_or(|idp| idp.contains(cfg.entra_tenant_id.as_str()))
+}
+
+// Why: Entra ID's multi-tenant discovery documents publish the issuer as a
+// `{tenantid}` template; a tenant-specific one publishes it resolved.
+#[must_use]
+pub fn resolve_issuer_template(issuer: &str, tenant: &str) -> String {
+    issuer.replace("{tenantid}", tenant)
 }
