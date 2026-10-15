@@ -43,7 +43,6 @@ use crate::services::farm_sync::validate::mcp_server_of;
 use crate::state::FarmState;
 use crate::types::{FarmId, FarmRunId};
 
-const SKILL_TOOL: &str = "Skill";
 const PLUGIN_DIR: &str = "plugin";
 
 /// What a launch knows before the request exists. `prompt_template` is the
@@ -144,8 +143,8 @@ pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
         system_prompt_append: None,
         persona: (!agent.body.trim().is_empty()).then(|| agent.body.clone()),
         model: spec.model.map(ToOwned::to_owned),
-        allowed_tools: allowed_tools(&agent.tools),
-        disallowed_tools: Vec::new(),
+        allowed_tools: super::tool_policy::allowed_tools(&agent.tools),
+        disallowed_tools: super::tool_policy::disallowed_tools(&agent.tools),
         permission_mode,
         permission_prompts_none: false,
         workspace: spec.layout.workspace.clone(),
@@ -165,14 +164,6 @@ pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
 
 fn plugin_root(layout: &RunLayout) -> PathBuf {
     layout.root.join(PLUGIN_DIR)
-}
-
-fn allowed_tools(agent_tools: &[String]) -> Vec<String> {
-    let mut tools = agent_tools.to_vec();
-    if !tools.is_empty() && !tools.iter().any(|t| t == SKILL_TOOL) {
-        tools.push(SKILL_TOOL.to_owned());
-    }
-    tools
 }
 
 pub async fn materialise(

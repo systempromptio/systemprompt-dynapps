@@ -53,7 +53,7 @@ pub(crate) fn client_rows(rows: &[ClientSummaryRow]) -> Vec<ClientRowView> {
                 active: r.active,
                 people: r.people,
                 success: pct_display(success),
-                success_tone: rate_tone(success),
+                success_tone: badge_tone(success),
                 completion: pct_display(ratio(r.completed, r.reported)),
                 eval: score_display(r.eval_mean),
                 cost: format_cost(r.cost_microdollars),
@@ -87,7 +87,7 @@ pub(crate) fn agent_rows(rows: &[AgentOutcomeRow]) -> Vec<AgentOutcomeView> {
                 url: format!("/admin/farm/{}/agents/{}", r.farm_id, r.agent_id),
                 runs: r.runs,
                 success: pct_display(success),
-                success_tone: rate_tone(success),
+                success_tone: badge_tone(success),
                 share_pct: format!("{:.1}", success.unwrap_or(0.0)),
                 completed: r.completed,
                 eval: score_display(r.eval_mean),
@@ -148,4 +148,11 @@ pub(crate) fn report_run_rows(rows: &[ReportRunRow]) -> Vec<ReportRunView> {
             created_local: local_time(r.created_at),
         })
         .collect()
+}
+
+fn badge_tone(pct: Option<f64>) -> &'static str {
+    match rate_tone(pct) {
+        "" => "muted",
+        tone => tone,
+    }
 }
