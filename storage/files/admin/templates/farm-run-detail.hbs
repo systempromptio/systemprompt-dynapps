@@ -53,6 +53,9 @@
         {{#if header.claimed_by}}
         <div class="sp-kv-row"><dt>Claimed by</dt><dd><code class="sp-code-inline">{{header.claimed_by}}</code></dd></div>
         {{/if}}
+        {{#if header.runner_machine_id}}
+        <div class="sp-kv-row"><dt>Runner machine</dt><dd><code class="sp-code-inline">{{header.runner_machine_id}}</code>{{#if header.runner_region}} · {{header.runner_region}}{{/if}}</dd></div>
+        {{/if}}
         {{#if header.lease_until_local}}
         <div class="sp-kv-row"><dt>Lease until</dt><dd>{{header.lease_until_local}}</dd></div>
         {{/if}}

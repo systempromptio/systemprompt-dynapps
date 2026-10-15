@@ -1,0 +1,10 @@
+extension:
+  type: cli
+  name: farm-worker
+  binary: systemprompt-farm-worker
+  description: Run one agent farm run on this machine (a Fly runner machine) and report it back to the API that launched it
+  build_type: workspace
+  enabled: true
+  commands:
+    - name: farm-worker
+      description: "farm-worker [--run <id>] [--api-base <url>] [--root <dir>] — fetch the run, execute it, report events, outputs and the result"

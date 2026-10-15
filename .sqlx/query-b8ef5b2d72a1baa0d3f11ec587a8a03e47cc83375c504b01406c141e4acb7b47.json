@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT runner_machine_id, runner_region\nFROM agent_farm_runs\nWHERE id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "runner_machine_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "runner_machine_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "runner_region",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "runner_region"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "b8ef5b2d72a1baa0d3f11ec587a8a03e47cc83375c504b01406c141e4acb7b47"
+}

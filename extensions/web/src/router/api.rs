@@ -55,6 +55,10 @@ pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
         .merge(secrets_api)
         .nest("/admin", admin_api)
         .nest(farm_public::FARM_PUBLIC_PREFIX, farm_api)
+        .nest(
+            farm_public::FARM_WORKER_PREFIX,
+            farm_public::farm_worker_router(),
+        )
 }
 
 pub(crate) fn share(db: &DbHandles) -> Router {

@@ -4,6 +4,7 @@
 
 mod links;
 mod reads;
+mod runner;
 mod stats;
 mod writes;
 
@@ -12,6 +13,7 @@ pub use reads::{
     find_run, find_run_by_agent_run, find_run_with_agent_run, list_active_farm_ids_for_user,
     list_active_runs, list_recent_runs, list_runs_paged,
 };
+pub use runner::{RunnerMachineRow, find_run_runner, update_run_runner};
 pub use stats::{get_run_stats, list_daily_run_counts};
 pub use writes::{
     insert_run, update_run_cancel_requested, update_run_finished, update_run_started,

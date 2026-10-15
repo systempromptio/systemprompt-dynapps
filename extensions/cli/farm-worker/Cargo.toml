@@ -1,0 +1,31 @@
+[package]
+name = "systemprompt-farm-worker"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Agent farm worker for the Dynapps instance: runs one farm run on its own Fly Machine through core's agent-runs executor, fetching the run from and reporting it back to the API's worker endpoints."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[[bin]]
+name = "systemprompt-farm-worker"
+path = "src/main.rs"
+
+[dependencies]
+# Audit: uses agent_runs (execute, governance hooks, RunLayout) and logging — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-web-admin-farm = { workspace = true }
+
+anyhow.workspace = true
+async-trait.workspace = true
+clap = { workspace = true, features = ["env"] }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

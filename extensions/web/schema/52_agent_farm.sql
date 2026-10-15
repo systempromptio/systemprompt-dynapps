@@ -99,6 +99,8 @@ CREATE TABLE IF NOT EXISTS agent_farm_runs (
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
     cancel_requested_at TIMESTAMPTZ,
+    runner_machine_id TEXT,
+    runner_region TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

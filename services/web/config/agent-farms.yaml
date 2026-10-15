@@ -32,8 +32,19 @@ farms:
       max_budget_usd: 2.0
       model: claude-sonnet-5-5
 
+# `mode: local` runs each claimed run as a child of the API process;
+# `fly_machine` runs it on its own Fly Machine from a pool of stopped runner
+# machines (Machines API token: the `fly_api_token` secret). The services tree
+# is shared by every profile, so production switches with the
+# FARM_RUNNER_MODE=fly_machine env var rather than here. Every `fly:` key
+# defaults from the Fly runtime env; see the farm crate's config/runner_yaml.rs.
 runner:
   max_concurrent: 1
+  mode: local
+  fly:
+    pool_size: 2
+    cpus: 2
+    memory_mb: 2048
 
 # The model that judges a rubric case after its run finishes. Every trigger
 # (public API, MCP, console, demo) builds the same judge from this block; the

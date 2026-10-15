@@ -428,4 +428,6 @@ mod farm_eval_judge_config;
 #[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]
+mod farm_fly_runner;
+#[cfg(test)]
 mod farm_run_events_view;

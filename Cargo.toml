@@ -18,6 +18,7 @@ members = [
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",
+    "extensions/cli/farm-worker",
     "extensions/secrets/onepassword",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles

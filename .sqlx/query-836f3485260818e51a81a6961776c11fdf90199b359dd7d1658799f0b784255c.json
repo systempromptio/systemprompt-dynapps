@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_runs\nSET runner_machine_id = $2, runner_region = $3, updated_at = NOW()\nWHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "836f3485260818e51a81a6961776c11fdf90199b359dd7d1658799f0b784255c"
+}

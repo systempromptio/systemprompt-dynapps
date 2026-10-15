@@ -57,6 +57,8 @@ pub(crate) struct RunHeaderView {
     pub host_session_id: Option<String>,
     pub attempt: i32,
     pub claimed_by: Option<String>,
+    pub runner_machine_id: Option<String>,
+    pub runner_region: Option<String>,
     pub lease_until_local: Option<String>,
     pub error_class: Option<String>,
 }
@@ -159,6 +161,11 @@ fn header_view(data: &RunData) -> RunHeaderView {
             .map(|s| s.as_str().to_owned()),
         attempt: run.attempt,
         claimed_by: agent_run.claimed_by.clone(),
+        runner_machine_id: data
+            .runner
+            .as_ref()
+            .and_then(|r| r.runner_machine_id.clone()),
+        runner_region: data.runner.as_ref().and_then(|r| r.runner_region.clone()),
         lease_until_local: agent_run.lease_until.map(local_time),
         error_class: run
             .error_class
