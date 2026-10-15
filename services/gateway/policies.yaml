@@ -96,10 +96,10 @@ policies:
   - name: default-quotas
     enabled: true
     spec:
-      # ENFORCED, tight (Ed, 2026-10-14): the Anthropic key is a client's,
-      # so usage is hard-capped while testing. These are ceilings, not
-      # warnings: a breach answers 429. Raise deliberately.
-      quota_mode: enforce
+      # WARN (Ed, 2026-10-15): enforce (set 2026-10-14) refused active
+      # users with 429 at the $5/h window. Back to warning thresholds;
+      # breaches are recorded, nothing is refused.
+      quota_mode: warn
       quota_windows:
         # Per user, hourly: 120 requests or $5 (about ten farm runs).
         - subject: user
