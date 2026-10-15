@@ -20,6 +20,33 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.69.0 — 2026-10-15
+
+### Added
+
+- **Each farm run runs on its own Fly Machine** (`runner.mode: fly_machine`); a pooled runner is started after it is updated, and runner VMs post governance hooks to the public API URL.
+- **Farm clients, per-agent run-as and task-completion reports**, with per-client dashboards, run-report and governance tabs and a `farm_dashboard` artifact.
+- **Farm runs enforce their declared MCP tools**, deny undeclared built-in tools and confine runner egress.
+- Interrupted farm eval runs resume at boot, and worker egress notes ship as runner events.
+
+### Changed
+
+- **Built against systemprompt-core 0.69.0.** Every core crate pin moves to `0.69.0` (`Cargo.toml`, `tests/Cargo.toml`, `tests/unit/bridge/Cargo.toml`), `[patch.crates-io]` is inactive in both workspaces and `bridge/CORE_REF` names `v0.69.0`, and every lockfile is refreshed. Core 0.69.0 fixes the replica-identity claim that crash-looped `sp-e43527c1cbb5`.
+- Every governance and quota plane, default quotas included, is in `warn`.
+- Entra OpenID Connect is the only sign-in; the session cookie is `SameSite=Lax` after the Entra callback.
+- The bridge carries Dynapps branding and no longer offers the GitHub, Salesforce or Atlassian MCP servers.
+
+### Fixed
+
+- The farm eval mean is taken from each run's own verdict, with infrastructure failures counted apart; run clients and reports are backfilled.
+- A run credential's cost window admits one worst-case request.
+- The macOS release smoke logs in to `https://dynapps.systemprompt.io` again, the bridge's default gateway. A later commit had reverted it to `https://dynapps.es`.
+
+### Removed
+
+- Astound artefacts left from the fork.
+- The disabled Entra SAML (ADFS) sign-in path and the legacy `/api/public/salesforce/token` accessor.
+
 ## 0.68.0 — 2026-10-14
 
 ### Added

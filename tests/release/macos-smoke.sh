@@ -74,7 +74,7 @@ login_link() {
     grep -Fq "$expected_url/bridge-auth/device-link" "$WORK/login.txt"
     grep -Fq 'nothing pasted' "$WORK/login.txt"
 }
-login_link https://dynapps.es
+login_link https://dynapps.systemprompt.io
 login_link http://127.0.0.1:18081 --gateway http://127.0.0.1:18081
 printf 'gateway_url = "http://127.0.0.1:18082"\n' > "$DYNAPPS_BRIDGE_CONFIG"
 login_link http://127.0.0.1:18082
