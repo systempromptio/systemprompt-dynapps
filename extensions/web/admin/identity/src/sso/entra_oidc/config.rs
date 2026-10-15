@@ -69,6 +69,9 @@ pub struct EntraOidcConfig {
     pub discovery_url: Option<String>,
     #[serde(default = "default_jwks_allowed_hosts")]
     pub jwks_allowed_hosts: Vec<String>,
+    /// Treat a guest or external-IdP `email` as verified, so it links by email.
+    #[serde(default)]
+    pub trust_guest_email: bool,
     #[serde(flatten)]
     pub policy: SsoIdentityPolicy,
 }
@@ -87,6 +90,7 @@ impl Default for EntraOidcConfig {
             clock_skew_seconds: default_clock_skew_seconds(),
             discovery_url: None,
             jwks_allowed_hosts: default_jwks_allowed_hosts(),
+            trust_guest_email: false,
             policy: SsoIdentityPolicy::default(),
         }
     }

@@ -133,7 +133,8 @@ pub fn identity_from_claims(
 // `idp`, or `idp` naming it), whose administrators own the attribute. A guest
 // or external-IdP account carries a foreign `idp` and is left unverified.
 fn email_is_vouched_for(claims: &IdTokenClaims, cfg: &EntraOidcConfig) -> bool {
-    claims.email_verified
+    cfg.trust_guest_email
+        || claims.email_verified
         || claims.xms_edov
         || claims
             .idp

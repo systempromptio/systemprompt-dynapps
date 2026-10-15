@@ -88,6 +88,19 @@ fn a_tenant_member_email_is_verified() {
 }
 
 #[test]
+fn trust_guest_email_lets_a_guest_email_link() {
+    let mut raw = entra_claims();
+    raw["idp"] = json!("live.com");
+    let claims: IdTokenClaims = serde_json::from_value(raw.clone()).expect("claims parse");
+    let cfg = EntraOidcConfig {
+        trust_guest_email: true,
+        ..config()
+    };
+    let identity = identity_from_claims(&claims, &cfg, NONCE, raw).expect("identity");
+    assert!(identity.email_verified);
+}
+
+#[test]
 fn a_guest_email_is_unverified_unless_entra_vouches() {
     let mut raw = entra_claims();
     raw["idp"] = json!("https://sts.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47/");

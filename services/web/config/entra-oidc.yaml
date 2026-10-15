@@ -59,6 +59,11 @@ allowed_email_domains:
 # (verified) address, instead of provisioning a duplicate.
 link_by_email: true
 
+# Demo only: a guest account (ed@systemprompt.io is a guest in the Dynapps
+# tenant) carries no xms_edov, so its email would not count as verified and
+# could not link. Set false once IT adds the xms_edov optional claim.
+trust_guest_email: true
+
 # A sign-in whose token carries no group at all gets no session.
 deny_without_group: true
 
