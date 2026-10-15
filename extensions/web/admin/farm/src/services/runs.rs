@@ -17,7 +17,7 @@ use systemprompt::agent_runs::repository::NewAgentRun;
 use systemprompt::identifiers::{AgentRunId, UserId};
 
 use super::runner::{ORIGIN_KIND, observer, prepare};
-use crate::config::RunAsMode;
+use crate::config::{FarmToolPolicy, RunAsMode, read_farms_doc};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::filters::NewRun;
 use crate::repositories::rows::{AgentRow, FarmRow, RunRow};
@@ -55,6 +55,13 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
 
     let (max_turns, max_budget_usd, timeout_seconds) =
         resolve_limits(&req, &agent, &farm, state.limits)?;
+    let policy = farm_tool_policy(state, &req.farm_id).await?;
+    if let Some(server) = policy.disallowed_server(&agent.tools) {
+        return Err(FarmError::Validation(format!(
+            "agent {} names MCP server {server}, which farm {} does not allow",
+            agent.id, req.farm_id
+        )));
+    }
     let credential_user = resolve_credential_user(pool, &req, &agent, &farm).await?;
     let template = req
         .prompt
@@ -78,6 +85,7 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         max_turns,
         max_budget_usd,
         timeout_seconds,
+        deny_tools: &policy.deny,
     })?;
     if request.prompt.trim().is_empty() {
         return Err(FarmError::Validation(
@@ -219,4 +227,14 @@ pub async fn cancel(state: &FarmState, run_id: &FarmRunId, user_id: &UserId) -> 
         repo.update_cancel_requested(&run.agent_run_id).await?;
     }
     Ok(flagged)
+}
+
+// Why: agent-farms.yaml, not the farm's Git source, holds the tool policy,
+// so it is read from the composed services tree at each launch.
+async fn farm_tool_policy(state: &FarmState, farm_id: &FarmId) -> FarmResult<FarmToolPolicy> {
+    let doc = read_farms_doc(&state.paths.composed_services_root).await?;
+    Ok(doc
+        .and_then(|doc| doc.farms.into_iter().find(|f| f.id == farm_id.as_str()))
+        .map(|farm| farm.tool_policy)
+        .unwrap_or_default())
 }

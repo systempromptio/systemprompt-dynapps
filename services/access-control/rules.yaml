@@ -67,10 +67,10 @@ entities:
     owner: bundle:dynapps-agent-farm
     default: closed
     why: >-
-      Odoo delivery agent farm shipped by the dynapps-agent-farm kit. Farm runs
-      execute as the requesting person through the gateway, so only someone who
-      already holds the workspace may launch one: administrators, the staff
-      group and the Odoo delivery project.
+      The nightly accounting-audit farm shipped by the dynapps-agent-farm kit.
+      Farm runs execute as the launching person through the gateway, so only
+      someone who already holds the workspace may launch one: administrators,
+      the staff group and the Odoo delivery project.
     allow:
       role: [admin, platform_admin, super_admin]
       group: [staff]

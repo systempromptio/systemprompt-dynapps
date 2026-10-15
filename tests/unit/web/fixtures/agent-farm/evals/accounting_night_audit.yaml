@@ -1,0 +1,25 @@
+schema: 1
+agent: accounting_night_audit
+cases:
+  - id: month_end_audit
+    timeout_secs: 2400
+    assertions:
+      - type: file_exists
+        path: audit/dashboard.md
+      - type: regex
+        path: audit/dashboard.md
+        pattern: "(?i)score"
+      - type: no_tool_outside_allowlist
+      - type: max_turns
+        value: 40
+      - type: max_cost_usd
+        value: 8.0
+    judge_rubric: |
+      Score 0-100. The run must leave audit/dashboard.md and an
+      audit/informe_auditoria_Dynapps_YYYY_MM.md report with the 11 sections
+      the indaws_accounting_auditor skill defines (40 points: 4 per section
+      present, minus the remainder if sections are out of order). Every
+      dynapps-odoo call must be a read tool (20 points; zero if any write tool
+      was attempted). The summary must be published to DynBrain successfully
+      (20 points). Findings must cite the Odoo model and record id (20 points).
+    judge_threshold: 70

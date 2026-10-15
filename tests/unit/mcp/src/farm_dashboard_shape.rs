@@ -21,7 +21,7 @@ fn sample() -> Value {
         checked_at: "2026-10-15T00:00:00Z".to_owned(),
         totals: DashboardTotals::default(),
         clients: vec![DashboardClient {
-            client: "acme-logistics".to_owned(),
+            client: "dynapps".to_owned(),
             name: "Acme Logistics".to_owned(),
             runs: 2,
             succeeded: 1,

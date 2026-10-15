@@ -18,4 +18,4 @@ pub use judge::{
 pub use orchestrator::{EvalLaunch, cancel_eval_run, start_eval_run};
 pub use resume::resume_eval_runs;
 pub use transcript::final_result_text;
-pub use triggers::{CaseLaunch, CaseLaunched, start_case_eval, start_demo_eval};
+pub use triggers::{CaseLaunch, CaseLaunched, start_case_eval};

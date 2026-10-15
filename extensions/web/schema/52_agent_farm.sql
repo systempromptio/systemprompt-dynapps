@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS clients (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
-    odoo_partner_id BIGINT,
     service_account_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -89,7 +88,7 @@ CREATE TABLE IF NOT EXISTS agent_farm_runs (
     agent_id TEXT NOT NULL,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     triggered_via TEXT NOT NULL
-        CHECK (triggered_via IN ('dashboard', 'api', 'eval', 'mcp', 'console', 'demo')),
+        CHECK (triggered_via IN ('dashboard', 'api', 'eval', 'mcp', 'console', 'demo', 'scheduler')),
     host TEXT NOT NULL DEFAULT 'claude-code'
         CHECK (host IN ('claude-code', 'codex-cli', 'opencode', 'hermes')),
     status TEXT NOT NULL DEFAULT 'queued'

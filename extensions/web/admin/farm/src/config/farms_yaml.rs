@@ -13,6 +13,7 @@ use super::clients_yaml::{AgentOverride, ClientDef, validate_clients};
 use super::evals_yaml::EvalsConfig;
 use super::run_as::RunAs;
 use super::runner_yaml::{FlyRunnerConfig, RunnerMode};
+use super::tool_policy_yaml::FarmToolPolicy;
 use crate::error::{FarmError, FarmResult};
 
 pub const FARMS_FILE: &str = "web/config/agent-farms.yaml";
@@ -51,6 +52,8 @@ pub struct FarmDef {
     pub agents: BTreeMap<String, AgentOverride>,
     #[serde(default)]
     pub defaults: FarmDefaults,
+    #[serde(default)]
+    pub tool_policy: FarmToolPolicy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -193,6 +196,7 @@ impl FarmsDoc {
             }
             farm.source.validate(&farm.id)?;
             farm.defaults.validate(&farm.id)?;
+            farm.tool_policy.validate(&farm.id).map_err(|e| invalid(&e))?;
         }
         if self.runner.as_ref().is_some_and(|r| r.max_concurrent == 0) {
             return Err(invalid("runner.max_concurrent must be at least 1"));

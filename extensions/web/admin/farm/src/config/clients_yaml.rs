@@ -16,8 +16,6 @@ pub struct ClientDef {
     pub slug: String,
     pub name: String,
     #[serde(default)]
-    pub odoo_partner_id: Option<i64>,
-    #[serde(default)]
     pub service_account: Option<String>,
 }
 

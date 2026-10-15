@@ -13,7 +13,6 @@ pub struct ClientSummaryRow {
     pub client_id: ClientId,
     pub name: String,
     pub slug: String,
-    pub odoo_partner_id: Option<i64>,
     pub runs: i64,
     pub succeeded: i64,
     pub finished: i64,

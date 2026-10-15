@@ -1,6 +1,5 @@
-//! The triggers beyond a plain suite launch: one eval case run on the
-//! caller's own launch (the public API's and MCP's `case`), and a whole suite
-//! started on behalf of the demo.
+//! The trigger beyond a plain suite launch: one eval case run on the caller's
+//! own launch (the public API's and MCP's `case`).
 //!
 //! A case trigger records a one-case eval run and its pending result, then
 //! launches the farm run itself, linked to the result by `eval_result_id`, so
@@ -14,16 +13,14 @@ use systemprompt::identifiers::UserId;
 
 use super::case::{CaseJob, settle_case};
 use super::judge::EvalJudge;
-use super::orchestrator::{
-    EvalLaunch, Tally, close_eval_run, fail_eval_run, record_outcome, set_cancelled, start_eval_run,
-};
+use super::orchestrator::{Tally, close_eval_run, fail_eval_run, record_outcome, set_cancelled};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, EvalCaseRow, EvalRunRow, RunRow};
 use crate::repositories::{agents, evals};
 use crate::services::farm_sync::eval_suite_id;
 use crate::services::runs::{LaunchRequest, launch};
 use crate::state::FarmState;
-use crate::types::{EvalResultId, EvalRunId, EvalRunStatus, EvalSuiteId, FarmId, TriggeredVia};
+use crate::types::{EvalResultId, EvalRunId, EvalRunStatus, FarmId};
 
 /// A launch that is also an eval of one case: `request` carries the caller's
 /// overrides and trigger; the case supplies its prompt, fixture and timeout
@@ -153,25 +150,4 @@ async fn settle(
     )
     .await?;
     close_eval_run(pool, &settling.eval_run_id, &tally).await
-}
-
-pub async fn start_demo_eval(
-    state: Arc<FarmState>,
-    farm_id: FarmId,
-    suite_id: EvalSuiteId,
-    user_id: UserId,
-) -> FarmResult<EvalRunRow> {
-    let judge = state.judge.judge_for(None, &user_id);
-    start_eval_run(
-        state,
-        judge,
-        EvalLaunch {
-            farm_id,
-            suite_id,
-            user_id,
-            triggered_via: TriggeredVia::Demo,
-            case_filter: None,
-        },
-    )
-    .await
 }

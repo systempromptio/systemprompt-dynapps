@@ -97,16 +97,18 @@ text_enum!(TriggeredVia {
     Mcp => "mcp",
     Console => "console",
     Demo => "demo",
+    Scheduler => "scheduler",
 });
 
 impl TriggeredVia {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Dashboard,
         Self::Api,
         Self::Eval,
         Self::Mcp,
         Self::Console,
         Self::Demo,
+        Self::Scheduler,
     ];
 }
 

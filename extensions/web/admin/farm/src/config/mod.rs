@@ -6,10 +6,12 @@ mod evals_yaml;
 mod farms_yaml;
 mod run_as;
 mod runner_yaml;
+mod tool_policy_yaml;
 
 pub use clients_yaml::{AgentOverride, ClientDef};
 pub use evals_yaml::{DEFAULT_JUDGE_MODEL, DEFAULT_JUDGE_PROVIDER, EvalsConfig};
 pub use run_as::{RunAs, RunAsMode};
+pub use tool_policy_yaml::FarmToolPolicy;
 
 pub use farms_yaml::{
     FARMS_FILE, FarmDef, FarmDefaults, FarmsDoc, GitSource, RunnerConfig, parse_farms_doc,

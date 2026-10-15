@@ -42,9 +42,7 @@ fn kit_tree() -> BTreeMap<String, CapturedFile> {
         tree.insert(path.clone(), captured(&read(&path)));
     }
     tree.insert("fixtures/README.md".to_owned(), captured("ground truth"));
-    for fixture in ["dynapps_fleet_maintenance", "dynapps_fleet_maintenance_git"] {
-        tree.insert(format!("fixtures/{fixture}/README.txt"), captured("seed"));
-    }
+    tree.insert("fixtures/night_audit/README.txt".to_owned(), captured("seed"));
     tree
 }
 
@@ -54,7 +52,7 @@ entry_prompt: \"go {{fixture_path}} {{case.prompt}}\"\nfixture: fix_one\n---\nBo
 #[test]
 fn every_kit_agent_parses() {
     let agents = files_in("agents");
-    assert_eq!(agents.len(), 4);
+    assert_eq!(agents.len(), 1);
     for path in agents {
         let agent = parse_agent_markdown(&path, &read(&path)).unwrap_or_else(|e| panic!("{e}"));
         assert!(path.ends_with(&format!("{}.md", agent.name)));
@@ -68,18 +66,18 @@ fn every_kit_agent_parses() {
 #[test]
 fn every_kit_eval_suite_parses() {
     let suites = files_in("evals");
-    assert_eq!(suites.len(), 4);
+    assert_eq!(suites.len(), 1);
     for path in suites {
         let suite = parse_eval_suite(&path, &read(&path)).unwrap_or_else(|e| panic!("{e}"));
         assert!(!suite.cases.is_empty());
     }
-    let reviewer = parse_eval_suite(
-        "evals/odoo_module_reviewer.yaml",
-        &read("evals/odoo_module_reviewer.yaml"),
+    let audit = parse_eval_suite(
+        "evals/accounting_night_audit.yaml",
+        &read("evals/accounting_night_audit.yaml"),
     )
     .unwrap_or_else(|e| panic!("{e}"));
-    let full = &reviewer.cases[0];
-    assert_eq!(full.id, "full_review");
+    let full = &audit.cases[0];
+    assert_eq!(full.id, "month_end_audit");
     assert_eq!(full.effective_judge_threshold(), Some(70));
     assert!(
         full.assertions
@@ -91,12 +89,12 @@ fn every_kit_eval_suite_parses() {
 #[test]
 fn kit_manifest_and_tree_parse_together() {
     let manifest = parse_farm_manifest(&read("farm.yaml")).unwrap_or_else(|e| panic!("{e}"));
-    assert_eq!(manifest.id, "dynapps-agent-farm");
-    assert_eq!(manifest.agents.len(), 4);
+    assert_eq!(manifest.id, "dynapps-night-audit");
+    assert_eq!(manifest.agents.len(), 1);
     let parsed = parse_farm_tree(&kit_tree()).unwrap_or_else(|e| panic!("{e}"));
-    assert_eq!(parsed.agents.len(), 4);
-    assert_eq!(parsed.suites.len(), 4);
-    assert_eq!(parsed.fixtures.len(), 2);
+    assert_eq!(parsed.agents.len(), 1);
+    assert_eq!(parsed.suites.len(), 1);
+    assert_eq!(parsed.fixtures.len(), 1);
     assert!(parsed.warnings.is_empty(), "{:?}", parsed.warnings);
 }
 
@@ -106,7 +104,7 @@ fn tree_refuses_unlisted_agent_and_missing_fixture() {
     tree.insert("agents/abc_agent.md".to_owned(), captured(AGENT));
     assert!(parse_farm_tree(&tree).is_err());
     let mut tree = kit_tree();
-    tree.remove("fixtures/dynapps_fleet_maintenance_git/README.txt");
+    tree.remove("fixtures/night_audit/README.txt");
     assert!(parse_farm_tree(&tree).is_err());
 }
 

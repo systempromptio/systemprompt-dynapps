@@ -7,7 +7,6 @@
 SELECT c.id AS "client_id!: ClientId",
        c.name AS "name!",
        c.slug AS "slug!",
-       c.odoo_partner_id AS "odoo_partner_id?",
        COUNT(r.id)::bigint AS "runs!",
        COUNT(r.id) FILTER (WHERE r.status = 'succeeded')::bigint AS "succeeded!",
        COUNT(r.id) FILTER (WHERE r.status IN ('succeeded', 'failed', 'timed_out'))::bigint AS "finished!",
@@ -28,5 +27,5 @@ LEFT JOIN agent_farm_runs r
 LEFT JOIN agent_farm_run_reports rr ON rr.run_id = r.id
 LEFT JOIN agent_farm_run_eval_scores s ON s.run_id = r.id
 WHERE ($1::text IS NULL OR c.id = $1)
-GROUP BY c.id, c.name, c.slug, c.odoo_partner_id
+GROUP BY c.id, c.name, c.slug
 ORDER BY COUNT(r.id) DESC, c.name

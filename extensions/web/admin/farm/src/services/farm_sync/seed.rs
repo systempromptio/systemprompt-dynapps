@@ -115,14 +115,7 @@ pub async fn seed_farms_from_yaml(pool: &PgPool, services_path: &Path) -> FarmRe
     };
     for client in &doc.clients {
         let account = resolve_client_account(pool, client).await?;
-        clients::upsert_client(
-            pool,
-            &client.slug,
-            &client.name,
-            client.odoo_partner_id,
-            account.as_ref(),
-        )
-        .await?;
+        clients::upsert_client(pool, &client.slug, &client.name, account.as_ref()).await?;
     }
     for def in &doc.farms {
         let owner = format!("farm {:?}", def.id);

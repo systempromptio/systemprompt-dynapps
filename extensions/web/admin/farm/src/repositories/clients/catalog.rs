@@ -15,7 +15,6 @@ pub struct ClientRow {
     pub id: ClientId,
     pub name: String,
     pub slug: String,
-    pub odoo_partner_id: Option<i64>,
     pub service_account_user_id: Option<UserId>,
     pub created_at: DateTime<Utc>,
 }
@@ -24,14 +23,12 @@ pub async fn upsert_client(
     pool: &PgPool,
     slug: &str,
     name: &str,
-    odoo_partner_id: Option<i64>,
     service_account: Option<&UserId>,
 ) -> Result<(), sqlx::Error> {
     sqlx::query_file!(
         "src/repositories/clients/upsert_client.sql",
         slug,
         name,
-        odoo_partner_id,
         service_account.map(UserId::as_str),
     )
     .execute(pool)

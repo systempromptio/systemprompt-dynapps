@@ -15,15 +15,14 @@ use systemprompt_web_admin_farm::types::ClientId;
 const DOC: &str = "clients:
   - slug: dynapps
     name: Dynapps
-  - slug: acme-logistics
-    name: Acme Logistics
-    odoo_partner_id: 12
-    service_account: svc-acme@dynapps.es
+  - slug: northwind
+    name: Northwind
+    service_account: svc-northwind@dynapps.es
 farms:
   - id: triage
     name: Triage
     marketplace: dynapps
-    client: acme-logistics
+    client: northwind
     agents:
       lead_triage:
         run_as: svc-triage@dynapps.es
@@ -36,13 +35,12 @@ fn clients_and_agent_run_as_parse() {
     let doc = parse_farms_doc(DOC).expect("parses");
     doc.validate().expect("valid");
     assert_eq!(doc.clients.len(), 2);
-    assert_eq!(doc.clients[1].odoo_partner_id, Some(12));
     assert_eq!(doc.clients[0].service_account, None);
     assert_eq!(
         doc.clients[1].service_account.as_deref(),
-        Some("svc-acme@dynapps.es")
+        Some("svc-northwind@dynapps.es")
     );
-    assert_eq!(doc.farms[0].client.as_deref(), Some("acme-logistics"));
+    assert_eq!(doc.farms[0].client.as_deref(), Some("northwind"));
     assert_eq!(
         doc.farms[0].agents["lead_triage"].run_as,
         Some(RunAs::service_account("svc-triage@dynapps.es"))
@@ -51,7 +49,7 @@ fn clients_and_agent_run_as_parse() {
 
 #[test]
 fn an_undeclared_client_is_refused() {
-    let text = DOC.replace("client: acme-logistics", "client: globex");
+    let text = DOC.replace("client: northwind", "client: globex");
     let doc = parse_farms_doc(&text).expect("parses");
     let err = doc.validate().expect_err("undeclared client");
     assert!(
@@ -62,14 +60,14 @@ fn an_undeclared_client_is_refused() {
 
 #[test]
 fn a_duplicate_client_is_refused() {
-    let text = DOC.replace("slug: acme-logistics", "slug: dynapps");
+    let text = DOC.replace("slug: northwind", "slug: dynapps");
     let doc = parse_farms_doc(&text).expect("parses");
     assert!(doc.validate().is_err());
 }
 
 #[test]
 fn an_empty_client_service_account_is_refused() {
-    let text = DOC.replace("svc-acme@dynapps.es", "\"  \"");
+    let text = DOC.replace("svc-northwind@dynapps.es", "\"  \"");
     let doc = parse_farms_doc(&text).expect("parses");
     let err = doc.validate().expect_err("empty service_account");
     assert!(err.to_string().contains("empty service_account"), "{err}");
@@ -127,11 +125,11 @@ fn user_mode_is_the_launcher_even_with_a_farm_account() {
 #[test]
 fn client_mode_is_the_clients_service_account() {
     let launcher = UserId::new("launcher");
-    let acme = ClientId::new("acme-logistics");
-    let svc = UserId::new("svc-acme");
+    let northwind = ClientId::new("northwind");
+    let svc = UserId::new("svc-northwind");
     let farm_as = setting(Some(RunAsMode::Client), None);
     let client = RunAsClient {
-        id: &acme,
+        id: &northwind,
         account: Some(&svc),
     };
     assert_eq!(
@@ -144,7 +142,7 @@ fn client_mode_is_the_clients_service_account() {
 #[test]
 fn client_mode_refusals_are_typed() {
     let launcher = UserId::new("launcher");
-    let acme = ClientId::new("acme-logistics");
+    let northwind = ClientId::new("northwind");
     let farm_as = setting(Some(RunAsMode::Client), None);
     let none = RunAsSetting::default();
     assert_eq!(
@@ -152,13 +150,13 @@ fn client_mode_refusals_are_typed() {
         Err(RunAsRefusal::NoClient)
     );
     let bare = RunAsClient {
-        id: &acme,
+        id: &northwind,
         account: None,
     };
     assert_eq!(
         credential_user(none, farm_as, Some(bare), &launcher),
         Err(RunAsRefusal::ClientHasNoAccount {
-            client: "acme-logistics".to_owned()
+            client: "northwind".to_owned()
         })
     );
 }

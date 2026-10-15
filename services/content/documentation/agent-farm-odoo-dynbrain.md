@@ -43,7 +43,7 @@ are `default: closed`:
 
 To see and run a farm's agents you also need the marketplace the farm names
 in `services/web/config/agent-farms.yaml` (`dynapps-agent-farm` for the
-Odoo delivery farm). If any of these is missing, ask an admin to add you to
+nightly audit farm, `dynapps-night-audit`). If any of these is missing, ask an admin to add you to
 the `staff` group; the Access control page shows which band decided.
 
 ## 2. Connect Odoo and DynBrain
@@ -91,6 +91,16 @@ declared tools are passed to Claude Code as `--allowedTools` exactly (the
 run's governance hook under `farm_tool_allowlist`. There is no "all tools of
 this server" form, so name each tool.
 
+A farm can narrow this further with `tool_policy` in `agent-farms.yaml`.
+`mcp_servers` is an allowlist: an agent naming any other server is refused at
+launch. `deny` is appended to every run's `--disallowedTools`, so Claude Code
+refuses those tools before a call leaves the runner. The nightly audit farm
+allows only `dynapps-odoo` and `dynbrain` and denies every dynapps-odoo write
+tool (`orm_create`, `orm_write`, `orm_unlink`, `orm_execute_kw`,
+`odoo_request_upload`): an unattended run can read Odoo but never change it.
+In an attended session the same writes pass governance only for admin or a
+holder of the `odoo_writer` role.
+
 ## 5. Choose whose identity the run uses (`run_as`)
 
 `run_as` is set on the farm in `agent-farms.yaml`, and an agent can override
@@ -105,15 +115,15 @@ is always recorded on it, whatever the mode.
 
 ```yaml
 farms:
-  - id: dynapps-agent-farm
+  - id: dynapps-night-audit
     client: dynapps
     run_as:
-      mode: service_account
-      service_account: svc-odoo-farm@dynapps.es
+      mode: user
     agents:
-      portal_assistant:
+      some_shared_agent:
         run_as:
-          mode: user
+          mode: service_account
+          service_account: svc-farm@dynapps.es
 ```
 
 A row with no mode predates modes: an account set means `service_account`,
@@ -134,8 +144,14 @@ mode spend that grant; the credential broker issues it only to a
   [agent-farm MCP server](/documentation/agent-farm) (`run_start`).
 - **API:** `POST /api/public/agent-farm/runs` with the farm, agent and
   optional prompt, fixture, model, `max_turns`, `max_budget_usd` and
-  `timeout_seconds`. Farm defaults apply otherwise (the Odoo delivery farm:
-  `acceptEdits`, 1200 s, 15 turns, USD 2.00, `claude-sonnet-5-5`).
+  `timeout_seconds`. Farm defaults apply otherwise (the nightly audit farm:
+  `acceptEdits`, 2400 s, 40 turns, USD 8.00, `claude-opus-5-5`).
+- **Scheduler:** the `farm_scheduled_run` job (`services/scheduler/config.yaml`)
+  queues `accounting_night_audit` on `dynapps-night-audit` at 02:00 UTC,
+  launched as the person its `launcher` parameter names. In `user` mode the
+  run spends that person's own dynapps-odoo and dynbrain grants. It is
+  recorded with trigger `scheduler`, which the run report and the farm page
+  show. Run it by hand with `systemprompt infra jobs run farm_scheduled_run`.
 
 ## 7. Follow runs and cost
 

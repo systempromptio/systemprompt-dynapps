@@ -20,8 +20,14 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **A nightly, scheduler-started farm run.** The new `farm_scheduled_run` web job (`extensions/web/jobs/src/farm_scheduled_run.rs`) queues one farm run on core's `agent_runs` on the scheduler's behalf; `services/scheduler/config.yaml` runs it at 02:00 UTC for `accounting_night_audit` on `dynapps-night-audit`, launched as `ed@systemprompt.io`. The run records `triggered_via = scheduler` (migration `017_farm_scheduler_trigger.sql` widens the check), so its report and the farm pages show the scheduler started it. Run it by hand with `systemprompt infra jobs run farm_scheduled_run`.
+- **A farm-level `tool_policy`.** `agent-farms.yaml` farms take `tool_policy: {mcp_servers, deny}`: `mcp_servers` is an allowlist (an agent naming another server is refused at launch) and `deny` is appended to every run's `--disallowedTools`.
+
 ### Changed
 
+- **The agent farm is cut down to one flow.** `services/web/config/agent-farms.yaml` declares one client (`dynapps`) and one farm, `dynapps-night-audit`: `run_as: {mode: user}`, so a run spends its launcher's own dynapps-odoo and dynbrain grants; MCP limited to those two servers; every dynapps-odoo write tool (`orm_create`, `orm_write`, `orm_unlink`, `orm_execute_kw`, `odoo_request_upload`) denied for these unattended runs; `claude-opus-5-5`, 40 turns, USD 8.00, 2400 s. The `acme-logistics` client, the Odoo delivery agents and their fixtures are gone, and so is the clients' `odoo_partner_id` (dropped by migration 017).
 - **Odoo write-gating moved to `dynapps-odoo`.** `services/governance/config.yaml` now gates `mcp__dynapps-odoo__*` tools whose name contains `write`, `create`, `unlink` or `execute` (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`) on admin or the new `odoo_writer` role, which replaces `odoo_destructive`; read tools pass. Under the current warn mode a write by anyone else is recorded as `warn`, and the server's `tool_policy: prompt` still asks before each call. `mcp_server/dynapps-odoo` in `services/access-control/rules.yaml` admits `odoo_writer` holders.
 
 ### Removed

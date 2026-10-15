@@ -43,6 +43,7 @@ pub fn trigger_badge(via: &str) -> BadgeView {
         Some(TriggeredVia::Mcp) => ("accent", "MCP"),
         Some(TriggeredVia::Console) => ("info", "Console"),
         Some(TriggeredVia::Demo) => ("warn", "Demo"),
+        Some(TriggeredVia::Scheduler) => ("accent", "Scheduler"),
         None => ("muted", "Unknown"),
     };
     BadgeView::new(tone, text, via)

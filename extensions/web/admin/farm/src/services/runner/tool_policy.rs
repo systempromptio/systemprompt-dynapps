@@ -5,6 +5,7 @@
 //! have no "every tool of this server but" form and the server's catalogue is
 //! not known at launch. `--allowedTools` lists the declared tools exactly, and
 //! the run's governance hook refuses the rest under `farm_tool_allowlist`.
+//! A farm's `tool_policy.deny` is appended by [`with_farm_denials`].
 
 use systemprompt_web_admin_core::util::tool_allowlist::SKILL_TOOL;
 
@@ -47,4 +48,14 @@ pub fn disallowed_tools(agent_tools: &[String]) -> Vec<String> {
         .filter(|tool| !agent_tools.iter().any(|t| t == *tool))
         .map(|tool| (*tool).to_owned())
         .collect()
+}
+
+#[must_use]
+pub fn with_farm_denials(mut denied: Vec<String>, farm_deny: &[String]) -> Vec<String> {
+    for tool in farm_deny {
+        if !denied.contains(tool) {
+            denied.push(tool.clone());
+        }
+    }
+    denied
 }

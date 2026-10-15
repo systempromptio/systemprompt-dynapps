@@ -6478,6 +6478,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-core",
+ "systemprompt-web-admin-farm",
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",

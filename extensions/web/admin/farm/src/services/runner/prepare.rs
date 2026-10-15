@@ -61,6 +61,7 @@ pub struct RequestSpec<'a> {
     pub max_turns: i32,
     pub max_budget_usd: f64,
     pub timeout_seconds: i32,
+    pub deny_tools: &'a [String],
 }
 
 #[must_use]
@@ -135,7 +136,10 @@ pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
         persona: (!agent.body.trim().is_empty()).then(|| agent.body.clone()),
         model: spec.model.map(ToOwned::to_owned),
         allowed_tools: super::tool_policy::allowed_tools(&agent.tools),
-        disallowed_tools: super::tool_policy::disallowed_tools(&agent.tools),
+        disallowed_tools: super::tool_policy::with_farm_denials(
+            super::tool_policy::disallowed_tools(&agent.tools),
+            spec.deny_tools,
+        ),
         permission_mode,
         permission_prompts_none: false,
         workspace: spec.layout.workspace.clone(),
