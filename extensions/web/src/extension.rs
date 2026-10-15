@@ -59,11 +59,6 @@ impl WebExtension {
     -> Option<Arc<systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig>> {
         config_loader::entra_oidc_config()
     }
-
-    #[must_use]
-    pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>> {
-        config_loader::salesforce_config()
-    }
 }
 
 register_extension!(WebExtension);

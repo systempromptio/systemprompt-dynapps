@@ -27,14 +27,6 @@ pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
     let bridge_identity =
         systemprompt_web_admin_platform::bridge_identity_router(Arc::clone(&db.read));
     let links_router = api::router(Arc::clone(&db.read), WebExtension::blog_config());
-    let salesforce_api = systemprompt_web_admin_platform::salesforce_api_router(
-        systemprompt_web_admin_platform::SalesforceDeps {
-            config: WebExtension::salesforce_config().unwrap_or_else(|| {
-                Arc::new(systemprompt_web_admin_platform::SalesforceConfig::disabled())
-            }),
-            write_pool: Arc::clone(&db.write),
-        },
-    );
 
     Router::new()
         .route(
@@ -50,7 +42,6 @@ pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
             Arc::clone(&db.write),
             admin::service_accounts(&db.read, &db.write),
         ))
-        .merge(salesforce_api)
         .merge(webhook_api)
         .merge(secrets_api)
         .nest("/admin", admin_api)

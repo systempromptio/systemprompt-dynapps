@@ -176,12 +176,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "web/config/security.yaml",
     ),
     file(
-        "salesforce",
-        "Salesforce sign-in",
-        "the connected app the account linking uses",
-        "web/config/salesforce.yaml",
-    ),
-    file(
         "homepage",
         "Homepage",
         "the public landing page's sections",

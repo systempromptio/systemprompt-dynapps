@@ -111,11 +111,7 @@ impl App {
                 Arc::clone(pool),
                 admin::service_accounts(pool, pool),
             ))
-            .merge(platform::bridge_identity_router(Arc::clone(pool)))
-            .merge(platform::salesforce_api_router(platform::SalesforceDeps {
-                config: Arc::new(platform::SalesforceConfig::disabled()),
-                write_pool: Arc::clone(pool),
-            }));
+            .merge(platform::bridge_identity_router(Arc::clone(pool)));
         let sso_deps = sso_deps(pool, &database);
         // Core layers `Option<Arc<AiService>>` onto every extension router;
         // `None` is an instance without inference configured.

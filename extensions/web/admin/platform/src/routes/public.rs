@@ -13,7 +13,6 @@ use sqlx::PgPool;
 
 use crate::handlers;
 use crate::handlers::connector_auth::{account, consent, identity};
-use crate::handlers::salesforce_auth::SalesforceDeps;
 use crate::services::service_accounts::ServiceAccounts;
 
 // Why: the desktop bridge has no cookie jar, so this route authenticates the
@@ -25,17 +24,6 @@ pub fn bridge_identity_router(pool: Arc<PgPool>) -> Router {
             get(handlers::bridge_whoami::bridge_whoami_handler),
         )
         .with_state(pool)
-}
-
-// Why: core's external-MCP client GETs this with the user's bridge token and no
-// session cookie, so it must not sit behind `require_auth_middleware`.
-pub fn salesforce_api_router(deps: SalesforceDeps) -> Router {
-    Router::new()
-        .route(
-            "/salesforce/token",
-            get(handlers::salesforce_auth::salesforce_token_handler),
-        )
-        .layer(Extension(deps))
 }
 
 pub fn connector_api_router(pool: Arc<PgPool>, accounts: ServiceAccounts) -> Router {

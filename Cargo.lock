@@ -6547,7 +6547,6 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-web-admin-identity",
- "systemprompt-web-admin-platform",
  "systemprompt-web-shared",
  "thiserror 2.0.21",
  "tracing",

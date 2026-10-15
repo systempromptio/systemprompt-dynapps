@@ -21,7 +21,6 @@ use crate::handlers::salesforce_auth::{SalesforceConfig, SalesforceError, post_t
 
 pub(crate) struct FreshToken {
     pub access_token: String,
-    pub instance_url: String,
 }
 
 // Why: Salesforce rejects an assertion whose `exp` is more than 5 minutes out.
@@ -43,12 +42,11 @@ pub(crate) async fn get_token(
     private_key_pem: &str,
 ) -> Result<FreshToken, SalesforceError> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-    let audience = cfg.jwt_bearer_audience().to_owned();
 
     let assertion = Assertion {
         iss: cfg.consumer_key.clone(),
         sub: username.to_owned(),
-        aud: audience.clone(),
+        aud: cfg.jwt_bearer_audience().to_owned(),
         exp: now + ASSERTION_TTL_SECS,
     };
 
@@ -59,14 +57,8 @@ pub(crate) async fn get_token(
 
     let resp = post_token_request(&cfg.token_url(), assertion_form_body(&signed)).await?;
 
-    let instance_url = resp
-        .instance_url
-        .filter(|u| !u.is_empty())
-        .unwrap_or(audience);
-
     Ok(FreshToken {
         access_token: resp.access_token,
-        instance_url,
     })
 }
 

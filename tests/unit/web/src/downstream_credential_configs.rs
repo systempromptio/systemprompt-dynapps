@@ -1,30 +1,23 @@
 //! The committed downstream-credential configs are load-bearing and otherwise
-//! unvalidated until boot: nothing else in the suite reads
-//! `services/web/config/salesforce.yaml` or the external MCP server YAMLs that
-//! depend on a per-user accessor. These checks parse every one of them the way
-//! the loaders do, so a typo'd key or an accessor path that disagrees with the
-//! route it names fails here rather than at a user's first tool call.
+//! unvalidated until boot: nothing else in the suite reads the external MCP
+//! server YAMLs that depend on a per-user accessor. These checks parse every
+//! one of them the way the loaders do, so a typo'd key or an accessor path
+//! that disagrees with the route it names fails here rather than at a user's
+//! first tool call.
 //!
-//! They also pin the posture: the Salesforce app ships disabled ahead of its
-//! credentials, the hosted Atlassian connector is the only Atlassian server,
-//! and the retired v1 `jira`/`confluence` servers cannot creep back.
-
-use std::path::PathBuf;
-
-use systemprompt_web_admin_platform::SalesforceConfig;
+//! They also pin the posture: the hosted Atlassian connector is the only
+//! Atlassian server, the retired v1 `jira`/`confluence` servers cannot creep
+//! back, and neither can the retired `/api/public/salesforce/token` accessor's
+//! `services/web/config/salesforce.yaml`.
 
 use crate::support::repo_root;
 
-// Why: must match the routes registered by `connector_api_router` /
-// `salesforce_api_router` under the `/api/public` nest. Core resolves the
+// Why: must match the routes registered by `connector_api_router` under the
+// `/api/public` nest. Core resolves the
 // accessor as `api_external_url + token_endpoint`, so a disagreement here is a
 // 404 at tool-call time and nowhere earlier.
 const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
 const SALESFORCE_SERVERS: [&str; 1] = ["salesforce"];
-
-fn web_config(name: &str) -> PathBuf {
-    repo_root().join("services/web/config").join(name)
-}
 
 fn mcp_config(name: &str) -> serde_yaml::Value {
     let path = repo_root().join("services/mcp").join(name);
@@ -42,23 +35,9 @@ fn server(file: &str, name: &str) -> serde_yaml::Value {
 }
 
 #[test]
-fn the_salesforce_config_parses_as_the_loader_reads_it() {
-    let path = web_config("salesforce.yaml");
-    let yaml = std::fs::read_to_string(&path).expect("salesforce.yaml is readable");
-    let config: SalesforceConfig = serde_yaml::from_str(&yaml)
-        .unwrap_or_else(|e| panic!("{} parses as SalesforceConfig: {e}", path.display()));
-
-    assert!(
-        config.my_domain.starts_with("https://"),
-        "my_domain doubles as the JWT-bearer audience and must be the https My Domain base, got {}",
-        config.my_domain
-    );
-}
-
-#[test]
-fn the_salesforce_app_ships_disabled_and_its_server_enabled() {
-    // Why: the app needs a credential that does not exist in any environment
-    // yet; the server is visible only to linked users, so it can stay on.
+fn the_salesforce_server_ships_enabled() {
+    // Why: the server is visible only to users with a linked Salesforce
+    // identity, so it can stay on.
     for name in SALESFORCE_SERVERS {
         assert_eq!(
             server(&format!("{name}.yaml"), name)["enabled"].as_bool(),
@@ -66,13 +45,6 @@ fn the_salesforce_app_ships_disabled_and_its_server_enabled() {
             "{name} must ship enabled"
         );
     }
-    let yaml = std::fs::read_to_string(web_config("salesforce.yaml")).expect("readable");
-    let value: serde_yaml::Value = serde_yaml::from_str(&yaml).expect("parses");
-    assert_eq!(
-        value.get("enabled").and_then(serde_yaml::Value::as_bool),
-        Some(false),
-        "salesforce.yaml must ship disabled"
-    );
 }
 
 #[test]
@@ -150,10 +122,11 @@ fn the_retired_v1_atlassian_files_do_not_exist() {
         "services/mcp/confluence.yaml",
         "services/web/config/atlassian.yaml",
         "services/access-control/atlassian.yaml",
+        "services/web/config/salesforce.yaml",
     ] {
         assert!(
             !repo_root().join(path).exists(),
-            "{path} belongs to the retired v1 Atlassian link"
+            "{path} belongs to a retired downstream link"
         );
     }
 }

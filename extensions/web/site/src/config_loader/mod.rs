@@ -8,10 +8,8 @@
 
 use std::sync::{Arc, OnceLock};
 
-mod downstream;
 mod sso_oidc;
 
-use downstream::load_salesforce_config;
 use sso_oidc::load_entra_oidc_config;
 
 use systemprompt::config::{AppPaths, ProfileBootstrap};
@@ -120,9 +118,6 @@ static HOMEPAGE_CONFIG: OnceLock<Result<Option<Arc<HomepageConfig>>, String>> = 
 static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String>> =
     OnceLock::new();
 static ENTRA_OIDC_CONFIG: OnceLock<Result<Option<Arc<EntraOidcConfig>>, String>> = OnceLock::new();
-static SALESFORCE_CONFIG: OnceLock<
-    Result<Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>>, String>,
-> = OnceLock::new();
 
 #[must_use]
 pub fn navigation_config() -> Option<Arc<NavigationConfig>> {
@@ -161,15 +156,6 @@ pub fn entra_oidc_config() -> Option<Arc<EntraOidcConfig>> {
         &ENTRA_OIDC_CONFIG,
         load_optional_entra_oidc_config,
         "Entra OIDC config error",
-    )
-}
-
-#[must_use]
-pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>> {
-    log_and_discard_err(
-        &SALESFORCE_CONFIG,
-        load_salesforce_config,
-        "Salesforce config error",
     )
 }
 
