@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dynapps — Agent Farm</title>
+<style>
+/* Dynapps brand tokens, mirrored from storage/files/css/core/variables.css.
+   Inlined because this page renders inside a sandboxed MCP-App iframe that
+   cannot reach the gateway's stylesheets. */
+:root{
+  color-scheme: light dark;
+  --accent:#F13C42;
+  --bg:#f8f7f3; --surface:#f1efed; --raised:#ffffff;
+  --ink:#171717; --ink-2:#4d4d4d; --muted:#707070;
+  --line:#dddddd; --line-soft:rgba(23,23,23,.08);
+  --ok:#16a34a; --warn:#d97706; --err:#dc2626; --info:#0071ce;
+  --ok-soft:rgba(34,197,94,.14); --warn-soft:rgba(251,191,36,.18);
+  --err-soft:rgba(239,68,68,.14); --muted-soft:rgba(112,112,112,.14);
+  --radius:16px 4px 16px 16px; --radius-sm:8px 2px 8px 8px; --pill:9999px;
+  --shadow:0 4px 8px rgba(0,0,0,.08);
+  --font:'Readex Pro','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  --mono:'Roboto Mono',ui-monospace,'SF Mono','Fira Code',monospace;
+  --step:150ms ease;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a0a0a; --surface:#171717; --raised:#1f1f1f;
+    --ink:#f8f7f3; --ink-2:#d4d4d4; --muted:#9a9a9a;
+    --line:#333333; --line-soft:rgba(248,247,243,.10);
+    --ok:#22c55e; --warn:#fbbf24; --err:#ef4444;
+    --shadow:0 4px 8px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0a0a0a; --surface:#171717; --raised:#1f1f1f;
+  --ink:#f8f7f3; --ink-2:#d4d4d4; --muted:#9a9a9a;
+  --line:#333333; --line-soft:rgba(248,247,243,.10);
+  --ok:#22c55e; --warn:#fbbf24; --err:#ef4444;
+  --shadow:0 4px 8px rgba(0,0,0,.4);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);font-size:15px;line-height:1.5;color:var(--ink);
+  background:var(--bg);padding:24px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.brand{font-size:12px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:4px}
+.meta{color:var(--muted);font-size:13px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:20px 0}
+.toolbar label{display:grid;gap:6px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
+select,button{font:inherit;font-size:14px;color:var(--ink);background:var(--raised);
+  border:1px solid var(--line);border-radius:8px;padding:9px 12px;transition:border-color var(--step)}
+button{cursor:pointer;font-weight:600}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.5;cursor:progress}
+.state{padding:10px 0;font-size:13px;color:var(--ink-2)}
+.state.warn{color:var(--accent);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+.kpi{padding:14px 16px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--line-soft);border-left:3px solid var(--line)}
+.kpi.ok{border-left-color:var(--ok)} .kpi.warn{border-left-color:var(--warn)} .kpi.err{border-left-color:var(--err)}
+.kpi .k-l{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.kpi .k-v{margin-top:6px;font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .k-n{font-size:12px;color:var(--muted)}
+h2{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:28px 0 10px}
+h2 small{font-weight:400;font-size:12px;color:var(--muted);margin-left:8px}
+.card{border-radius:var(--radius);background:var(--raised);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.chart{padding:16px}
+.chart svg{display:block;width:100%;height:180px}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{text-align:left;font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+  padding:12px 14px;background:var(--surface);border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--line-soft);color:var(--ink-2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{display:inline-block;width:64px;height:6px;border-radius:var(--pill);background:var(--muted-soft);vertical-align:middle;margin-right:8px;overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--accent)}
+.pill{display:inline-block;padding:2px 9px;border-radius:var(--pill);font-size:12px;font-weight:600;white-space:nowrap;background:var(--muted-soft);color:var(--ink-2)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.err{background:var(--err-soft);color:var(--err)}
+.summary{max-width:360px;font-size:13px}
+.empty{padding:22px;color:var(--muted);font-size:13.5px}
+code{font-family:var(--mono);font-size:12px}
+[hidden]{display:none!important}
+@media (max-width:640px){body{padding:14px} h1{font-size:22px} .toolbar>*{flex:1 1 100%} table{min-width:600px}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style></head><body><main class="wrap">
+<header>
+  <div class="brand">Dynapps &middot; Agent farm</div>
+  <h1>Agent Farm</h1>
+  <p class="meta">Runs, success rate, task completion, eval scores and cost per client and per agent, from this platform&rsquo;s own farm tables. Administrators see every run; everyone else sees the runs they launched.</p>
+</header>
+
+<div class="toolbar">
+  <label>Period
+    <select id="window">
+      <option value="24h">24 hours</option>
+      <option value="7d" selected>7 days</option>
+      <option value="30d">30 days</option>
+    </select>
+  </label>
+  <label>Client
+    <select id="client"><option value="">All clients</option></select>
+  </label>
+  <button id="refresh" type="button" class="primary">Refresh</button>
+</div>
+
+<div id="state" class="state" role="status" aria-live="polite">Ready</div>
+<p id="period" class="meta"></p>
+<div id="kpis" class="kpis"></div>
+
+<h2>Runs over time<small id="trend-note"></small></h2>
+<div class="card chart" id="trend"></div>
+
+<h2>Clients<small id="clients-note"></small></h2>
+<div id="clients"></div>
+
+<h2>Agents<small id="agents-note"></small></h2>
+<div id="agents"></div>
+
+<h2>Recent runs<small id="runs-note"></small></h2>
+<div id="runs"></div>
+</main><script>
+'use strict';
+/*MCP_BRIDGE*/
+const initial = /*REPORT_DATA*/null;
+const $ = id => document.getElementById(id);
+const TOOL = 'mcp__agent-farm__farm_dashboard';
+let busy = false;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const usd = m => typeof m === 'number' && m > 0
+  ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 4 }).format(m / 1e6)
+  : '$0';
+const pct = v => typeof v === 'number' ? Math.round(v) + '%' : '—';
+const score = v => typeof v === 'number' ? String(Math.round(v)) : '—';
+const tone = v => typeof v !== 'number' ? '' : v >= 90 ? 'ok' : v >= 70 ? 'warn' : 'err';
+const when = t => t ? new Date(t).toLocaleString() : '—';
+const share = (part, whole) => whole > 0 ? (part * 100 / whole) : null;
+
+function validate(d) {
+  if (!d || typeof d !== 'object') return ['response is not an object'];
+  const bad = [];
+  for (const [k, ok] of [
+    ['totals', d.totals && typeof d.totals === 'object'],
+    ['clients', Array.isArray(d.clients)], ['agents', Array.isArray(d.agents)],
+    ['daily', Array.isArray(d.daily)], ['recent_runs', Array.isArray(d.recent_runs)],
+    ['checked_at', typeof d.checked_at === 'string'],
+  ]) if (!ok) bad.push(k);
+  return bad;
+}
+
+function kpi(label, value, note, cls) {
+  return '<div class="kpi ' + (cls || '') + '"><div class="k-l">' + esc(label) + '</div><div class="k-v">'
+    + esc(value) + '</div><div class="k-n">' + esc(note) + '</div></div>';
+}
+
+function trend(days) {
+  if (!days.length || !days.some(d => d.runs > 0)) return '<p class="empty">No farm runs in this window.</p>';
+  const W = 600, H = 180, pad = 4, n = days.length;
+  const max = Math.max(1, ...days.map(d => d.runs));
+  const bw = (W - pad * 2) / n;
+  const bars = days.map((d, i) => {
+    const h = (d.runs / max) * (H - 20), hs = (d.succeeded / max) * (H - 20);
+    const x = pad + i * bw + bw * 0.15, w = bw * 0.7;
+    return '<g><title>' + esc(d.day) + ': ' + d.runs + ' runs, ' + d.succeeded + ' succeeded</title>'
+      + '<rect x="' + x.toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="var(--muted-soft)"></rect>'
+      + '<rect x="' + x.toFixed(1) + '" y="' + (H - hs).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hs.toFixed(1) + '" fill="var(--accent)"></rect></g>';
+  }).join('');
+  let last = null;
+  const pts = days.map((d, i) => {
+    if (d.finished > 0) last = d.succeeded * 100 / d.finished;
+    if (last === null) return null;
+    return (pad + i * bw + bw / 2).toFixed(1) + ',' + (H - (last / 100) * (H - 20)).toFixed(1);
+  }).filter(Boolean);
+  const line = pts.length > 1
+    ? '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--ok)" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>' : '';
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Runs per day with success rate">'
+    + bars + line + '</svg><div class="legend"><span><i style="background:var(--muted-soft)"></i>Runs</span>'
+    + '<span><i style="background:var(--accent)"></i>Succeeded</span><span><i style="background:var(--ok)"></i>Success rate (0–100%)</span>'
+    + '<span>' + esc(days[0].day) + ' – ' + esc(days[n - 1].day) + ', peak ' + max + ' runs/day</span></div>';
+}
+
+function table(cols, rows, render, empty) {
+  if (!rows.length) return '<div class="card"><p class="empty">' + esc(empty) + '</p></div>';
+  return '<div class="card"><div class="scroll"><table><thead><tr>'
+    + cols.map(c => '<th scope="col">' + esc(c) + '</th>').join('')
+    + '</tr></thead><tbody>' + rows.map(render).join('') + '</tbody></table></div></div>';
+}
+
+function pill(text, cls) { return '<span class="pill ' + (cls || '') + '">' + esc(text) + '</span>'; }
+
+function render(d) {
+  const bad = validate(d);
+  if (bad.length) {
+    $('state').textContent = 'The server returned figures this page cannot trust (' + bad.join(', ') + ').';
+    $('state').className = 'state warn';
+    return;
+  }
+  $('state').textContent = 'Loaded · scope ' + d.scope;
+  $('state').className = 'state';
+  $('period').textContent = 'Last ' + d.window + ' · retrieved ' + when(d.checked_at);
+  const t = d.totals;
+  const completion = share(t.completed, t.reported);
+  $('kpis').innerHTML = kpi('Runs', t.runs.toLocaleString(), t.finished + ' finished')
+    + kpi('Success rate', pct(t.success_pct), t.succeeded + ' of ' + t.finished + ' succeeded', tone(t.success_pct))
+    + kpi('Task completion', pct(completion), t.completed + ' of ' + t.reported + ' reported', tone(completion))
+    + kpi('Eval score', score(t.eval_mean), 'mean judge score, 0–100', tone(t.eval_mean))
+    + kpi('Cost', usd(t.cost_microdollars), 'gateway spend');
+  $('trend').innerHTML = trend(d.daily);
+  $('trend-note').textContent = d.daily.length + ' days';
+
+  const sel = $('client'), keep = sel.value;
+  sel.innerHTML = '<option value="">All clients</option>' + d.clients.map(c =>
+    '<option value="' + esc(c.client) + '">' + esc(c.name) + '</option>').join('');
+  sel.value = d.client || keep;
+
+  const total = d.clients.reduce((a, c) => a + c.runs, 0);
+  $('clients-note').textContent = d.clients.length + ' clients';
+  $('clients').innerHTML = table(
+    ['Client', 'Runs', 'Success', 'Completion', 'Eval', 'People', 'Cost', 'Last run'], d.clients, c => {
+      const s = share(c.runs, total) || 0, comp = share(c.completed, c.reported);
+      return '<tr><td><strong>' + esc(c.name) + '</strong> <code>' + esc(c.client) + '</code></td>'
+        + '<td class="num"><span class="bar"><span style="width:' + s.toFixed(1) + '%"></span></span>' + c.runs + '</td>'
+        + '<td>' + pill(pct(c.success_pct), tone(c.success_pct)) + '</td>'
+        + '<td class="num">' + pct(comp) + '</td><td class="num">' + score(c.eval_mean) + '</td>'
+        + '<td class="num">' + c.people + '</td><td class="num">' + usd(c.cost_microdollars) + '</td>'
+        + '<td>' + when(c.last_run_at) + '</td></tr>';
+    }, 'No clients declared.');
+
+  $('agents-note').textContent = d.agents.length + ' agents';
+  $('agents').innerHTML = table(
+    ['Agent', 'Runs', 'Success', 'Completed', 'Eval', 'Cost', 'Last run'], d.agents, a =>
+      '<tr><td>' + esc(a.farm) + ' › <strong>' + esc(a.agent) + '</strong></td><td class="num">' + a.runs + '</td>'
+      + '<td><span class="bar"><span style="width:' + (a.success_pct || 0).toFixed(1) + '%"></span></span>' + pill(pct(a.success_pct), tone(a.success_pct)) + '</td>'
+      + '<td class="num">' + a.completed + '</td><td class="num">' + score(a.eval_mean) + '</td>'
+      + '<td class="num">' + usd(a.cost_microdollars) + '</td><td>' + when(a.last_run_at) + '</td></tr>',
+    'No runs in this window.');
+
+  const statusTone = s => s === 'succeeded' ? 'ok' : (s === 'failed' || s === 'timed_out') ? 'err' : s === 'running' ? 'warn' : '';
+  $('runs-note').textContent = d.recent_runs.length + ' shown';
+  $('runs').innerHTML = table(
+    ['When', 'Agent', 'Client', 'Launched by', 'Status', 'Report', 'Eval', 'Summary', 'Cost'], d.recent_runs, r =>
+      '<tr><td>' + when(r.created_at) + '</td><td>' + esc(r.farm) + ' › ' + esc(r.agent) + '</td>'
+      + '<td>' + esc(r.client_name || '—') + '</td><td><code>' + esc(r.launched_by) + '</code></td>'
+      + '<td>' + pill(r.status, statusTone(r.status)) + '</td>'
+      + '<td>' + (r.completed === true ? pill('Completed', 'ok') : r.completed === false ? pill('Incomplete', 'err') : pill('No report')) + '</td>'
+      + '<td>' + (r.eval_passed === true ? pill('Passed ' + score(r.eval_score), 'ok') : r.eval_passed === false ? pill('Failed ' + score(r.eval_score), 'err') : pill('Not scored')) + '</td>'
+      + '<td class="summary">' + esc(r.summary || '') + '</td><td class="num">' + usd(r.cost_microdollars) + '</td></tr>',
+    'No runs yet.');
+}
+
+function unpack(result) {
+  if (result && result.isError) {
+    const t = (result.content || []).find(c => c.text);
+    throw Error(t ? t.text : 'farm_dashboard failed');
+  }
+  let data = result && result.structuredContent;
+  if (!data) {
+    const block = ((result && result.content) || []).find(c => c.text);
+    const text = block ? block.text : '';
+    try { data = JSON.parse(text); }
+    catch { const i = text.indexOf('{'); if (i >= 0) data = JSON.parse(text.slice(i)); }
+  }
+  if (data && typeof data.content === 'string') data = JSON.parse(data.content);
+  if (data && data.data && Array.isArray(data.data.clients)) data = data.data;
+  if (!data || !Array.isArray(data.clients)) throw Error('Unsupported farm_dashboard response');
+  return data;
+}
+
+async function call(args) {
+  if (!window.cowork || !window.cowork.callMcpTool) {
+    throw Error('The workspace MCP bridge is unavailable. Open this artifact in a connected MCP Apps or Cowork host.');
+  }
+  let timer;
+  try {
+    return unpack(await Promise.race([
+      window.cowork.callMcpTool(TOOL, args),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(Error('farm_dashboard timed out. Previously displayed data is unchanged.')), 120000);
+      }),
+    ]));
+  } finally { clearTimeout(timer); }
+}
+
+async function refresh() {
+  if (busy) return;
+  busy = true;
+  $('refresh').disabled = true;
+  $('state').textContent = 'Loading…';
+  $('state').className = 'state';
+  try { render(await call({ window: $('window').value, client: $('client').value })); }
+  catch (error) { $('state').textContent = error.message; $('state').className = 'state warn'; }
+  finally { busy = false; $('refresh').disabled = false; }
+}
+
+$('refresh').onclick = refresh;
+$('window').onchange = refresh;
+$('client').onchange = refresh;
+
+window.addEventListener('message', event => {
+  if (event.source !== window.parent) return;
+  const d = event.data || {};
+  const t = (d.params && d.params.hostContext && d.params.hostContext.theme)
+         || (d.hostContext && d.hostContext.theme) || d.theme;
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+});
+
+if (initial) {
+  if (initial.window) $('window').value = initial.window;
+  render(initial);
+} else {
+  refresh();
+}
+</script></body></html>

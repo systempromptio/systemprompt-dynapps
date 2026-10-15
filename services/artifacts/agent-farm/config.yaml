@@ -1,0 +1,15 @@
+id: agent-farm
+name: Agent Farm
+description: "Dynapps — Agent Farm. Runs, success rate, task completion, eval scores\
+  \ and cost per client and per agent, with recent runs, read as your signed-in account."
+version: 1.0.0
+enabled: true
+starred: true
+category: engineering
+tags:
+- engineering
+- agent-farm
+- reporting
+mcp_tools:
+- mcp__agent-farm__farm_dashboard
+file: view.html

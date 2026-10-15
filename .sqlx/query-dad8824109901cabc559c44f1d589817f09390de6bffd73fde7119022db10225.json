@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT run_id AS \"run_id!: FarmRunId\",\n       completed AS \"completed!\",\n       summary AS \"summary?\",\n       final_message AS \"final_message?\",\n       outputs AS \"outputs!\",\n       odoo_writes AS \"odoo_writes!\",\n       eval_passed AS \"eval_passed?\",\n       eval_score AS \"eval_score?\",\n       created_at AS \"created_at!\"\nFROM agent_farm_run_reports\nWHERE run_id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "run_id!: FarmRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "completed!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "completed"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "final_message?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "final_message"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "outputs!",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "outputs"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "odoo_writes!",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "odoo_writes"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "eval_passed?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_passed"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "eval_score?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_score"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "dad8824109901cabc559c44f1d589817f09390de6bffd73fde7119022db10225"
+}

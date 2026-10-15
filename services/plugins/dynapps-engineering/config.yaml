@@ -24,5 +24,12 @@ plugin:
     include:
       - agent-farm
   content_sources: {}
+  # The farm dashboard, drawn from the agent-farm server's `farm_dashboard`
+  # tool: per-client and per-agent outcomes for administrators, the caller's
+  # own runs for everyone else.
+  artifacts:
+    source: explicit
+    include:
+      - agent-farm
   # No `hooks:` key. dynapps-commons owns the session-global governance
   # hooks; a second owner would be another govern call per tool.

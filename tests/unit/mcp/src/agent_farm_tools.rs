@@ -1,4 +1,4 @@
-//! The `agent-farm` MCP server: its fourteen tools are the whole surface,
+//! The `agent-farm` MCP server: its fifteen tools are the whole surface,
 //! every schema it lists is well-formed and Gemini-declarable, the
 //! read-only annotation sits on exactly the tools that change nothing, and
 //! `authorize_run` admits a person's own run, their project's run and an
@@ -31,6 +31,7 @@ const READ_ONLY: [&str; 12] = [
     "analytics_skills",
     "analytics_tools",
     "catalog_list",
+    "farm_dashboard",
 ];
 
 fn names(tools: &[rmcp::model::Tool]) -> Vec<String> {
