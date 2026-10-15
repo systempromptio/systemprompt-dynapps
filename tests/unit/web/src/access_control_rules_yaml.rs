@@ -42,20 +42,20 @@ fn project(
 #[test]
 fn every_band_value_becomes_one_row_carrying_the_entity_why() {
     let set = project(
-        "entities:\n  - entity: mcp_server/atlassian\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs, uk]\n    deny:\n      project: [storefront]\n",
+        "entities:\n  - entity: mcp_server/dynbrain\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs, uk]\n    deny:\n      project: [storefront]\n",
         &[],
         &[],
     )
     .expect("projects");
     assert_eq!(set.rules.len(), 4);
-    let uk = &set.rules[&key("mcp_server", "atlassian", "group", "uk")];
+    let uk = &set.rules[&key("mcp_server", "dynbrain", "group", "uk")];
     assert_eq!(uk.access, Access::Allow);
     assert_eq!(uk.justification, "pilot");
-    let denied = &set.rules[&key("mcp_server", "atlassian", "project", "storefront")];
+    let denied = &set.rules[&key("mcp_server", "dynbrain", "project", "storefront")];
     assert_eq!(denied.access, Access::Deny);
-    let entity = &set.entities[&("mcp_server".to_owned(), "atlassian".to_owned())];
+    let entity = &set.entities[&("mcp_server".to_owned(), "dynbrain".to_owned())];
     assert!(!entity.default_included);
-    assert!(set.governs("mcp_server", "atlassian"));
+    assert!(set.governs("mcp_server", "dynbrain"));
     assert!(!set.governs("mcp_server", "github"));
 }
 

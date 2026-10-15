@@ -112,17 +112,6 @@
                     <dt>Slack</dt>
                     <dd><span class="sp-kv-row__value"><span class="sp-u-mono">{{#if identity.slack_user_id}}{{identity.slack_user_id}}{{else}}Not linked{{/if}}</span>{{#if can_write}}{{#if identity.slack_user_id}}<button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-unlink="slack">Unlink</button>{{/if}}{{/if}}</span></dd>
                 </div>
-{{#if identity.salesforce_identities}}{{#each identity.salesforce_identities}}
-                <div class="sp-kv-row">
-                    <dt>{{this.label}}</dt>
-                    <dd><span class="sp-kv-row__value"><span class="sp-u-mono">{{this.sf_username}}</span>{{#if ../can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-unlink="salesforce" data-provider="{{this.provider}}">Unlink</button>{{/if}}</span></dd>
-                </div>
-                {{/each}}{{else}}
-                <div class="sp-kv-row">
-                    <dt>Salesforce</dt>
-                    <dd><span class="sp-kv-row__value"><span class="sp-u-mono">Not linked</span></span></dd>
-                </div>
-                {{/if}}
                 <div class="sp-kv-row">
                     <dt>Share token</dt>
                     <dd><span class="sp-kv-row__value"><span class="sp-u-num">version {{identity.share_token_version}}</span>{{#if can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-issue-share-token>Issue</button>{{/if}}</span></dd>

@@ -261,6 +261,10 @@ for entry in lock["plugins"]:
 
     pdir = services / "plugins" / plugin_id
     pdir.mkdir(parents=True)
+    # Dynapps-side MCP bindings the upstream manifest cannot know: the farm
+    # plugin carries the portal servers its farm agents call
+    # (`mcp__dynapps-odoo__*`, `mcp__dynbrain__*`).
+    local_mcp = {"indaws-farm": ["dynapps-odoo", "dynbrain"]}.get(plugin_id, [])
     plugin = {"plugin": {
         "id": plugin_id,
         "name": f"Indaws {short.replace('-', ' ').title()}",
@@ -273,7 +277,7 @@ for entry in lock["plugins"]:
         "category": upstream.get("category", "productivity"),
         "skills": {"source": "explicit", "include": skill_ids},
         "agents": {"source": "explicit", "include": []},
-        "mcp_servers": {"source": "explicit", "include": []},
+        "mcp_servers": {"source": "explicit", "include": local_mcp},
         "content_sources": {},
     }}
     header = [

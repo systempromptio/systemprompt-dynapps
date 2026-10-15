@@ -19,53 +19,59 @@ async fn consent_is_single_use_and_bound_to_the_user_and_provider() {
         ciphertext: vec![7; 32],
         nonce: vec![1; 12],
     };
-    repo::save_state(&db.pool, &user_id(&alice), "github", "test-consent", &grant)
-        .await
-        .unwrap();
+    repo::save_state(
+        &db.pool,
+        &user_id(&alice),
+        "dynapps-odoo",
+        "test-consent",
+        &grant,
+    )
+    .await
+    .unwrap();
     assert!(
-        repo::consume_state(&db.pool, &user_id(&bob), "github", "test-consent")
+        repo::consume_state(&db.pool, &user_id(&bob), "dynapps-odoo", "test-consent")
             .await
             .unwrap()
             .is_none()
     );
     assert!(
-        repo::consume_state(&db.pool, &user_id(&alice), "atlassian", "test-consent")
+        repo::consume_state(&db.pool, &user_id(&alice), "dynbrain", "test-consent")
             .await
             .unwrap()
             .is_none()
     );
     assert!(
-        repo::consume_state(&db.pool, &user_id(&alice), "github", "test-consent")
+        repo::consume_state(&db.pool, &user_id(&alice), "dynapps-odoo", "test-consent")
             .await
             .unwrap()
             .is_some()
     );
     assert!(
-        repo::consume_state(&db.pool, &user_id(&alice), "github", "test-consent")
+        repo::consume_state(&db.pool, &user_id(&alice), "dynapps-odoo", "test-consent")
             .await
             .unwrap()
             .is_none()
     );
     let mut tx = db.pool.begin().await.unwrap();
-    repo::store(&mut tx, &user_id(&alice), "github", &grant)
+    repo::store(&mut tx, &user_id(&alice), "dynapps-odoo", &grant)
         .await
         .unwrap();
     tx.commit().await.unwrap();
     let mut tx = db.pool.begin().await.unwrap();
     assert!(
-        repo::lock(&mut tx, &user_id(&bob), "github")
+        repo::lock(&mut tx, &user_id(&bob), "dynapps-odoo")
             .await
             .unwrap()
             .is_none()
     );
     assert!(
-        repo::lock(&mut tx, &user_id(&alice), "atlassian")
+        repo::lock(&mut tx, &user_id(&alice), "dynbrain")
             .await
             .unwrap()
             .is_none()
     );
     assert!(
-        repo::lock(&mut tx, &user_id(&alice), "github")
+        repo::lock(&mut tx, &user_id(&alice), "dynapps-odoo")
             .await
             .unwrap()
             .is_some()
@@ -86,7 +92,7 @@ async fn account_revisions_survive_disconnect_and_are_isolated_per_user() {
     insert_user(&db.pool, &bob).await;
     let user = user_id(&alice);
     let mut tx = db.pool.begin().await.unwrap();
-    let mut row = accounts::get_locked_account(&mut tx, &user, "github")
+    let mut row = accounts::get_locked_account(&mut tx, &user, "dynapps-odoo")
         .await
         .unwrap();
     let initial = row.revision;
@@ -105,7 +111,7 @@ async fn account_revisions_survive_disconnect_and_are_isolated_per_user() {
             .is_empty()
     );
     let mut tx = db.pool.begin().await.unwrap();
-    let mut row = accounts::get_locked_account(&mut tx, &user, "github")
+    let mut row = accounts::get_locked_account(&mut tx, &user, "dynapps-odoo")
         .await
         .unwrap();
     row.status = "not_connected".into();
@@ -131,7 +137,7 @@ async fn refresh_and_disconnect_serialize_on_the_account_generation() {
     insert_user(&db.pool, &alice).await;
     let user = user_id(&alice);
     let mut first = db.pool.begin().await.unwrap();
-    let mut row = accounts::get_locked_account(&mut first, &user, "atlassian")
+    let mut row = accounts::get_locked_account(&mut first, &user, "dynbrain")
         .await
         .unwrap();
     row.generation += 1;
@@ -142,7 +148,7 @@ async fn refresh_and_disconnect_serialize_on_the_account_generation() {
     assert!(
         tokio::time::timeout(
             Duration::from_millis(50),
-            accounts::get_locked_account(&mut second, &user, "atlassian")
+            accounts::get_locked_account(&mut second, &user, "dynbrain")
         )
         .await
         .is_err()
@@ -152,7 +158,7 @@ async fn refresh_and_disconnect_serialize_on_the_account_generation() {
     // transaction to prove the committed generation is what a callback sees.
     second.rollback().await.unwrap();
     let mut second = db.pool.begin().await.unwrap();
-    let observed = accounts::get_locked_account(&mut second, &user, "atlassian")
+    let observed = accounts::get_locked_account(&mut second, &user, "dynbrain")
         .await
         .unwrap();
     assert_eq!(observed.generation, 1);
@@ -216,7 +222,7 @@ async fn configured_provider_ids_preserve_accounts_and_single_use_consent() {
         nonce: vec![1; 12],
     };
     let mut tx = db.pool.begin().await.unwrap();
-    for provider in ["atlassian", "fourth-mcp"] {
+    for provider in ["dynbrain", "fourth-mcp"] {
         repo::store(&mut tx, &user, provider, &grant).await.unwrap();
         let mut account = accounts::get_locked_account(&mut tx, &user, provider)
             .await
@@ -239,7 +245,7 @@ async fn configured_provider_ids_preserve_accounts_and_single_use_consent() {
         .await
         .unwrap();
     assert!(
-        repo::consume_state(&db.pool, &user, "github", "generic-state")
+        repo::consume_state(&db.pool, &user, "dynapps-odoo", "generic-state")
             .await
             .unwrap()
             .is_none()

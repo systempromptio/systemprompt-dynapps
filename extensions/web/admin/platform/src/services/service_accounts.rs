@@ -10,6 +10,7 @@ use chrono::{DateTime, Utc};
 use systemprompt::identifiers::UserId;
 use systemprompt::users::{ArchiveParams, NewServiceAccount, User, UserRepository, UserStatus};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::roles_grant_manage;
 
 #[derive(Debug, Clone)]
 pub struct ServiceAccount {
@@ -43,6 +44,15 @@ impl ServiceAccounts {
 
     pub async fn is_service_account(&self, user: &UserId) -> AdminResult<bool> {
         Ok(self.find(user).await?.is_some())
+    }
+
+    pub async fn is_admin(&self, user: &UserId) -> AdminResult<bool> {
+        let found = self
+            .users
+            .find_by_id(user)
+            .await
+            .map_err(AdminError::internal)?;
+        Ok(found.is_some_and(|user| roles_grant_manage(&user.roles)))
     }
 
     pub async fn find(&self, user: &UserId) -> AdminResult<Option<ServiceAccount>> {

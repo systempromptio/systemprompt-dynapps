@@ -87,10 +87,6 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let governance = check_governance_config(&services_path)?;
     check_judge_config()?;
 
-    systemprompt_web_admin_platform::salesforce_orgs_boot_check(&services_path)
-        .await
-        .map_err(|e| JobError::from(MarketplaceError::Internal(e)))?;
-
     let catalog = bootstrap_gateway_entities(db_pool).await?;
 
     let pool = db_pool.write_pool();

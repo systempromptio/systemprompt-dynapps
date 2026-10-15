@@ -84,10 +84,7 @@ pub(super) fn in_outage_hold(
         })
 }
 
-pub(super) fn token_state(grant: &Grant, remint: bool) -> String {
-    if remint {
-        return "Fresh JWT bearer token minted".to_owned();
-    }
+pub(super) fn token_state(grant: &Grant) -> String {
     if grant.expires_at == i64::MAX {
         return "Personal token on file".to_owned();
     }
@@ -95,8 +92,8 @@ pub(super) fn token_state(grant: &Grant, remint: bool) -> String {
     format!("Access token valid for {minutes} min")
 }
 
-pub(super) fn require_connection(status: &str, preauthorize: bool) -> AdminResult<()> {
-    if !preauthorize && matches!(status, "not_connected" | "reconnect_required") {
+pub(super) fn require_connection(status: &str) -> AdminResult<()> {
+    if matches!(status, "not_connected" | "reconnect_required") {
         return Err(AdminError::NotFound(
             "Connect your provider account in Systemprompt".into(),
         ));

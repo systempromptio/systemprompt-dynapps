@@ -30,3 +30,8 @@ rsa = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
+
+# Fake Dynapps portal (src/fake_portal): loopback TLS, since the connector
+# refuses any OAuth endpoint that is not https.
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }

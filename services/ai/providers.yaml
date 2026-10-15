@@ -6,16 +6,14 @@
 # Edit by hand or with: systemprompt admin config catalog ...
 providers:
 - name: anthropic
-  # Claude on Anthropic's own API, by API key. Kept declared and routable,
-  # but this installation serves Claude from Vertex AI (`vertex-anthropic`
-  # below), so the bare `claude-*` ids belong there.
+  # Claude on Anthropic's own API, by API key. Since 2026-10-14 this is the
+  # ONLY Claude upstream: every bare `claude-*` id routes here
+  # (services/ai/gateway.yaml, `claude-star-4203d1`), with no failover. The
+  # Vertex entries below stay declared for a later restore and serve nothing.
   #
-  # Every model here is `hidden`: none is listed to clients, so nobody picks
-  # an `anthropic-claude-*` id. The entries stay for the opt-in
-  # `anthropic-claude-*` route and the `claude-native-tools` route, which
-  # finds them by `upstream_model` (ProviderEntry::find_served_model ignores
-  # `hidden`) and prices the served request from them. No `claude-*` failover
-  # chain reaches this provider; that is vertex-anthropic-eu.
+  # Every model here is `hidden`; the routes find them by `upstream_model`
+  # (ProviderEntry::find_served_model ignores `hidden`) and price the served
+  # request from them.
   #
   # Why the `anthropic-` prefix: a model id must be unique across the whole
   # catalog (ProviderRegistry::validate), and Claude Code asks for the bare
@@ -23,7 +21,7 @@ providers:
   # `anthropic-claude-sonnet-5-5` reaches Anthropic's `claude-sonnet-5-5`.
   display_name: Anthropic
   description: >-
-    Claude models on Anthropic's own API, authenticated with the anthropic key. Reached by the anthropic-claude-* ids; the bare claude-* ids are served from Vertex AI.
+    Claude models on Anthropic's own API, authenticated with the anthropic key. Serves every claude-* and anthropic-claude-* request on this installation.
   wire: anthropic
   surface: anthropic
   endpoint: https://api.anthropic.com/v1
@@ -266,7 +264,7 @@ providers:
   # with the body field it gates, so a mistake here costs one round trip.
   display_name: Google Vertex AI (Claude)
   description: >-
-    Claude models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Serves every claude-* request on this installation.
+    Claude models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Unrouted since 2026-10-14 (Anthropic-only); kept for a later restore.
   wire: anthropic
   surface: anthropic
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
@@ -343,8 +341,9 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
 - name: vertex-anthropic-eu
-  # The second Claude deployment on Vertex AI, and the failover target of every
-  # claude-* chain in gateway.yaml (vertex-anthropic -> vertex-anthropic-eu):
+  # UNROUTED since 2026-10-14 (Anthropic-only). Was the second Claude
+  # deployment on Vertex AI and the failover target of the claude-* chain
+  # (vertex-anthropic -> vertex-anthropic-eu):
   # same `vertex` service account, same Anthropic-on-Vertex wire, but the
   # regional europe-west1 (Belgium) endpoint instead of `global`, so a global
   # capacity shortfall lands on separately-provisioned regional quota. The
@@ -358,7 +357,7 @@ providers:
   # premium. `accepted_betas` mirrors vertex-anthropic; see its comment.
   display_name: Google Vertex AI (Claude, europe-west1)
   description: >-
-    Claude models served from Vertex AI's europe-west1 regional endpoint under the vertex service-account secret. The failover deployment for every claude-* request.
+    Claude models served from Vertex AI's europe-west1 regional endpoint under the vertex service-account secret. Unrouted since 2026-10-14 (Anthropic-only); kept for a later restore.
   wire: anthropic
   surface: anthropic
   endpoint: https://europe-west1-aiplatform.googleapis.com/v1/projects/{project}/locations/europe-west1/publishers/anthropic

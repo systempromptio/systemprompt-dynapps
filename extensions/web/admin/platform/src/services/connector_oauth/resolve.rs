@@ -1,10 +1,10 @@
 //! Token resolution under the account lock. One transaction carries the
-//! account row, the sealed grant, any re-mint or refresh and the state the
+//! account row, the sealed grant, any refresh and the state the
 //! outcome writes back, so refresh, generation checks and error-state commits
 //! land together.
 //!
 //! A grant that fails to open commits its reconnect flag before the error
-//! propagates; a missing grant or a failed first mint rolls back.
+//! propagates; a missing grant rolls back.
 
 use super::failure::{FailureKind, FlowFailure, FlowResult};
 use chrono::Utc;
@@ -16,8 +16,8 @@ use super::account_state::{
     apply_verification, in_outage_hold, open_or_flag, record_grant_failure, require_connection,
     token_state,
 };
-use super::token_plan::{AccessMode, TokenPlan, needs_remint};
-use super::{Grant, Provider, salesforce, seal, transport, verify};
+use super::token_plan::{AccessMode, TokenPlan};
+use super::{Grant, Provider, seal, transport, verify};
 use crate::repositories::connectors::connector_accounts::{self as accounts, ProviderConnection};
 use crate::repositories::connectors::connector_credentials::{self as repo, EncryptedGrant};
 use systemprompt_web_admin_core::connections::report::VerificationReport;
@@ -34,7 +34,6 @@ pub struct TokenResolver<'a> {
 }
 
 struct Resolution<'a> {
-    pool: &'a PgPool,
     user: &'a UserId,
     provider: &'a Provider,
     mode: AccessMode,
@@ -86,16 +85,12 @@ impl<'a> TokenResolver<'a> {
             return Err(FlowFailure::new(FailureKind::RefreshUncertain).error);
         }
         let row = repo::lock(&mut tx, user, provider.slug()).await?;
-        let mode = AccessMode {
-            probe,
-            preauthorize: row.is_none() && provider.is_salesforce() && account.generation == 0,
-        };
-        require_connection(&account.status, mode.preauthorize)?;
+        let mode = AccessMode { probe };
+        require_connection(&account.status)?;
         let outage_hold = in_outage_hold(&account, row.as_ref().map(|r| r.updated_at));
         mode.admission(outage_hold, account.verified_at.is_some())
             .require()?;
         let resolution = Resolution {
-            pool,
             user,
             provider: &provider,
             mode,
@@ -116,8 +111,9 @@ impl Resolution<'_> {
         account: &mut ProviderConnection,
     ) -> AdminResult<(Tx, Grant)> {
         let Some(sealed) = sealed else {
-            let grant = self.mint_first_grant(account.generation).await?;
-            return Ok((tx, grant));
+            return Err(AdminError::NotFound(
+                "Connect your provider account in Systemprompt".into(),
+            ));
         };
         match open_or_flag(&mut tx, self.user, self.provider, &sealed, account).await {
             Ok(grant) => Ok((tx, grant)),
@@ -128,15 +124,6 @@ impl Resolution<'_> {
         }
     }
 
-    async fn mint_first_grant(&self, generation: i64) -> AdminResult<Grant> {
-        if !self.mode.preauthorize {
-            return Err(AdminError::NotFound(
-                "Connect your provider account in Systemprompt".into(),
-            ));
-        }
-        salesforce::mint(self.pool, self.user, self.provider, generation).await
-    }
-
     async fn complete(
         &self,
         mut tx: Tx,
@@ -144,12 +131,7 @@ impl Resolution<'_> {
         mut grant: Grant,
         report: &mut VerificationReport,
     ) -> AdminResult<String> {
-        let reminted = needs_remint(&grant, Utc::now().timestamp());
-        if reminted {
-            grant =
-                salesforce::mint(self.pool, self.user, self.provider, account.generation).await?;
-        }
-        let plan = TokenPlan::for_grant(&grant, self.mode, reminted, Utc::now().timestamp());
+        let plan = TokenPlan::for_grant(&grant, self.mode, Utc::now().timestamp());
         if let Err(error) = refresh_and_verify(&mut grant, plan, report, self.http).await {
             if report
                 .steps
@@ -200,7 +182,7 @@ async fn refresh_and_verify(
             .await
             .map(|()| "Access token refreshed".to_owned())
     } else {
-        Ok(token_state(grant, plan.reminted))
+        Ok(token_state(grant))
     };
     match outcome {
         Ok(detail) => report.record("token", started, &Ok(detail)),

@@ -26,9 +26,9 @@
 # a boot error, not a silent default — reading `warnn` as either `enforce` or
 # `warn` would change what is enforced without saying so.
 #
-# ENFORCED ON THE TOOL PLANE (2026-10-14). `scope_check` and `tool_blocklist`
-# override the window with their own `mode: enforce`, so destructive tools are
-# refused for real while the other two stages keep measuring. The Odoo MCP
+# BACK TO WARN ON THE TOOL PLANE (Ed, 2026-10-15). `scope_check` and
+# `tool_blocklist` were enforced on 2026-10-14; every stage now inherits the
+# top-level warn mode again, so nothing is refused, only recorded. The Odoo MCP
 # server's destructive and erasure tools (`mcp__odoo__*delete*`, `*anonymise*`,
 # `*erase*`) pass only for admin or a caller holding the `odoo_destructive`
 # role — authority is a role grant on the account, revoked the same way, with
@@ -130,7 +130,6 @@ governance:
       allowlist: []
   - id: scope_check
     enabled: true
-    mode: enforce
     admin_only_prefixes:
     - mcp__systemprompt__
     role_gated:
@@ -139,7 +138,6 @@ governance:
       roles: [odoo_destructive]
   - id: tool_blocklist
     enabled: true
-    mode: enforce
     patterns:
     - delete
     - drop

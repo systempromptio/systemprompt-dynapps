@@ -8,6 +8,7 @@
 
 use systemprompt::agent_runs::{AgentRunRepository, ErrorClass, RunOutcome, RunStatus};
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_farm::config::RunAsMode;
 use systemprompt_web_admin_farm::repositories::{agents, clients, reports, runs};
 use systemprompt_web_admin_farm::services::runs::{LaunchRequest, launch, resolve_client};
 use systemprompt_web_admin_farm::types::{ClientId, TriggeredVia};
@@ -19,10 +20,10 @@ async fn add_clients(seeded: &Seeded, tag: &str) -> (ClientId, ClientId) {
     let pool = seeded.state.pool.as_ref();
     let own = format!("own-{tag}");
     let other = format!("other-{tag}");
-    clients::upsert_client(pool, &own, "Own", None)
+    clients::upsert_client(pool, &own, "Own", None, None)
         .await
         .expect("insert own client");
-    clients::upsert_client(pool, &other, "Other", Some(42))
+    clients::upsert_client(pool, &other, "Other", Some(42), None)
         .await
         .expect("insert other client");
     sqlx::query("UPDATE agent_farms SET client_id = $1 WHERE id = $2")
@@ -95,9 +96,15 @@ async fn an_agents_run_as_is_preferred_over_the_launcher() {
         .execute(db.pool.as_ref())
         .await
         .expect("insert service user");
-    agents::update_agent_run_as(&db.pool, &seeded.farm, seeded.agent.as_str(), Some(&svc))
-        .await
-        .expect("set agent run_as");
+    agents::update_agent_run_as(
+        &db.pool,
+        &seeded.farm,
+        seeded.agent.as_str(),
+        Some(&svc),
+        Some(RunAsMode::ServiceAccount),
+    )
+    .await
+    .expect("set agent run_as");
 
     let run = launch_one(&seeded).await;
     let agent_run = AgentRunRepository::from_pool(std::sync::Arc::clone(&db.pool))

@@ -12,14 +12,12 @@ use systemprompt_web_admin_core::connections::source::{
 };
 use systemprompt_web_admin_core::connections::{Connection, ConnectionSnapshot};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
-use systemprompt_web_admin_core::repositories::principal::group_membership;
 
 pub(crate) use super::connector_readiness::probe_session_connection;
 
 pub(super) struct Entitlement {
     pub(super) active: bool,
     pub(super) roles: Vec<String>,
-    groups: Vec<String>,
 }
 
 pub(super) fn scopes_granted(roles: &[String], scopes: &[Permission]) -> bool {
@@ -37,36 +35,23 @@ pub(super) async fn load_entitlement(pool: &PgPool, user: &UserId) -> AdminResul
         )
         .await?
         .ok_or_else(|| AdminError::Unauthorized("Account unavailable".into()))?;
-    let groups = group_membership::list_group_ids_for_user(pool, user)
-        .await?
-        .into_iter()
-        .map(|id| id.as_str().to_owned())
-        .collect();
     Ok(Entitlement {
         active: identity.status == "active",
         roles: identity.roles,
-        groups,
     })
 }
 
 impl Entitlement {
     fn permits(&self, provider: &Provider) -> bool {
         self.active
-            && match provider {
-                Provider::Salesforce(_) => provider
-                    .salesforce_org()
-                    .is_ok_and(|org| org.is_entitled(&self.groups)),
-                _ => provider
-                    .session_scopes()
-                    .is_none_or(|scopes| scopes_granted(&self.roles, scopes)),
-            }
+            && provider
+                .session_scopes()
+                .is_none_or(|scopes| scopes_granted(&self.roles, scopes))
     }
 }
 
 fn not_entitled_message(provider: &Provider) -> &'static str {
-    if provider.is_salesforce() {
-        "Your account is not entitled to this Salesforce org"
-    } else if provider.is_session_attested() {
+    if provider.is_session_attested() {
         "This connector is not open to your account"
     } else {
         "An active account is required to connect providers"
@@ -102,7 +87,7 @@ fn actions_for(
     let mut actions = Vec::new();
     if configured && entitled && provider.is_session_attested() {
         actions.push("test".into());
-    } else if configured && entitled && provider.requires_auth() && status != "not_provisioned" {
+    } else if configured && entitled && provider.requires_auth() {
         actions.push(
             if status == "connected" {
                 "reconnect"
@@ -111,11 +96,8 @@ fn actions_for(
             }
             .into(),
         );
-        if row.is_some_and(|r| r.auth_method.is_some()) || provider.is_salesforce() {
+        if row.is_some_and(|r| r.auth_method.is_some()) {
             actions.push("test".into());
-        }
-        if *provider == Provider::Atlassian {
-            actions.push("manual_token".into());
         }
     }
     if row.is_some_and(|r| r.auth_method.is_some()) {
@@ -141,8 +123,6 @@ fn describe(
         } else {
             "not_connected"
         }
-    } else if configured && !provider.provisioned() {
-        "not_provisioned"
     } else if configured {
         row.map_or("not_connected", |r| r.status.as_str())
     } else {

@@ -64,7 +64,7 @@ summary: one paragraph, at most 60 words, in the third person, describing what t
 wanted and what happened. Never quote credentials, keys or personal data.
 
 tags: up to 8 short lowercase labels that add detail beyond the category (for example \
-\"jira\", \"sql\", \"sfcc\", \"onboarding\").
+\"odoo\", \"sql\", \"invoicing\", \"onboarding\").
 
 skills_observed: the names of any skills or slash commands the person invoked, exactly as \
 they appear (for example \"ba-story-drafting\"). Empty if none.

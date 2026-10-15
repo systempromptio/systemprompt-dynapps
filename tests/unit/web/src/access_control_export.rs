@@ -50,7 +50,7 @@ fn rows_group_back_into_one_entity_block_that_the_loader_accepts() {
         &[
             row(
                 "mcp_server",
-                "atlassian",
+                "dynbrain",
                 "role",
                 "admin",
                 Access::Allow,
@@ -58,7 +58,7 @@ fn rows_group_back_into_one_entity_block_that_the_loader_accepts() {
             ),
             row(
                 "mcp_server",
-                "atlassian",
+                "dynbrain",
                 "group",
                 "uk",
                 Access::Allow,
@@ -66,7 +66,7 @@ fn rows_group_back_into_one_entity_block_that_the_loader_accepts() {
             ),
             row(
                 "mcp_server",
-                "atlassian",
+                "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
@@ -74,7 +74,7 @@ fn rows_group_back_into_one_entity_block_that_the_loader_accepts() {
             ),
             row(
                 "mcp_server",
-                "atlassian",
+                "dynbrain",
                 "project",
                 "storefront",
                 Access::Deny,
@@ -82,20 +82,20 @@ fn rows_group_back_into_one_entity_block_that_the_loader_accepts() {
             ),
             row(
                 "mcp_server",
-                "atlassian",
+                "dynbrain",
                 "user",
                 "someone",
                 Access::Deny,
                 None,
             ),
         ],
-        &[entity("mcp_server", "atlassian", false)],
+        &[entity("mcp_server", "dynbrain", false)],
         &Owners::default(),
     );
     let doc = parse_rules_doc(&yaml).expect("export is valid rules.yaml");
     assert_eq!(doc.entities.len(), 1);
     let decl = &doc.entities[0];
-    assert_eq!(decl.entity, "mcp_server/atlassian");
+    assert_eq!(decl.entity, "mcp_server/dynbrain");
     assert_eq!(decl.default, EntityDefault::Closed);
     assert_eq!(decl.why, "pilot");
     assert_eq!(

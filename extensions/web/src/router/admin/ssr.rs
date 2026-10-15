@@ -131,7 +131,6 @@ fn api_routes() -> Router<Arc<PgPool>> {
         .merge(activity_ssr::history_api_routes())
         .merge(overview::api_routes())
         .merge(account_ssr::profile_api_routes())
-        .merge(platform_ssr::api_routes())
 }
 
 fn platform_routes() -> Router<Arc<PgPool>> {

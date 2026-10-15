@@ -143,8 +143,6 @@ fn the_attach_form_refuses_what_it_cannot_use() {
     let cases = [
         serde_json::json!({"kind": "github_app", "app_id": "12a", "installation_id": "4", "secret": "k"}),
         serde_json::json!({"kind": "github_app", "app_id": "1", "installation_id": "4", "secret": " "}),
-        serde_json::json!({"kind": "salesforce_client_credentials", "instance_url": "http://evil.example", "consumer_key": "c", "secret": "s"}),
-        serde_json::json!({"kind": "atlassian_api_token", "email": "a:b@x.io", "secret": "t"}),
         serde_json::json!({"kind": "odoo_api_key", "url": "http://odoo.example", "db": "d", "login": "l", "secret": "k"}),
         serde_json::json!({"kind": "odoo_api_key", "url": "https://odoo.example", "db": "", "login": "l", "secret": "k"}),
         serde_json::json!({"kind": "aws_keys", "secret": "t"}),
@@ -156,9 +154,9 @@ fn the_attach_form_refuses_what_it_cannot_use() {
 
 #[test]
 fn provider_endpoints_are_https_or_loopback() {
-    assert!(endpoint_allowed("https://acme.my.salesforce.com"));
+    assert!(endpoint_allowed("https://odoo.example.com"));
     assert!(endpoint_allowed("http://127.0.0.1:8123"));
-    assert!(!endpoint_allowed("http://acme.my.salesforce.com"));
-    assert!(!endpoint_allowed("https://user:pw@acme.my.salesforce.com"));
+    assert!(!endpoint_allowed("http://odoo.example.com"));
+    assert!(!endpoint_allowed("https://user:pw@odoo.example.com"));
     assert!(!endpoint_allowed("not a url"));
 }

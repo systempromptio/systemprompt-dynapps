@@ -1,11 +1,11 @@
 // Why: the vocabulary of the connectors page — status labels, tones, action
 // names and the per-provider glyph family — kept apart from the rendering so
 // a wording change never touches the DOM code.
-export const labels = { verification_required: 'Verification required', no_auth_required: 'Built in', not_configured: 'Not configured', not_connected: 'Not connected', not_provisioned: 'Not provisioned', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+export const labels = { verification_required: 'Verification required', no_auth_required: 'Built in', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
 export const tones = { connected: 'ok', reconnect_required: 'warn', verification_required: 'warn', temporarily_unavailable: 'err' };
-export const names = { atlassian: 'Atlassian', salesforce: 'Salesforce' };
-export const actionLabels = { connect: 'Connect', reconnect: 'Reconnect', disconnect: 'Disconnect', test: 'Test connection', manual_token: 'Use personal token' };
-const notes = { provider_configuration: 'The provider rejected the app configuration — ask the platform administrator to check its OAuth settings', provider_invalid_response: 'The provider returned an invalid authorization response — test the connection before using it', refresh_outcome_unknown: 'The refresh response was lost or unusable — reconnect before using this provider again', sandbox_refreshed: 'This org was refreshed by an administrator — reconnect to continue', verification_failed: 'Authorization saved, but the last verification failed', grant_rejected: 'The provider rejected the saved grant', configuration_changed: 'The connector configuration changed — reconnect to authorize again', provider_unavailable: 'The provider did not answer the last check', provider_permission_denied: 'The provider refused the permissions this connector needs' };
+export const names = {};
+export const actionLabels = { connect: 'Connect', reconnect: 'Reconnect', disconnect: 'Disconnect', test: 'Test connection' };
+const notes = { provider_configuration: 'The provider rejected the app configuration — ask the platform administrator to check its OAuth settings', provider_invalid_response: 'The provider returned an invalid authorization response — test the connection before using it', refresh_outcome_unknown: 'The refresh response was lost or unusable — reconnect before using this provider again', verification_failed: 'Authorization saved, but the last verification failed', grant_rejected: 'The provider rejected the saved grant', configuration_changed: 'The connector configuration changed — reconnect to authorize again', provider_unavailable: 'The provider did not answer the last check', provider_permission_denied: 'The provider refused the permissions this connector needs' };
 export const groups = [
     { key: 'attention', title: 'Needs your attention', note: 'Broken or unverified — fix these first.' },
     { key: 'ready', title: 'Ready to connect', note: 'Authorize once; every client you connect uses the same account.' },
@@ -35,16 +35,14 @@ export function groupOf(account) {
     return 'quiet';
 }
 export function glyph(provider) {
-    if (provider === 'atlassian') return 'atlassian';
     if (provider === 'google_workspace') return 'google';
     if (provider === 'systemprompt') return 'systemprompt';
-    return provider.startsWith('salesforce') ? 'salesforce' : 'generic';
+    return 'generic';
 }
-export function monogram(family, name) { return { atlassian: 'At', google: 'G', systemprompt: 'Sp', salesforce: 'Sf' }[family] || name.slice(0, 2); }
-export function kind(family) { return { atlassian: 'Atlassian Cloud', google: 'Google Workspace', systemprompt: 'Control plane', salesforce: 'Salesforce org' }[family] || 'MCP server'; }
+export function monogram(family, name) { return { google: 'G', systemprompt: 'Sp' }[family] || name.slice(0, 2); }
+export function kind(family) { return { google: 'Google Workspace', systemprompt: 'Control plane' }[family] || 'MCP server'; }
 export function note(account) {
-    if (!account.entitled) return account.provider.startsWith('salesforce') ? 'Your account is not entitled to this Salesforce org' : account.session_attested ? 'Not open to your account' : 'An active account is required to connect providers';
-    if (account.status === 'not_provisioned') return 'Waiting for a Salesforce administrator to provision this org';
+    if (!account.entitled) return account.session_attested ? 'Not open to your account' : 'An active account is required to connect providers';
     return notes[account.error_code] || '';
 }
 export function variant(action, status) {

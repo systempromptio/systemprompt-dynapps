@@ -4,6 +4,10 @@
 //! service account exists to serve workflow write-backs
 //! (`workflow:<definition_id>:write`) and agent farms (`farm:<id>`); any other
 //! purpose, or none, is refused so an interactive path cannot borrow it.
+//!
+//! [`farm_run`] reads the same purpose for a person's bearer: a farm run in
+//! `run_as: {mode: user}` mode spends the launcher's own connector grant, and
+//! the run id it names is checked against that person's active runs.
 
 #[must_use]
 pub fn allowed(caller: Option<&str>) -> bool {
@@ -21,4 +25,11 @@ pub fn allowed(caller: Option<&str>) -> bool {
     caller
         .strip_prefix("farm:")
         .is_some_and(|farm| !farm.is_empty())
+}
+
+#[must_use]
+pub fn farm_run(caller: Option<&str>) -> Option<&str> {
+    caller
+        .filter(|c| allowed(Some(c)))
+        .and_then(|c| c.strip_prefix("farm:"))
 }

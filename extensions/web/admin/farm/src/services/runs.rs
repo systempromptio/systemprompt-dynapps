@@ -17,6 +17,7 @@ use systemprompt::agent_runs::repository::NewAgentRun;
 use systemprompt::identifiers::{AgentRunId, UserId};
 
 use super::runner::{ORIGIN_KIND, observer, prepare};
+use crate::config::RunAsMode;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::filters::NewRun;
 use crate::repositories::rows::{AgentRow, FarmRow, RunRow};
@@ -54,6 +55,7 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
 
     let (max_turns, max_budget_usd, timeout_seconds) =
         resolve_limits(&req, &agent, &farm, state.limits)?;
+    let credential_user = resolve_credential_user(pool, &req, &agent, &farm).await?;
     let template = req
         .prompt
         .filter(|p| !p.trim().is_empty())
@@ -83,11 +85,6 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         ));
     }
 
-    let credential_user = prepare::credential_user(
-        agent.run_as_user_id.as_ref(),
-        farm.run_as_user_id.as_ref(),
-        &req.user_id,
-    );
     let new_run = NewRun {
         id: farm_run_id,
         agent_run_id,
@@ -110,6 +107,37 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
     };
 
     insert_pair(pool, &new_run, &credential_user, &request).await
+}
+
+async fn resolve_credential_user(
+    pool: &PgPool,
+    req: &LaunchRequest,
+    agent: &AgentRow,
+    farm: &FarmRow,
+) -> FarmResult<UserId> {
+    let agent_as = prepare::RunAsSetting::from_row(
+        agent.run_as_mode.as_deref(),
+        agent.run_as_user_id.as_ref(),
+    );
+    let farm_as =
+        prepare::RunAsSetting::from_row(farm.run_as_mode.as_deref(), farm.run_as_user_id.as_ref());
+    let client_id = req.client_id.as_ref().or(farm.client_id.as_ref());
+    let client_row = match (prepare::effective_mode(agent_as, farm_as), client_id) {
+        (RunAsMode::Client, Some(id)) => clients::find_client(pool, id.as_str()).await?,
+        _ => None,
+    };
+    let client = client_id.map(|id| prepare::RunAsClient {
+        id,
+        account: client_row
+            .as_ref()
+            .and_then(|row| row.service_account_user_id.as_ref()),
+    });
+    Ok(prepare::credential_user(
+        agent_as,
+        farm_as,
+        client,
+        &req.user_id,
+    )?)
 }
 
 pub async fn resolve_client(pool: &PgPool, slug: Option<&str>) -> FarmResult<Option<ClientId>> {

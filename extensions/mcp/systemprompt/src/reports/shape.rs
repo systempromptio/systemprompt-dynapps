@@ -48,7 +48,7 @@ pub struct SourceStatus {
 pub struct ReportTable {
     pub title: String,
     pub columns: Vec<String>,
-    // JSON: variable-shape CLI and Atlassian table cells
+    // JSON: variable-shape CLI table cells
     pub rows: Vec<BTreeMap<String, Value>>,
 }
 

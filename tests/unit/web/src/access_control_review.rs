@@ -18,7 +18,7 @@ use systemprompt_web_admin_core::repositories::sync::history::KeptReview;
 
 fn declared() -> DeclaredSet {
     let doc = parse_rules_doc(
-        "entities:\n  - entity: mcp_server/atlassian\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs]\n  - entity: mcp_server/jira\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n",
+        "entities:\n  - entity: mcp_server/dynbrain\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs]\n  - entity: mcp_server/odoo\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n",
     )
     .expect("parses");
     build_declared_set(
@@ -65,54 +65,54 @@ fn find<'a>(reviews: &'a [EntityReview], id: &str) -> &'a EntityReview {
 #[test]
 fn an_entity_never_applied_is_new_in_code_and_not_live() {
     let reviews = review_entities(&compute_drift(&declared(), &[], &[]));
-    let jira = find(&reviews, "jira");
-    assert_eq!(jira.kind, ReviewKind::NewInCode);
-    assert!(jira.not_live);
-    assert!(jira.applies);
-    assert_eq!(jira.key, "mcp_server/jira");
+    let odoo = find(&reviews, "odoo");
+    assert_eq!(odoo.kind, ReviewKind::NewInCode);
+    assert!(odoo.not_live);
+    assert!(odoo.applies);
+    assert_eq!(odoo.key, "mcp_server/odoo");
 }
 
 #[test]
 fn a_live_entity_missing_a_declared_rule_reads_as_removed_in_console() {
-    let rules = [row("atlassian", "role", "admin", Access::Allow, "yaml")];
-    let entities = [entity("atlassian"), entity("jira")];
+    let rules = [row("dynbrain", "role", "admin", Access::Allow, "yaml")];
+    let entities = [entity("dynbrain"), entity("odoo")];
     let reviews = review_entities(&compute_drift(&declared(), &rules, &entities));
-    let atlassian = find(&reviews, "atlassian");
-    assert_eq!(atlassian.kind, ReviewKind::RemovedInConsole);
-    assert!(!atlassian.not_live);
-    assert_eq!(atlassian.lines.len(), 1, "{atlassian:?}");
-    assert_eq!(atlassian.lines[0].subject, "india-devs");
+    let dynbrain = find(&reviews, "dynbrain");
+    assert_eq!(dynbrain.kind, ReviewKind::RemovedInConsole);
+    assert!(!dynbrain.not_live);
+    assert_eq!(dynbrain.lines.len(), 1, "{dynbrain:?}");
+    assert_eq!(dynbrain.lines[0].subject, "india-devs");
 }
 
 #[test]
 fn a_disagreeing_row_is_changed_in_code_and_a_console_extra_is_only_in_console() {
     let rules = [
-        row("atlassian", "role", "admin", Access::Deny, "yaml"),
-        row("atlassian", "group", "india-devs", Access::Allow, "yaml"),
-        row("jira", "role", "admin", Access::Allow, "yaml"),
+        row("dynbrain", "role", "admin", Access::Deny, "yaml"),
+        row("dynbrain", "group", "india-devs", Access::Allow, "yaml"),
+        row("odoo", "role", "admin", Access::Allow, "yaml"),
         row("github", "group", "uk", Access::Allow, DASHBOARD_SOURCE),
     ];
-    let entities = [entity("atlassian"), entity("jira"), entity("github")];
+    let entities = [entity("dynbrain"), entity("odoo"), entity("github")];
     let reviews = review_entities(&compute_drift(&declared(), &rules, &entities));
-    assert_eq!(find(&reviews, "atlassian").kind, ReviewKind::ChangedInCode);
+    assert_eq!(find(&reviews, "dynbrain").kind, ReviewKind::ChangedInCode);
     let github = find(&reviews, "github");
     assert_eq!(github.kind, ReviewKind::OnlyInConsole);
     assert!(
         !github.applies,
         "code does not govern github, so applying it moves nothing"
     );
-    assert!(reviews.iter().all(|r| r.entity_id != "jira"), "jira agrees");
+    assert!(reviews.iter().all(|r| r.entity_id != "odoo"), "odoo agrees");
 }
 
 #[test]
 fn a_bundle_row_on_an_ungoverned_entity_is_never_reviewed() {
     let rules = [
-        row("atlassian", "role", "admin", Access::Allow, "yaml"),
-        row("atlassian", "group", "india-devs", Access::Allow, "yaml"),
-        row("jira", "role", "admin", Access::Allow, "yaml"),
+        row("dynbrain", "role", "admin", Access::Allow, "yaml"),
+        row("dynbrain", "group", "india-devs", Access::Allow, "yaml"),
+        row("odoo", "role", "admin", Access::Allow, "yaml"),
         row("kitsrv", "group", "uk", Access::Allow, "bundle:sfnext"),
     ];
-    let entities = [entity("atlassian"), entity("jira")];
+    let entities = [entity("dynbrain"), entity("odoo")];
     let reviews = review_entities(&compute_drift(&declared(), &rules, &entities));
     assert!(reviews.is_empty(), "{reviews:?}");
 }
@@ -120,21 +120,21 @@ fn a_bundle_row_on_an_ungoverned_entity_is_never_reviewed() {
 #[test]
 fn a_kept_decision_holds_only_for_the_diff_it_was_taken_on() {
     let reviews = review_entities(&compute_drift(&declared(), &[], &[]));
-    let jira = find(&reviews, "jira").clone();
+    let odoo = find(&reviews, "odoo").clone();
     let kept = |fingerprint: &str| KeptReview {
-        key: jira.key.clone(),
+        key: odoo.key.clone(),
         fingerprint: fingerprint.to_owned(),
         reason: "retiring it".to_owned(),
         display_name: "Ed".to_owned(),
         created_at: Utc::now(),
     };
 
-    let held = split_reviews(reviews.clone(), &[kept(&jira.fingerprint)]);
-    assert!(held.pending.iter().all(|r| r.review.key != jira.key));
+    let held = split_reviews(reviews.clone(), &[kept(&odoo.fingerprint)]);
+    assert!(held.pending.iter().all(|r| r.review.key != odoo.key));
     assert_eq!(held.kept.len(), 1);
 
     let moved = split_reviews(reviews, &[kept("an-older-diff")]);
-    assert!(moved.pending.iter().any(|r| r.review.key == jira.key));
+    assert!(moved.pending.iter().any(|r| r.review.key == odoo.key));
     assert!(moved.kept.is_empty());
 }
 
@@ -142,8 +142,8 @@ fn a_kept_decision_holds_only_for_the_diff_it_was_taken_on() {
 fn the_fingerprint_is_stable_and_moves_with_the_diff() {
     let a = review_entities(&compute_drift(&declared(), &[], &[]));
     let b = review_entities(&compute_drift(&declared(), &[], &[]));
-    assert_eq!(find(&a, "jira").fingerprint, find(&b, "jira").fingerprint);
-    let rules = [row("jira", "group", "uk", Access::Allow, DASHBOARD_SOURCE)];
+    assert_eq!(find(&a, "odoo").fingerprint, find(&b, "odoo").fingerprint);
+    let rules = [row("odoo", "group", "uk", Access::Allow, DASHBOARD_SOURCE)];
     let c = review_entities(&compute_drift(&declared(), &rules, &[]));
-    assert_ne!(find(&a, "jira").fingerprint, find(&c, "jira").fingerprint);
+    assert_ne!(find(&a, "odoo").fingerprint, find(&c, "odoo").fingerprint);
 }

@@ -77,7 +77,7 @@ async fn the_failed_filter_still_selects_a_failed_execution() {
         "INSERT INTO mcp_tool_executions
              (mcp_execution_id, tool_name, server_name, started_at, completed_at,
               execution_time_ms, input, status, user_id, source)
-         VALUES ($1, 'search', 'atlassian', $2, $2, 12, '{}', 'failed', $3, 'proxy')",
+         VALUES ($1, 'search', 'dynbrain', $2, $2, 12, '{}', 'failed', $3, 'proxy')",
     )
     .bind(&execution_id)
     .bind(Utc::now())

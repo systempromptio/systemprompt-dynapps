@@ -1,8 +1,8 @@
 //! Platform JSON API routes.
 //!
 //! The scheduled-jobs listing, the sync planes and the archive import, device
-//! credential and service-account management, the per-user Salesforce link
-//! and connector reprovisioning, and a person's own Odoo link (self-service).
+//! credential and service-account management, and a person's own Odoo link
+//! (self-service).
 //! The sync participant tier is its own fragment because the root gates it on
 //! the scoped-console role rather than an admin tier; the archive import stays
 //! with the manage-tier writes because a staged archive can rewrite every plane
@@ -66,19 +66,6 @@ pub fn sync_participant_routes() -> Router<Arc<PgPool>> {
         .route(
             "/sync/sources/refresh",
             post(handlers::sync::refresh_sources_handler),
-        )
-}
-
-pub fn connector_write_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/users/{user_id}/salesforce-identity",
-            post(handlers::salesforce_identity::link_salesforce_identity_handler)
-                .delete(handlers::salesforce_identity::unlink_salesforce_identity_handler),
-        )
-        .route(
-            "/connectors/{provider}/reprovision",
-            post(handlers::connector_reprovision::reprovision_connector_handler),
         )
 }
 

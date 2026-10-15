@@ -239,7 +239,7 @@ jobs:
           workspaces: |
             .
             tests
-      - name: Focused Salesforce emergency gate
+      - name: Focused connector emergency gate
         if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
         run: just test-hotfix
       - run: just test

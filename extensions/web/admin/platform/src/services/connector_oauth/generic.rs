@@ -31,14 +31,12 @@ pub fn binding(provider: &Provider) -> AdminResult<String> {
 }
 
 pub fn validate_grant(grant: &Grant) -> AdminResult<()> {
-    if matches!(grant.provider, Provider::Generic(_)) {
-        if grant.configuration_binding != binding(&grant.provider)? {
-            return Err(AdminError::Unauthorized(
-                "Connector configuration changed; reconnect required".into(),
-            ));
-        }
-        trusted_endpoint(&grant.provider, &grant.token_endpoint)?;
+    if grant.configuration_binding != binding(&grant.provider)? {
+        return Err(AdminError::Unauthorized(
+            "Connector configuration changed; reconnect required".into(),
+        ));
     }
+    trusted_endpoint(&grant.provider, &grant.token_endpoint)?;
     Ok(())
 }
 

@@ -6,7 +6,8 @@ gateway:
   enabled: true
   routes:
   # Server web and deferred-tool search need Anthropic's native tool service.
-  # Keep ordinary Claude inference on Vertex, with the same gateway governance.
+  # Redundant while every claude-* id is Anthropic-only (2026-10-14); kept so
+  # a Vertex restore still sends these tools to Anthropic.
   - id: claude-native-tools
     name: Claude native web and tool search
     model_pattern: claude-*

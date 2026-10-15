@@ -50,7 +50,7 @@ fn server_and_wildcard_entries_cover_their_server_only() {
     assert!(undeclared_mcp_tool("mcp__odoo_admin__partner_get", &server));
     let wildcard = tools(&["mcp__odoo__*"]);
     assert!(!undeclared_mcp_tool("mcp__odoo__partner_get", &wildcard));
-    assert!(undeclared_mcp_tool("mcp__salesforce__query", &wildcard));
+    assert!(undeclared_mcp_tool("mcp__dynbrain__docs_search", &wildcard));
 }
 
 #[test]

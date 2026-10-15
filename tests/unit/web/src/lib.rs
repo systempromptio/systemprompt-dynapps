@@ -327,17 +327,14 @@ mod util_svg_pure;
 mod viewer_timezone;
 
 #[cfg(test)]
+#[cfg(test)]
+mod bridge_release_parity;
+#[cfg(test)]
 mod connector_cards;
 #[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
 mod connector_oauth_classify;
-#[cfg(test)]
-mod connector_token_expiry;
-#[cfg(test)]
-mod salesforce_orgs;
-
-mod bridge_release_parity;
 
 #[cfg(test)]
 mod authorization_failures;
@@ -431,6 +428,8 @@ mod farm_eval_history;
 #[cfg(test)]
 mod farm_eval_judge_config;
 
+#[cfg(test)]
+mod catalogue_integrity;
 #[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]

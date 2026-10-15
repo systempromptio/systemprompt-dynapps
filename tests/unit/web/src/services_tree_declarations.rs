@@ -226,7 +226,7 @@ fn no_export_carries_a_person() {
         BandRuleRow {
             id: "u1".to_owned(),
             entity_type: "mcp_server".to_owned(),
-            entity_id: "atlassian".to_owned(),
+            entity_id: "dynbrain".to_owned(),
             rule_type: "user".to_owned(),
             rule_value: "someone@dynapps.es".to_owned(),
             access: systemprompt_security::authz::Access::Allow,
@@ -237,7 +237,7 @@ fn no_export_carries_a_person() {
         BandRuleRow {
             id: "g1".to_owned(),
             entity_type: "mcp_server".to_owned(),
-            entity_id: "atlassian".to_owned(),
+            entity_id: "dynbrain".to_owned(),
             rule_type: "group".to_owned(),
             rule_value: "uk".to_owned(),
             access: systemprompt_security::authz::Access::Allow,
@@ -248,7 +248,7 @@ fn no_export_carries_a_person() {
     ];
     let entities = [EntityDefaultRow {
         entity_type: "mcp_server".to_owned(),
-        entity_id: "atlassian".to_owned(),
+        entity_id: "dynbrain".to_owned(),
         default_included: false,
         source: "yaml".to_owned(),
     }];

@@ -43,3 +43,7 @@ tower = { workspace = true }
 # `#[async_trait]` seams (the conversation judge backend) need it for fakes.
 async-trait = { workspace = true }
 http-body-util = { workspace = true }
+# The farm `run_as` e2e asks the real connector broker for each run's bearer
+# and forwards it to the fake portal.
+systemprompt-web-admin-platform = { workspace = true }
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }

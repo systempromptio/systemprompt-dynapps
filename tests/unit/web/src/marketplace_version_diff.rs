@@ -39,7 +39,7 @@ fn skills_are_labelled_added_removed_changed_or_unchanged_by_digest() {
         "ba",
         "p1",
         vec![
-            skill("ba", "jira_management", "s1"),
+            skill("ba", "odoo_quotes", "s1"),
             skill("ba", "bug_logging", "s2"),
             skill("ba", "old", "s9"),
         ],
@@ -48,7 +48,7 @@ fn skills_are_labelled_added_removed_changed_or_unchanged_by_digest() {
         "ba",
         "p1",
         vec![
-            skill("ba", "jira_management", "s1-changed"),
+            skill("ba", "odoo_quotes", "s1-changed"),
             skill("ba", "bug_logging", "s2"),
             skill("ba", "brand_new", "s3"),
         ],
@@ -63,16 +63,16 @@ fn skills_are_labelled_added_removed_changed_or_unchanged_by_digest() {
     };
     assert_eq!(by_id("brand_new"), Some(Change::Added));
     assert_eq!(by_id("old"), Some(Change::Removed));
-    assert_eq!(by_id("jira_management"), Some(Change::Changed));
+    assert_eq!(by_id("odoo_quotes"), Some(Change::Changed));
     assert_eq!(by_id("bug_logging"), Some(Change::Unchanged));
     let changed = d
         .skills
         .iter()
-        .find(|s| s.skill_id.as_str() == "jira_management")
+        .find(|s| s.skill_id.as_str() == "odoo_quotes")
         .expect("row");
     assert_eq!(changed.before.as_deref(), Some("s1"));
     assert_eq!(changed.after.as_deref(), Some("s1-changed"));
-    assert_eq!(changed.skill_key, "ba:jira-management");
+    assert_eq!(changed.skill_key, "ba:odoo-quotes");
     assert!(d.has_changes());
     assert_eq!(d.moved_skills().len(), 3);
     assert_eq!(d.plugins.len(), 1);
@@ -86,18 +86,14 @@ fn skills_are_labelled_added_removed_changed_or_unchanged_by_digest() {
 #[test]
 fn plugins_added_or_removed_are_named_and_a_first_version_adds_everything() {
     let after = manifest(vec![
-        ("ba", "p1", vec![skill("ba", "jira_management", "s1")]),
+        ("ba", "p1", vec![skill("ba", "odoo_quotes", "s1")]),
         ("sf", "p2", vec![skill("sf", "core_logic", "s5")]),
     ]);
     let first = manifest_diff(None, &after);
     assert_eq!(first.added, 2);
     assert!(first.plugins.iter().all(|p| p.change == Change::Added));
 
-    let before = manifest(vec![(
-        "ba",
-        "p1",
-        vec![skill("ba", "jira_management", "s1")],
-    )]);
+    let before = manifest(vec![("ba", "p1", vec![skill("ba", "odoo_quotes", "s1")])]);
     let d = manifest_diff(Some(&before), &after);
     assert_eq!(
         d.plugins
@@ -121,11 +117,7 @@ fn plugins_added_or_removed_are_named_and_a_first_version_adds_everything() {
 
 #[test]
 fn identical_manifests_have_nothing_to_say() {
-    let m = manifest(vec![(
-        "ba",
-        "p1",
-        vec![skill("ba", "jira_management", "s1")],
-    )]);
+    let m = manifest(vec![("ba", "p1", vec![skill("ba", "odoo_quotes", "s1")])]);
     let d = manifest_diff(Some(&m), &m);
     assert!(!d.has_changes());
     assert_eq!(d.unchanged, 1);

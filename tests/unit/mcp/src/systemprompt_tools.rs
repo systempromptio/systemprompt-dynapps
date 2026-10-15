@@ -11,11 +11,9 @@ use systemprompt_mcp_agent::tools::{
 };
 
 // Why: this server exposes the CLI, ONE read-only report and four typed
-// analytics tools, all over this platform's own data. It used to carry two
-// Atlassian-backed tools as well; those are gone deliberately — the client
-// reaches Jira and Confluence through the `atlassian` server it already
-// holds, rather than through a proxy here that had to re-translate an
-// unversioned payload shape.
+// analytics tools, all over this platform's own data. It proxies no
+// third-party server: a proxy here would have to re-translate an unversioned
+// payload shape.
 #[test]
 fn the_cli_the_report_and_the_typed_tools_are_the_whole_surface() {
     let tools = list_tools();
@@ -35,10 +33,8 @@ fn the_cli_the_report_and_the_typed_tools_are_the_whole_surface() {
     assert_eq!(tools[0].name.as_ref(), SERVER_NAME);
     assert_eq!(SERVER_NAME, "systemprompt");
     assert!(
-        !names(&tools).iter().any(|n| n.contains("atlassian")
-            || n.contains("project_catalog")
-            || n.contains("jira")),
-        "this server must not proxy Atlassian: {:?}",
+        !names(&tools).iter().any(|n| n.contains("project_catalog")),
+        "this server must not proxy a third-party server: {:?}",
         names(&tools)
     );
 }

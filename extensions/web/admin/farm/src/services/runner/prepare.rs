@@ -11,12 +11,11 @@
 //!
 //! `credential_purpose` (`farm:<run id>`) feeds `IssueRunCredentials.purpose`;
 //! the caller is bound to the credential at issue, never sent as a forgeable
-//! scope header. `credential_user` names the user a run's credentials are
-//! issued to: the agent's own service account
-//! (`agent_farm_agents.run_as_user_id`), else the farm's
-//! (`agent_farms.run_as_user_id`), else the launching user. The run's farm is
-//! bound as its `farm` attribution scope, verified at the gateway against the
-//! credential user's active runs.
+//! scope header. `credential_user` (see [`super::identity`]) names the user
+//! a run's credentials are issued to from the agent's `run_as`, else the
+//! farm's: the launcher, the client's service account, or the named service
+//! account. The run's farm is bound as its `farm` attribution scope, verified
+//! at the gateway against the credential user's active runs.
 //!
 //! Every MCP server an agent's `mcp__<server>` tools name is handed to the
 //! host as this instance's HTTP endpoint for it. The request carries no
@@ -29,10 +28,11 @@ use std::time::Duration;
 use std::collections::BTreeMap;
 
 use systemprompt::agent_runs::{HostKind, McpServerSpec, PermissionMode, RunLayout, RunRequest};
-use systemprompt::identifiers::{AgentRunId, ScopeDimension, UserId};
+use systemprompt::identifiers::{AgentRunId, ScopeDimension};
 use systemprompt::models::attribution::ScopeBinding;
 use walkdir::WalkDir;
 
+pub use super::identity::{RunAsClient, RunAsSetting, credential_user, effective_mode};
 use super::plugin::materialise_plugin;
 use crate::attribution::FARM_DIMENSION;
 use crate::error::{FarmError, FarmResult};
@@ -66,15 +66,6 @@ pub struct RequestSpec<'a> {
 #[must_use]
 pub fn run_layout(state: &FarmState, agent_run_id: &AgentRunId) -> RunLayout {
     RunLayout::new(state.paths.run_dir(agent_run_id.as_str()))
-}
-
-#[must_use]
-pub fn credential_user(
-    agent_run_as: Option<&UserId>,
-    farm_run_as: Option<&UserId>,
-    run_user: &UserId,
-) -> UserId {
-    agent_run_as.or(farm_run_as).unwrap_or(run_user).clone()
 }
 
 #[must_use]

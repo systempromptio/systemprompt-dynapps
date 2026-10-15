@@ -64,8 +64,10 @@ dependencies = [
 name = "admin-db-config-tests"
 version = "0.0.0"
 dependencies = [
+ "axum",
  "chrono",
  "dynapps-test-common",
+ "http-body-util",
  "reqwest",
  "serde_json",
  "serde_yaml_ng",
@@ -80,6 +82,7 @@ dependencies = [
  "systemprompt-web-admin-platform",
  "tempfile",
  "tokio",
+ "tower",
  "uuid",
 ]
 
@@ -1917,6 +1920,7 @@ dependencies = [
  "jsonwebtoken",
  "rand_core 0.6.4",
  "rsa",
+ "rustls",
  "serde_json",
  "sha2 0.10.9",
  "sqlx",
@@ -1924,6 +1928,7 @@ dependencies = [
  "systemprompt-web-extension",
  "tempfile",
  "tokio",
+ "tokio-rustls",
  "url",
  "uuid",
 ]
@@ -9682,6 +9687,7 @@ dependencies = [
  "chrono",
  "dynapps-test-common",
  "http-body-util",
+ "reqwest",
  "rmcp",
  "serde_json",
  "sqlx",
@@ -9690,6 +9696,7 @@ dependencies = [
  "systemprompt-security",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-farm",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-content",
  "systemprompt-web-extension",
  "systemprompt-web-jobs",

@@ -96,7 +96,7 @@ fn public_web_access_is_explicit_and_tools_are_available() {
 fn deferred_tools_and_server_web_history_survive_anthropic_rebuilds() {
     let tools = json!([
         {"type":"tool_search_tool_regex_20251119","name":"tool_search_tool_regex"},
-        {"name":"salesforce_query","description":"CRM query","defer_loading":true,"input_schema":{"type":"object"}},
+        {"name":"odoo_query","description":"CRM query","defer_loading":true,"input_schema":{"type":"object"}},
         {"type":"web_search_20250305","name":"web_search","max_uses":3}
     ]);
     let messages = json!([
@@ -105,7 +105,7 @@ fn deferred_tools_and_server_web_history_survive_anthropic_rebuilds() {
             {"type":"server_tool_use","id":"srvtoolu_search","name":"web_search","input":{"query":"example news"}},
             {"type":"web_search_tool_result","tool_use_id":"srvtoolu_search","content":[{"type":"web_search_result","url":"https://example.com/news","title":"News","encrypted_content":"opaque"}]}
         ]},
-        {"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_lookup","content":[{"type":"tool_reference","tool_name":"salesforce_query"}]}]}
+        {"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_lookup","content":[{"type":"tool_reference","tool_name":"odoo_query"}]}]}
     ]);
     let request = systemprompt_gateway::protocol::inbound::anthropic_messages::parse::parse(
         &json!({"model":"claude-sonnet-5-5","max_tokens":128,"tools":tools,"messages":messages}),

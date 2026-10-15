@@ -13,7 +13,7 @@ name = "systemprompt-mcp-agent-farm"
 path = "src/main.rs"
 
 [features]
-# Dynapps builds with the farm on; astound flips the default to `workflows`.
+# Dynapps builds with the farm on; `workflows` is the alternative default.
 default = ["farm"]
 farm = ["dep:systemprompt-web-admin-farm"]
 workflows = []

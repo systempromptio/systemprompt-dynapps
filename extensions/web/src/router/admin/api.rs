@@ -90,7 +90,6 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .merge(governance_routes::gateway_write_routes())
         .merge(identity_routes::user_write_routes())
         .merge(catalog_routes::api::share_token_routes())
-        .merge(platform_routes::connector_write_routes())
         .merge(identity_routes::session_write_routes())
         .merge(identity_routes::access_control_write_routes())
         .merge(platform_routes::sync_write_routes())

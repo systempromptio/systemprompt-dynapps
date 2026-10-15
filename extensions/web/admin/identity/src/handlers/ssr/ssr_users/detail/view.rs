@@ -14,11 +14,10 @@ use systemprompt_web_admin_core::ssr::history_rows::{HistoryRowView, HistoryView
 use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
 
 use super::context::{
-    DeviceRowView, DevicesTabView, IdentityTabView, MembershipTabView, SalesforceIdentityView,
-    ScopeDefaultOptionView, UserConversationsTabView, UserSessionRowView, UserSessionsTabView,
+    DeviceRowView, DevicesTabView, IdentityTabView, MembershipTabView, ScopeDefaultOptionView,
+    UserConversationsTabView, UserSessionRowView, UserSessionsTabView,
 };
 use super::load::{IdentityData, MembershipData, UserConversationsData};
-use systemprompt_web_admin_core::connections::source::connector_display_name;
 use systemprompt_web_admin_core::types::UserContext;
 
 pub(super) use super::usage::usage_tab;
@@ -76,15 +75,6 @@ pub(super) fn identity_tab(
             .find(|i| i.issuer == SLACK_ISSUER)
             .map(|i| i.external_sub.clone())
             .unwrap_or_default(),
-        salesforce_identities: data
-            .salesforce_identities
-            .iter()
-            .map(|identity| SalesforceIdentityView {
-                label: connector_display_name(&identity.provider),
-                provider: identity.provider.clone(),
-                sf_username: identity.sf_username.clone(),
-            })
-            .collect(),
         share_token_version: data.share_token_version,
     }
 }

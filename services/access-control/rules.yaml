@@ -286,10 +286,13 @@ entities:
           afterwards, and holding it implies seeing the server it unlocks.
       group: [service-accounts]
 
-  # Closed to everyone but staff and administrators: the portal refuses anyone
-  # without a portal.dynapps.es account, so offering the Connect row more
-  # widely only produces failed consents. Not opened to service accounts — no
-  # machine credential exists for the portal; every call is a person's grant.
+  # Closed to everyone but staff, administrators and service accounts: the
+  # portal refuses anyone without a portal.dynapps.es account, so offering the
+  # Connect row more widely only produces failed consents. Service accounts are
+  # in because farm runs in `client` / `service_account` mode
+  # (agent-farms.yaml run_as) spend the portal grant an admin connected for
+  # that account on its service-account page; the broker issues it only to a
+  # `farm:<run id>` caller.
   - entity: mcp_server/dynapps-odoo
     default: closed
     why: >-
@@ -298,7 +301,7 @@ entities:
       rules scope what each person sees and changes.
     allow:
       role: [admin, platform_admin, super_admin]
-      group: [staff]
+      group: [staff, service-accounts]
 
   - entity: mcp_server/dynbrain
     default: closed
@@ -307,4 +310,4 @@ entities:
       as the staff member's own Odoo account through a per-user OAuth grant.
     allow:
       role: [admin, platform_admin, super_admin]
-      group: [staff]
+      group: [staff, service-accounts]

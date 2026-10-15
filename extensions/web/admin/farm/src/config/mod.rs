@@ -8,8 +8,8 @@ mod run_as;
 mod runner_yaml;
 
 pub use clients_yaml::{AgentOverride, ClientDef};
-pub use run_as::{RunAs, RunAsMode};
 pub use evals_yaml::{DEFAULT_JUDGE_MODEL, DEFAULT_JUDGE_PROVIDER, EvalsConfig};
+pub use run_as::{RunAs, RunAsMode};
 
 pub use farms_yaml::{
     FARMS_FILE, FarmDef, FarmDefaults, FarmsDoc, GitSource, RunnerConfig, parse_farms_doc,

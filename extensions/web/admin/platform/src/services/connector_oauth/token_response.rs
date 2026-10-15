@@ -9,7 +9,6 @@ pub(super) struct Tokens {
     pub(super) refresh_token: Option<String>,
     pub(super) expires_in: Option<i64>,
     pub(super) error: Option<String>,
-    pub(super) error_description: Option<String>,
     pub(super) token_type: Option<String>,
 }
 
@@ -32,9 +31,8 @@ pub(super) async fn accepted_tokens(
     if status >= 500 || status == 429 {
         return Err(FlowFailure::new(FailureKind::Outage));
     }
-    // JSON: inspect provider field types without exposing tokens, then normalize
-    // Salesforce expiry.
-    let mut value: serde_json::Value = super::generic_discovery::bounded_json(response)
+    // JSON: inspect provider field types without exposing tokens.
+    let value: serde_json::Value = super::generic_discovery::bounded_json(response)
         .await
         .map_err(|_untrusted_response_error| {
             FlowFailure::new(if refreshing && (200..300).contains(&status) {
@@ -44,14 +42,6 @@ pub(super) async fn accepted_tokens(
             })
         })?;
     log_shape(grant, &value);
-    if grant.provider.is_salesforce()
-        && let Some(seconds) = value
-            .get("expires_in")
-            .and_then(serde_json::Value::as_str)
-            .and_then(|text| text.parse::<i64>().ok())
-    {
-        value["expires_in"] = seconds.into();
-    }
     let tokens: Tokens = serde_json::from_value(value).map_err(|error| {
         tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(),
             stage = "token", category = ?error.classify(), "token response schema mismatch (values omitted)");
@@ -60,12 +50,7 @@ pub(super) async fn accepted_tokens(
         } else { FailureKind::InvalidResponse })
     })?;
     if !(200..300).contains(&status) || tokens.error.is_some() {
-        let kind = oauth_failure(
-            &grant.provider,
-            status,
-            tokens.error.as_deref(),
-            tokens.error_description.as_deref(),
-        );
+        let kind = oauth_failure(status, tokens.error.as_deref());
         let code = safe_oauth_code(tokens.error.as_deref());
         tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
             stage = "token", status, oauth_error = code, classification = kind.code(), "token request rejected");

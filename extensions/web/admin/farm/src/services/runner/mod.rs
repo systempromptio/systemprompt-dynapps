@@ -10,6 +10,7 @@
 pub mod cost_window;
 pub mod fly;
 mod handler;
+pub mod identity;
 pub mod observer;
 pub mod plugin;
 pub mod prepare;

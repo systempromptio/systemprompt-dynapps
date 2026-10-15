@@ -1,10 +1,12 @@
 //! The clients declared in agent-farms.yaml. A client's id is its slug, so
 //! a seed upserts by slug and never deletes: runs keep the client they were
-//! attributed to.
+//! attributed to. `service_account_user_id` is the account a
+//! `run_as: {mode: client}` run acts as for that client.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
 
 use crate::types::ClientId;
 
@@ -14,6 +16,7 @@ pub struct ClientRow {
     pub name: String,
     pub slug: String,
     pub odoo_partner_id: Option<i64>,
+    pub service_account_user_id: Option<UserId>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -22,12 +25,14 @@ pub async fn upsert_client(
     slug: &str,
     name: &str,
     odoo_partner_id: Option<i64>,
+    service_account: Option<&UserId>,
 ) -> Result<(), sqlx::Error> {
     sqlx::query_file!(
         "src/repositories/clients/upsert_client.sql",
         slug,
         name,
-        odoo_partner_id
+        odoo_partner_id,
+        service_account.map(UserId::as_str),
     )
     .execute(pool)
     .await?;

@@ -6,6 +6,7 @@
 //! them getting it wrong.
 
 pub mod fake_http;
+pub mod fake_portal;
 pub mod onepassword_fake;
 pub mod onepassword_fake_cli;
 pub mod orphans;
@@ -15,6 +16,8 @@ pub mod sso;
 pub mod tempdb;
 
 pub use fake_http::{RecordedRequest, RequestLog};
+pub use fake_portal::env::{PortalEnv, Principal};
+pub use fake_portal::{DYNBRAIN_PATH, FakePortal, ODOO_PATH, TokenPair};
 pub use onepassword_fake::FakeConnect;
 pub use onepassword_fake_cli::FakeOpCli;
 pub use paths::{repo_path, repo_root};

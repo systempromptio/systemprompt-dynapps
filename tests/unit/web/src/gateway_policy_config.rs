@@ -50,13 +50,11 @@ fn the_scanners_are_in_warn_mode_and_block_nothing() {
     assert_eq!(default_quotas().spec.safety.mode, SafetyMode::Warn);
 }
 
-// Why: on 2026-10-14 the gateway moved onto a client's Anthropic key (Ed:
-// "MASSIVELY restrict usage"), so the quota plane alone is enforced: a breach
-// answers 429. The scanners and the governance chain stay in warn mode; only
-// this plane flipped, and only deliberately.
+// Why: enforce (2026-10-14) refused active users with 429 at the $5/h window,
+// so on 2026-10-15 the quota plane returned to warning thresholds.
 #[test]
-fn the_quota_windows_are_enforced_ceilings() {
-    assert_eq!(default_quotas().spec.quota_mode, QuotaMode::Enforce);
+fn the_quota_windows_are_warning_thresholds() {
+    assert_eq!(default_quotas().spec.quota_mode, QuotaMode::Warn);
 }
 
 #[test]

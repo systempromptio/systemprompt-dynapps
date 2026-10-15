@@ -1,152 +1,74 @@
-//! The committed downstream-credential configs are load-bearing and otherwise
+//! The committed portal connector configs are load-bearing and otherwise
 //! unvalidated until boot: nothing else in the suite reads the external MCP
-//! server YAMLs that depend on a per-user accessor. These checks parse every
-//! one of them the way the loaders do, so a typo'd key or an accessor path
-//! that disagrees with the route it names fails here rather than at a user's
-//! first tool call.
-//!
-//! They also pin the posture: the hosted Atlassian connector is the only
-//! Atlassian server, the retired v1 `jira`/`confluence` servers cannot creep
-//! back, and neither can the retired `/api/public/salesforce/token` accessor's
-//! `services/web/config/salesforce.yaml`.
+//! server YAMLs that a per-user OAuth grant fronts. These checks parse every
+//! one of them the way the loaders do, so a typo'd key or a server that
+//! slipped out of the aggregator fails here rather than at a user's first
+//! tool call.
 
 use crate::support::repo_root;
 
-// Why: must match the routes registered by `connector_api_router` under the
-// `/api/public` nest. Core resolves the
-// accessor as `api_external_url + token_endpoint`, so a disagreement here is a
-// 404 at tool-call time and nowhere earlier.
-const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
-const SALESFORCE_SERVERS: [&str; 1] = ["salesforce"];
+const PORTAL_SERVERS: [&str; 2] = ["dynapps-odoo", "dynbrain"];
 
-fn mcp_config(name: &str) -> serde_yaml::Value {
-    let path = repo_root().join("services/mcp").join(name);
+fn server(name: &str) -> serde_yaml::Value {
+    let path = repo_root()
+        .join("services/mcp")
+        .join(format!("{name}.yaml"));
     let yaml = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()));
-    serde_yaml::from_str(&yaml).unwrap_or_else(|e| panic!("{} parses as YAML: {e}", path.display()))
-}
-
-fn server(file: &str, name: &str) -> serde_yaml::Value {
-    mcp_config(file)
-        .get("mcp_servers")
+    let doc: serde_yaml::Value = serde_yaml::from_str(&yaml)
+        .unwrap_or_else(|e| panic!("{} parses as YAML: {e}", path.display()));
+    doc.get("mcp_servers")
         .and_then(|s| s.get(name))
-        .unwrap_or_else(|| panic!("{file} declares an `mcp_servers.{name}` entry"))
+        .unwrap_or_else(|| panic!("{name}.yaml declares an `mcp_servers.{name}` entry"))
         .clone()
 }
 
 #[test]
-fn the_salesforce_server_ships_enabled() {
-    // Why: the server is visible only to users with a linked Salesforce
-    // identity, so it can stay on.
-    for name in SALESFORCE_SERVERS {
+fn every_portal_server_is_an_enabled_generic_oauth_connector() {
+    for name in PORTAL_SERVERS {
+        let entry = server(name);
         assert_eq!(
-            server(&format!("{name}.yaml"), name)["enabled"].as_bool(),
+            entry["enabled"].as_bool(),
             Some(true),
-            "{name} must ship enabled"
+            "{name} ships enabled"
         );
-    }
-}
-
-#[test]
-fn every_external_server_points_at_the_accessor_that_serves_it() {
-    let salesforce = SALESFORCE_SERVERS.map(|name| {
-        (
-            format!("{name}.yaml"),
-            name,
-            format!("/api/public/connectors/{name}/token"),
-        )
-    });
-    let mut servers = vec![(
-        "atlassian.yaml".to_owned(),
-        "atlassian",
-        ATLASSIAN_ACCESSOR.to_owned(),
-    )];
-    servers.extend(salesforce);
-    for (file, name, accessor) in servers {
-        let entry = server(&file, name);
-        let external_auth = entry
-            .get("external_auth")
-            .unwrap_or_else(|| panic!("{file}: {name} must declare external_auth"));
-
         assert_eq!(
-            external_auth
-                .get("token_endpoint")
-                .and_then(serde_yaml::Value::as_str),
-            Some(accessor.as_str()),
-            "{file}: token_endpoint must name the route that actually serves it"
-        );
-
-        // Why: the presence of `external_auth` is what switches core off
-        // forwarding our own JWT. `oauth.required: true` alongside it would gate
-        // the same call twice against two different credentials.
-        assert_eq!(
-            entry
-                .get("oauth")
-                .and_then(|o| o.get("required"))
-                .and_then(serde_yaml::Value::as_bool),
-            Some(false),
-            "{file}: external_auth governs auth, so oauth.required must be false"
-        );
-
-        assert_eq!(
-            entry.get("type").and_then(serde_yaml::Value::as_str),
+            entry["type"].as_str(),
             Some("external"),
-            "{file}: a server with external_auth must be type: external"
+            "{name} is an external server"
         );
-    }
-}
-
-#[test]
-fn the_atlassian_server_uses_the_v2_streamable_http_endpoint() {
-    // Why: core's MCP client speaks only StreamableHttp — it has no HTTP+SSE
-    // transport — and Atlassian's /v1 forms are retired with the v1 link.
-    let endpoint = server("atlassian.yaml", "atlassian")
-        .get("endpoint")
-        .and_then(serde_yaml::Value::as_str)
-        .expect("atlassian.yaml: atlassian must declare an endpoint")
-        .to_owned();
-    assert!(
-        endpoint.starts_with("https://mcp.atlassian.com/v2/mcp"),
-        "atlassian.yaml: the hosted connector is the v2 endpoint, got {endpoint}"
-    );
-}
-
-#[test]
-fn the_retired_v1_atlassian_files_do_not_exist() {
-    // Why: the per-server jira/confluence entries and the 3LO app config were
-    // deleted with their code (2026-09-08). A file reappearing would be loaded
-    // by the aggregator or the link-gate loader and fail at boot, or worse,
-    // parse and gate nothing.
-    for path in [
-        "services/mcp/jira.yaml",
-        "services/mcp/confluence.yaml",
-        "services/web/config/atlassian.yaml",
-        "services/access-control/atlassian.yaml",
-        "services/web/config/salesforce.yaml",
-    ] {
+        assert_eq!(
+            entry["connector"]["adapter"].as_str(),
+            Some("generic"),
+            "{name} connects through the generic OAuth connector"
+        );
+        // Why: the per-user connector grant governs the upstream call;
+        // `oauth.required: true` alongside it would gate the same call twice
+        // against two different credentials.
+        assert_eq!(
+            entry["oauth"]["required"].as_bool(),
+            Some(false),
+            "{name}: the connector governs auth, so oauth.required must be false"
+        );
         assert!(
-            !repo_root().join(path).exists(),
-            "{path} belongs to a retired downstream link"
+            entry["endpoint"]
+                .as_str()
+                .is_some_and(|e| e.starts_with("https://portal.dynapps.es/")),
+            "{name} is served by the Dynapps portal"
         );
     }
 }
 
 #[test]
-fn the_external_mcp_servers_are_listed_in_the_aggregator() {
+fn the_portal_servers_are_listed_in_the_aggregator() {
     // Why: a flat resource file that is not in `includes:` is never loaded, and
     // nothing reports it — the server simply does not exist.
     let aggregator = std::fs::read_to_string(repo_root().join("services/config/config.yaml"))
         .expect("services/config/config.yaml is readable");
-    for name in std::iter::once("atlassian").chain(SALESFORCE_SERVERS) {
+    for name in PORTAL_SERVERS {
         assert!(
             aggregator.contains(&format!("../mcp/{name}.yaml")),
             "services/config/config.yaml must include ../mcp/{name}.yaml"
-        );
-    }
-    for name in ["jira", "confluence"] {
-        assert!(
-            !aggregator.contains(&format!("../mcp/{name}.yaml")),
-            "services/config/config.yaml still includes the retired ../mcp/{name}.yaml"
         );
     }
 }

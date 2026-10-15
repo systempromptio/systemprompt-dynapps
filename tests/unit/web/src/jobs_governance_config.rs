@@ -130,10 +130,9 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
     let report = check_governance_config(&services).expect("shipped config must parse");
     assert_eq!(report.active, 4, "all four stages must be enabled");
     assert_eq!(
-        report.warning, 2,
-        "the shipped chain is in warn mode (2026-09-04 measurement window) except the tool \
-         plane: scope_check and tool_blocklist enforce (2026-10-14). Flipping another stage \
-         back to `mode: enforce` is a deliberate act and changes this number."
+        report.warning, 4,
+        "the shipped chain is entirely in warn mode (tool plane returned to warn 2026-10-15). \
+         Flipping a stage back to `mode: enforce` is a deliberate act and changes this number."
     );
 
     let yaml = std::fs::read_to_string(services.join("governance/config.yaml")).unwrap();

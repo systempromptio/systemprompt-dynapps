@@ -29,3 +29,7 @@ sqlx = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
+# The fake-portal e2e drives `connector_api_router` in-process.
+axum = { workspace = true }
+tower = { workspace = true }
+http-body-util = { workspace = true }

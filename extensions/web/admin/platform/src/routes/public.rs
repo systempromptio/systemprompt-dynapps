@@ -1,7 +1,7 @@
 //! The platform routers that mount outside the admin session.
 //!
-//! The desktop bridge's identity check, the Salesforce bearer accessor, and the
-//! hosted-MCP connector consent and account API. Each authenticates its own
+//! The desktop bridge's identity check and the hosted-MCP connector consent
+//! and account API. Each authenticates its own
 //! caller, so none sits behind the admin cookie layers or in the admin route
 //! table.
 
@@ -34,15 +34,7 @@ pub fn connector_api_router(pool: Arc<PgPool>, accounts: ServiceAccounts) -> Rou
             post(account::disconnect),
         )
         .route("/account/connections/{provider}/test", post(account::test))
-        .route(
-            "/account/connections/{provider}/manual-token",
-            post(account::manual),
-        )
         .route("/connectors/{provider}/start", get(consent::start))
-        .route(
-            "/connectors/salesforce/callback",
-            get(consent::salesforce_callback),
-        )
         .route("/connectors/{provider}/callback", get(consent::callback))
         .route("/connectors/{provider}/token", get(consent::token))
         .route("/identity/{server}/token", get(identity::token))

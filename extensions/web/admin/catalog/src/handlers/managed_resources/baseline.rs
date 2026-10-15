@@ -34,12 +34,7 @@ async fn capture(_user: &UserContext, state: &ManagedState) -> AdminResult<Impor
     let captured = tokio::task::spawn_blocking(move || {
         capture_skills(
             &root,
-            &[
-                systemprompt::identifiers::SkillId::new("admin_daily_brief"),
-                systemprompt::identifiers::SkillId::new("admin_critical_projects"),
-                systemprompt::identifiers::SkillId::new("admin_ai_usage"),
-                systemprompt::identifiers::SkillId::new("systemprompt_cli"),
-            ],
+            &[systemprompt::identifiers::SkillId::new("systemprompt_cli")],
         )
     })
     .await

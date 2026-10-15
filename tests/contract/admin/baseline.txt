@@ -18,7 +18,6 @@ DELETE /api/public/admin/sync/import/{stage_id}              anonymous=401 non-a
 DELETE /api/public/admin/user/account                        anonymous=401 non-admin=400 developer=400 admin=400 platform-admin=400 project-manager=400 knowledge-worker=400
 DELETE /api/public/admin/user/odoo-link                      anonymous=401 non-admin=204 developer=204 admin=204 platform-admin=204 project-manager=204 knowledge-worker=204
 DELETE /api/public/admin/users/{user_id}                     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
-DELETE /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/users/{user_id}/sessions            anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/users/{user_id}/sessions/{session_id} anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 GET    /admin                                                anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
@@ -225,7 +224,6 @@ POST   /admin/analysis/publications/withdrawals              anonymous=307 non-a
 POST   /admin/analysis/reports                               anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/analysis/reports/{id}/regenerate               anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 POST   /admin/api/profile/bridge-code                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
-POST   /admin/api/profile/salesforce/unlink                  anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 POST   /admin/data/clear/confirm                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/data/clear/preview                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/devices/pats                                   anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303
@@ -245,7 +243,6 @@ POST   /api/public/admin/agent-farm/demos/odoo               anonymous=401 non-a
 POST   /api/public/admin/agent-farm/farms/{farm_id}/sync     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/approve         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/deny            anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
-POST   /api/public/admin/connectors/{provider}/reprovision   anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/gateway/routes                      anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/gateway/routes/reorder              anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/groups                              anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
@@ -281,7 +278,6 @@ POST   /api/public/admin/sync/sources/refresh                anonymous=401 non-a
 POST   /api/public/admin/user/odoo-link                      anonymous=401 non-admin=422 developer=422 admin=422 platform-admin=422 project-manager=422 knowledge-worker=422
 POST   /api/public/admin/users                               anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/restore             anonymous=401 non-admin=403 developer=403 admin=409 platform-admin=409 project-manager=403 knowledge-worker=403
-POST   /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/share-token         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/agent-farm/evals/{suite_id}/run           anonymous=401 non-admin=422 developer=422 admin=422 platform-admin=422 project-manager=422 knowledge-worker=422
 POST   /api/public/agent-farm/runs                           anonymous=401 non-admin=422 developer=422 admin=422 platform-admin=422 project-manager=422 knowledge-worker=422

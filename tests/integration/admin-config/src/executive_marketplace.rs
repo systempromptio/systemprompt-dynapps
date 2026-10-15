@@ -1,5 +1,5 @@
-//! Shipped executive and connection-scoped Salesforce access through the
-//! runtime policy resolver.
+//! Shipped executive (control-plane) access through the runtime policy
+//! resolver.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -16,8 +16,6 @@ use systemprompt_web_admin_core::repositories::gateway_catalog::{
     dispatchable_route_ids, registered_routes,
 };
 use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
-use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
-use systemprompt_web_admin_platform::salesforce_orgs;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
 use crate::tempdb::TempDb;
@@ -34,7 +32,7 @@ fn services_path() -> PathBuf {
 fn executive_services_load_with_resolvable_plugin_members() {
     let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
         .expect("shipped services load and validate");
-    for id in ["dynapps-super-admin", "dynapps-salesforce"] {
+    for id in ["dynapps-super-admin"] {
         let marketplace = services
             .marketplaces
             .iter()
@@ -52,106 +50,19 @@ fn executive_services_load_with_resolvable_plugin_members() {
     }
 }
 
-#[test]
-fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
-    const EXPECTED: &[&str] = &[
-        "account_context",
-        "account_tiering",
-        "call_follow_up",
-        "call_prep",
-        "close_plan",
-        "customer_health",
-        "customer_voice",
-        "daily_briefing",
-        "deal_advance_gap",
-        "deal_review",
-        "deal_signals",
-        "deal_slip_scenario",
-        "draft_outreach",
-        "expansion_whitespace",
-        "find_internal_answer",
-        "forecast_narrative",
-        "handle_objection",
-        "lead_triage",
-        "pipeline_review",
-        "query_activity_history",
-        "renewal_radar",
-        "rep_context",
-        "research_prospect",
-        "salesforce_hygiene_check",
-        "stakeholder_map",
-        "team_pipeline",
-        "using_display_widget",
-        "weekly_wrap",
-        "win_loss_review",
-    ];
-    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
-        .expect("shipped services load and validate");
-    let plugin = services
-        .plugins
-        .iter()
-        .find(|(id, _)| id.as_str() == "dynapps-salesforce")
-        .expect("Salesforce plugin exists")
-        .1;
-    let actual: Vec<&str> = plugin.skills.include.iter().map(String::as_str).collect();
-    assert_eq!(actual, EXPECTED);
-    assert!(
-        !services
-            .marketplaces
-            .iter()
-            .any(|(id, _)| id.as_str() == "dynapps-sales-uk")
-    );
-
-    for id in EXPECTED {
-        let directory = services_path().join("skills").join(id);
-        for file in [directory.join("config.yaml"), directory.join("SKILL.md")] {
-            let body = std::fs::read_to_string(&file).expect("Salesforce skill file");
-            assert!(
-                !body.to_ascii_lowercase().contains("slack"),
-                "{} contains excluded collaboration-channel content",
-                file.display()
-            );
-        }
-    }
-}
-
 #[tokio::test]
-#[expect(
-    unsafe_code,
-    reason = "set_var is unsafe in edition 2024; see the SAFETY note"
-)]
-async fn executive_and_salesforce_connection_grant_only_the_intended_resources() {
+async fn executive_access_grants_only_the_control_plane() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let path = services_path();
     let services =
         ConfigLoader::load_from_path(&path.join("config/config.yaml")).expect("services");
-    // Why: a connection counts only when its connector is configured — the
-    // MCP server enabled in the shipped catalog and its org in the registry —
-    // and both are read from process-wide bootstraps, so this test installs
-    // the shipped tree rather than the empty fixture the user helper falls
-    // back to.
+    // Why: the parent-chain index reads the shipped catalog from the
+    // process-wide services bootstrap, so this test installs the shipped tree
+    // rather than the empty fixture the user helper falls back to.
     systemprompt::loader::ServicesBootstrap::init_from_path(&path.join("config/config.yaml"))
         .expect("install shipped services");
-    salesforce_orgs::SalesforceOrgRegistry::init_from_path(&path)
-        .await
-        .expect("install shipped Salesforce orgs");
-    // Why: a connection is `not_provisioned` until the org's External Client
-    // App credentials resolve; nextest runs each test in its own process, so
-    // the environment override reaches only this one.
-    // SAFETY: current-thread `#[tokio::test]` and nextest gives each test its
-    // own process, so no other thread reads the environment.
-    unsafe {
-        std::env::set_var(
-            salesforce_orgs::SHARED_CLIENT_ID_SECRET.to_uppercase(),
-            "test-client-id",
-        );
-        std::env::set_var(
-            salesforce_orgs::SHARED_CLIENT_SECRET.to_uppercase(),
-            "test-client-secret",
-        );
-    }
     groups_yaml_loader::load_groups_from_yaml(&db.pool, &path)
         .await
         .expect("groups");
@@ -184,20 +95,18 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
     // Why: `control_plane` is reached by every administrator role, not by
     // super_admin alone — dynapps-super-admin absorbed the old
     // systemprompt-admin marketplace, and splitting the control plane in two is
-    // exactly how an administrator ended up holding half of it. `sales` is
-    // reached by staff membership; a verified Salesforce connection or a
-    // project assignment alone grants nothing.
-    for (role, staff, connected, project, control_plane, sales) in [
-        ("user", false, false, false, false, false),
-        ("admin", false, false, false, true, false),
-        ("platform_admin", false, false, false, true, false),
-        ("knowledge_worker", false, false, false, false, false),
-        ("project_manager", false, false, false, false, false),
-        ("user", true, false, false, false, true),
-        ("user", false, true, false, false, false),
-        ("user", false, false, true, false, false),
-        ("super_admin", false, false, false, true, false),
-        ("super_admin", true, true, true, true, true),
+    // exactly how an administrator ended up holding half of it. Staff
+    // membership or a project assignment alone grants nothing.
+    for (role, staff, project, control_plane) in [
+        ("user", false, false, false),
+        ("admin", false, false, true),
+        ("platform_admin", false, false, true),
+        ("knowledge_worker", false, false, false),
+        ("project_manager", false, false, false),
+        ("user", true, false, false),
+        ("user", false, true, false),
+        ("super_admin", false, false, true),
+        ("super_admin", true, true, true),
     ] {
         let user = UserId::new(unique("executive-access"));
         let roles = vec!["user".to_owned(), role.to_owned()];
@@ -214,19 +123,6 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
         if project {
             set_project(&db.pool, user.as_str(), Some("odoo-delivery")).await;
         }
-        if connected {
-            let mut tx = db.pool.begin().await.expect("begin connector update");
-            let mut row = accounts::get_locked_account(&mut tx, &user, "salesforce")
-                .await
-                .expect("connector account");
-            row.status = "connected".into();
-            row.auth_method = Some("oauth".into());
-            row.verified_at = Some(chrono::Utc::now());
-            accounts::update_account(&mut tx, &user, &row)
-                .await
-                .expect("mark connector ready");
-            tx.commit().await.expect("commit connector update");
-        }
         let attributes = subject_attributes_for(&db.pool, &user)
             .await
             .expect("attributes");
@@ -236,16 +132,8 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
                 "dynapps-super-admin",
                 control_plane,
             ),
-            (EntityKind::Marketplace, "dynapps-salesforce", sales),
             (EntityKind::Plugin, "dynapps-super-admin", control_plane),
-            (EntityKind::Plugin, "dynapps-salesforce", sales),
-            (EntityKind::Skill, "admin_critical_projects", control_plane),
-            (EntityKind::Skill, "admin_ai_usage", control_plane),
-            (EntityKind::Skill, "admin_daily_brief", control_plane),
-            (EntityKind::Skill, "account_context", sales),
-            (EntityKind::Skill, "pipeline_review", sales),
-            (EntityKind::Skill, "using_display_widget", sales),
-            (EntityKind::McpServer, "salesforce", true),
+            (EntityKind::Skill, "systemprompt_cli", control_plane),
         ] {
             let ids = vec![id.to_owned()];
             let allowed = allowed_ids(
@@ -265,7 +153,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
             assert_eq!(
                 allowed.contains(id),
                 expected,
-                "{role}, staff={staff}, connected={connected}, project={project}: {id}"
+                "{role}, staff={staff}, project={project}: {id}"
             );
         }
     }

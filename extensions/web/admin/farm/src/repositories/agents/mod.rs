@@ -5,6 +5,7 @@ use systemprompt::identifiers::{PluginId, UserId};
 
 use super::filters::NewAgent;
 use super::rows::AgentRow;
+use crate::config::RunAsMode;
 use crate::types::{FarmAgentId, FarmId};
 
 pub async fn list_farm_agents(
@@ -73,12 +74,14 @@ pub async fn update_agent_run_as(
     farm_id: &FarmId,
     id: &str,
     run_as: Option<&UserId>,
+    mode: Option<RunAsMode>,
 ) -> Result<u64, sqlx::Error> {
     let result = sqlx::query_file!(
         "src/repositories/agents/update_agent_run_as.sql",
         farm_id.as_str(),
         id,
         run_as.map(UserId::as_str),
+        mode.map(RunAsMode::as_str),
     )
     .execute(pool)
     .await?;

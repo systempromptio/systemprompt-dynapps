@@ -1,9 +1,9 @@
 //! Read-only provider identity and MCP protocol verification before connection
 //! use.
 
+use super::Grant;
 use super::response::{body, tool_error};
 use super::transport::client;
-use super::{Grant, Provider};
 use serde_json::{Value, json};
 use std::time::Instant;
 use systemprompt_web_admin_core::connections::report::VerificationReport;
@@ -62,74 +62,9 @@ async fn rpc(
         .ok_or_else(|| AdminError::Upstream("MCP response has no result".into()))
 }
 
-async fn identity(
-    http: &reqwest::Client,
-    grant: &mut Grant,
-    session: &mut Option<String>,
-) -> AdminResult<()> {
-    if matches!(grant.provider, Provider::Generic(_)) {
-        grant.resource_name = grant.provider.endpoint();
-        return super::userinfo::generic_identity(http, grant).await;
-    }
-    let info = match &grant.provider {
-        Provider::Generic(_) => return Ok(()),
-        Provider::Atlassian => super::payload::atlassian_user(
-            &rpc(
-                http,
-                grant,
-                session,
-                json!({"jsonrpc":"2.0", "id":3,
-            "method":"tools/call", "params":{"name":"atlassianUserInfo", "arguments":{}}}),
-            )
-            .await?,
-        )?,
-        Provider::Salesforce(_) => {
-            let url = format!(
-                "{}/services/oauth2/userinfo",
-                grant.provider.salesforce_org()?.domain()?
-            );
-            let response = http
-                .get(url)
-                .bearer_auth(&grant.access_token)
-                .header("User-Agent", "Dynapps-systemprompt")
-                .send()
-                .await
-                .map_err(|_redacted_error| {
-                    AdminError::Upstream("Provider identity unavailable".into())
-                })?;
-            tracing::info!(target: "connector_oauth", user_id = %grant.user, provider = grant.provider.slug(),
-                stage = "identity", status = response.status().as_u16(), "provider identity responded");
-            body(response).await?
-        },
-    };
-    let id = match &grant.provider {
-        Provider::Atlassian => info.get("account_id").or_else(|| info.get("accountId")),
-        Provider::Salesforce(_) => info.get("user_id"),
-        Provider::Generic(_) => None,
-    };
-    grant.account_id = id
-        .and_then(|v| {
-            v.as_str()
-                .map(str::to_owned)
-                .or_else(|| v.as_u64().map(|n| n.to_string()))
-        })
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| AdminError::Upstream("Provider returned no verified account ID".into()))?;
-    info.get("displayName")
-        .or_else(|| info.get("login"))
-        .or_else(|| info.get("preferred_username"))
-        .and_then(Value::as_str)
-        .unwrap_or(&grant.account_id)
-        .clone_into(&mut grant.account_name);
-    if grant.provider.is_salesforce() {
-        super::salesforce::bind_org(grant, &info)?;
-    }
-    if grant.provider == Provider::Atlassian {
-        let sites = super::payload::atlassian_sites(&rpc(http, grant, session, json!({"jsonrpc":"2.0", "id":4,
-            "method":"tools/call", "params":{"name":"getAccessibleAtlassianResources", "arguments":{}}})).await?)?;
-        super::site::select(grant, &sites).await?;
-    }
-    Ok(())
+async fn identity(http: &reqwest::Client, grant: &mut Grant) -> AdminResult<()> {
+    grant.resource_name = grant.provider.endpoint();
+    super::userinfo::generic_identity(http, grant).await
 }
 
 pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
@@ -221,7 +156,7 @@ async fn handshake(
 
     let started = Instant::now();
     let outcome = async {
-        identity(http, grant, session).await?;
+        identity(http, grant).await?;
         Ok(
             match (
                 grant.account_name.is_empty(),

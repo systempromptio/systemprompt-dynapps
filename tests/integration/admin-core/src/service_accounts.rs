@@ -240,14 +240,15 @@ async fn a_credential_with_no_row_is_not_connected() {
 }
 
 #[tokio::test]
-async fn the_broker_returns_an_atlassian_basic_pair() {
+async fn the_broker_returns_an_odoo_basic_pair() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     set_master_key();
     let id = service_account(&db.pool).await;
     let body: AttachCredential = serde_json::from_value(serde_json::json!({
-        "kind": "atlassian_api_token", "email": "bot@example.com", "secret": "tok",
+        "kind": "odoo_api_key", "url": "https://odoo.example.com", "db": "main",
+        "login": "bot@example.com", "secret": "tok",
     }))
     .expect("attach body");
     machine_credentials::attach(
@@ -255,14 +256,14 @@ async fn the_broker_returns_an_atlassian_basic_pair() {
         &accounts(&db.pool),
         Holder {
             user: &id,
-            provider: "atlassian",
+            provider: "odoo",
         },
         body,
         "test",
     )
     .await
     .expect("attach");
-    let value = machine_credentials::broker_token(&db.pool, &id, "atlassian", Some("farm:triage"))
+    let value = machine_credentials::broker_token(&db.pool, &id, "odoo", Some("farm:triage"))
         .await
         .expect("token");
     assert_eq!(value, "Basic Ym90QGV4YW1wbGUuY29tOnRvaw==");

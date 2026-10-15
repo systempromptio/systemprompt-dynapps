@@ -1,6 +1,8 @@
 //! The shipped chain on the Odoo plane: a destructive or erasure Odoo tool is
-//! refused to a plain caller and passes for `odoo_destructive` or admin, and
-//! the role unlocks nothing outside `mcp__odoo__`.
+//! flagged for a plain caller and passes for `odoo_destructive` or admin, and
+//! the role unlocks nothing outside `mcp__odoo__`. The tool plane runs in warn
+//! mode (services/governance/config.yaml, 2026-10-15), so a would-be refusal
+//! is recorded as `Warn`; restoring `mode: enforce` turns these back to `Deny`.
 
 use systemprompt::identifiers::{CallId, McpToolName, SessionId, UserId};
 use systemprompt_security::authz::types::{Decision, DecisionTag};
@@ -38,14 +40,14 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
 }
 
 #[test]
-fn destructive_odoo_tools_are_refused_without_the_role() {
+fn destructive_odoo_tools_are_flagged_without_the_role() {
     for tool in [
         "mcp__odoo__lead_delete",
         "mcp__odoo__partner_anonymise",
         "mcp__odoo__gdpr_erase",
     ] {
         let decision = decide(tool, AccessScope::User, &["user"]);
-        assert_eq!(decision.tag(), DecisionTag::Deny, "{tool}");
+        assert_eq!(decision.tag(), DecisionTag::Warn, "{tool}");
     }
 }
 
@@ -67,5 +69,5 @@ fn reads_pass_and_the_role_unlocks_nothing_elsewhere() {
         AccessScope::User,
         &["odoo_destructive"],
     );
-    assert_eq!(elsewhere.tag(), DecisionTag::Deny);
+    assert_eq!(elsewhere.tag(), DecisionTag::Warn);
 }

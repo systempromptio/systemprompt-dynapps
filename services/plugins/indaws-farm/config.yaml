@@ -26,5 +26,7 @@ plugin:
     include: []
   mcp_servers:
     source: explicit
-    include: []
+    include:
+    - dynapps-odoo
+    - dynbrain
   content_sources: {}

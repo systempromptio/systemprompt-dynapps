@@ -108,7 +108,6 @@ pub(super) fn short_layer(layer: &str, effective: &str) -> String {
         "user" => "person".to_owned(),
         "default" | "default_included" if effective == "allow" => "open".to_owned(),
         "default" | "default_included" => "closed".to_owned(),
-        "salesforce" => "linked".to_owned(),
         other => other.replace('_', " "),
     }
 }
@@ -117,7 +116,6 @@ pub(super) fn rule_type_of(short: &str) -> String {
     match short {
         "person" => "user".to_owned(),
         "open" | "closed" => "default".to_owned(),
-        "linked" => "salesforce".to_owned(),
         other => other.replace(' ', "_"),
     }
 }

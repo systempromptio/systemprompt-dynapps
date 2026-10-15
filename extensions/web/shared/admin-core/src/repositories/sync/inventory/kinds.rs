@@ -140,12 +140,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "config/blog.yaml",
     ),
     file(
-        "salesforce_orgs",
-        "Salesforce orgs",
-        "the org registry behind the per-org MCP servers",
-        "config/salesforce-orgs.yaml",
-    ),
-    file(
         "agent_farms",
         "Agent farms",
         "the Git-sourced agent farms this instance syncs and runs",

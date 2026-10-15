@@ -5,7 +5,7 @@ import { escapeHtml } from '/assets/js/utils/escape.js';
 import { subscribeSnapshot } from '/assets/js/services/state-store.js';
 const statuses = { verification_required: 'Verification required', no_auth_required: 'No authorization required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
 const dots = { connected: 'ok', reconnect_required: 'warn', verification_required: 'warn', temporarily_unavailable: 'warn' };
-const names = { atlassian: 'Atlassian', salesforce: 'Salesforce' };
+const names = {};
 let currentUser = null;
 let current = null;
 let unavailable = false;

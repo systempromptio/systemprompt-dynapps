@@ -2,8 +2,7 @@
 //!
 //! The configuration and code-sync pages in the Platform group, the device
 //! credentials and service-account pages in People, and the connect, connectors
-//! and setup pages every signed-in user reaches from their account, plus the
-//! Salesforce unlink those pages post to.
+//! and setup pages every signed-in user reaches from their account.
 
 use std::sync::Arc;
 
@@ -62,13 +61,6 @@ pub fn account_routes() -> Router<Arc<PgPool>> {
         .route("/connect", get(handlers::ssr::connect_page))
         .route("/connectors", get(handlers::ssr::connectors_page))
         .route("/setup", get(handlers::ssr::setup_page))
-}
-
-pub fn api_routes() -> Router<Arc<PgPool>> {
-    Router::new().route(
-        "/api/profile/salesforce/unlink",
-        post(handlers::salesforce_auth::salesforce_unlink),
-    )
 }
 
 // Why: Instance-wide operational data; handlers enforce platform-admin access.

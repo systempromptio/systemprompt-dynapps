@@ -40,7 +40,7 @@ async fn candidate_edit_compares_against_and_preserves_its_baseline_revision() {
         .response_headers_with(capture, &[("origin", &request_origin)])
         .await;
     assert_eq!(status, StatusCode::CREATED);
-    let baseline: String = sqlx::query_scalar("SELECT v.id FROM managed_revisions v JOIN managed_resources r ON r.id = v.resource_id WHERE r.resource_key = 'admin_daily_brief' ORDER BY v.created_at DESC LIMIT 1")
+    let baseline: String = sqlx::query_scalar("SELECT v.id FROM managed_revisions v JOIN managed_resources r ON r.id = v.resource_id WHERE r.resource_key = 'systemprompt_cli' ORDER BY v.created_at DESC LIMIT 1")
         .fetch_one(&*db.pool).await.expect("captured baseline");
     let files_path = format!("/api/public/admin/managed/revisions/{baseline}/files");
     let (status, baseline_before) = app.call(Call::get(&files_path, Principal::Admin)).await;

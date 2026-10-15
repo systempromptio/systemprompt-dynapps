@@ -2,7 +2,7 @@
 //! run's credentials are issued to.
 //!
 //! - `user`: the person who launched the run, spending their own connector
-//!   grants (Odoo, DynBrain) through the gateway.
+//!   grants (Odoo, `DynBrain`) through the gateway.
 //! - `client`: the service account of the run's client (`clients[].
 //!   service_account`), so every run for one client acts as that client.
 //! - `service_account`: the named service account (`service_account:`).
@@ -92,7 +92,6 @@ impl RunAs {
         }
     }
 
-    /// The account to resolve at sync, present only in `service_account` mode.
     #[must_use]
     pub fn account(&self) -> Option<&str> {
         match self.mode {

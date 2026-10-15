@@ -56,6 +56,7 @@ pub(crate) async fn seed(pool: &Arc<PgPool>) -> Seeded {
             max_budget_usd: 2.0,
             model: None,
             run_as_user_id: None,
+            run_as_mode: None,
             project_id: None,
             client_id: None,
         },

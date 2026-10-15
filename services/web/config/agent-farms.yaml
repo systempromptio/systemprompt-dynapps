@@ -11,10 +11,35 @@
 # run, eval run and report it produces is attributed to that client. An
 # agent may name its own `run_as` under `agents:`, preferred over the farm's.
 # Unknown keys are a load error.
+#
+# `run_as` picks whose identity a run's credentials (gateway, MCP servers,
+# connector grants) are issued to. Three modes:
+#
+#   run_as:
+#     mode: user              # the person who launched the run; the run spends
+#                             # their own Odoo / DynBrain portal grants, as if
+#                             # they called the tools themselves
+#   run_as:
+#     mode: client            # the service account of the run's client (the
+#                             # launch's client, else the farm's `client:`),
+#                             # declared as `service_account:` on that client;
+#                             # a launch with no client, or a client without
+#                             # one, is refused
+#   run_as:
+#     mode: service_account   # one named service account (by email or id)
+#     service_account: svc-odoo-farm@dynapps.es
+#
+# A service account reaches the portal servers (dynapps-odoo, dynbrain)
+# through the OAuth grant an admin connects once on its page under
+# /admin/identity/service-accounts. The legacy plain form
+# `run_as: svc@example.com` still loads, as mode service_account. Whatever
+# the mode, the launching person is recorded on the run.
 
 clients:
   - slug: dynapps
     name: "Dynapps"
+    # The account `run_as: {mode: client}` runs for this client act as.
+    service_account: svc-odoo-farm@dynapps.es
   - slug: acme-logistics
     name: "Acme Logistics"
 
@@ -29,8 +54,17 @@ farms:
     client: dynapps
     # Runs execute as this service account (by email, so one config serves
     # every environment). Its odoo_api_key machine credential is what the odoo
-    # MCP server spends; the launching person is still recorded on the run.
-    run_as: svc-odoo-farm@dynapps.es
+    # MCP server spends, and its portal grant what dynapps-odoo and dynbrain
+    # spend; the launching person is still recorded on the run.
+    run_as:
+      mode: service_account
+      service_account: svc-odoo-farm@dynapps.es
+    # Per-agent override, preferred over the farm's run_as. An agent that
+    # works on the launcher's own Odoo / DynBrain data runs as them:
+    #   agents:
+    #     portal_assistant:
+    #       run_as:
+    #         mode: user
     source:
       github: systempromptio/systemprompt-agent-farm
       ref: main

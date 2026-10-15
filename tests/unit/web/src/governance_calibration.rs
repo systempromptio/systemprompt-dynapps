@@ -209,11 +209,7 @@ fn installation_omits_aws_and_keeps_warn_mode() {
         .unwrap();
     assert_eq!(cfg.mode.to_string(), "warn");
     for policy in &cfg.policies {
-        let expected = match policy.id.as_str() {
-            "scope_check" | "tool_blocklist" => "enforce",
-            _ => "warn",
-        };
-        assert_eq!(policy.mode.to_string(), expected, "{}", policy.id.as_str());
+        assert_eq!(policy.mode.to_string(), "warn", "{}", policy.id.as_str());
     }
     let engine = GovernanceEngine::from_config(&cfg).unwrap();
     assert!(!engine.enforces_prompt_secrets());

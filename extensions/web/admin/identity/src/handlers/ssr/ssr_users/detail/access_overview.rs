@@ -258,12 +258,7 @@ fn connection_view(c: &Connection) -> ConnectionView {
         )
     };
     ConnectionView {
-        name: match c.provider.as_str() {
-            "atlassian" => "Atlassian",
-            "salesforce" => "Salesforce",
-            other => other,
-        }
-        .to_owned(),
+        name: c.provider.clone(),
         permission: if c.entitled { "Allowed" } else { "Not allowed" },
         status,
         tone,

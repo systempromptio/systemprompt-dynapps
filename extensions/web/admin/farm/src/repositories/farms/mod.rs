@@ -7,6 +7,7 @@ use systemprompt_web_shared::ProjectId;
 
 use super::filters::NewFarm;
 use super::rows::FarmRow;
+use crate::config::RunAsMode;
 use crate::types::{ClientId, FarmId};
 
 pub async fn list_farms(pool: &PgPool) -> Result<Vec<FarmRow>, sqlx::Error> {
@@ -51,6 +52,7 @@ pub async fn upsert_farm(pool: &PgPool, farm: &NewFarm) -> Result<(), sqlx::Erro
         farm.run_as_user_id.as_ref().map(UserId::as_str),
         farm.project_id.as_ref().map(ProjectId::as_str),
         farm.client_id.as_ref().map(ClientId::as_str),
+        farm.run_as_mode.map(RunAsMode::as_str),
     )
     .execute(pool)
     .await?;
