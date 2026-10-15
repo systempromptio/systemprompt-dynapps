@@ -19,7 +19,7 @@ step "1. Run row"
 row=$(sql_rows "SELECT status, triggered_via, started_at, finished_at FROM agent_farm_runs WHERE id = $r")
 printf '%s' "$row" > "$STATE_DIR/run_row.json"
 trig=$(printf '%s' "$row" | jq -r '.[0].triggered_via // empty')
-record 30 "trigger recorded as $TRIGGER" "$([[ "$trig" == "$TRIGGER" || "$trig" == scheduler* ]] && echo true || echo false)" "triggered_via=${trig:-none}"
+record 30 "trigger recorded as $TRIGGER" "$([[ "$trig" == "$TRIGGER" ]] && echo true || echo false)" "triggered_via=${trig:-none}"
 
 step "2. Artifacts"
 outputs=$(jq -c '[.outputs[]?.path]' "$STATE_DIR/report.json" 2>/dev/null || echo '[]')

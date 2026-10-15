@@ -87,7 +87,10 @@ metrics = {
     "mcp": servers,
     "governance": {"warn_count": warns, "decisions": gov},
     "artifacts": outputs,
-    "delivery": {"dynbrain": "published" if delivered else "missing", "article_id": article},
+    "delivery": {"dynbrain": report.get("delivery_status") or ("delivered" if delivered else "not_found"),
+                 "article_id": article},
+    "farm_report": {k: report.get(k) for k in ("mcp_calls", "mcp_reads", "mcp_writes", "governance_warnings")
+                    if k in report},
     "eval": {"passed": report.get("eval_passed"), "score": report.get("eval_score")},
     "followup": followup,
     "assertions": assertions,
