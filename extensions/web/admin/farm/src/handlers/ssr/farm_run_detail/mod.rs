@@ -40,7 +40,7 @@ use systemprompt_web_admin_core::ssr::page::Page;
 
 use crate::handlers::ssr::run_events_view::{RunEventView, event_views};
 use crate::handlers::ssr::shared::is_live;
-use crate::repositories::clients::{RunDecisionRow, RunIdentityRow, RunReportRow};
+use crate::repositories::clients::{RunDecisionRow, RunIdentityRow, RunReportViewRow};
 use crate::repositories::rows::RunRow;
 use crate::repositories::runs::RunnerMachineRow;
 use crate::repositories::summaries::RunRequestRow;
@@ -61,7 +61,7 @@ pub(crate) struct RunData {
     pub tool_call_count: i64,
     pub requests: Vec<RunRequestRow>,
     pub runner: Option<RunnerMachineRow>,
-    pub report: Option<RunReportRow>,
+    pub report: Option<RunReportViewRow>,
     pub identity: Option<RunIdentityRow>,
     pub decisions: Vec<RunDecisionRow>,
 }
@@ -148,7 +148,7 @@ pub(crate) async fn load_run_data(
 }
 
 type ReportFacts = (
-    Result<Option<RunReportRow>, sqlx::Error>,
+    Result<Option<RunReportViewRow>, sqlx::Error>,
     Result<Option<RunIdentityRow>, sqlx::Error>,
     Result<Vec<RunDecisionRow>, sqlx::Error>,
 );
@@ -174,7 +174,7 @@ async fn load_report_facts(
     .collect();
     let id = &run.id;
     tokio::join!(
-        clients::find_run_report(pool, id),
+        clients::find_run_report_view(pool, id),
         clients::find_run_identity(pool, id),
         clients::list_run_governance(pool, &sessions, context_id, GOVERNANCE_CAP),
     )

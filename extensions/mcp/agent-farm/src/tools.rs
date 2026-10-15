@@ -11,7 +11,7 @@ use crate::typed;
 
 pub const SERVER_NAME: &str = "agent-farm";
 
-pub const TOOL_NAMES: [&str; 15] = [
+pub const TOOL_NAMES: [&str; 16] = [
     "run_start",
     "run_status",
     "run_events",

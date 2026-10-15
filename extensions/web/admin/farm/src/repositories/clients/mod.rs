@@ -19,7 +19,7 @@ use crate::types::{ClientId, FarmAgentId, FarmId, FarmRunId};
 pub use catalog::{ClientRow, find_client, list_clients, upsert_client};
 pub use rows::{
     AgentOutcomeRow, ClientSummaryRow, DailyOutcomeRow, ReportRunRow, RunDecisionRow,
-    RunIdentityRow, RunReportRow,
+    RunIdentityRow, RunReportViewRow,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -98,13 +98,13 @@ pub async fn list_report_runs(
     .await
 }
 
-pub async fn find_run_report(
+pub async fn find_run_report_view(
     pool: &PgPool,
     run_id: &FarmRunId,
-) -> Result<Option<RunReportRow>, sqlx::Error> {
+) -> Result<Option<RunReportViewRow>, sqlx::Error> {
     sqlx::query_file_as!(
-        RunReportRow,
-        "src/repositories/clients/find_run_report.sql",
+        RunReportViewRow,
+        "src/repositories/clients/find_run_report_view.sql",
         run_id.as_str()
     )
     .fetch_optional(pool)

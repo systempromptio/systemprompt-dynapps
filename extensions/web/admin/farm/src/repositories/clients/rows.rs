@@ -69,7 +69,7 @@ pub struct ReportRunRow {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct RunReportRow {
+pub struct RunReportViewRow {
     pub run_id: FarmRunId,
     pub completed: bool,
     pub summary: Option<String>,

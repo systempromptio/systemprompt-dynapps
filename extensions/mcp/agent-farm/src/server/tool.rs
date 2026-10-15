@@ -47,9 +47,11 @@ async fn run<H: McpToolHandler>(
     ctx: &Dispatch<'_>,
     handler: &H,
 ) -> Result<CallToolResult, McpError> {
-    ctx.executor
-        .execute(handler, ctx.request, ctx.request_context, ctx.client)
-        .await
+    Box::pin(
+        ctx.executor
+            .execute(handler, ctx.request, ctx.request_context, ctx.client),
+    )
+    .await
 }
 
 pub async fn dispatch_tool(
