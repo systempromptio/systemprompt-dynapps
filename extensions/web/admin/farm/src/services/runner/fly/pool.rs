@@ -128,6 +128,7 @@ impl RunnerPool {
     // Why: the Fly Machines API leaves a stopped machine stopped after a
     // config update ("leaving the new version stopped"), so the pooled
     // runner is started explicitly once the update has settled.
+    // JSON: the machine config is the Fly Machines API wire body.
     async fn relaunch(&self, id: &str, config: serde_json::Value) -> FarmResult<Machine> {
         let updated = self.client.update(id, config).await?;
         self.client.wait(&updated, "stopped").await?;
