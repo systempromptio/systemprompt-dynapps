@@ -10,19 +10,19 @@ use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 // as issued, so they are decoded untyped before `IdTokenClaims` reads them.
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use systemprompt::security::keys::{JwksClient, JwksClientError};
 use systemprompt::sso::{ExternalIdentity, SsoError};
 
 use super::super::error::SsoProviderError;
 use super::claims::IdTokenClaims;
 use super::config::EntraOidcConfig;
 use super::discovery::OidcDiscovery;
+use super::jwks::fetch_rsa_key;
 
 pub(super) async fn validate_id_token(
     id_token: &str,
     cfg: &EntraOidcConfig,
     discovery: &OidcDiscovery,
-    jwks: &JwksClient,
+    http: &reqwest::Client,
     expected_nonce: &str,
 ) -> Result<ExternalIdentity, SsoError> {
     let header = decode_header(id_token).map_err(SsoProviderError::IdTokenHeader)?;
@@ -35,15 +35,7 @@ pub(super) async fn validate_id_token(
         .kid
         .ok_or_else(|| SsoError::InvalidAssertion("id_token carries no kid".to_owned()))?;
 
-    let jwk = jwks
-        .fetch_at(&discovery.issuer, &discovery.jwks_uri, &kid)
-        .await
-        .map_err(|e| match e {
-            JwksClientError::KeyNotFound { .. } => {
-                SsoError::InvalidAssertion("unknown kid".to_owned())
-            },
-            other => SsoError::Unavailable(format!("JWKS resolution failed: {other}")),
-        })?;
+    let jwk = fetch_rsa_key(http, &discovery.jwks_uri, &cfg.jwks_allowed_hosts, &kid).await?;
     let key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e).map_err(SsoError::internal)?;
 
     let configured_issuer = cfg.issuer();

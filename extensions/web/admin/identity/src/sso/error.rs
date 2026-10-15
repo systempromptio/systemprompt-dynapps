@@ -25,6 +25,24 @@ pub enum SsoProviderError {
         #[source]
         source: reqwest::Error,
     },
+    #[error("JWKS uri {url} unusable: {source}")]
+    JwksUri {
+        url: String,
+        #[source]
+        source: url::ParseError,
+    },
+    #[error("JWKS fetch from {url} failed: {source}")]
+    JwksFetch {
+        url: String,
+        #[source]
+        source: reqwest::Error,
+    },
+    #[error("JWKS from {url} unparseable: {source}")]
+    JwksParse {
+        url: String,
+        #[source]
+        source: reqwest::Error,
+    },
     #[error("token endpoint unreachable: {0}")]
     TokenEndpoint(#[source] reqwest::Error),
     #[error("token response unparseable: {0}")]
@@ -73,6 +91,9 @@ impl From<SsoProviderError> for SsoError {
             | SsoProviderError::DiscoveryStatus { .. }
             | SsoProviderError::DiscoveryParse { .. }
             | SsoProviderError::TokenEndpoint(_)
+            | SsoProviderError::JwksUri { .. }
+            | SsoProviderError::JwksFetch { .. }
+            | SsoProviderError::JwksParse { .. }
             | SsoProviderError::IdpMetadata(_)
             | SsoProviderError::MetadataClient(_)
             | SsoProviderError::MetadataFetch { .. }

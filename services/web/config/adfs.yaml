@@ -49,6 +49,7 @@ idp_metadata_path: entra-federation-metadata.xml
 allowed_email_domains:
   - dynapps.es
   - wearedynapps.com
+  - dynapps.be
 
 # Attach a first sign-in to the active local account that owns the asserted
 # (verified) address, instead of provisioning a duplicate.

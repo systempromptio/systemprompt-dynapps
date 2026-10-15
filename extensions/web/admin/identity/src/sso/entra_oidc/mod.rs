@@ -17,6 +17,7 @@
 mod claims;
 mod config;
 mod discovery;
+mod jwks;
 mod token;
 mod verify;
 
@@ -27,7 +28,6 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::RngCore;
 use sha2::{Digest, Sha256};
-use systemprompt::security::keys::JwksClient;
 use systemprompt::sso::{
     CookieSameSite, ExternalIdentity, SsoError, SsoHookContext, SsoIdentityPolicy, SsoPaths,
     SsoProtocol, SsoProvider, SsoRedirect, SsoReturn, SsoStart, SsoStateContext, SsoStateSeed,
@@ -106,7 +106,6 @@ pub struct EntraOidcProvider {
     issuer: String,
     discovery: DiscoverySource,
     http: reqwest::Client,
-    jwks: JwksClient,
 }
 
 impl EntraOidcProvider {
@@ -119,7 +118,6 @@ impl EntraOidcProvider {
         discovery.spawn_refresh();
         Ok(Self {
             issuer: cfg.issuer(),
-            jwks: JwksClient::new(cfg.jwks_allowed_hosts.clone()),
             client_secret,
             discovery,
             http,
@@ -261,7 +259,7 @@ impl SsoProvider for EntraOidcProvider {
         )
         .await?;
         let identity =
-            verify::validate_id_token(&id_token, &self.cfg, &discovery, &self.jwks, &nonce).await?;
+            verify::validate_id_token(&id_token, &self.cfg, &discovery, &self.http, &nonce).await?;
         Ok(identity)
     }
 }
