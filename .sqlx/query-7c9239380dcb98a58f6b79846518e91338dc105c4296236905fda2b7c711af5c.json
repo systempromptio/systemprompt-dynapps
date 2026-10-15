@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The scheduler-started runs since $1 (the nightly audit flow) and what\n-- their reports recorded: outcome, cost, MCP reads and writes, governance\n-- warnings, DynBrain delivery and the mean eval score, plus the last run.\nSELECT COUNT(r.id)::bigint AS \"runs!\",\n       COUNT(r.id) FILTER (WHERE r.status = 'succeeded')::bigint AS \"succeeded!\",\n       COALESCE(SUM(r.cost_microdollars), 0)::bigint AS \"cost_microdollars!\",\n       COALESCE(SUM(rep.mcp_reads), 0)::bigint AS \"mcp_reads!\",\n       COALESCE(SUM(rep.mcp_writes), 0)::bigint AS \"mcp_writes!\",\n       COALESCE(SUM(rep.governance_warnings), 0)::bigint AS \"governance_warnings!\",\n       COUNT(rep.run_id) FILTER (WHERE rep.delivery_status = 'delivered')::bigint AS \"delivered!\",\n       COUNT(rep.run_id)::bigint AS \"reported!\",\n       AVG(rep.eval_score)::float8 AS \"eval_mean?\",\n       MAX(r.created_at) AS \"last_run_at?\",\n       (ARRAY_AGG(r.id ORDER BY r.created_at DESC))[1] AS \"last_run_id?: FarmRunId\",\n       (ARRAY_AGG(r.status ORDER BY r.created_at DESC))[1] AS \"last_status?\"\nFROM agent_farm_runs r\nLEFT JOIN agent_farm_run_reports rep ON rep.run_id = r.id\nWHERE r.triggered_via = 'scheduler' AND r.created_at >= $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "runs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "succeeded!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "mcp_reads!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "mcp_writes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "governance_warnings!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "delivered!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "reported!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "eval_mean?",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "last_run_at?",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "last_run_id?: FarmRunId",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "last_status?",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "7c9239380dcb98a58f6b79846518e91338dc105c4296236905fda2b7c711af5c"
+}

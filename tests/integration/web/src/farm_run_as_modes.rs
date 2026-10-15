@@ -88,7 +88,7 @@ pub(crate) async fn credential_user_of(pool: &Arc<PgPool>, run: &RunRow) -> User
 
 async fn client_with(pool: &PgPool, account: Option<&UserId>) -> ClientId {
     let slug = format!("client-{}", uuid::Uuid::new_v4().simple());
-    clients::upsert_client(pool, &slug, "Client", None, account)
+    clients::upsert_client(pool, &slug, "Client", account)
         .await
         .expect("upsert client");
     ClientId::new(slug)

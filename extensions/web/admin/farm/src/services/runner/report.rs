@@ -2,12 +2,14 @@
 //!
 //! [`write_run_report`] runs after the observer stamps a run terminal: it
 //! reads the run's last assistant text from `agent_run_events`, hashes the
-//! files under the agent's `output_path` in the run workspace, and upserts
-//! `agent_farm_run_reports`, whose SQL joins the Odoo audit rows and the eval
-//! verdict. An eval settles later, so [`refresh_report_eval`] re-reads it.
-//! [`backfill_missing_reports`] writes, once at boot, the report of every
-//! terminal run that has none; a run with a report is never selected again,
-//! and one whose agent run is gone is skipped, so the pass is idempotent.
+//! files under the agent's `output_path` in the run workspace, tallies its
+//! MCP calls per server (reads, writes, `DynBrain` delivery) and the
+//! governance `warn` findings its sessions produced, and upserts
+//! `agent_farm_run_reports`, whose SQL joins the eval verdict. An eval settles
+//! later, so [`refresh_report_eval`] re-reads it. [`backfill_missing_reports`]
+//! writes, once at boot, the report of every terminal run that has none; a run
+//! with a report is never selected again, and one whose agent run is gone is
+//! skipped, so the pass is idempotent.
 
 use std::io::Read;
 use std::path::Path;
@@ -19,6 +21,7 @@ use sqlx::PgPool;
 use systemprompt::agent_runs::{AgentRunRepository, RunLayout};
 use walkdir::WalkDir;
 
+use super::tool_tally::tally;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::reports::{self, NewRunReport};
 use crate::repositories::{agents, runs};
@@ -144,11 +147,37 @@ pub async fn write_run_report(pool: &Arc<PgPool>, run_id: &FarmRunId) -> FarmRes
         at: "run report outputs".to_owned(),
         source,
     })?;
+    let tools = tally(&events);
+    let mcp_calls = serde_json::to_value(&tools.servers).map_err(|source| FarmError::Json {
+        at: "run report mcp calls".to_owned(),
+        source,
+    })?;
+    let sessions: Vec<String> = [
+        agent_run
+            .gateway_session_id
+            .as_ref()
+            .map(|s| s.as_str().to_owned()),
+        agent_run
+            .host_session_id
+            .as_ref()
+            .map(|s| s.as_str().to_owned()),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    let context = run.context_id.as_ref().map(|c| c.as_str().to_owned());
+    let governance_warnings =
+        reports::count_run_warnings(pool, &sessions, context.as_deref()).await?;
     let report = NewRunReport {
         run_id,
         summary: summary.as_deref(),
         final_message: final_message.as_deref(),
         outputs: &outputs,
+        mcp_calls: &mcp_calls,
+        mcp_reads: tools.reads(),
+        mcp_writes: tools.writes(),
+        governance_warnings: i32::try_from(governance_warnings).unwrap_or(i32::MAX),
+        delivery_status: tools.delivery.as_str(),
     };
     Ok(reports::upsert_run_report(pool, &report).await?)
 }

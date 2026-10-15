@@ -123,7 +123,7 @@ impl McpToolHandler for FarmRunReportHandler<'_> {
         "farm_run_report"
     }
     fn description(&self) -> &'static str {
-        "The task-completion report of one finished farm run: whether the task completed (run succeeded and its eval, if any, passed), a summary and the final message, the files it wrote (path, size, sha256), the Odoo writes its tool calls made, and the eval verdict. `report` is empty while the run is still going."
+        "The task-completion report of one finished farm run: whether the task completed (run succeeded and its eval, if any, passed), a summary and the final message, the files it wrote (path, size, sha256), how it was triggered (scheduler or manual), its start and end, turns, tokens and cost, its MCP calls per server split into reads and writes, the governance warn findings, whether its summary reached DynBrain, and the eval verdict. `report` is empty while the run is still going."
     }
     fn read_only(&self) -> bool {
         true

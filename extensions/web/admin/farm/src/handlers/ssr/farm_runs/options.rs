@@ -19,7 +19,7 @@ const STATUSES: [RunStatus; 7] = [
     RunStatus::Cancelled,
     RunStatus::TimedOut,
 ];
-const TRIGGERS: [TriggeredVia; 6] = TriggeredVia::ALL;
+const TRIGGERS: [TriggeredVia; 7] = TriggeredVia::ALL;
 
 pub(super) fn preserved(query: &RunsQuery, range: TimeRange, preset: &str) -> Vec<Preserved> {
     let mut out = vec![

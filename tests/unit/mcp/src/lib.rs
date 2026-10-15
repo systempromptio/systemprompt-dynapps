@@ -44,4 +44,3 @@ mod typed_activity;
 mod typed_inputs;
 #[cfg(all(test, unix))]
 mod typed_users_handler;
-

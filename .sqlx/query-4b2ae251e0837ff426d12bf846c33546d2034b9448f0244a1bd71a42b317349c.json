@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT run_id AS \"run_id!: FarmRunId\",\n       completed AS \"completed!\",\n       summary AS \"summary?\",\n       final_message AS \"final_message?\",\n       outputs AS \"outputs!\",\n       odoo_writes AS \"odoo_writes!\",\n       eval_passed AS \"eval_passed?\",\n       eval_score AS \"eval_score?\",\n       created_at AS \"created_at!\"\nFROM agent_farm_run_reports\nWHERE run_id = $1\n",
+  "query": "SELECT run_id AS \"run_id!: FarmRunId\",\n       completed AS \"completed!\",\n       summary AS \"summary?\",\n       final_message AS \"final_message?\",\n       outputs AS \"outputs!\",\n       mcp_calls AS \"mcp_calls!\",\n       mcp_reads AS \"mcp_reads!\",\n       mcp_writes AS \"mcp_writes!\",\n       governance_warnings AS \"governance_warnings!\",\n       delivery_status AS \"delivery_status!\",\n       eval_passed AS \"eval_passed?\",\n       eval_score AS \"eval_score?\",\n       created_at AS \"created_at!\"\nFROM agent_farm_run_reports\nWHERE run_id = $1\n",
   "describe": {
     "columns": [
       {
@@ -60,17 +60,61 @@
       },
       {
         "ordinal": 5,
-        "name": "odoo_writes!",
+        "name": "mcp_calls!",
         "type_info": "Jsonb",
         "origin": {
           "Table": {
             "table": "agent_farm_run_reports",
-            "name": "odoo_writes"
+            "name": "mcp_calls"
           }
         }
       },
       {
         "ordinal": 6,
+        "name": "mcp_reads!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_reads"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "mcp_writes!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_writes"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "governance_warnings!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "governance_warnings"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "delivery_status!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "delivery_status"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
         "name": "eval_passed?",
         "type_info": "Bool",
         "origin": {
@@ -81,7 +125,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 11,
         "name": "eval_score?",
         "type_info": "Float8",
         "origin": {
@@ -92,7 +136,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 12,
         "name": "created_at!",
         "type_info": "Timestamptz",
         "origin": {
@@ -115,10 +159,14 @@
       true,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
       true,
       true,
       false
     ]
   },
-  "hash": "dad8824109901cabc559c44f1d589817f09390de6bffd73fde7119022db10225"
+  "hash": "4b2ae251e0837ff426d12bf846c33546d2034b9448f0244a1bd71a42b317349c"
 }

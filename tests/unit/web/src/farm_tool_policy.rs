@@ -83,7 +83,10 @@ fn the_shipped_config_is_the_one_nightly_audit_flow() {
     assert_eq!(farm.tool_policy.mcp_servers, ["dynapps-odoo", "dynbrain"]);
     for write in ["orm_create", "orm_write", "orm_unlink", "orm_execute_kw"] {
         let tool = format!("mcp__dynapps-odoo__{write}");
-        assert!(farm.tool_policy.deny.contains(&tool), "{tool} is not denied");
+        assert!(
+            farm.tool_policy.deny.contains(&tool),
+            "{tool} is not denied"
+        );
     }
     assert_eq!(farm.defaults.model.as_deref(), Some("claude-opus-5-5"));
     assert_eq!(farm.defaults.max_turns, 40);
@@ -102,5 +105,8 @@ fn the_scheduler_queues_the_audit_nightly() {
     assert!(entry.contains("farm: dynapps-night-audit"), "{entry}");
     assert!(entry.contains("agent: accounting_night_audit"), "{entry}");
     assert!(entry.contains("launcher: ed@systemprompt.io"), "{entry}");
-    assert_eq!(TriggeredVia::parse("scheduler"), Some(TriggeredVia::Scheduler));
+    assert_eq!(
+        TriggeredVia::parse("scheduler"),
+        Some(TriggeredVia::Scheduler)
+    );
 }

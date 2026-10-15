@@ -42,7 +42,10 @@ fn kit_tree() -> BTreeMap<String, CapturedFile> {
         tree.insert(path.clone(), captured(&read(&path)));
     }
     tree.insert("fixtures/README.md".to_owned(), captured("ground truth"));
-    tree.insert("fixtures/night_audit/README.txt".to_owned(), captured("seed"));
+    tree.insert(
+        "fixtures/night_audit/README.txt".to_owned(),
+        captured("seed"),
+    );
     tree
 }
 

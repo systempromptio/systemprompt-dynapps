@@ -157,7 +157,8 @@ mode spend that grant; the credential broker issues it only to a
 
 | Where | What |
 |-------|------|
-| `/admin/farm/runs`, `/admin/farm/runs/<id>` | Run list and detail; cancel from the detail page |
+| `/admin/farm` | The "Nightly audit" strip: the last 30 days of scheduler-started runs, their success, cost, MCP reads and writes, governance warnings, DynBrain delivery and eval score |
+| `/admin/farm/runs`, `/admin/farm/runs/<id>` | Run list and detail; cancel from the detail page. The Report tab shows the trigger, start and end, turns, tokens, cost, MCP calls per server (reads and writes), governance warnings, artifacts, DynBrain delivery and the eval score |
 | `/admin/farm/clients`, `/admin/farm/clients/<id>` | Runs, evals and reports attributed to each client |
 | `/admin/farm/people` | Usage per person |
 | `/admin/farm/evals` | Eval suites and their runs |

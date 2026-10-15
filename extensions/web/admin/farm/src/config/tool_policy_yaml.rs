@@ -10,6 +10,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::farms_yaml::FARMS_FILE;
+use crate::error::{FarmError, FarmResult};
 use crate::services::farm_sync::validate::{is_allowed_tool, mcp_server_of};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,25 +24,25 @@ pub struct FarmToolPolicy {
 }
 
 impl FarmToolPolicy {
-    pub(super) fn validate(&self, farm: &str) -> Result<(), String> {
+    pub(super) fn validate(&self, farm: &str) -> FarmResult<()> {
+        let invalid = |what: &str, bad: &str| {
+            FarmError::Config(format!(
+                "{FARMS_FILE}: farm {farm:?}: tool_policy.{what} entry {bad:?} is not valid"
+            ))
+        };
         if let Some(bad) = self
             .mcp_servers
             .iter()
             .find(|s| mcp_server_of(&format!("mcp__{s}")).is_none())
         {
-            return Err(format!(
-                "farm {farm:?}: tool_policy.mcp_servers entry {bad:?} is not a server id"
-            ));
+            return Err(invalid("mcp_servers", bad));
         }
         if let Some(bad) = self.deny.iter().find(|t| !is_allowed_tool(t)) {
-            return Err(format!(
-                "farm {farm:?}: tool_policy.deny entry {bad:?} is not a tool"
-            ));
+            return Err(invalid("deny", bad));
         }
         Ok(())
     }
 
-    /// The first server an agent's tools name that the allowlist leaves out.
     #[must_use]
     pub fn disallowed_server<'a>(&self, agent_tools: &'a [String]) -> Option<&'a str> {
         if self.mcp_servers.is_empty() {

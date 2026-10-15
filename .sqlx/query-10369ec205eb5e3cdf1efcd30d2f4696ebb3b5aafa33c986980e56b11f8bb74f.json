@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- One report per run, recomputed on every call. The MCP tally, governance\n-- warnings and delivery status come from the observer, which reads them from\n-- the run's events and governance rows. The eval verdict is read from the\n-- run's eval result once it has settled.\nINSERT INTO agent_farm_run_reports (run_id, client_id, completed, summary, final_message, outputs,\n                                    mcp_calls, mcp_reads, mcp_writes, governance_warnings,\n                                    delivery_status, eval_passed, eval_score)\nSELECT r.id,\n       r.client_id,\n       r.status = 'succeeded' AND (er.id IS NULL OR er.status = 'passed'),\n       $2,\n       $3,\n       $4,\n       $5,\n       $6,\n       $7,\n       $8,\n       $9,\n       CASE WHEN er.status IN ('passed', 'failed', 'errored') THEN er.status = 'passed' END,\n       er.judge_score\nFROM agent_farm_runs r\nLEFT JOIN agent_farm_eval_results er ON er.id = r.eval_result_id\nWHERE r.id = $1\nON CONFLICT (run_id) DO UPDATE SET\n    client_id = EXCLUDED.client_id,\n    completed = EXCLUDED.completed,\n    summary = EXCLUDED.summary,\n    final_message = EXCLUDED.final_message,\n    outputs = EXCLUDED.outputs,\n    mcp_calls = EXCLUDED.mcp_calls,\n    mcp_reads = EXCLUDED.mcp_reads,\n    mcp_writes = EXCLUDED.mcp_writes,\n    governance_warnings = EXCLUDED.governance_warnings,\n    delivery_status = EXCLUDED.delivery_status,\n    eval_passed = EXCLUDED.eval_passed,\n    eval_score = EXCLUDED.eval_score\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Jsonb",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "10369ec205eb5e3cdf1efcd30d2f4696ebb3b5aafa33c986980e56b11f8bb74f"
+}

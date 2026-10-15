@@ -57,7 +57,7 @@ async fn client_mode_reaches_the_portal_as_the_clients_account() {
     let seeded = seed(&db.pool).await;
     let svc = insert_service_account(&db.pool, "e2e-client").await;
     let slug = format!("client-{}", uuid::Uuid::new_v4().simple());
-    clients::upsert_client(&db.pool, &slug, "Client", None, Some(&svc))
+    clients::upsert_client(&db.pool, &slug, "Client", Some(&svc))
         .await
         .expect("upsert client");
     let client = ClientId::new(slug);

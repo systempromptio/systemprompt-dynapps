@@ -12,8 +12,8 @@
 //!   consumed by the SSR layer.
 //! - **Analytics / housekeeping** ([`ContentAnalyticsAggregationJob`],
 //!   [`SecretMigrationJob`]) — periodic rollups and one-shot migrations.
-//! - **Agent farm** ([`FarmScheduledRunJob`]) — queues the nightly farm run
-//!   the scheduler config names, recorded as started by the scheduler.
+//! - **Agent farm** ([`FarmScheduledRunJob`]) — queues the nightly farm run the
+//!   scheduler config names, recorded as started by the scheduler.
 //! - **Data lifecycle** ([`RetentionDailyReportJob`], [`AuditChainVerifyJob`],
 //!   [`RetentionExportWeeklyJob`], [`RetentionExportMonthlyJob`]) — measures,
 //!   archives and health-checks the retention-managed tables; see

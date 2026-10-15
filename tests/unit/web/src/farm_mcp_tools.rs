@@ -13,7 +13,10 @@ fixture: fix_one\nentry_prompt: \"Work in {{fixture_path}}\"\n---\nBody\n";
 #[test]
 fn mcp_entries_name_their_server() {
     assert_eq!(mcp_server_of("mcp__dynapps-odoo"), Some("dynapps-odoo"));
-    assert_eq!(mcp_server_of("mcp__dynapps-odoo__lead_list"), Some("dynapps-odoo"));
+    assert_eq!(
+        mcp_server_of("mcp__dynapps-odoo__lead_list"),
+        Some("dynapps-odoo")
+    );
     assert_eq!(mcp_server_of("mcp__agent-farm__*"), Some("agent-farm"));
     assert_eq!(mcp_server_of("Read"), None);
     for bad in [

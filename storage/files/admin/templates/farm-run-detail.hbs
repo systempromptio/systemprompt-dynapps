@@ -135,11 +135,20 @@
     </div>
 
     <div class="sp-tab-panel" id="run-panel-report" role="tabpanel" aria-labelledby="run-tab-report" hidden>
+      <dl class="sp-kv-list" aria-label="Run facts">
+        <div class="sp-kv-row"><dt>Trigger</dt><dd>{{> components/badge tone=report.facts.trigger.tone text=report.facts.trigger.text}}</dd></div>
+        <div class="sp-kv-row"><dt>Started</dt><dd>{{report.facts.started}}</dd></div>
+        <div class="sp-kv-row"><dt>Finished</dt><dd>{{report.facts.finished}}</dd></div>
+        <div class="sp-kv-row"><dt>Turns</dt><dd>{{report.facts.turns}}</dd></div>
+        <div class="sp-kv-row"><dt>Tokens</dt><dd>{{report.facts.tokens}}</dd></div>
+        <div class="sp-kv-row"><dt>Cost</dt><dd>{{report.facts.cost}}</dd></div>
+      </dl>
       {{#if report.has_report}}
       <p class="sp-farm-run__diff-stats">
         {{> components/badge tone=report.completion.tone text=report.completion.text}}
         {{> components/badge tone=report.eval.tone text=report.eval.text}}
-        <span class="sp-farm-run__muted">recorded {{report.recorded_local}}</span>
+        {{> components/badge tone=report.delivery.tone text=report.delivery.text}}
+        <span class="sp-farm-run__muted">{{report.mcp_reads}} MCP reads · {{report.mcp_writes}} writes · {{report.governance_warnings}} governance warnings · recorded {{report.recorded_local}}</span>
       </p>
       {{#if report.summary}}
       <section class="sp-farm-run__turn">
@@ -153,7 +162,7 @@
         <p class="sp-farm-run__prose sp-farm-run__report-message">{{report.final_message}}</p>
       </details>
       {{/if}}
-      {{> components/section title="Outputs" note="Files the run wrote, as the observer recorded them."}}
+      {{> components/section title="Artifacts" note="Files the run wrote, as the observer recorded them."}}
       {{#if report.has_outputs}}
       {{#> components/table caption="Files the run wrote" table_mode="scroll"}}
         <thead><tr><th>Path</th><th class="sp-table__cell--num">Size</th><th>SHA-256</th></tr></thead>
@@ -168,26 +177,25 @@
         </tbody>
       {{/components/table}}
       {{else}}
-        {{> components/empty-state compact=true heading="No outputs" message="The run recorded no output files."}}
+        {{> components/empty-state compact=true heading="No artifacts" message="The run recorded no output files."}}
       {{/if}}
-      {{> components/section title="Odoo writes" note="Each Odoo write the run's MCP calls made, with the governance decision on it."}}
-      {{#if report.has_odoo_writes}}
-      {{#> components/table caption="Odoo writes made by this run" table_mode="scroll"}}
-        <thead><tr><th class="sp-col-date">When</th><th>Tool</th><th>Model</th><th>Records</th><th class="sp-col-status">Decision</th></tr></thead>
+      {{> components/section title="MCP calls" note="The run's MCP calls per server, split into reads and writes; failed counts calls whose result was an error."}}
+      {{#if report.has_mcp_servers}}
+      {{#> components/table caption="MCP calls per server" table_mode="scroll"}}
+        <thead><tr><th>Server</th><th class="sp-table__cell--num">Reads</th><th class="sp-table__cell--num">Writes</th><th class="sp-table__cell--num">Failed</th></tr></thead>
         <tbody>
-        {{#each report.odoo_writes}}
+        {{#each report.mcp_servers}}
           <tr>
-            <td class="sp-col-date sp-table__cell--date">{{this.at}}</td>
-            <td><code class="sp-code-inline">{{this.tool}}</code></td>
-            <td><code class="sp-code-inline">{{this.model}}</code></td>
-            <td>{{this.record_ids}}</td>
-            <td class="sp-col-status">{{> components/badge tone=this.decision.tone text=this.decision.text}}</td>
+            <td><code class="sp-code-inline">{{this.server}}</code></td>
+            <td class="sp-table__cell--num">{{this.reads}}</td>
+            <td class="sp-table__cell--num">{{this.writes}}</td>
+            <td class="sp-table__cell--num">{{this.failed}}</td>
           </tr>
         {{/each}}
         </tbody>
       {{/components/table}}
       {{else}}
-        {{> components/empty-state compact=true heading="No Odoo writes" message="The run made no Odoo writes."}}
+        {{> components/empty-state compact=true heading="No MCP calls" message="The run made no MCP calls."}}
       {{/if}}
       {{else}}
         {{> components/empty-state heading="No completion report yet" message="The runner writes the report when the run reaches a terminal status."}}

@@ -154,7 +154,10 @@ fn mcp_endpoints_move_to_the_worker_base() {
     );
     match &moved.mcp_servers["dynapps-odoo"] {
         McpServerSpec::Http { url, .. } => {
-            assert_eq!(url, "http://m1.vm.a.internal:8080/api/v1/mcp/dynapps-odoo/mcp");
+            assert_eq!(
+                url,
+                "http://m1.vm.a.internal:8080/api/v1/mcp/dynapps-odoo/mcp"
+            );
         },
         other @ McpServerSpec::Stdio { .. } => panic!("unexpected spec {other:?}"),
     }

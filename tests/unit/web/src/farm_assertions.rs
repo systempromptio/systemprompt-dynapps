@@ -201,7 +201,11 @@ fn regex_matches_and_reports_bad_patterns() {
 fn no_tool_outside_allowlist_allows_skill_and_listed_mcp() {
     let dir = workspace();
     let mut case = Case::new(dir.path());
-    case.tools = vec!["Read".into(), "Bash(git:*)".into(), "mcp__dynapps-odoo".into()];
+    case.tools = vec![
+        "Read".into(),
+        "Bash(git:*)".into(),
+        "mcp__dynapps-odoo".into(),
+    ];
     case.events = vec![
         tool(1, "Read", json!({})),
         tool(2, "Bash", json!({})),

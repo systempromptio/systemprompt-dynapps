@@ -134,10 +134,15 @@ CREATE TABLE IF NOT EXISTS agent_farm_run_reports (
     summary TEXT,
     final_message TEXT,
     outputs JSONB NOT NULL DEFAULT '[]',
-    odoo_writes JSONB NOT NULL DEFAULT '[]',
     eval_passed BOOLEAN,
     eval_score DOUBLE PRECISION,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    mcp_calls JSONB NOT NULL DEFAULT '[]',
+    mcp_reads INTEGER NOT NULL DEFAULT 0,
+    mcp_writes INTEGER NOT NULL DEFAULT 0,
+    governance_warnings INTEGER NOT NULL DEFAULT 0,
+    delivery_status TEXT NOT NULL DEFAULT 'not_attempted'
+        CHECK (delivery_status IN ('delivered', 'failed', 'not_attempted'))
 );
 
 CREATE TABLE IF NOT EXISTS agent_farm_eval_suites (

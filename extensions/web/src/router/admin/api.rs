@@ -107,8 +107,7 @@ fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
 }
 
 pub(super) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
-    identity_routes::self_service_routes()
-        .with_state(Arc::clone(write_pool))
+    identity_routes::self_service_routes().with_state(Arc::clone(write_pool))
 }
 
 pub(super) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {

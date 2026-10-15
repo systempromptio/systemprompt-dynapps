@@ -34,7 +34,10 @@ pub async fn find_service_account(
     .await
 }
 
-pub async fn find_launcher(pool: &PgPool, id_or_email: &str) -> Result<Option<UserId>, sqlx::Error> {
+pub async fn find_launcher(
+    pool: &PgPool,
+    id_or_email: &str,
+) -> Result<Option<UserId>, sqlx::Error> {
     sqlx::query_file_scalar!("src/repositories/farms/find_launcher.sql", id_or_email)
         .fetch_optional(pool)
         .await

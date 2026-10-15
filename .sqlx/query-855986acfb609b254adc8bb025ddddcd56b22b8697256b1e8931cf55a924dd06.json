@@ -1,0 +1,268 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- A run's report with the run facts it is read beside: how it was started,\n-- when it ran, and the turns, tokens and cost core recorded.\nSELECT rep.run_id AS \"run_id: FarmRunId\", rep.client_id AS \"client_id: ClientId\", rep.completed,\n       rep.summary, rep.final_message, rep.outputs, rep.mcp_calls, rep.mcp_reads, rep.mcp_writes,\n       rep.governance_warnings, rep.delivery_status, rep.eval_passed, rep.eval_score,\n       rep.created_at, r.triggered_via, r.started_at, r.finished_at, r.cost_microdollars,\n       ar.turns AS \"turns?\", ar.input_tokens AS \"input_tokens?\",\n       ar.output_tokens AS \"output_tokens?\"\nFROM agent_farm_run_reports rep\nJOIN agent_farm_runs r ON r.id = rep.run_id\nLEFT JOIN agent_runs ar ON ar.id = r.agent_run_id\nWHERE rep.run_id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "run_id: FarmRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id: ClientId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "client_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "completed",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "completed"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "final_message",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "final_message"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "outputs",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "outputs"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "mcp_calls",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_calls"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "mcp_reads",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_reads"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "mcp_writes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "mcp_writes"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "governance_warnings",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "governance_warnings"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "delivery_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "delivery_status"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "eval_passed",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_passed"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "eval_score",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_score"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "triggered_via",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "triggered_via"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "cost_microdollars",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "turns?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "turns"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "input_tokens?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "input_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "output_tokens?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "output_tokens"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "855986acfb609b254adc8bb025ddddcd56b22b8697256b1e8931cf55a924dd06"
+}

@@ -196,7 +196,7 @@ impl FarmsDoc {
             }
             farm.source.validate(&farm.id)?;
             farm.defaults.validate(&farm.id)?;
-            farm.tool_policy.validate(&farm.id).map_err(|e| invalid(&e))?;
+            farm.tool_policy.validate(&farm.id)?;
         }
         if self.runner.as_ref().is_some_and(|r| r.max_concurrent == 0) {
             return Err(invalid("runner.max_concurrent must be at least 1"));

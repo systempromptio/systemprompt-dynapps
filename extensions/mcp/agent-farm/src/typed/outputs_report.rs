@@ -14,14 +14,12 @@ pub struct ReportOutputFile {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct ReportOdooWrite {
-    pub tool: Option<String>,
-    pub model: Option<String>,
+pub struct ReportMcpServerCalls {
+    pub server: String,
+    pub reads: i64,
+    pub writes: i64,
     #[serde(default)]
-    pub record_ids: Vec<i64>,
-    pub decision: String,
-    pub policy: String,
-    pub at: String,
+    pub failed: i64,
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
@@ -30,10 +28,21 @@ pub struct RunReportOutput {
     pub summary: Option<String>,
     pub final_message: Option<String>,
     pub outputs: Vec<ReportOutputFile>,
-    pub odoo_writes: Vec<ReportOdooWrite>,
+    pub mcp_calls: Vec<ReportMcpServerCalls>,
+    pub mcp_reads: i32,
+    pub mcp_writes: i32,
+    pub governance_warnings: i32,
+    pub delivery_status: String,
     pub eval_passed: Option<bool>,
     pub eval_score: Option<f64>,
     pub created_at: DateTime<Utc>,
+    pub triggered_via: String,
+    pub started_at: Option<DateTime<Utc>>,
+    pub finished_at: Option<DateTime<Utc>>,
+    pub turns: Option<i32>,
+    pub input_tokens: Option<i64>,
+    pub output_tokens: Option<i64>,
+    pub cost_microdollars: i64,
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
@@ -62,10 +71,21 @@ impl TryFrom<systemprompt_web_admin_farm::repositories::reports::RunReportRow> f
             summary: row.summary,
             final_message: row.final_message,
             outputs: serde_json::from_value(row.outputs)?,
-            odoo_writes: serde_json::from_value(row.odoo_writes)?,
+            mcp_calls: serde_json::from_value(row.mcp_calls)?,
+            mcp_reads: row.mcp_reads,
+            mcp_writes: row.mcp_writes,
+            governance_warnings: row.governance_warnings,
+            delivery_status: row.delivery_status,
             eval_passed: row.eval_passed,
             eval_score: row.eval_score,
             created_at: row.created_at,
+            triggered_via: row.triggered_via,
+            started_at: row.started_at,
+            finished_at: row.finished_at,
+            turns: row.turns,
+            input_tokens: row.input_tokens,
+            output_tokens: row.output_tokens,
+            cost_microdollars: row.cost_microdollars,
         })
     }
 }

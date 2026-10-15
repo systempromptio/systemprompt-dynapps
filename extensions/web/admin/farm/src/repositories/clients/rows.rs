@@ -80,10 +80,14 @@ pub struct RunReportViewRow {
     pub summary: Option<String>,
     pub final_message: Option<String>,
     // JSON: JSONB columns the runner observer writes; their item shapes
-    // ({path, bytes, sha256} and {tool, model, record_ids, decision, at})
-    // are read field by field in the Report tab.
+    // ({path, bytes, sha256} and {server, reads, writes, failed}) are read
+    // field by field in the Report tab.
     pub outputs: serde_json::Value,
-    pub odoo_writes: serde_json::Value,
+    pub mcp_calls: serde_json::Value,
+    pub mcp_reads: i32,
+    pub mcp_writes: i32,
+    pub governance_warnings: i32,
+    pub delivery_status: String,
     pub eval_passed: Option<bool>,
     pub eval_score: Option<f64>,
     pub created_at: DateTime<Utc>,

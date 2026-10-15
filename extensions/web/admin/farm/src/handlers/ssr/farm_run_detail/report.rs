@@ -1,18 +1,22 @@
 //! The Report tab and the identity badges. The report is the observer's
 //! `agent_farm_run_reports` row: whether the task completed, its summary and
-//! final message, the files it wrote and the Odoo writes its MCP calls made.
-//! The badges name the client the run was for, the person who launched it and
-//! the identity its credentials were minted for (core's `agent_runs.user_id`).
+//! final message, the files it wrote, its MCP calls per server split into
+//! reads and writes, the governance `warn` findings and whether the summary
+//! reached `DynBrain`. The run facts beside it (trigger, start and end, turns,
+//! tokens, cost) come from the run rows. The badges name the client the run
+//! was for, the person who launched it and the identity its credentials were
+//! minted for (core's `agent_runs.user_id`).
 
 use serde::Serialize;
-// JSON: the report row's outputs and odoo_writes are JSONB the observer
+// JSON: the report row's outputs and mcp_calls are JSONB the observer
 // writes; each item is read field by field below.
 use serde_json::Value;
 use systemprompt_web_admin_core::ssr::format::{format_bytes, local_time};
+use systemprompt_web_shared::format::format_cost;
 
 use super::RunData;
 use crate::handlers::ssr::farm_clients::views::{completion_badge, eval_badge};
-use crate::handlers::ssr::shared::BadgeView;
+use crate::handlers::ssr::shared::{BadgeView, trigger_badge};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct IdentityView {
@@ -33,26 +37,40 @@ pub(crate) struct OutputView {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct OdooWriteView {
-    pub tool: String,
-    pub model: String,
-    pub record_ids: String,
-    pub decision: BadgeView,
-    pub at: String,
+pub(crate) struct McpServerView {
+    pub server: String,
+    pub reads: i64,
+    pub writes: i64,
+    pub failed: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct RunFactsView {
+    pub trigger: BadgeView,
+    pub started: String,
+    pub finished: String,
+    pub turns: String,
+    pub tokens: String,
+    pub cost: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct RunReportView {
     pub has_report: bool,
+    pub facts: RunFactsView,
     pub completion: BadgeView,
     pub eval: BadgeView,
+    pub delivery: BadgeView,
     pub summary: String,
     pub final_message: String,
     pub recorded_local: String,
     pub outputs: Vec<OutputView>,
     pub has_outputs: bool,
-    pub odoo_writes: Vec<OdooWriteView>,
-    pub has_odoo_writes: bool,
+    pub mcp_servers: Vec<McpServerView>,
+    pub has_mcp_servers: bool,
+    pub mcp_reads: i32,
+    pub mcp_writes: i32,
+    pub governance_warnings: i32,
 }
 
 fn text(item: &Value, key: &str) -> String {
@@ -63,34 +81,62 @@ fn text(item: &Value, key: &str) -> String {
     }
 }
 
-fn decision_badge(decision: &str) -> BadgeView {
-    let tone = match decision {
-        "allow" | "allowed" => "ok",
-        "warn" => "warn",
-        "deny" | "denied" | "refused" => "err",
-        _ => "muted",
+fn number(item: &Value, key: &str) -> i64 {
+    item.get(key).and_then(Value::as_i64).unwrap_or(0)
+}
+
+pub(crate) fn delivery_badge(status: &str) -> BadgeView {
+    let (tone, label) = match status {
+        "delivered" => ("ok", "Delivered to DynBrain"),
+        "failed" => ("err", "DynBrain delivery failed"),
+        _ => ("muted", "Not delivered"),
     };
-    let label = if decision.is_empty() { "—" } else { decision };
-    BadgeView::new(tone, label, decision)
+    BadgeView::new(tone, label, status)
 }
 
 fn items(value: &Value) -> &[Value] {
     value.as_array().map_or(&[], Vec::as_slice)
 }
 
+fn facts_view(data: &RunData) -> RunFactsView {
+    let when =
+        |t: Option<chrono::DateTime<chrono::Utc>>| t.map_or_else(|| "—".to_owned(), local_time);
+    let agent_run = &data.agent_run;
+    let tokens = match (agent_run.input_tokens, agent_run.output_tokens) {
+        (None, None) => "—".to_owned(),
+        (input, output) => format!("{} in · {} out", input.unwrap_or(0), output.unwrap_or(0)),
+    };
+    RunFactsView {
+        trigger: trigger_badge(&data.run.triggered_via),
+        started: when(agent_run.started_at.or(data.run.started_at)),
+        finished: when(agent_run.finished_at.or(data.run.finished_at)),
+        turns: agent_run
+            .turns
+            .map_or_else(|| "—".to_owned(), |t| t.to_string()),
+        tokens,
+        cost: format_cost(data.run.cost_microdollars),
+    }
+}
+
 pub(crate) fn report_view(data: &RunData) -> RunReportView {
+    let facts = facts_view(data);
     let Some(report) = &data.report else {
         return RunReportView {
             has_report: false,
+            facts,
             completion: completion_badge(None),
             eval: eval_badge(None, None),
+            delivery: delivery_badge(""),
             summary: String::new(),
             final_message: String::new(),
             recorded_local: String::new(),
             outputs: Vec::new(),
             has_outputs: false,
-            odoo_writes: Vec::new(),
-            has_odoo_writes: false,
+            mcp_servers: Vec::new(),
+            has_mcp_servers: false,
+            mcp_reads: 0,
+            mcp_writes: 0,
+            governance_warnings: 0,
         };
     };
     let outputs: Vec<OutputView> = items(&report.outputs)
@@ -104,34 +150,31 @@ pub(crate) fn report_view(data: &RunData) -> RunReportView {
             sha256: text(o, "sha256"),
         })
         .collect();
-    let odoo_writes: Vec<OdooWriteView> = items(&report.odoo_writes)
+    let mcp_servers: Vec<McpServerView> = items(&report.mcp_calls)
         .iter()
-        .map(|w| OdooWriteView {
-            tool: text(w, "tool"),
-            model: text(w, "model"),
-            record_ids: match w.get("record_ids") {
-                Some(Value::Array(ids)) => ids
-                    .iter()
-                    .map(|v| v.as_str().map_or_else(|| v.to_string(), str::to_owned))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                _ => text(w, "record_ids"),
-            },
-            decision: decision_badge(&text(w, "decision")),
-            at: text(w, "at"),
+        .map(|c| McpServerView {
+            server: text(c, "server"),
+            reads: number(c, "reads"),
+            writes: number(c, "writes"),
+            failed: number(c, "failed"),
         })
         .collect();
     RunReportView {
         has_report: true,
+        facts,
         completion: completion_badge(Some(report.completed)),
         eval: eval_badge(report.eval_passed, report.eval_score),
+        delivery: delivery_badge(&report.delivery_status),
         summary: report.summary.clone().unwrap_or_default(),
         final_message: report.final_message.clone().unwrap_or_default(),
         recorded_local: local_time(report.created_at),
         has_outputs: !outputs.is_empty(),
         outputs,
-        has_odoo_writes: !odoo_writes.is_empty(),
-        odoo_writes,
+        has_mcp_servers: !mcp_servers.is_empty(),
+        mcp_servers,
+        mcp_reads: report.mcp_reads,
+        mcp_writes: report.mcp_writes,
+        governance_warnings: report.governance_warnings,
     }
 }
 

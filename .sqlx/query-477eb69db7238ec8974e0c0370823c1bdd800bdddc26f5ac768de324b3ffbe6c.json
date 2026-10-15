@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: ClientId\", name, slug, odoo_partner_id,\n       service_account_user_id AS \"service_account_user_id: UserId\", created_at\nFROM clients\nORDER BY name, id\n",
+  "query": "SELECT id AS \"id: ClientId\", name, slug,\n       service_account_user_id AS \"service_account_user_id: UserId\", created_at\nFROM clients\nORDER BY name, id\n",
   "describe": {
     "columns": [
       {
@@ -38,17 +38,6 @@
       },
       {
         "ordinal": 3,
-        "name": "odoo_partner_id",
-        "type_info": "Int8",
-        "origin": {
-          "Table": {
-            "table": "clients",
-            "name": "odoo_partner_id"
-          }
-        }
-      },
-      {
-        "ordinal": 4,
         "name": "service_account_user_id: UserId",
         "type_info": "Text",
         "origin": {
@@ -59,7 +48,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -78,9 +67,8 @@
       false,
       false,
       true,
-      true,
       false
     ]
   },
-  "hash": "13214bb6a411526487c47d5a8589324a5706439b0c860ede4f56c9e3b4d0fadb"
+  "hash": "477eb69db7238ec8974e0c0370823c1bdd800bdddc26f5ac768de324b3ffbe6c"
 }

@@ -29,13 +29,19 @@ fn policy_id_is_stable() {
 fn declared_mcp_tool_is_allowed() {
     let allow = triage();
     assert!(tool_permitted("mcp__dynapps-odoo__crm_lead_search", &allow));
-    assert!(!undeclared_mcp_tool("mcp__dynapps-odoo__crm_lead_update", &allow));
+    assert!(!undeclared_mcp_tool(
+        "mcp__dynapps-odoo__crm_lead_update",
+        &allow
+    ));
 }
 
 #[test]
 fn undeclared_mcp_tool_is_denied() {
     let allow = triage();
-    assert!(undeclared_mcp_tool("mcp__dynapps-odoo__partner_delete", &allow));
+    assert!(undeclared_mcp_tool(
+        "mcp__dynapps-odoo__partner_delete",
+        &allow
+    ));
     assert!(undeclared_mcp_tool("mcp__github__create_issue", &allow));
     assert!(undeclared_mcp_tool(
         "mcp__dynapps-odoo__crm_lead_search_all",
@@ -46,10 +52,19 @@ fn undeclared_mcp_tool_is_denied() {
 #[test]
 fn server_and_wildcard_entries_cover_their_server_only() {
     let server = tools(&["mcp__dynapps-odoo"]);
-    assert!(!undeclared_mcp_tool("mcp__dynapps-odoo__partner_get", &server));
-    assert!(undeclared_mcp_tool("mcp__dynapps-odoo_admin__partner_get", &server));
+    assert!(!undeclared_mcp_tool(
+        "mcp__dynapps-odoo__partner_get",
+        &server
+    ));
+    assert!(undeclared_mcp_tool(
+        "mcp__dynapps-odoo_admin__partner_get",
+        &server
+    ));
     let wildcard = tools(&["mcp__dynapps-odoo__*"]);
-    assert!(!undeclared_mcp_tool("mcp__dynapps-odoo__partner_get", &wildcard));
+    assert!(!undeclared_mcp_tool(
+        "mcp__dynapps-odoo__partner_get",
+        &wildcard
+    ));
     assert!(undeclared_mcp_tool("mcp__dynbrain__docs_search", &wildcard));
 }
 
@@ -73,6 +88,9 @@ fn skill_tool_is_always_permitted() {
 
 #[test]
 fn an_agent_without_a_tools_list_is_unrestricted() {
-    assert!(!undeclared_mcp_tool("mcp__dynapps-odoo__partner_delete", &[]));
+    assert!(!undeclared_mcp_tool(
+        "mcp__dynapps-odoo__partner_delete",
+        &[]
+    ));
     assert!(disallowed_tools(&[]).is_empty());
 }

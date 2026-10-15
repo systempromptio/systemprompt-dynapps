@@ -12,10 +12,10 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
+use crate::repositories::connectors::credential_audit::{CredentialAudit, insert_credential_audit};
 use crate::repositories::connectors::machine_credentials::{
     count_machine_credentials, delete_machine_credential,
 };
-use crate::repositories::connectors::credential_audit::{CredentialAudit, insert_credential_audit};
 use crate::repositories::service_account_group::insert_service_account_membership;
 use crate::services::connector_oauth::Provider;
 use crate::services::machine_credentials::{self, AttachCredential, Holder};

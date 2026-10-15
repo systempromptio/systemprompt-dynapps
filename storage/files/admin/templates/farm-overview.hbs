@@ -20,6 +20,18 @@
     <div class="sp-farm-overview" data-farm-live-list="{{live_url}}">
         {{> farm/activity-live activity}}
 
+        {{#if scheduled_kpis}}
+        <section class="sp-farm-clients" aria-label="Scheduled runs">
+            {{> components/section title="Nightly audit" note="Runs the scheduler started in the last 30 days: outcome, cost, MCP reads and writes, governance warnings, DynBrain delivery and eval score."}}
+            <div class="sp-kpi-grid sp-kpi-grid--compact">
+                {{#each scheduled_kpis}}
+                {{> components/kpi key=this.key label=this.label icon=this.icon value=this.value note=this.note
+                    hint=this.hint tone=this.tone href=this.href}}
+                {{/each}}
+            </div>
+        </section>
+        {{/if}}
+
         <section class="sp-farm-clients" aria-label="Last 30 days">
             {{#> components/section title="Last 30 days" note="Outcomes across every farm and client: runs, success rate, cost and eval score."}}
                 {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm/clients">By client</a>{{/inline}}

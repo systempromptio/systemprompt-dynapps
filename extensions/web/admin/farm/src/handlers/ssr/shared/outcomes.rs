@@ -65,7 +65,7 @@ pub(crate) fn rate_tone(pct: Option<f64>) -> &'static str {
     }
 }
 
-const fn tile(
+pub(crate) const fn tile(
     key: &'static str,
     label: &'static str,
     icon: &'static str,

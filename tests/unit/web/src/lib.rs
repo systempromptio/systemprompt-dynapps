@@ -441,3 +441,5 @@ mod farm_run_events_view;
 mod farm_tool_allowlist;
 #[cfg(test)]
 mod farm_tool_policy;
+#[cfg(test)]
+mod farm_tool_tally;
