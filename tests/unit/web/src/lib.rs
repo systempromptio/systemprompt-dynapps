@@ -395,6 +395,8 @@ mod farm_cost_window;
 #[cfg(test)]
 mod farm_eval_mean;
 #[cfg(test)]
+mod farm_eval_resume;
+#[cfg(test)]
 mod farm_run_as;
 
 #[cfg(test)]

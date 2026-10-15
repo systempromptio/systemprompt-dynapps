@@ -26,12 +26,19 @@ use systemprompt_web_admin_farm::types::{AgentRunStatus, ErrorClass};
 use tokio_util::sync::CancellationToken;
 
 use crate::client::{HttpEventSink, WorkerClient};
+use crate::notes::Notes;
 use crate::{egress, privilege};
 
 pub(crate) async fn run(client: &WorkerClient, root: Option<PathBuf>) -> Result<WorkerResult> {
     let spec: WorkerSpec = client.get("spec").await?;
     let root = root.unwrap_or_else(|| spec.server_root.clone());
-    confine(&spec, &root).await?;
+    let mut notes = Notes::default();
+    let confined = confine(&spec, &root, &mut notes).await;
+    if let Err(error) = &confined {
+        notes.error(format!("{error:#}"));
+    }
+    let seq_after = notes.ship(client, spec.seq_after).await;
+    confined?;
     let layout = RunLayout::new(&root);
     layout.create().await.context("run directory")?;
     let bundle: Bundle = client.get("bundle").await?;
@@ -59,7 +66,7 @@ pub(crate) async fn run(client: &WorkerClient, root: Option<PathBuf>) -> Result<
         credentials: &credentials,
         gateway_base_url: &spec.gateway_base_url,
         hooks_file: hooks,
-        seq_after: spec.seq_after,
+        seq_after,
         sink: &sink,
         cancel,
     })
@@ -75,9 +82,9 @@ pub(crate) async fn run(client: &WorkerClient, root: Option<PathBuf>) -> Result<
     })
 }
 
-async fn confine(spec: &WorkerSpec, root: &Path) -> Result<()> {
+async fn confine(spec: &WorkerSpec, root: &Path, notes: &mut Notes) -> Result<()> {
     privilege::become_root()?;
-    egress::install(&spec.egress)
+    egress::install(&spec.egress, notes)
         .await
         .context("egress allowlist not installed")?;
     privilege::drop_to_agent(root)

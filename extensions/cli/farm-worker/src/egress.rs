@@ -6,6 +6,9 @@
 //! a self-test then expects a connection to [`PROBE_HOST`] to be refused.
 //! Any failure is an error, so the run is reported `host_crashed` and the
 //! agent never runs unconfined.
+//!
+//! Each line it logs is also pushed onto the caller's [`Notes`], which the
+//! worker posts to the API as runner events so the run page shows them.
 
 use std::process::Stdio;
 use std::time::Duration;
@@ -16,11 +19,13 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpStream, lookup_host};
 use tokio::process::Command;
 
+use crate::notes::Notes;
+
 const NFT: &str = "nft";
 const PROBE_HOST: &str = "example.com";
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub(crate) async fn install(policy: &EgressPolicy) -> Result<()> {
+pub(crate) async fn install(policy: &EgressPolicy, notes: &mut Notes) -> Result<()> {
     let nets = resolve(policy).await?;
     load(&nft_ruleset(&nets)).await?;
     tracing::info!(
@@ -28,7 +33,12 @@ pub(crate) async fn install(policy: &EgressPolicy) -> Result<()> {
         addresses = nets.len(),
         "egress allowlist installed"
     );
-    self_test().await
+    notes.info(format!(
+        "egress allowlist installed: policy {}, {} addresses",
+        policy.label(),
+        nets.len()
+    ));
+    self_test(notes).await
 }
 
 async fn resolve(policy: &EgressPolicy) -> Result<Vec<Net>> {
@@ -76,12 +86,13 @@ async fn load(ruleset: &str) -> Result<()> {
     Ok(())
 }
 
-async fn self_test() -> Result<()> {
+async fn self_test(notes: &mut Notes) -> Result<()> {
     let Ok(mut addrs) = lookup_host((PROBE_HOST, 443)).await else {
         tracing::info!(
             probe = PROBE_HOST,
             "egress self-test: probe host unresolvable"
         );
+        notes.info(format!("egress self-test: {PROBE_HOST} unresolvable"));
         return Ok(());
     };
     let Some(addr) = addrs.next() else {
@@ -91,10 +102,16 @@ async fn self_test() -> Result<()> {
         Ok(Ok(_)) => bail!("egress self-test: {PROBE_HOST} ({addr}) is reachable"),
         Ok(Err(error)) => {
             tracing::info!(probe = PROBE_HOST, %addr, %error, "egress self-test: refused");
+            notes.info(format!(
+                "egress self-test: connection to {PROBE_HOST} ({addr}) refused: {error}"
+            ));
             Ok(())
         },
         Err(_) => {
             tracing::info!(probe = PROBE_HOST, %addr, "egress self-test: timed out");
+            notes.info(format!(
+                "egress self-test: connection to {PROBE_HOST} ({addr}) dropped (timed out)"
+            ));
             Ok(())
         },
     }

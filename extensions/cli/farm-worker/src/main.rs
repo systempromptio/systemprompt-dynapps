@@ -12,6 +12,7 @@
 
 mod client;
 mod egress;
+mod notes;
 mod privilege;
 mod run;
 

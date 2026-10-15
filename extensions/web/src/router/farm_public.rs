@@ -82,6 +82,8 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
         tracing::info!(farms = restored, "agent farm checkouts restored");
         let reported = backfill_missing_reports(&state.pool).await;
         tracing::info!(runs = reported, "missing farm run reports backfilled");
+        let resumed = systemprompt_web_admin_farm::services::evals::resume_eval_runs(&state).await;
+        tracing::info!(eval_runs = resumed, "interrupted eval runs resumed");
     });
 }
 

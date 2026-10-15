@@ -19,6 +19,7 @@ systemprompt-web-admin-farm = { workspace = true }
 
 anyhow.workspace = true
 async-trait.workspace = true
+chrono.workspace = true
 clap = { workspace = true, features = ["env"] }
 nix.workspace = true
 reqwest.workspace = true
