@@ -80,7 +80,7 @@ pub fn machine_config(config: &FlyRunnerConfig, launch: &MachineLaunch) -> Value
             "cpus": config.cpus,
             "memory_mb": config.memory_mb,
         },
-        "init": { "entrypoint": [config.worker_bin], "cmd": [] },
+        "init": { "exec": [config.worker_bin] },
         "restart": { "policy": "no" },
         "auto_destroy": false,
         "metadata": { POOL_METADATA_KEY: POOL_METADATA_VALUE },

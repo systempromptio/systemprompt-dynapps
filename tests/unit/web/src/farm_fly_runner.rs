@@ -116,7 +116,7 @@ fn machine_config_launches_the_worker_without_services() {
     let config = machine_config(&FlyRunnerConfig::default(), &launch);
     assert_eq!(config["image"], "registry.fly.io/app:deployment-1");
     assert_eq!(
-        config["init"]["entrypoint"][0],
+        config["init"]["exec"][0],
         "/app/bin/systemprompt-farm-worker"
     );
     assert_eq!(config["metadata"]["farm_runner"], "pool");
