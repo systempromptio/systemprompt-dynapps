@@ -1,10 +1,12 @@
 //! The run report's tool tally: a call is a write when a segment of its name
 //! is a mutating verb, MCP calls are counted per server, and the summary is
-//! delivered only by a `DynBrain` write that did not fail.
+//! delivered only by a `DynBrain` write that did not fail and names the
+//! created document's `id`. An `{"error": …}` body is a failure even without
+//! the host's error flag.
 
 use systemprompt::agent_runs::{RunEvent, RunEventPayload};
 use systemprompt_web_admin_farm::services::runner::tool_tally::{
-    DeliveryStatus, ServerCalls, is_write_tool, tally,
+    CallOutcome, DeliveryStatus, ServerCalls, call_outcome, is_write_tool, tally,
 };
 
 fn event(seq: i64, payload: RunEventPayload) -> RunEvent {
@@ -18,7 +20,7 @@ fn event(seq: i64, payload: RunEventPayload) -> RunEvent {
     }
 }
 
-fn call(seq: i64, name: &str, is_error: Option<bool>) -> Vec<RunEvent> {
+fn call(seq: i64, name: &str, result: Option<(bool, &str)>) -> Vec<RunEvent> {
     let id = format!("t{seq}");
     let mut events = vec![event(
         seq,
@@ -28,12 +30,12 @@ fn call(seq: i64, name: &str, is_error: Option<bool>) -> Vec<RunEvent> {
             input: serde_json::json!({}),
         },
     )];
-    if let Some(is_error) = is_error {
+    if let Some((is_error, content)) = result {
         events.push(event(
             seq + 1,
             RunEventPayload::ToolResult {
                 tool_use_id: id,
-                content: String::new(),
+                content: content.to_owned(),
                 is_error,
             },
         ));
@@ -41,7 +43,7 @@ fn call(seq: i64, name: &str, is_error: Option<bool>) -> Vec<RunEvent> {
     events
 }
 
-fn run(calls: &[(&str, Option<bool>)]) -> Vec<RunEvent> {
+fn run(calls: &[(&str, Option<(bool, &str)>)]) -> Vec<RunEvent> {
     calls
         .iter()
         .enumerate()
@@ -75,10 +77,10 @@ fn writes_are_named_by_a_mutating_verb_segment() {
 #[test]
 fn calls_are_counted_per_server_and_built_ins_are_ignored() {
     let tally = tally(&run(&[
-        ("mcp__dynapps-odoo__orm_search_read", Some(false)),
-        ("mcp__dynapps-odoo__orm_write", Some(true)),
-        ("mcp__dynbrain__search", Some(false)),
-        ("Read", Some(false)),
+        ("mcp__dynapps-odoo__orm_search_read", Some((false, "[]"))),
+        ("mcp__dynapps-odoo__orm_write", Some((true, "denied"))),
+        ("mcp__dynbrain__search", Some((false, "[]"))),
+        ("Read", Some((false, ""))),
     ]));
     assert_eq!(
         tally.servers,
@@ -102,16 +104,54 @@ fn calls_are_counted_per_server_and_built_ins_are_ignored() {
 }
 
 #[test]
-fn delivery_needs_a_dynbrain_write_that_succeeded() {
+fn delivery_needs_a_dynbrain_write_that_names_its_document() {
+    let create = "mcp__dynbrain__docs_create";
     let delivered = tally(&run(&[
-        ("mcp__dynbrain__document_create", Some(true)),
-        ("mcp__dynbrain__document_create", Some(false)),
+        (create, Some((true, "boom"))),
+        (
+            create,
+            Some((false, r#"{"id": "doc-7", "title": "Audit"}"#)),
+        ),
     ]));
     assert_eq!(delivered.delivery, DeliveryStatus::Delivered);
-    let failed = tally(&run(&[("mcp__dynbrain__document_create", Some(true))]));
-    assert_eq!(failed.delivery, DeliveryStatus::Failed);
-    let unanswered = tally(&run(&[("mcp__dynbrain__document_create", None)]));
+    let error_body = tally(&run(&[(
+        create,
+        Some((false, r#"{"error": "Parent not found or not accessible."}"#)),
+    )]));
+    assert_eq!(error_body.delivery, DeliveryStatus::Failed);
+    assert_eq!(
+        error_body.servers[0].failed, 1,
+        "an error body is a failed call"
+    );
+    let no_id = tally(&run(&[(create, Some((false, r#"{"ok": true}"#)))]));
+    assert_eq!(no_id.delivery, DeliveryStatus::Failed);
+    let unanswered = tally(&run(&[(create, None)]));
     assert_eq!(unanswered.delivery, DeliveryStatus::Failed);
     assert_eq!(DeliveryStatus::Delivered.as_str(), "delivered");
     assert_eq!(DeliveryStatus::NotAttempted.as_str(), "not_attempted");
+}
+
+#[test]
+fn an_error_key_fails_a_call_wherever_the_body_wraps_it() {
+    assert_eq!(call_outcome(true, r#"{"id": 1}"#), CallOutcome::Failed);
+    assert_eq!(
+        call_outcome(false, r#"{"error": "x"}"#),
+        CallOutcome::Failed
+    );
+    assert_eq!(
+        call_outcome(false, r#"[{"type": "text", "text": "{\"error\": \"x\"}"}]"#),
+        CallOutcome::Failed
+    );
+    assert_eq!(
+        call_outcome(false, r#"[{"type": "text", "text": "{\"id\": \"d1\"}"}]"#),
+        CallOutcome::Succeeded { has_id: true }
+    );
+    assert_eq!(
+        call_outcome(false, "plain text"),
+        CallOutcome::Succeeded { has_id: false }
+    );
+    assert_eq!(
+        call_outcome(false, r#"{"id": null}"#),
+        CallOutcome::Succeeded { has_id: false }
+    );
 }

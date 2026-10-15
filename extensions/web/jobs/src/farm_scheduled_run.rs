@@ -2,19 +2,21 @@
 //! `agent_runs` on the scheduler's behalf.
 //!
 //! The scheduler entry names the farm, the agent and the person the run
-//! launches as (`farm`, `agent`, `launcher` parameters). The run is recorded
-//! with `triggered_via = scheduler`; the farm's runner service claims it like
-//! any other queued run. The job only queues: it never waits for the run.
-//! Where the launcher is not an active person (every environment but
+//! launches as (`farm`, `agent`, `launcher` parameters), and optionally the
+//! eval `case` the run is launched as, so it is judged when it finishes. The
+//! run is recorded with `triggered_via = scheduler`; the farm's runner service
+//! claims it like any other queued run. The job only queues: it never waits for
+//! the run. Where the launcher is not an active person (every environment but
 //! production) the tick logs that and queues nothing.
 
 use std::sync::Arc;
 
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
+use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult};
 use systemprompt_web_admin_farm::services::scheduled::{ScheduledLaunch, launch_scheduled};
-use systemprompt_web_admin_farm::state::build_farm_state_from_app;
+use systemprompt_web_admin_farm::state::build_farm_state_with_ai;
 use systemprompt_web_admin_farm::types::{FarmAgentId, FarmId};
 
 use crate::error::JobError;
@@ -35,10 +37,18 @@ impl FarmScheduledRunJob {
             farm_id: FarmId::new(required(ctx, "farm")?),
             agent_id: FarmAgentId::new(required(ctx, "agent")?),
             launcher: required(ctx, "launcher")?,
+            case: ctx
+                .get_parameter_parsed::<String>("case")?
+                .map(|case| case.trim().to_owned())
+                .filter(|case| !case.is_empty()),
         };
         let db = ctx.get::<DbPool>()?;
         let paths = ctx.get::<Arc<AppPaths>>().ok().map(Arc::clone);
-        let state = build_farm_state_from_app(db.write_pool(), paths.as_deref());
+        let ai = ctx
+            .get::<Arc<AppContext>>()
+            .ok()
+            .and_then(|app| app.ai_service_arc());
+        let state = build_farm_state_with_ai(db.write_pool(), paths.as_deref(), ai);
         let launcher = scheduled.launcher.clone();
         let Some(run) = launch_scheduled(&state, scheduled)
             .await

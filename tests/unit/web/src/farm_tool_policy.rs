@@ -105,6 +105,7 @@ fn the_scheduler_queues_the_audit_nightly() {
     assert!(entry.contains("farm: dynapps-night-audit"), "{entry}");
     assert!(entry.contains("agent: accounting_night_audit"), "{entry}");
     assert!(entry.contains("launcher: ed@systemprompt.io"), "{entry}");
+    assert!(entry.contains("case: nightly_previous_month"), "{entry}");
     assert_eq!(
         TriggeredVia::parse("scheduler"),
         Some(TriggeredVia::Scheduler)
