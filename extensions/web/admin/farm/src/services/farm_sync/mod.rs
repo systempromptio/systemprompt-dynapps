@@ -13,21 +13,19 @@ pub mod eval_yaml;
 pub mod farm_yaml;
 pub mod fixtures;
 mod persist;
+pub mod seed;
 pub mod tree;
 pub mod validate;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::{MarketplaceId, UserId};
-use systemprompt_web_shared::ProjectId;
+use systemprompt::identifiers::UserId;
 
-use crate::config::{FarmDef, read_farms_doc};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::farms;
-use crate::repositories::filters::NewFarm;
 use crate::repositories::rows::FarmRow;
 use crate::state::FarmState;
 use crate::types::FarmId;
@@ -44,6 +42,7 @@ pub use fixtures::{
     FixtureFile, FixtureManifest, fixture_manifest, group_fixtures, materialise_fixture,
 };
 pub use persist::eval_suite_id;
+pub use seed::{apply_agent_run_as, seed_farms_from_yaml};
 pub use tree::{ParsedFarm, parse_farm_tree};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -126,6 +125,8 @@ async fn sync_captured(
         })
         .collect();
     let cases = persist::persist_farm(&state.pool, &farm.id, &parsed, &stored, &commit).await?;
+    seed::apply_agent_run_as_from_yaml(&state.pool, &state.paths.composed_services_root, &farm.id)
+        .await?;
     Ok(FarmSyncReport {
         commit,
         agents: parsed.agents.len(),
@@ -171,54 +172,4 @@ async fn write_fixtures(parsed: &ParsedFarm, dirs: &[PathBuf]) -> FarmResult<Vec
     })
     .await
     .map_err(|e| FarmError::Io(std::io::Error::other(e)))?
-}
-
-fn new_farm(def: &FarmDef, run_as_user_id: Option<UserId>) -> NewFarm {
-    NewFarm {
-        id: FarmId::new(def.id.clone()),
-        name: def.name.clone(),
-        description: def.description.clone(),
-        marketplace_id: MarketplaceId::new(def.marketplace.clone()),
-        source_repo: def.source.github.clone(),
-        source_ref: def.source.r#ref.clone(),
-        source_subdir: def.source.subdir.clone(),
-        permission_mode: def.defaults.permission_mode.clone(),
-        timeout_seconds: i32::try_from(def.defaults.timeout_seconds).unwrap_or(i32::MAX),
-        max_turns: i32::try_from(def.defaults.max_turns).unwrap_or(i32::MAX),
-        max_budget_usd: def.defaults.max_budget_usd,
-        model: def.defaults.model.clone(),
-        run_as_user_id,
-        project_id: def
-            .project
-            .as_deref()
-            .map(str::trim)
-            .filter(|p| !p.is_empty())
-            .map(ProjectId::new),
-    }
-}
-
-async fn resolve_run_as(pool: &PgPool, def: &FarmDef) -> FarmResult<Option<UserId>> {
-    let Some(run_as) = def.run_as.as_deref() else {
-        return Ok(None);
-    };
-    farms::find_service_account(pool, run_as.trim())
-        .await?
-        .map(Some)
-        .ok_or_else(|| {
-            FarmError::Config(format!(
-                "farm {:?}: run_as {run_as:?} is not an active service account",
-                def.id
-            ))
-        })
-}
-
-pub async fn seed_farms_from_yaml(pool: &PgPool, services_path: &Path) -> FarmResult<usize> {
-    let Some(doc) = read_farms_doc(services_path).await? else {
-        return Ok(0);
-    };
-    for def in &doc.farms {
-        let run_as_user_id = resolve_run_as(pool, def).await?;
-        farms::upsert_farm(pool, &new_farm(def, run_as_user_id)).await?;
-    }
-    Ok(doc.farms.len())
 }

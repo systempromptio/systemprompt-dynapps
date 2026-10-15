@@ -16,6 +16,7 @@ pub use systemprompt::agent_runs::{
 };
 use systemprompt_web_shared::web_define_id;
 
+web_define_id!(ClientId);
 web_define_id!(FarmId);
 web_define_id!(FarmAgentId);
 web_define_id!(FarmRunId);

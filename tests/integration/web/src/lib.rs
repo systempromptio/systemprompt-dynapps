@@ -26,6 +26,8 @@ mod farm_attribution;
 #[cfg(test)]
 mod farm_case_eval;
 #[cfg(test)]
+mod farm_clients_reports;
+#[cfg(test)]
 mod farm_run_as_dimension;
 #[cfg(test)]
 mod farm_runner_lifecycle;

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Sets one agent's run-as account; the sync never writes this column.\nUPDATE agent_farm_agents\nSET run_as_user_id = $3\nWHERE farm_id = $1 AND id = $2\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "96702f54a0ebf080ba756b86852f8d399fadfc13aefc0bb1bc170d01f5128ae7"
+}

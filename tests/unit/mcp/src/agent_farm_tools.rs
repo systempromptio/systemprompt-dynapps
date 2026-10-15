@@ -18,12 +18,13 @@ use systemprompt_mcp_agent_farm::{RunOrigin, Viewer, authorize_run};
 use systemprompt_web_admin_core::repositories::agent_run_facts::RunScope;
 use systemprompt_web_shared::ProjectId;
 
-const READ_ONLY: [&str; 11] = [
+const READ_ONLY: [&str; 12] = [
     "run_status",
     "run_events",
     "run_list",
     "run_facts",
     "run_stats",
+    "farm_run_report",
     "farm_eval_results",
     "analytics_costs",
     "analytics_requests",
@@ -37,7 +38,7 @@ fn names(tools: &[rmcp::model::Tool]) -> Vec<String> {
 }
 
 #[test]
-fn the_fourteen_tools_are_the_whole_surface() {
+fn the_fifteen_tools_are_the_whole_surface() {
     let tools = list_tools();
     assert_eq!(names(&tools), TOOL_NAMES);
     assert_eq!(SERVER_NAME, "agent-farm");

@@ -6,7 +6,7 @@ use systemprompt::identifiers::{AgentRunId, ContextId, UserId};
 
 use crate::repositories::filters::{NewRun, RunFinish};
 use crate::repositories::rows::RunRow;
-use crate::types::{EvalResultId, FarmAgentId, FarmId, FarmRunId};
+use crate::types::{ClientId, EvalResultId, FarmAgentId, FarmId, FarmRunId};
 
 pub async fn insert_run(
     executor: impl PgExecutor<'_>,
@@ -32,6 +32,7 @@ pub async fn insert_run(
         run.timeout_seconds,
         run.source_commit_sha,
         run.eval_result_id.as_ref().map(EvalResultId::as_str),
+        run.client_id.as_ref().map(ClientId::as_str),
     )
     .fetch_one(executor)
     .await

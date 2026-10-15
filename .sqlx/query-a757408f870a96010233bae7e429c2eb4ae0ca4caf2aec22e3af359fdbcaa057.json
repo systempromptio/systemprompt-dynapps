@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "-- $8 is a sort key bound as text and picked by CASE, never interpolated.\nSELECT id AS \"id: FarmRunId\", agent_run_id AS \"agent_run_id: AgentRunId\", farm_id AS \"farm_id: FarmId\",\n       agent_id AS \"agent_id: FarmAgentId\", user_id AS \"user_id: UserId\", triggered_via, host, status,\n       attempt, prompt, fixture, model, permission_mode, max_turns, max_budget_usd, timeout_seconds,\n       source_commit_sha, context_id AS \"context_id: ContextId\", error_class, cost_microdollars,\n       event_count, tool_call_count, gateway_request_count, eval_result_id, started_at, finished_at,\n       cancel_requested_at, created_at, updated_at\nFROM agent_farm_runs\nWHERE ($1::text IS NULL OR farm_id = $1)\n  AND ($2::text IS NULL OR agent_id = $2)\n  AND ($3::text IS NULL OR user_id = $3)\n  AND ($4::text IS NULL OR status = $4)\n  AND ($5::text IS NULL OR triggered_via = $5)\n  AND ($6::timestamptz IS NULL OR created_at >= $6)\n  AND ($7::timestamptz IS NULL OR created_at < $7)\nORDER BY\n    CASE WHEN $8 = 'created_asc' THEN created_at END ASC,\n    CASE WHEN $8 = 'duration_desc' THEN finished_at - started_at END DESC NULLS LAST,\n    CASE WHEN $8 = 'cost_desc' THEN cost_microdollars END DESC NULLS LAST,\n    CASE WHEN $8 = 'tool_calls_desc' THEN tool_call_count END DESC NULLS LAST,\n    created_at DESC,\n    id\nLIMIT $9 OFFSET $10\n",
+  "query": "INSERT INTO agent_farm_runs (id, agent_run_id, farm_id, agent_id, user_id, triggered_via, host,\n                             status, attempt, prompt, fixture, model, permission_mode, max_turns,\n                             max_budget_usd, timeout_seconds, source_commit_sha, eval_result_id, client_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7, 'queued', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,\n        COALESCE($18, (SELECT client_id FROM agent_farms WHERE id = $3)))\nRETURNING id AS \"id: FarmRunId\", agent_run_id AS \"agent_run_id: AgentRunId\", farm_id AS \"farm_id: FarmId\",\n       agent_id AS \"agent_id: FarmAgentId\", user_id AS \"user_id: UserId\", triggered_via, host, status,\n       attempt, prompt, fixture, model, permission_mode, max_turns, max_budget_usd, timeout_seconds,\n       source_commit_sha, context_id AS \"context_id: ContextId\", error_class, cost_microdollars,\n       event_count, tool_call_count, gateway_request_count, eval_result_id, started_at, finished_at,\n       cancel_requested_at, created_at, updated_at, client_id AS \"client_id: ClientId\"\n",
   "describe": {
     "columns": [
       {
@@ -321,6 +321,17 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 29,
+        "name": "client_id: ClientId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "client_id"
+          }
+        }
       }
     ],
     "parameters": {
@@ -330,11 +341,19 @@
         "Text",
         "Text",
         "Text",
-        "Timestamptz",
-        "Timestamptz",
         "Text",
-        "Int8",
-        "Int8"
+        "Text",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Float8",
+        "Int4",
+        "Text",
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -366,8 +385,9 @@
       true,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "ac28a21f9d7e7c3f06b9a77043837990c2155349fc0fd421b9461a17a631ed72"
+  "hash": "a757408f870a96010233bae7e429c2eb4ae0ca4caf2aec22e3af359fdbcaa057"
 }

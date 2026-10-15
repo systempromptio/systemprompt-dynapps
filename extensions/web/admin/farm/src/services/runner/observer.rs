@@ -13,6 +13,9 @@
 //! `unexecuted_outcome` is the outcome of a run the executor never ran:
 //! cancelled while queued, or failed before the host started.
 //!
+//! A newly stamped run also gets its task-completion report
+//! ([`report::write_run_report`]); a report failure is logged, never fatal.
+//!
 //! Evals need no trigger: an eval case waits on the farm row's status, which
 //! this stamp is what moves.
 
@@ -23,6 +26,7 @@ use sqlx::PgPool;
 use systemprompt::agent_runs::{AgentRunRepository, AgentRunRow, RunOutcome};
 use systemprompt::identifiers::{AgentRunId, HostSessionId};
 
+use super::report;
 use crate::error::FarmResult;
 use crate::repositories::filters::RunFinish;
 use crate::repositories::rows::RunRow;
@@ -134,7 +138,11 @@ async fn stamp(
         gateway_request_count,
         context_id,
     };
-    Ok(runs::update_run_finished(pool, &farm_run.id, &finish).await?)
+    let stamped = runs::update_run_finished(pool, &farm_run.id, &finish).await?;
+    if stamped && let Err(error) = report::write_run_report(pool, &farm_run.id).await {
+        tracing::warn!(%error, run = farm_run.id.as_str(), "run report not written");
+    }
+    Ok(stamped)
 }
 
 async fn count_tool_calls(repo: &AgentRunRepository, id: &AgentRunId) -> FarmResult<i32> {

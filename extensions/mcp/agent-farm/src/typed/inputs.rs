@@ -61,6 +61,11 @@ pub struct RunStartInput {
     )]
     #[serde(default)]
     pub project: String,
+    #[schemars(
+        description = "Client slug the run is for (e.g. `dynapps`). Empty means the farm's own client."
+    )]
+    #[serde(default)]
+    pub client: String,
 }
 
 /// One run by id.

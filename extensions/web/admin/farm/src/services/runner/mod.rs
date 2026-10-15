@@ -10,6 +10,7 @@ mod handler;
 pub mod observer;
 pub mod plugin;
 pub mod prepare;
+pub mod report;
 mod service;
 
 pub use service::{FarmRunnerService, ORIGIN_KIND};

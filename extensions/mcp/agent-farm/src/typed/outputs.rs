@@ -52,6 +52,8 @@ pub struct RunStatusOutput {
     pub cost_microdollars: Option<i64>,
     pub exit_code: Option<i32>,
     pub cancel_requested: bool,
+    pub client: Option<String>,
+    pub report: Option<super::outputs_report::RunReportOutput>,
 }
 farm_output!(RunStatusOutput, "agent_run_status");
 

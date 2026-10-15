@@ -8,7 +8,7 @@ use systemprompt::identifiers::{AgentRunId, ContextId, MarketplaceId, PluginId, 
 use systemprompt_web_shared::ProjectId;
 
 use crate::types::{
-    EvalResultId, EvalSuiteId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
+    ClientId, EvalResultId, EvalSuiteId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,6 +27,7 @@ pub struct NewFarm {
     pub model: Option<String>,
     pub run_as_user_id: Option<UserId>,
     pub project_id: Option<ProjectId>,
+    pub client_id: Option<ClientId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +81,7 @@ pub struct NewRun {
     pub timeout_seconds: i32,
     pub source_commit_sha: Option<String>,
     pub eval_result_id: Option<EvalResultId>,
+    pub client_id: Option<ClientId>,
 }
 
 /// The farm facts a finished run records; the executor's own outcome is on

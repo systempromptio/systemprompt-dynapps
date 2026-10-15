@@ -31,7 +31,7 @@ impl McpToolHandler for RunStartHandler<'_> {
         "run_start"
     }
     fn description(&self) -> &'static str {
-        "Queue one headless agent run on a farm and return at once with its run id. The run executes under the farm's limits unless you set tighter ones; poll `run_status`, read `run_events`. Name an eval `case` to have the run evaluated when it finishes (`eval_run_id` in the result; read it with `farm_eval_results`). You must hold the farm's workspace."
+        "Queue one headless agent run on a farm and return at once with its run id. The run executes under the farm's limits unless you set tighter ones; poll `run_status`, read `run_events`. Name a `client` slug to attribute the run to a client other than the farm's. Name an eval `case` to have the run evaluated when it finishes (`eval_run_id` in the result; read it with `farm_eval_results`). You must hold the farm's workspace."
     }
     async fn handle(
         &self,
@@ -100,12 +100,13 @@ async fn start_farm_run(
 ) -> ToolResult<(RunStartOutput, String)> {
     use std::sync::Arc;
     use systemprompt_web_admin_farm::services::evals::{CaseLaunch, start_case_eval};
-    use systemprompt_web_admin_farm::services::runs::{LaunchRequest, launch};
+    use systemprompt_web_admin_farm::services::runs::{LaunchRequest, launch, resolve_client};
     use systemprompt_web_admin_farm::types::{FarmAgentId, TriggeredVia};
 
     let farm = super::farm_access::entitled_farm(ctx, &input.farm).await?;
     check_run_project(ctx, &farm, input.project.trim())?;
     let state = ctx.env()?.farm_state()?;
+    let client_id = resolve_client(&state.pool, Some(input.client.as_str())).await?;
     let max_turns =
         (input.max_turns > 0).then(|| i32::try_from(input.max_turns).unwrap_or(i32::MAX));
     let timeout_seconds = (input.timeout_seconds > 0)
@@ -123,6 +124,7 @@ async fn start_farm_run(
         max_budget_usd: (input.max_budget_usd > 0.0).then_some(input.max_budget_usd),
         timeout_seconds,
         eval_result_id: None,
+        client_id,
     };
     let case_id = input.case.trim();
     let (row, eval_run_id) = if case_id.is_empty() {
