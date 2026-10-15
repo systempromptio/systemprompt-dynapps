@@ -132,7 +132,7 @@ fn egress_allow_is_read_from_the_farms_file() {
 
 #[test]
 fn the_ruleset_keeps_ipv6_neighbour_discovery_open() {
-    let rules = systemprompt_web_admin_farm::services::runner::fly::egress::nft_ruleset(&[]);
+    let rules = nft_ruleset(&[]);
     assert!(rules.contains(
         "icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit } accept"
     ));
