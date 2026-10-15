@@ -35,8 +35,7 @@ What we have provisioned:
      dynapps.systemprompt.io.gdwqlrk.flydns.net. Fly certificate issued on
      sp-e43527c1cbb5; the production profile now uses the canonical URL for
      api_external_url, cors_allowed_origins and jwt_issuer.
-     Constraint: astound.systemprompt.io is another customer's live address
-     and was not touched.
+     Constraint: other tenants' addresses on systemprompt.io were not touched.
 
 2.2  AI provider credentials. For the pilot the tenant uses systemprompt.io's
      own Vertex AI service account (Claude on Vertex, global endpoint, with
@@ -127,4 +126,4 @@ What we have provisioned:
     so restrict the groups claim to groups assigned to the application;
     single logout is not implemented.
   - Content specific to the previous customer has been removed: their kits,
-    their Salesforce org connection and the Google Workspace MCP server.
+    their CRM org connection and the Google Workspace MCP server.

@@ -84,7 +84,7 @@ waiting count as `unsealed_rows`. See `extensions/web/schema/51_audit_integrity.
 
 Workflow write-backs and farm runs act as service accounts that core refuses
 for every interactive login. Their machine credentials (GitHub App keys,
-Salesforce client secrets, Atlassian API tokens) are sealed with the master
+Odoo API keys) are sealed with the master
 key, bound to one account and provider, never returned by any endpoint, and
 issued as a bearer only to a `workflow:<id>:write` or `farm:<id>` caller. Dynapps stores and
 gates them; every token is minted by core's `connector_grant`, the one
@@ -112,7 +112,7 @@ configures:
    releases repository, the gateway resolves the newest bridge release from
    that GitHub repository on a desktop bridge's request.
 6. **Identity and connectors.** Microsoft Entra ID (OpenID Connect) for sign-in, and the
-   Atlassian and Salesforce connectors when a user uses them.
+   configured MCP connectors (`dynapps-odoo`, `dynbrain`) when a user uses them.
 
 The desktop bridge checks for its own updates against the gateway it is
 enrolled with, never against the vendor. A cloud profile (`target: cloud`) or

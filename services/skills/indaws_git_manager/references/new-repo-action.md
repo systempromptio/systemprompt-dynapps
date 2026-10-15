@@ -43,7 +43,7 @@ The script does NOT detect provider from a remote (there isn't one yet), Odoo ve
 Asked one at a time, with defaults:
 
 1. **Odoo version**: defaults to the version hint if detected; otherwise asks until user enters a valid `XX.0` format.
-2. **Task tracker**: `odoo` or `jira` (default `odoo`).
+2. **Task tracker**: `odoo` (Odoo project tasks via `dynapps-odoo`; default `odoo`).
 
 Hardcoded — never asked:
 - `module_layout = standard` (new repos always use `parts/custom/`).

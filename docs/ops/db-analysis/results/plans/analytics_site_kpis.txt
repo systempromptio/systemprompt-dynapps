@@ -1,9 +1,0 @@
-                                                                                                    QUERY PLAN                                                                                                     
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=491.75..491.77 rows=1 width=112)
-   ->  Sort  (cost=477.45..477.72 rows=110 width=74)
-         Sort Key: user_id
-         ->  Seq Scan on ai_requests r  (cost=0.00..473.72 rows=110 width=74)
-               Filter: ((NOT synthetic) AND (($4 IS NULL) OR ((user_id)::text = $4)) AND ((created_at >= $5) OR (created_at >= (now() - '14 days'::interval))) AND (($3 IS NULL) OR ((user_id)::text = ANY ($3))))
-(5 rows)
-

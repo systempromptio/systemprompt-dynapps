@@ -52,7 +52,7 @@ systemprompt infra jobs run database_cleanup      # run it now
 systemprompt infra jobs list                      # last run / next run / status
 ```
 
-Requests themselves (`ai_requests`) are not in this job: the astound
+Requests themselves (`ai_requests`) are not in this job: the Dynapps
 `plugin_usage_retention` job expires them after 90 days together with the
 hook events (`expire_raw_evidence`, `extensions/web/schema/32_raw_retention.sql`),
 and the stored message bodies cascade with them. The messages window above
@@ -60,7 +60,7 @@ only trims bodies sooner than the request rows.
 
 ## Measurement, archives and the health check
 
-Three astound jobs are the other half of the policy (`extensions/web/jobs/src/retention/`):
+Three Dynapps jobs are the other half of the policy (`extensions/web/jobs/src/retention/`):
 
 | job | when | what |
 |---|---|---|

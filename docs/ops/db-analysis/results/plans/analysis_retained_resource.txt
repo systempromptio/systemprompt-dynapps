@@ -1,6 +1,0 @@
-                            QUERY PLAN                            
-------------------------------------------------------------------
- Seq Scan on managed_resources  (cost=0.00..0.00 rows=1 width=96)
-   Filter: ((owner_id = $1) AND (id = $2))
-(2 rows)
-

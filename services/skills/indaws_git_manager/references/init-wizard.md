@@ -18,7 +18,7 @@ Detailed flow for the `init` action of the `git-manager` skill. Designed to be t
 
 ## Interactive phase (ask the user, one question at a time)
 
-1. "¿Qué sistema de tareas usáis?" → detect task pattern (`P{project}-{task}`, `JIRA-{number}`, etc.)
+1. "¿Qué sistema de tareas usáis?" → detect task pattern (Odoo `P{project}-{task}`, etc.)
 2. "¿Cómo queréis integrar los cambios?" → merge method (squash recommended, explain trade-offs)
 3. "¿Cómo queréis lanzar a producción?" → release mode (develop-based vs release-based)
 4. "¿Dónde están los módulos?" (ruta relativa al repo root) → modules path

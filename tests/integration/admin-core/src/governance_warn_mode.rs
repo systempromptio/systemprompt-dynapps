@@ -2,9 +2,9 @@
 //! `services/governance/config.yaml` is parsed by the same loader the server
 //! uses, built into the same `GovernanceEngine`, and driven with the inputs
 //! that were denying real traffic before the mode existed. Every stage must
-//! still find what it found. The two tool-plane stages (`scope_check`,
-//! `tool_blocklist`) override the window with `mode: enforce` and refuse; the
-//! other two warn and never refuse.
+//! still find what it found. Every stage inherits the window (no stage
+//! overrides it with `mode: enforce` since 2026-10-15), so each finding is a
+//! recorded warn and nothing is refused.
 //!
 //! The write side is exercised too: each warn verdict is recorded through
 //! `record_decision` into a throwaway database and read back with the same
@@ -150,7 +150,7 @@ fn failed_policies(evaluation: &Evaluation) -> Vec<&str> {
 }
 
 #[test]
-fn the_shipped_chain_has_every_stage_on_and_only_the_tool_plane_enforcing() {
+fn the_shipped_chain_has_every_stage_on_and_every_stage_warning() {
     let config = shipped_config();
     assert!(config.enabled, "the master switch is on");
     assert_eq!(
@@ -166,11 +166,9 @@ fn the_shipped_chain_has_every_stage_on_and_only_the_tool_plane_enforcing() {
             .find(|p| p.id == stage)
             .unwrap_or_else(|| panic!("{stage} is declared; chain has {ids:?}"));
         assert!(policy.enabled, "{stage} is enabled — warn is not off");
-        let enforces = matches!(stage, "scope_check" | "tool_blocklist");
-        assert_eq!(
+        assert!(
             policy.mode.is_warn(),
-            !enforces,
-            "{stage}: only the tool-plane stages override the window with enforce"
+            "{stage}: no stage overrides the window with enforce"
         );
     }
 }
@@ -273,7 +271,7 @@ fn a_configured_provider_key_is_caught_and_is_a_warn() {
 }
 
 #[test]
-fn an_admin_only_tool_from_a_user_is_refused_by_scope_check() {
+fn an_admin_only_tool_from_a_user_is_a_warn_from_scope_check() {
     let engine = shipped_engine();
     let user = UserId::new(unique("user"));
     let session = SessionId::new(unique("session"));
@@ -281,12 +279,13 @@ fn an_admin_only_tool_from_a_user_is_refused_by_scope_check() {
 
     let evaluation = call.evaluate(&engine);
 
-    assert_eq!(evaluation.decision.tag(), DecisionTag::Deny);
-    assert_eq!(failed_policies(&evaluation), vec!["scope_check"]);
+    assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
+    assert_eq!(warned_policies(&evaluation), vec!["scope_check"]);
+    assert!(evaluation.decision.permits());
 }
 
 #[test]
-fn a_blocklisted_tool_name_is_refused_by_tool_blocklist() {
+fn a_blocklisted_tool_name_is_a_warn_from_tool_blocklist() {
     let engine = shipped_engine();
     let user = UserId::new(unique("user"));
     let session = SessionId::new(unique("session"));
@@ -294,8 +293,9 @@ fn a_blocklisted_tool_name_is_refused_by_tool_blocklist() {
 
     let evaluation = call.evaluate(&engine);
 
-    assert_eq!(evaluation.decision.tag(), DecisionTag::Deny);
-    assert_eq!(failed_policies(&evaluation), vec!["tool_blocklist"]);
+    assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
+    assert_eq!(warned_policies(&evaluation), vec!["tool_blocklist"]);
+    assert!(evaluation.decision.permits());
 }
 
 // Why: the shipped window is 300 calls a minute per session. Under enforce the
@@ -319,10 +319,10 @@ fn an_exhausted_rate_limit_window_is_a_warn_from_rate_limit() {
     assert!(evaluation.decision.permits());
 }
 
-// Why: a warn does not halt the chain, so a credential the warning stage
-// found is still recorded on a call an enforcing stage after it refuses.
+// Why: a warn does not halt the chain, so every stage that finds something on
+// one call records its own warn and the call is still admitted.
 #[test]
-fn a_warn_is_recorded_on_a_call_an_enforcing_stage_refuses() {
+fn every_stage_that_finds_something_on_one_call_records_a_warn() {
     let engine = shipped_engine();
     let user = UserId::new(unique("user"));
     let session = SessionId::new(unique("session"));
@@ -335,13 +335,16 @@ fn a_warn_is_recorded_on_a_call_an_enforcing_stage_refuses() {
 
     let evaluation = call.evaluate(&engine);
 
-    assert_eq!(evaluation.decision.tag(), DecisionTag::Deny);
-    assert_eq!(warned_policies(&evaluation), vec!["secret_scan"]);
-    assert_eq!(failed_policies(&evaluation), vec!["scope_check"]);
+    assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
+    assert_eq!(
+        warned_policies(&evaluation),
+        vec!["secret_scan", "scope_check", "tool_blocklist"]
+    );
+    assert!(failed_policies(&evaluation).is_empty());
 }
 
 #[tokio::test]
-async fn every_decision_is_written_and_only_warns_roll_up() {
+async fn every_decision_is_written_and_every_warn_rolls_up() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -376,12 +379,7 @@ async fn every_decision_is_written_and_only_warns_roll_up() {
     .expect("read the rows back");
     assert_eq!(rows.len(), 3, "one row per call, none dropped");
     for (decision, policy, reason) in &rows {
-        let expected = if policy == "secret_scan" {
-            "warn"
-        } else {
-            "deny"
-        };
-        assert_eq!(decision, expected, "{policy}: only the warning stage warns");
+        assert_eq!(decision, "warn", "{policy}: every stage warns");
         assert!(
             !reason.is_empty(),
             "{policy}: the reason a deny would have carried is kept"
@@ -398,11 +396,7 @@ async fn every_decision_is_written_and_only_warns_roll_up() {
         .await
         .expect("the report query runs");
     let ours: Vec<_> = rollup.iter().filter(|r| r.user_id == user).collect();
-    assert_eq!(
-        ours.len(),
-        1,
-        "the report sees the warned policy and none of the refusals"
-    );
+    assert_eq!(ours.len(), 3, "the report sees every warned policy");
     assert!(
         ours.iter()
             .all(|r| r.count == 1 && !r.example_reason.is_empty())

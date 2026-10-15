@@ -263,7 +263,7 @@ across 12 modules. Each module has:
 
 ### Red flags
 - "We need an interactive Gantt with dependencies" → Odoo Enterprise + configuration
-- "We want Jira / dev-tool integration" → API development
+- "We want dev-tool / issue-tracker integration" → API development
 
 ---
 

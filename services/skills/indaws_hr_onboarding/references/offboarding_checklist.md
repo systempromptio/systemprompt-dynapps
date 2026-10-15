@@ -65,7 +65,7 @@ revocacion de accesos, transferencia de conocimiento y entrevista de salida.
 | Banca online | Revocar acceso | CRITICA |
 | Herramienta de gestion proyectos | Desactivar usuario | MEDIA |
 | Sentry / Monitoring | Remover usuario | MEDIA |
-| Notion / Confluence | Revocar acceso | MEDIA |
+| Notion / dynbrain | Revocar acceso | MEDIA |
 | Google Drive compartido | Revocar acceso a carpetas sensibles | ALTA |
 
 ### Post-Revocacion

@@ -30,7 +30,7 @@ Shortcut for `git-manager` action `branch`. Creates a feature branch with the co
 ### 1. Read workflow config
 Look for `.gitworkflow.yml` in repo root.
 - **Found**: read `naming.task_pattern` to know the expected format (e.g., `P{project_id}-{task_id}`)
-- **Not found**: ask the user: "¿Qué formato de tarea usáis? (ej: P42-12345, JIRA-110)" — then offer to generate the config file via `git-manager init`
+- **Not found**: ask the user: "¿Qué formato de tarea usáis? (ej: P42-12345)" — then offer to generate the config file via `git-manager init`
 
 ### 2. Validate task ID
 If the user passed a task ID as argument:

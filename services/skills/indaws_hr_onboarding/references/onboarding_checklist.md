@@ -26,8 +26,8 @@ Cada tarea incluye responsable, plazo (dias desde incorporacion) y categoria.
 | Acceso a Google Drive compartido | Day-1 | Carpetas del departamento |
 | Alta en gestor de contrasenas (1Password) | Day-1 | Boveda del equipo |
 | Acceso a Odoo interno | Day-1 | Modulos segun rol |
-| Alta en herramienta de gestion de proyectos | Day-1 | Jira / Trello segun equipo |
-| Acceso a documentacion interna (Notion/Confluence) | Day-1 | Espacio del departamento |
+| Alta en herramienta de gestion de proyectos | Day-1 | Odoo Proyectos (dynapps-odoo) segun equipo |
+| Acceso a documentacion interna (Notion/dynbrain) | Day-1 | Espacio del departamento |
 
 ### Documentacion RRHH (Responsable: RRHH)
 | Tarea | Plazo | Notas |

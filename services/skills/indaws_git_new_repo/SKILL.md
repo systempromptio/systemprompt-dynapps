@@ -34,7 +34,7 @@ The script auto-detects an Odoo version hint from the parent directory (e.g., if
 ## What it does (summary)
 
 1. **Preflight**: target dir must be empty (or be created from `<name>` argument); copier installed; skeleton resolvable via `SKELETON_PATH`, `SKELETON_REPO_URL`, or interactive prompt.
-2. **Asks** Odoo version (with hint) and task tracker (odoo / jira). The rest are hardcoded (`module_layout=standard`, `repo_type=customer`, `org_name=Indaws Business Solutions S.L.`, etc.).
+2. **Asks** Odoo version (with hint) and task tracker (odoo — Odoo project tasks via `dynapps-odoo`). The rest are hardcoded (`module_layout=standard`, `repo_type=customer`, `org_name=Indaws Business Solutions S.L.`, etc.).
 3. **Renders** the skeleton with `copier copy --defaults` excluding GitLab-only files when targeting GitHub.
 4. **Sanity-checks** that no excluded file leaked.
 5. **`git init`** + first commit + creates the dual branches (`X.Y` + `X.Y-develop` on GitHub; `master` + `develop` on GitLab).

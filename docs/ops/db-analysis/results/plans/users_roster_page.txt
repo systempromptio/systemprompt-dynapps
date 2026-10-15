@@ -1,3 +1,0 @@
-ERROR:  relation "user_last_seen" does not exist
-LINE 38:                  LEFT JOIN user_last_seen seen ON seen.user_...
-                                    ^

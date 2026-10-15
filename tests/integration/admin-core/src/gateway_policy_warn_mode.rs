@@ -3,12 +3,12 @@
 //! the boot job uses, written to `ai_gateway_policies` in a throwaway
 //! database, and read back through the gateway's `PolicyResolver` — the merge
 //! that decides what the dispatch path actually enforces. `safety.mode` has to
-//! come out the far side as `warn` and `quota_mode` as `enforce` (flipped
-//! 2026-10-14), or the file says one thing and the gateway does another.
+//! come out the far side as `warn` and so does `quota_mode` (back to warn
+//! 2026-10-15), or the file says one thing and the gateway does another.
 //!
 //! The quota plane gets its own proof: the resolved windows are driven to
 //! exhaustion with the real reservation code, which must report the breach
-//! that the enforce mode turns into a refusal.
+//! that warn mode records and enforce mode would turn into a refusal.
 
 use std::sync::Arc;
 
@@ -64,7 +64,7 @@ async fn ingest_shipped(db: &TempDb) -> DbPool {
 }
 
 #[test]
-fn the_shipped_file_enforces_quotas_and_warns_on_safety() {
+fn the_shipped_file_warns_on_quotas_and_safety() {
     let cfg = shipped_policies();
     cfg.validate().expect("the shipped file validates");
     let spec = &cfg
@@ -73,11 +73,11 @@ fn the_shipped_file_enforces_quotas_and_warns_on_safety() {
         .find(|p| p.enabled)
         .expect("an enabled policy")
         .spec;
-    assert_eq!(spec.quota_mode, QuotaMode::Enforce);
+    assert_eq!(spec.quota_mode, QuotaMode::Warn);
     assert_eq!(spec.safety.mode, SafetyMode::Warn);
     assert!(
         !spec.quota_windows.is_empty(),
-        "the enforced windows are declared"
+        "the windows stay declared so warn has thresholds to report"
     );
     assert!(
         !spec.safety.block_categories.is_empty()
@@ -100,8 +100,8 @@ async fn the_resolver_keeps_both_mode_switches_after_ingestion() {
         .expect("policy row resolves");
 
     assert!(
-        !resolved.quota_mode.is_warn(),
-        "quota_mode: enforce survived the row merge"
+        resolved.quota_mode.is_warn(),
+        "quota_mode: warn survived the row merge"
     );
     assert!(
         resolved.safety.mode.is_warn(),
@@ -115,9 +115,10 @@ async fn the_resolver_keeps_both_mode_switches_after_ingestion() {
     db.cleanup().await;
 }
 
-// Why: the quota stage is `precheck_and_reserve` followed by the refusal
-// `quota_mode: enforce` answers with 429; the breach must carry its reason,
-// so the exhausted state is driven with the real windows and bucket table.
+// Why: the quota stage is `precheck_and_reserve`; under `quota_mode: warn`
+// core records the breach instead of answering 429, and that warning must
+// carry its reason, so the exhausted state is driven with the real windows
+// and bucket table.
 #[tokio::test]
 async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     let Some(db) = TempDb::create().await else {
@@ -129,7 +130,7 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
         .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
         .await
         .expect("policy row resolves");
-    assert!(!resolved.quota_mode.is_warn());
+    assert!(resolved.quota_mode.is_warn());
 
     let user_window = resolved
         .quota_windows
