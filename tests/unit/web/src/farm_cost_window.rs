@@ -34,7 +34,7 @@ fn a_one_dollar_budget_admits_a_worst_case_first_turn() {
         window >= worst,
         "the first turn's reservation fits the window"
     );
-    assert!((window - 2.56 * COST_WINDOW_HEADROOM).abs() < 1e-9);
+    assert!(2.56f64.mul_add(-COST_WINDOW_HEADROOM, window).abs() < 1e-9);
 }
 
 #[test]
