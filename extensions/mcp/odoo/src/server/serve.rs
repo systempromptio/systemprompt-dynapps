@@ -97,10 +97,25 @@ pub(super) async fn serve(s: &Serve<'_>) -> Result<CallToolResult, McpError> {
         client: s.profile,
     };
     let result = Box::pin(dispatch_tool(&dispatch, call.clone(), tool)).await;
-    let succeeded = result.as_ref().is_ok_and(|r| r.is_error != Some(true));
-    settle(&pool, audit, succeeded).await;
+    let failure = failure_detail(&result);
+    let succeeded = failure.is_none();
+    settle(&pool, audit, failure.as_deref()).await;
     if succeeded {
         post_attribution(&call, tool, s.request.arguments.as_ref()).await;
     }
     result
+}
+
+fn failure_detail(result: &Result<CallToolResult, McpError>) -> Option<String> {
+    match result {
+        Err(error) => Some(error.message.to_string()),
+        Ok(r) if r.is_error == Some(true) => Some(
+            r.content
+                .iter()
+                .filter_map(|block| block.as_text().map(|t| t.text.clone()))
+                .collect::<Vec<_>>()
+                .join(" "),
+        ),
+        Ok(_) => None,
+    }
 }

@@ -6614,6 +6614,7 @@ dependencies = [
  "axum",
  "chrono",
  "inventory",
+ "reqwest",
  "serde",
  "serde_json",
  "systemprompt",

@@ -139,7 +139,10 @@ pub fn classification_schema() -> serde_json::Value {
 }
 
 pub fn parse_classification(content: &str) -> Result<Classification, serde_json::Error> {
-    let mut parsed: Classification = serde_json::from_str(content)?;
+    let start = content.find('{').unwrap_or(0);
+    let end = content.rfind('}').map_or(content.len(), |i| i + 1);
+    let json = content.get(start..end).unwrap_or(content);
+    let mut parsed: Classification = serde_json::from_str(json)?;
     parsed.summary = parsed
         .summary
         .trim()

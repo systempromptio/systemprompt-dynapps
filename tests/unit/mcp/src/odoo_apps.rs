@@ -213,3 +213,22 @@ fn a_bare_authentication_failure_still_asks_for_a_relink() {
         "an authentication failure must name the relink remedy: {message}"
     );
 }
+
+// Why: the live farm bot hit exactly this refusal on crm_lead_delete; the
+// rights remedy must keep Odoo's own words, which name the group to grant.
+#[test]
+fn a_delete_refusal_keeps_the_group_odoo_names() {
+    let fault = OdooError::Odoo(
+        "You are not allowed to delete 'Lead/Opportunity' (crm.lead) records.\n\nThis \
+         operation is allowed for the following groups:\n\t- Sales/Administrator\n\nContact \
+         your administrator to request access if necessary."
+            .to_owned(),
+    );
+    let OdooError::AccessDenied(message) =
+        map_access_denied("farm-bot@example.com", "crm.lead", fault)
+    else {
+        panic!("expected AccessDenied");
+    };
+    assert!(message.contains("farm-bot@example.com"), "{message}");
+    assert!(message.contains("Sales/Administrator"), "{message}");
+}

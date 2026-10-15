@@ -71,6 +71,19 @@ fn is_permission_fault(message: &str) -> bool {
     message.contains("AccessError")
         || message.contains("not allowed to access this document")
         || message.contains("not allowed to modify this document")
+        || message.contains("You are not allowed to")
+}
+
+fn first_paragraphs(message: &str) -> String {
+    message
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            !line.is_empty() && !line.starts_with("Traceback") && !line.starts_with("File ")
+        })
+        .take(4)
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 // Why: recognise both refusals while the acting login and model are still in
@@ -87,7 +100,8 @@ pub fn map_access_denied(login: &str, model: &str, err: OdooError) -> OdooError 
         return OdooError::AccessDenied(format!(
             "Odoo authenticated '{login}' but refused it access to '{model}'. Ask an Odoo \
              administrator to grant that account access to the {app} app (Settings → Users, then \
-             the app's access rights)."
+             the app's access rights). Odoo said: {}",
+            first_paragraphs(message)
         ));
     }
     if is_auth_failure_fault(message) {
