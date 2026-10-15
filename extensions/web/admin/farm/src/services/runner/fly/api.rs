@@ -205,6 +205,15 @@ impl MachinesClient {
         .map(|_| ())
     }
 
+    pub async fn start(&self, id: &str) -> FarmResult<()> {
+        self.send::<Value>(
+            self.http.post(format!("{}/machines/{id}/start", self.base)),
+            "start runner machine",
+        )
+        .await
+        .map(|_| ())
+    }
+
     pub async fn destroy(&self, id: &str) -> FarmResult<()> {
         self.send::<Value>(
             self.http
