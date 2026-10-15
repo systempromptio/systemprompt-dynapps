@@ -25,9 +25,11 @@ ED_EMAIL="${ED_EMAIL:-ed@systemprompt.io}"
 RUN_TIMEOUT="${RUN_TIMEOUT:-2400}"
 ODOO_SERVER="dynapps-odoo"
 BRAIN_SERVER="dynbrain"
-# Every dynapps-odoo tool the audit may call. Anything else on that server
+# Every dynapps-odoo read tool (observed on prod 2026-10-15; the server also
+# exposes orm_create/write/unlink/execute_kw, orm_post_message, orm_send_mail,
+# odoo_request_upload and odoo_attachment_link). Anything else on that server
 # counts as a write, so a new tool is flagged until someone classifies it.
-ODOO_READ_TOOLS="whoami orm_search_read odoo_list_models odoo_describe_model odoo_get_selection odoo_aggregate odoo_resolve odoo_attachment_search"
+ODOO_READ_TOOLS="whoami odoo_whoami orm_search_read orm_aggregate odoo_list_models odoo_describe_model odoo_get_selection odoo_aggregate odoo_resolve odoo_attachment_search"
 BRAIN_WRITE_RE='^docs_(create|create_tree|update|trash|move|asset_upload|asset_link|request_upload|propose_changes|review_proposal|merge_proposal)$'
 
 STATE_DIR="$NIGHT_DIR/.state"
@@ -120,11 +122,11 @@ bare_tool_sql() { printf "regexp_replace(%s, '^mcp__.*__', '')" "$1"; }
 
 # Which portal server a row belongs to. Farm runs are observed twice: the
 # plugin hook records Claude Code's name (mcp__dynapps-odoo__orm_search_read,
-# server hook_claude_code) and the gateway proxy may record the bare tool
+# server hook_claude_code; the bridge adds a plugin_<plugin>_ prefix) and the gateway proxy may record the bare tool
 # under the server's own name. Rows from neither server map to their server.
 server_sql() {
   local srv="${1:-NULL}"
-  printf "CASE WHEN tool_name LIKE 'mcp\\_\\_%s\\_\\_%%' OR %s ILIKE '%%%s%%' THEN '%s' WHEN tool_name LIKE 'mcp\\_\\_%s\\_\\_%%' OR %s ILIKE '%%%s%%' THEN '%s' ELSE COALESCE(%s, 'other') END" \
+  printf "CASE WHEN tool_name LIKE 'mcp\\_\\_%%%s\\_\\_%%' OR %s ILIKE '%%%s%%' THEN '%s' WHEN tool_name LIKE 'mcp\\_\\_%%%s\\_\\_%%' OR %s ILIKE '%%%s%%' THEN '%s' ELSE COALESCE(%s, 'other') END" \
     "$ODOO_SERVER" "$srv" "$ODOO_SERVER" "$ODOO_SERVER" "$BRAIN_SERVER" "$srv" "$BRAIN_SERVER" "$BRAIN_SERVER" "$srv"
 }
 
