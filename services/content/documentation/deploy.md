@@ -3,7 +3,7 @@ title: "Deploy: One Node and PostgreSQL"
 description: "Run the published Dynapps gateway image on one Linux machine against PostgreSQL, from pulling the image to the first admin sign-in."
 author: "Dynapps"
 slug: "deploy"
-keywords: "deploy, self-host, docker, docker compose, postgresql, ghcr, image, profile, secrets, vertex ai, service account, single node, install, upgrade"
+keywords: "deploy, self-host, docker, docker compose, postgresql, ghcr, image, profile, secrets, single node, install, upgrade"
 kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
@@ -109,7 +109,6 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
   --trusted-proxies 127.0.0.0/8 \
   --database-url 'postgres://systemprompt:<pw>@<db-host>:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --secret "vertex=$(cat vertex-sa.json)" \
   --image ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@
 ```
 
@@ -119,8 +118,8 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
 | `--admin-email` | the first admin account, created at boot as user `admin` |
 | `--trusted-proxies` | the address your TLS proxy or load balancer connects from. nginx on the same machine: `127.0.0.0/8`. Without it forwarded headers are ignored and rate limiting can refuse callers |
 | `--database-url` | from step 2, or `postgres://systemprompt:<pw>@postgres:5432/systemprompt` for the bundled database |
-| `--anthropic-key` | the Anthropic API key, stored as the `anthropic` secret. The `claude-*` route fails over to it when Vertex is out of capacity or unreachable |
-| `--secret name=value` | any other secret, repeatable. `vertex=<service-account JSON>` is the one every deployment needs: one key serves Claude, Gemini and the open models on Vertex. Optional ones (`gemini`, `dynapps_release_token`, `ghcr_pull_token`) are listed in `SECRETS.md` |
+| `--anthropic-key` | the Anthropic API key, stored as the `anthropic` secret. It is the only model credential this installation uses: every `claude-*` request goes to Anthropic's API |
+| `--secret name=value` | any other secret, repeatable. Optional ones (`dynapps_release_token`, `ghcr_pull_token`) are listed in `SECRETS.md` |
 | `--image` | optional; validates the rendered profile inside the image before you start anything |
 
 **Settle the hostname before the first boot.** Changing `--external-url` later

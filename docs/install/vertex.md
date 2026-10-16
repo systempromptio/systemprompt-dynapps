@@ -1,5 +1,10 @@
 # Vertex AI credentials for the gateway
 
+> **Not in use.** This installation is Anthropic-only by customer requirement
+> (2026-10-16): every Google provider below is commented out of
+> `services/ai/providers.yaml` and the `vertex` and `gemini` secrets are
+> removed. This page is kept for a restore.
+
 This page is for the team issuing Google credentials from the Cloud project.
 For the full set of secrets an operator must provide across every provider, and
 how to set and verify them, see [required-secrets.md](required-secrets.md).

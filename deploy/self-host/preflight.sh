@@ -96,8 +96,7 @@ if [ -f "$S" ]; then
     for k in database_url oauth_at_rest_pepper manifest_signing_secret_seed signing_key_pem; do
         [ -n "$(jq -r --arg k "$k" '.[$k] // empty' "$S")" ] && ok "secret $k present" || bad "secret $k missing (SECRETS.md)"
     done
-    prov=0; for k in vertex anthropic gemini; do [ -n "$(jq -r --arg k "$k" '.[$k] // empty' "$S")" ] && prov=1; done
-    [ "$prov" = 1 ] && ok "at least one model provider key present" || bad "no provider key (vertex / anthropic / gemini)"
+    [ -n "$(jq -r '.anthropic // empty' "$S")" ] && ok "anthropic provider key present" || bad "no anthropic key (the only model provider)"
     plen="$(jq -r '.oauth_at_rest_pepper // ""' "$S" | wc -c)"; [ "$plen" -gt 32 ] && ok "pepper ≥ 32 chars" || bad "oauth_at_rest_pepper shorter than 32 chars"
     slen="$(jq -r '.manifest_signing_secret_seed // ""' "$S" | base64 -d 2>/dev/null | wc -c | tr -d ' ')"
     [ "$slen" = "32" ] && ok "manifest seed decodes to 32 bytes" || bad "manifest_signing_secret_seed must be base64 of exactly 32 bytes (got $slen)"

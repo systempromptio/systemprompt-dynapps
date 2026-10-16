@@ -3,12 +3,12 @@ title: "Model Gateway, Routing & Data Residency"
 description: "Route all AI traffic through one provider-neutral gateway with ACL-enforced model access, quotas, latency SLOs, private endpoints, and declared residency requirements."
 author: "Dynapps"
 slug: "enterprise-model-routing"
-keywords: "gateway, routing, models, providers, vertex ai, failover, acl, quotas, residency, no-retain, shadow ai, slo, chat completions, retirement"
+keywords: "gateway, routing, models, providers, anthropic, failover, acl, quotas, residency, no-retain, shadow ai, slo, chat completions, retirement"
 kind: "guide"
 public: true
 tags: ["enterprise", "gateway", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-10-08"
+updated_at: "2026-10-16"
 after_reading_this:
   - "Route any Anthropic- or OpenAI-compatible client through the provider-neutral gateway"
   - "Know which models this instance serves, from which provider, and which retire soon"
@@ -31,8 +31,8 @@ related_docs:
 **TL;DR:** Configured clients send AI traffic through one provider-neutral
 gateway, on `/v1/messages` (Anthropic Messages), `/v1/chat/completions`
 (OpenAI Chat) and `/v1/responses` (OpenAI Responses). Routes map a requested
-model pattern onto a provider. **Claude is served from Google Vertex AI and
-fails over to Anthropic's own API**, and every request records which provider
+model pattern onto a provider. **Claude is served from Anthropic's own API,
+the only upstream on this instance**, and every request records which provider
 actually answered. A model that no route or catalog entry names is refused.
 Every route is currently open to every signed-in role. The residency and
 no-retain requirements are a working mechanism, but no route declares one
@@ -49,9 +49,9 @@ that provider's own format:
 | `POST /v1/chat/completions` | OpenAI Chat Completions | OpenCode, OpenAI-compatible tools |
 | `POST /v1/responses` | OpenAI Responses | Responses-API clients |
 
-The providers this instance declares speak three upstream formats:
-`anthropic` (Anthropic and Claude on Vertex), `gemini` (Gemini by API key and
-on Vertex) and `openai-chat` (Vertex Model-as-a-Service). A route matches on
+The gateway speaks three upstream formats (`anthropic`, `gemini` and
+`openai-chat`), but this instance declares one live provider, `anthropic`,
+by customer requirement since 2026-10-16. A route matches on
 model pattern, and **first match wins**. A route can rewrite the model with
 `upstream_model`, so the backend can change without any change to the
 client. Request and wire details are in the [Gateway API](/documentation/gateway-api).
@@ -65,12 +65,13 @@ boots the same set.
 | Requested id | Provider | Models |
 |---|---|---|
 | `claude-*` | `anthropic` (Anthropic's API, by key; Anthropic-only since 2026-10-14) | Opus 5.5, Sonnet 5.5, Haiku 5.5 |
-| `vertex-gemini-*` | `vertex` (Vertex AI, `global`) | Gemini 3.8 Flash, 3.5 Flash, 3.5 Flash-Lite |
-| `gemini-*` | `gemini` (public API, by key) | Gemini 3.8 Flash; also used by the classifier job |
-| `qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `minimax.*`, `openai.gpt-oss-*` | `vertex-maas` (Vertex Model-as-a-Service) | the open models |
-| `deepseek.r1-*` | `vertex-maas-us-central1` | DeepSeek R1, served only from `us-central1` |
 
-The Claude models, at Vertex's global rates:
+Only the customer's Anthropic API key is used. The Gemini, Vertex AI and
+Cerebras providers are kept commented out in `services/ai/providers.yaml`
+and their secrets are removed; restoring one means uncommenting it, adding
+its secret, and adding a route.
+
+The Claude models, at Anthropic's rates:
 
 | Model | Input / output per million | Context | Max output |
 |---|---|---|---|
@@ -80,88 +81,35 @@ The Claude models, at Vertex's global rates:
 
 `gateway.default_model` is `claude-sonnet-5-5[1m]`. The `[1m]` suffix is Claude
 Code's 1M-context marker: the bridge seeds it into Claude Code, and the
-gateway strips it before routing, so the request reaches Vertex as
+gateway strips it before routing, so the request reaches Anthropic as
 `claude-sonnet-5-5`. Without the marker, Claude Code budgets 200k for every
 gateway model. Only the latest Claude models are declared; Claude 4.x and the
 5.0 models were removed on 2026-10-14. With `allow_unlisted_models: false`, a request for a
 retired id is refused rather than forwarded.
 
-### Retirement dates
-
-| Date | What stops |
-|---|---|
-| **2026-10-21** | Google turns off every Qwen, Kimi, DeepSeek and MiniMax Model-as-a-Service endpoint, plus `zai.glm-5`, `zai.glm-4.7` and `openai.gpt-oss-20b`. After this date, core hides the retired entries from every model list |
-
-`openai.gpt-oss-120b` and `zai.glm-5.2` are not retiring. `zai.glm-5.2` is a
-preview, guaranteed until at least 2026-10-08.
-
-## Claude on Vertex AI
-
-The `vertex-anthropic` provider uses the same Google service account (the
-`vertex` secret) as every other Vertex provider:
-
-```yaml
-providers:
-- name: vertex-anthropic
-  wire: anthropic
-  surface: anthropic
-  endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
-  api_key_secret: vertex
-```
-
-Clients call it exactly as they would call Anthropic. The gateway sends the
-Anthropic Messages format unchanged; only the envelope around it differs:
-
-- The gateway mints an OAuth token from the service account and fills
-  `{project}` from its key.
-- Requests go to the model's own `:rawPredict` or `:streamRawPredict` path.
-- The API version travels in the body as `anthropic_version`, not in a header.
-- Only the `anthropic-beta` flags listed in the provider's `accepted_betas`
-  are forwarded, and a body field a dropped flag gates is removed with it
-  (`context-management-*` gates `context_management`), so Vertex never sees the
-  field without its flag. A flag or field Vertex still refuses is learned at
-  runtime and dropped, and the request is re-sent once. Clients need no setting
-  for this: `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` is not required, and
-  setting it turns those betas off on every route, including the ones that
-  serve them.
-
-Whether a provider is hosted on Vertex is read from the endpoint host, so the
-catalog cannot claim one platform while pointing at another.
-
 ## Provider failover
 
 A route may list **`fallbacks`**: deployments tried in order after the
 primary, each a `provider` and optionally an `upstream_model` when that
-deployment's model id differs. The shipped `claude-*` route fails over from
-Vertex AI's `global` endpoint to a second Vertex deployment,
-`vertex-anthropic-eu`, on the `europe-west1` regional endpoint under the same
-`vertex` service account. Traffic never leaves Vertex:
+deployment's model id differs. The shipped `claude-*` route has **no**
+fallback: Anthropic's API is the only upstream. The following is an
+**illustration** of a chain with a second deployment declared:
 
 ```yaml
 gateway:
   routes:
-  - id: claude-star-4203d1
-    name: Claude (Vertex AI)
-    model_pattern: claude-*
-    provider: vertex-anthropic
+  - model_pattern: claude-*
+    provider: anthropic
     fallbacks:
-    - provider: vertex-anthropic-eu
+    - provider: anthropic-secondary
 ```
 
 The older `fallback_provider` / `fallback_upstream_model` keys are refused at
 boot; move them into a one-entry `fallbacks` list.
 
-**Anthropic's API is in no failover chain.** A provider serves a route's
-traffic only when the route (or one of its chains) names it, and no `claude-*`
-chain names `anthropic`. The regional deployment serves each Claude model under
-a hidden `vertex-eu-claude-*` alias, priced at Vertex's 10% regional premium.
-The project's Claude quota in `europe-west1` must be requested from Google in
-advance, or the fallback answers 429 too. The
-`claude-native-tools` route names Anthropic as its primary and is unaffected.
-
 **Per-project chains.** `by_scope` gives requests attributed to a value in
-one scope dimension their own chain, for example a project's own Vertex
-project or region. A value the route does not list is refused unless
+one scope dimension their own chain, for example a project's own provider
+deployment. A value the route does not list is refused unless
 `unmapped: shared` sends it down the route's own chain:
 
 ```yaml
@@ -170,9 +118,9 @@ project or region. A value the route does not list is refused unless
       unmapped: shared
       chains:
         storefront:
-          provider: vertex-anthropic
+          provider: anthropic
           fallbacks:
-          - provider: vertex-anthropic-eu
+          - provider: anthropic-secondary
 ```
 
 The project is the one the gateway attributed the request to: the
@@ -203,7 +151,7 @@ the route-match descriptor gains a `failover:<primary>-><fallback>` segment.
 
 | `route_match` contains | Meaning |
 |---|---|
-| `failover:vertex-anthropic->vertex-anthropic-eu` | the primary failed and the next deployment answered (`a->b->c` for a longer chain) |
+| `failover:anthropic->anthropic-secondary` | the primary failed and the next deployment answered (`a->b->c` for a longer chain) |
 | `scope:project=<id>` | the request was attributed to that project and served by its `by_scope` chain (or the shared chain under `unmapped: shared`) |
  The Prometheus
 counter **`gateway_upstream_failovers_total{from,to,reason}`** (`reason` is
@@ -314,7 +262,7 @@ states what it requires with a **`requires:`** block. The following is an
 gateway:
   routes:
   - model_pattern: claude-*
-    provider: vertex-anthropic
+    provider: anthropic
     requires:
       no_retain: true
 ```
@@ -330,8 +278,6 @@ Enforcement happens twice:
 **What is declared today:**
 
 - Every provider is `no_retain: true` and `european: false`.
-- Every Vertex endpoint uses the `global` location (or `us-central1` for
-  DeepSeek R1).
 - **No route declares `requires:`**, so neither flag is enforced at dispatch,
   and there is **no EU route**.
 
@@ -350,5 +296,3 @@ than the route, is on the [roadmap](/documentation/enterprise-roadmap).
   the Models tab.
 - `/admin/requests`: open a request to see `provider` and `served_provider`.
 - `systemprompt infra logs request list --since 1h`
-- `systemprompt admin config catalog discovery` shows what the last Vertex
-  discovery pass found.

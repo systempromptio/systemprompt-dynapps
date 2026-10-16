@@ -1,7 +1,14 @@
 # Required secrets
 
-Everything an Dynapps operator must provide for Claude Code, OpenCode and
-Gemini to work end to end. Each provider entry in
+Everything an Dynapps operator must provide for Claude Code and OpenCode to
+work end to end.
+
+**This installation is Anthropic-only (customer requirement, 2026-10-16).**
+The one model secret is `anthropic`. The `vertex` and `gemini` providers are
+commented out of `services/ai/providers.yaml` and their secrets removed; the
+rest of this page describes them for a restore (uncomment the provider, set
+its secret, add a route).
+ Each provider entry in
 [`services/ai/providers.yaml`](../../services/ai/providers.yaml) names the
 secret it reads its credential from; the profile secret store supplies the
 value per environment. The catalog is shipped in the image and is identical in
@@ -18,8 +25,8 @@ Credential issuing for the Google project is covered in more detail in
 | `anthropic` | `anthropic` | Anthropic API key | serves every `claude-*` request (Anthropic-only since 2026-10-14) |
 | `gemini` | `gemini` | Gemini API key | `gemini-3.8-flash` (the classifier job) |
 
-One secret is the minimum: `vertex` alone gives Claude Code and OpenCode a
-working default, since `gateway.yaml` sets `default_provider: vertex-anthropic` and
+One secret is the minimum: `anthropic` alone gives Claude Code and OpenCode a
+working default, since `gateway.yaml` sets `default_provider: anthropic` and
 `default_model: "claude-sonnet-5-5[1m]"` (Claude Code's 1M-context form of
 `claude-sonnet-5-5`; other hosts get the bare id). Every other secret adds models to the picker.
 
