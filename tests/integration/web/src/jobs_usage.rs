@@ -306,3 +306,67 @@ async fn the_daily_rollup_and_the_retention_sweep_run_over_the_same_traffic() {
 
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn the_retention_sweep_expires_past_one_batch_and_keeps_recent_traffic() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let old_minutes = 100 * 24 * 60;
+    let expired = 5_000 + 7;
+    let mut requests: Vec<Request> = (0..expired)
+        .map(|_| Request {
+            minutes_before_the_hour: old_minutes,
+            cost_microdollars: 0,
+            status: "completed",
+        })
+        .collect();
+    requests.push(Request {
+        minutes_before_the_hour: 30,
+        cost_microdollars: 0,
+        status: "completed",
+    });
+    seed(&db.pool, "retained", &requests).await;
+
+    let result = job("plugin_usage_retention")
+        .execute(&context(&db.pool))
+        .await
+        .expect("the sweep runs");
+    assert!(result.success, "{result:?}");
+
+    let left: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM ai_requests WHERE user_id = 'retained'")
+            .fetch_one(&*db.pool)
+            .await
+            .expect("count requests");
+    assert_eq!(
+        left, 1,
+        "every expired request goes across batches; the recent one stays"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn the_conversation_rollup_bounds_its_transaction_and_leaves_the_session_clean() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    seed(&db.pool, "rollup-bounded", &spike(3, "completed")).await;
+    let before: String = sqlx::query_scalar("SHOW statement_timeout")
+        .fetch_one(&*db.pool)
+        .await
+        .expect("read timeout");
+
+    systemprompt_web_jobs::ConversationRollupJob::execute_with_pool(&db.pool, false)
+        .await
+        .expect("pending rollup");
+
+    let mut conn = db.pool.acquire().await.expect("connection");
+    let after: String = sqlx::query_scalar("SHOW statement_timeout")
+        .fetch_one(&mut *conn)
+        .await
+        .expect("read timeout");
+    assert_eq!(after, before, "the refresh's timeout is transaction-local");
+    drop(conn);
+    db.cleanup().await;
+}
