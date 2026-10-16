@@ -8,11 +8,14 @@
 //! changes a pinned key is refused by core and reported here as a failure.
 //! Only key names are ever logged. A reload that changed keys leaves a
 //! `user_activity` row under the job's configured owner.
+//!
+//! The secrets live in each process, so the job is node-scoped: every replica
+//! reloads its own copy rather than the one that wins the cluster lock.
 
 use chrono::{DateTime, Utc};
 use systemprompt::config::{ReloadOutcome, SecretsBootstrap};
 use systemprompt::database::DbPool;
-use systemprompt::traits::{Job, JobContext, JobResult};
+use systemprompt::traits::{Job, JobContext, JobResult, JobScope};
 use systemprompt_web_admin_core::activity::NewActivity;
 use systemprompt_web_admin_core::repositories::user_activity;
 
@@ -97,6 +100,10 @@ impl Job for SecretsRefreshJob {
 
     fn schedule(&self) -> &'static str {
         "0 * * * * *"
+    }
+
+    fn scope(&self) -> JobScope {
+        JobScope::Node
     }
 
     async fn execute(
