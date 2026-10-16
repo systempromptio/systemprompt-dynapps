@@ -86,6 +86,8 @@ mod downstream_credential_configs;
 #[cfg(test)]
 mod dynapps_portal_connectors;
 #[cfg(test)]
+mod entrypoint_role;
+#[cfg(test)]
 mod export_registry;
 #[cfg(test)]
 mod format_display;
