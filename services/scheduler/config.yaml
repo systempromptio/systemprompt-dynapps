@@ -329,6 +329,53 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Core projection drainers, on each job's built-in schedule (no
+    # `schedule:` override): every 10 s for trace_facts_rollup, once a minute
+    # at a staggered second for the rest. Each drains a queue its source
+    # table's triggers fill into the stored facts a list view reads, so an
+    # empty queue is a cheap no-op. backfill_rollups is the same shape: it
+    # drains the hours migrations queued for the hourly AI, tool and
+    # agent-task rollups, 24 hours per batch, and idles once they are done.
+    - name: trace_facts_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: ai_request_tool_flag_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: user_context_counters_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: log_summary_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: tool_row_facts_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: analytics_event_link_facts_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: session_bot_type_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: backfill_rollups
+      extension: core
+      owner: admin
+      enabled: true
+
     # publish_pipeline sub-steps. The composite above runs each of these every
     # 15 minutes in dependency order; scheduling them independently would
     # double-run them, so they are disabled here (an explicit entry also
