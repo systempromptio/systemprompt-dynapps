@@ -12,7 +12,8 @@
 //! see what the other is doing, so the KPI strip spans both on every tab: the
 //! four chain stages' deny counts beside the scanners' findings and blocks. A
 //! findings count with no blocks under it is warn mode absorbing the traffic,
-//! and that reading is the point of putting them side by side.
+//! and that reading is the point of putting them side by side. A fourth tab,
+//! **Sync**, is the `governance` plane's card ([`sync_tab`]).
 
 use std::sync::Arc;
 
@@ -37,6 +38,7 @@ mod columns;
 mod context;
 mod data;
 mod kpis;
+mod sync_tab;
 mod urls;
 mod view;
 
@@ -224,6 +226,9 @@ pub(crate) async fn governance_page(
     Query(query): Query<GovernanceQuery>,
 ) -> AdminHtmlResult<Response> {
     require_console(&user_ctx)?;
+    if systemprompt_web_admin_core::ssr::sync_plane::is_sync_tab(query.tab.as_deref()) {
+        return sync_tab::sync_page(&pool, &user_ctx, &mkt_ctx, &engine).await;
+    }
 
     let tab = GovernanceTab::parse(query.tab.as_deref());
     let range = range_of(&query);

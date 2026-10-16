@@ -4,14 +4,16 @@
 //! Three tabs. *Sources* lists every place a declaration comes from in one
 //! table — the internal base tree this repository ships and each external
 //! bundle the profile pins — with the hash each declares and what it owns,
-//! and offers the in-place import that recomposes them. *Access review* is
+//! and offers the in-place import that recomposes them, above one row per
+//! projected plane linking to its sync location. *Access review* is
 //! the access-control plane, entity by entity: what code and this database
 //! disagree about, settled one row at a time with a stated reason, above the
 //! whole-plane card. *Export & import*
 //! moves the projected planes as one archive: the database rendered back
 //! to its files for a commit, or an uploaded archive staged for a preview
 //! on `/admin/sync/import/{stage}`. What each plane's database says
-//! against its file lives on the plane's owner page, under its Sync tab.
+//! against its file lives at the plane's `sync_url` — its owner page's Sync
+//! tab, or Access review for access control.
 //!
 //! A marketplace participant gets the scoped layout: the bundles that own
 //! their marketplaces, one access-control card per marketplace with the
@@ -23,6 +25,7 @@
 //! 500 — the rest of the page still renders.
 
 mod access_review;
+mod planes;
 mod view;
 
 use std::sync::Arc;
@@ -166,6 +169,12 @@ pub(crate) async fn sync_page(
         None
     };
 
+    let planes = if tab == SyncTab::Sources && user_ctx.is_console {
+        planes::plane_rows(&pool).await?
+    } else {
+        Vec::new()
+    };
+
     let page = view::page_data(view::SyncPageInput {
         tab,
         is_participant,
@@ -173,6 +182,7 @@ pub(crate) async fn sync_page(
         marketplaces,
         history,
         access_review,
+        planes,
         sources,
         sources_unreadable,
     });

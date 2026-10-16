@@ -206,6 +206,14 @@ fn tab_links(
         is_active: tab == active,
         count,
     })
+    .chain(
+        std::iter::once(super::sync_tab::sync_link(false)).map(|t| TabLink {
+            label: t.label,
+            href: t.href,
+            is_active: false,
+            count: 0,
+        }),
+    )
     .collect()
 }
 

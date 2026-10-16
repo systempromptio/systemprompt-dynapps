@@ -51,7 +51,7 @@
     {{#> components/section title="Not in the archive" note="Planes this instance projects that the archive did not carry. Their database is untouched by anything on this page."}}{{/components/section}}
     <ul class="sp-sync-archive__files">
         {{#each absent}}
-        <li><code class="sp-code-inline">services/{{source_file}}</code> <span class="sp-u-text-tertiary">— {{label}}</span> · <a href="{{owner_url}}?tab=sync">its Sync tab</a></li>
+        <li><code class="sp-code-inline">services/{{source_file}}</code> <span class="sp-u-text-tertiary">— {{label}}</span> · <a href="{{sync_url}}">its Sync tab</a></li>
         {{/each}}
     </ul>
     {{/if}}

@@ -11,9 +11,7 @@ use systemprompt_web_admin_core::repositories::sync::inventory::{CONFIG_KINDS, C
 use systemprompt_web_admin_core::repositories::sync::provenance::{BundleFiles, source_for_path};
 use systemprompt_web_admin_core::repositories::sync::registry::planes;
 use systemprompt_web_admin_core::repositories::sync::tree_hash::subtree_hash;
-use systemprompt_web_admin_core::ssr::sync_plane::{
-    HashView, PlaneCardView, SYNC_TAB, plane_card_by_id,
-};
+use systemprompt_web_admin_core::ssr::sync_plane::{HashView, PlaneCardView, plane_card_by_id};
 
 fn projected_state(card: &PlaneCardView) -> (&'static str, &'static str, String) {
     if card.applied.is_none() {
@@ -64,7 +62,7 @@ fn projected_row(kind: &ConfigKind, card: &PlaneCardView) -> ConfigRowView {
         state_tone: tone,
         state_note: note,
         applied: card.applied.clone(),
-        link: Some(format!("{}?tab={SYNC_TAB}", card.owner_url)),
+        link: Some(card.sync_url.clone()),
         link_label: "Sync",
     }
 }

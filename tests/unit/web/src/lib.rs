@@ -304,6 +304,8 @@ mod sync_drift_kpis;
 #[cfg(test)]
 mod sync_inventory;
 #[cfg(test)]
+mod sync_plane_urls;
+#[cfg(test)]
 mod sync_sources_hash;
 #[cfg(test)]
 mod sync_staging;
@@ -338,12 +340,6 @@ mod connector_oauth_classify;
 
 #[cfg(test)]
 mod authorization_failures;
-#[cfg(test)]
-mod vertex_accepted_betas;
-#[cfg(test)]
-mod vertex_gated_fields;
-#[cfg(test)]
-mod vertex_rate_card_routes;
 
 #[cfg(test)]
 mod governance_calibration;

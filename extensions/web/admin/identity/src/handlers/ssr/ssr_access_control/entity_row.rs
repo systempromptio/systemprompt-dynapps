@@ -93,10 +93,7 @@ pub(super) fn entity_view(
         state: state.label(),
         state_tone: state.tone(),
         in_sync: state == EntityState::InSync,
-        sync_url: format!(
-            "{SYNC_URL}&entity={}",
-            urlencoding::encode(&format!("{}/{}", first.entity_type, first.entity_id))
-        ),
+        sync_url: SYNC_URL.to_owned(),
         rule_count: rules.len(),
         expiring_soon: rules.iter().any(|r| r.expires_soon),
         rules,

@@ -186,6 +186,10 @@ impl SyncPlane for GatewayRoutesPlane {
         "gateway_routes"
     }
 
+    fn owner_url(&self) -> &'static str {
+        "/admin/gateway"
+    }
+
     fn runtime_note(&self) -> Option<&'static str> {
         Some(RUNTIME_NOTE)
     }

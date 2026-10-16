@@ -10,7 +10,6 @@
             <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="route-new">New route</button>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/access-control?entity_kind=gateway_route">Route access</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/gateway/policies">Policies</a>
-            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{sync_url}}">Sync</a>
         {{/inline}}
     {{/components/page-header}}
 
@@ -35,6 +34,11 @@
     </section>
 
     {{> components/tabs tabs=tabs nav_label="Gateway views"}}
+
+    {{#if sync}}
+    {{> components/sync-plane plane=sync.card can_write=sync.can_write}}
+    {{> components/sync-plane-dialogs}}
+    {{/if}}
 
     {{#if show_overview}}
     <section aria-label="Dispatch order">

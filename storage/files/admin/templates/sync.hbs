@@ -2,7 +2,7 @@
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="Where declarations come from and how they move. Sources are the internal base tree this repository ships and each external bundle the profile pins — one mechanism, some local, some remote. The archive carries every projected plane between the database and the repository. Access review settles the access-control rules entity by entity; every other plane's database against its file is on that plane's own page, under Sync."}}
+    {{#> components/page-header title=title subtitle="Where declarations come from and how they move. Sources are the internal base tree this repository ships and each external bundle the profile pins — one mechanism, some local, some remote. The archive carries every projected plane between the database and the repository. Access review settles the access-control rules entity by entity; every other plane's database against its file is on that plane's own page, under Sync — the Planes table links each one."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How sync works</a>
         {{#unless is_participant}}
@@ -124,6 +124,32 @@ owner key for rules.yaml: {{owner_key}}</pre>
         <pre class="sp-sync-pin">{{sources.refresh_hint}}</pre>
     </details>
     {{/unless}}{{/if}}
+
+    {{#if planes}}
+    {{#> components/section title="Planes" note="Each declaration this instance projects into the database, with its drift against the file and its last apply. Review opens the plane's one sync location."}}{{/components/section}}
+    {{#> components/table caption="Projected planes"}}
+        <thead><tr>
+            <th>Plane</th>
+            <th>Declared</th>
+            <th>In database</th>
+            <th>Drift</th>
+            <th>Last apply</th>
+            <th></th>
+        </tr></thead>
+        <tbody>
+        {{#each planes}}
+        <tr data-plane="{{id}}">
+            <td><strong>{{label}}</strong><br><span class="sp-u-mono sp-u-text-tertiary">services/{{source_file}}</span></td>
+            <td class="sp-u-mono">{{declared_count}}</td>
+            <td class="sp-u-mono">{{in_db}}</td>
+            <td>{{#if unreadable}}<span title="{{unreadable}}">{{> components/badge tone="err" text="unreadable"}}</span>{{else}}{{#if is_clean}}{{> components/badge tone="ok" text="in sync"}}{{else}}{{> components/badge tone="warn" text=drift_label}}{{/if}}{{/if}}</td>
+            <td>{{#if applied}}<time datetime="{{applied.at}}" title="{{applied.at}}">{{relativeTime applied.at}}</time><br><span class="sp-u-text-tertiary">{{applied.mode}} · {{applied.by}}</span>{{else}}<span class="sp-u-text-tertiary">never</span>{{/if}}</td>
+            <td><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{review_url}}">Review</a></td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{/if}}
 
     {{#if is_participant}}
     {{#> components/section title="Your marketplaces" note="The access-control declaration for each marketplace you participate in, against this database. An apply here moves that marketplace's rows and nothing else, and is recorded under your name below."}}{{/components/section}}

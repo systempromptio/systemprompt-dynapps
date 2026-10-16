@@ -2,6 +2,7 @@ import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 import { showConfirmDialog } from '../services/confirm.js';
 import { on, initDelegation } from '../services/events.js';
+import { initSyncPlane } from '../components/sp-sync-plane.js';
 
 const dialog = () => document.getElementById('gateway-route-dialog');
 const form = () => document.getElementById('gateway-route-form');
@@ -191,3 +192,4 @@ export const init = () => {
 };
 
 init();
+initSyncPlane();

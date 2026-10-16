@@ -17,12 +17,14 @@
 //! Each of the four tabs is a URL: Overview (dispatch order and provider
 //! health), Providers (each upstream opened into its models and routes),
 //! Routes (the ordered dispatch table plus the resolved-only set) and
-//! Settings (switches and the per-account probe). Policies is linked as a
-//! fifth tab but lives on its own page.
+//! Settings (switches and the per-account probe), plus Sync, the
+//! `gateway_routes` plane's code-against-database card. Policies is linked
+//! as a last tab but lives on its own page.
 
 mod models;
 mod route_detail;
 mod rows;
+mod tabs;
 mod view;
 
 use std::collections::HashMap;
@@ -40,8 +42,8 @@ use systemprompt_web_admin_core::repositories::gateway_catalog::{
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::pickable_users::list_pickable_users;
+use systemprompt_web_admin_core::ssr::sync_plane::plane_card_by_id;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
-use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{
     GatewayConfigView, GatewayRouteView, MarketplaceContext, UserContext,
@@ -49,7 +51,8 @@ use systemprompt_web_admin_core::types::{
 
 pub(crate) use route_detail::gateway_route_page;
 use rows::{RouteRowInputs, Surfaces, kpis, load_surfaces, resolved_only, route_rows};
-use view::GatewayPageData;
+use tabs::{GatewayTab, view_tabs};
+use view::{GatewayPageData, GatewaySyncView};
 
 const ENTITY_GATEWAY_ROUTE: &str = "gateway_route";
 
@@ -58,72 +61,6 @@ const NAMES_NOTE: &str = "A route's name and description are written to services
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct GatewayQuery {
     tab: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GatewayTab {
-    Overview,
-    Providers,
-    Routes,
-    Settings,
-}
-
-impl GatewayTab {
-    fn parse(tab: Option<&str>) -> Self {
-        match tab {
-            Some("providers") => Self::Providers,
-            Some("routes" | "resolved") => Self::Routes,
-            Some("settings") => Self::Settings,
-            _ => Self::Overview,
-        }
-    }
-}
-
-fn view_tabs(active: GatewayTab, routes: usize, providers: usize) -> Vec<TabLinkView> {
-    let link = |slug, label, href: &str, tab: Option<GatewayTab>, count| TabLinkView {
-        slug,
-        label,
-        href: href.to_owned(),
-        is_active: tab == Some(active),
-        count,
-    };
-    vec![
-        link(
-            "overview",
-            "Overview",
-            "/admin/gateway",
-            Some(GatewayTab::Overview),
-            None,
-        ),
-        link(
-            "providers",
-            "Providers",
-            "/admin/gateway?tab=providers",
-            Some(GatewayTab::Providers),
-            Some(i64::try_from(providers).unwrap_or(i64::MAX)),
-        ),
-        link(
-            "routes",
-            "Routes",
-            "/admin/gateway?tab=routes",
-            Some(GatewayTab::Routes),
-            Some(i64::try_from(routes).unwrap_or(i64::MAX)),
-        ),
-        link(
-            "settings",
-            "Settings",
-            "/admin/gateway?tab=settings",
-            Some(GatewayTab::Settings),
-            None,
-        ),
-        link(
-            "policies",
-            "Policies",
-            "/admin/gateway/policies",
-            None,
-            None,
-        ),
-    ]
 }
 
 fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
@@ -240,7 +177,7 @@ async fn gateway_view(
         load_error: config_error,
         catalog_error,
         runtime_note: repositories::sync_planes::gateway_routes::RUNTIME_NOTE,
-        sync_url: "/admin/sync?entity=gateway_route",
+        sync: None,
         names_note: NAMES_NOTE,
         tabs: view_tabs(tab, routes_count, providers_count),
         show_overview: tab == GatewayTab::Overview,
@@ -261,7 +198,16 @@ pub(crate) async fn gateway_page(
     let mut faults = Faults::new();
     let read = load_gateway(&pool, &mut faults).await;
     let tab = GatewayTab::parse(query.tab.as_deref());
-    let page = gateway_view(&pool, read, tab, &mut faults).await;
+    let mut page = gateway_view(&pool, read, tab, &mut faults).await;
+    if tab == GatewayTab::Sync {
+        let plane = repositories::sync_planes::gateway_routes::PLANE_ID;
+        page.sync = plane_card_by_id(&pool, plane, "")
+            .await?
+            .map(|card| GatewaySyncView {
+                card,
+                can_write: user_ctx.is_admin,
+            });
+    }
     Ok(render_page_with_faults(
         &engine,
         "gateway",

@@ -8,6 +8,7 @@ use serde::Serialize;
 use systemprompt::identifiers::MarketplaceId;
 
 use super::access_review::AccessReviewView;
+use super::planes::PlaneRowView;
 use super::{DOCS_URL, EXPORT_ZIP_URL, IMPORT_URL, SyncTab, tabs};
 use systemprompt_web_admin_core::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
 use systemprompt_web_admin_core::repositories::sync::attention::access_attention;
@@ -74,6 +75,7 @@ pub(crate) struct SyncPageData {
     pub show_sources: bool,
     pub show_access: bool,
     pub access_review: Option<AccessReviewView>,
+    pub planes: Vec<PlaneRowView>,
     pub docs_url: &'static str,
     pub configuration_url: &'static str,
     pub observability_url: &'static str,
@@ -96,6 +98,7 @@ pub(super) struct SyncPageInput {
     pub marketplaces: Vec<MarketplaceSyncView>,
     pub history: Vec<SyncHistoryRow>,
     pub access_review: Option<AccessReviewView>,
+    pub planes: Vec<PlaneRowView>,
     pub sources: SourcesView,
     pub sources_unreadable: Option<String>,
 }
@@ -139,6 +142,7 @@ pub(super) fn page_data(input: SyncPageInput) -> SyncPageData {
         show_sources: tab == SyncTab::Sources,
         show_access: tab == SyncTab::Access,
         access_review: input.access_review,
+        planes: input.planes,
         docs_url: DOCS_URL,
         configuration_url: "/admin/configuration",
         observability_url: "/admin/system/observability",

@@ -42,6 +42,7 @@ use crate::repositories::access_rules::sync::{apply_sync, apply_sync_scoped};
 use crate::repositories::gateway_catalog::registered_routes_from_services;
 
 pub const PLANE_ID: &str = super::plane_ids::ACCESS_CONTROL;
+pub const REVIEW_URL: &str = "/admin/sync?tab=access";
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AccessControlPlane;
@@ -188,6 +189,10 @@ impl SyncPlane for AccessControlPlane {
 
     fn owner_url(&self) -> &'static str {
         "/admin/access-control"
+    }
+
+    fn sync_url(&self) -> String {
+        REVIEW_URL.to_owned()
     }
 
     async fn drift(&self, pool: &PgPool) -> AdminResult<PlaneDrift> {

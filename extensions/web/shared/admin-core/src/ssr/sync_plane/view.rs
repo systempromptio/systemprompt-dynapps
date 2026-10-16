@@ -126,5 +126,6 @@ pub struct PlaneCardView {
     pub show_export: bool,
     pub entity_filter: String,
     pub clear_filter_url: String,
+    pub sync_url: String,
     pub source_label: &'static str,
 }

@@ -61,7 +61,7 @@ pub(crate) async fn import_preview_page(
             None => absent.push(AbsentPlaneView {
                 label: plane.label(),
                 source_file: plane.source_file(),
-                owner_url: plane.owner_url(),
+                sync_url: plane.sync_url(),
             }),
         }
     }

@@ -15,12 +15,11 @@ use sqlx::PgPool;
 pub use view::{AppliedView, HashView, PlaneCardView, SyncRecommendation};
 
 use crate::error::AdminResult;
+pub use crate::repositories::sync::plane::SYNC_TAB;
 use crate::repositories::sync::plane::{DeclarationSource, SyncPlane};
 use crate::repositories::sync::registry::find_plane;
 use crate::repositories::sync::state::{SyncStateRow, find_sync_state};
 use crate::ssr::types::tabs::TabLinkView;
-
-pub const SYNC_TAB: &str = "sync";
 
 #[derive(Debug, Clone, Default)]
 pub struct PlaneCardOpts<'a> {
@@ -56,14 +55,14 @@ pub async fn plane_card(
     if let Some((kind, id)) = opts.entity_filter.split_once('/') {
         rows.retain(|r| r.entity_type == kind && r.entity_id == id);
     }
-    let owner_url = plane.owner_url();
+    let sync_url = plane.sync_url();
     let is_clean = drift.is_clean && drift.unreadable.is_none();
     Ok(PlaneCardView {
         id: plane.id(),
         label: plane.label(),
         source_file: plane.source_file(),
         projection: plane.projection(),
-        owner_url,
+        owner_url: plane.owner_url(),
         runtime_note: plane.runtime_note(),
         declared_hash: HashView::of(&drift.declared_hash),
         declared_count: drift.declared_count,
@@ -83,7 +82,8 @@ pub async fn plane_card(
             .unwrap_or_else(|| format!("/api/public/admin/sync/planes/{}/apply", plane.id())),
         show_export: opts.show_export,
         entity_filter: opts.entity_filter.to_owned(),
-        clear_filter_url: format!("{owner_url}?tab={SYNC_TAB}"),
+        clear_filter_url: sync_url.clone(),
+        sync_url,
         source_label: opts.source_label.unwrap_or("the file"),
     })
 }
