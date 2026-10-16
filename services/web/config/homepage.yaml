@@ -1,15 +1,16 @@
 # Homepage Configuration
 #
-# Front page for the Dynapps internal AI gateway. The hero below
-# is authoritative. Body sections (value pillars, department grid, integrations,
-# how to use) live in services/web/templates/homepage.html.
+# Front page for the Dynapps AI platform. The page is this hero plus the
+# client download buttons (services/web/templates/homepage.html), so the hero
+# carries the whole pitch: what the platform does for a Dynapps team, not
+# only that it is governed.
 
 hero:
-  title: "The Internal AI Platform,"
-  title_highlight: "by Dynapps"
-  subtitle: "Governed AI for Dynapps teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools. Every change is confirmed with you first, and every action is audited."
-  eyebrow: "Dynapps · Internal AI Gateway"
-  cta: "Documentation"
-  cta_url: "/documentation/"
-  cta_secondary: ""
-  cta_secondary_url: ""
+  title: "Dynapps' Odoo expertise,"
+  title_highlight: "working inside Claude"
+  subtitle: "Every Dynapps team gets Claude with the company's own playbooks built in: lead research, value-based quotations, development assessments and plans, ticket solving, SEO and brand. Skills work on live Odoo records and DynBrain knowledge as your own Odoo account, and the Agent Farm runs them unattended and scores the results. One corporate sign-in covers Claude Code, Cowork, Claude Desktop and OpenCode, and every request runs on Dynapps' Anthropic key and is recorded, costed and audited."
+  eyebrow: "Dynapps · AI Platform"
+  cta: "Set up in 10 minutes"
+  cta_url: "/documentation/setup"
+  cta_secondary: "Documentation"
+  cta_secondary_url: "/documentation/"
