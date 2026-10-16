@@ -119,9 +119,9 @@ impl FakeOidcIdp {
     // A single-use code the token endpoint redeems for `spec`'s ID token,
     // provided the caller presents a verifier hashing to `code_challenge`.
     // The keys the token and JWKS endpoints serve are generated here, on the
-    // test's side: left to those handlers, a first RSA-2048 keygen runs inside the identity
-    // crate's 10s HTTP timeout, which an instrumented build overruns and the
-    // sign-in is refused as `unavailable`.
+    // test's side: left to those handlers, a first RSA-2048 keygen runs inside the
+    // identity crate's 10s HTTP timeout, which an instrumented build overruns
+    // and the sign-in is refused as `unavailable`.
     pub fn issue_code(&self, spec: IdTokenSpec, code_challenge: &str) -> String {
         TestIdpKeys::get();
         signing_keys(&spec);
