@@ -64,8 +64,7 @@ boots the same set.
 
 | Requested id | Provider | Models |
 |---|---|---|
-| `claude-*` | `vertex-anthropic` (Vertex AI, `global`), failing over to `anthropic` | Opus 5.5, Sonnet 5.5, Haiku 5.5 |
-| `anthropic-claude-*` | `anthropic` (Anthropic's API) | the same Claude models, hidden from every model list |
+| `claude-*` | `anthropic` (Anthropic's API, by key; Anthropic-only since 2026-10-14) | Opus 5.5, Sonnet 5.5, Haiku 5.5 |
 | `vertex-gemini-*` | `vertex` (Vertex AI, `global`) | Gemini 3.8 Flash, 3.5 Flash, 3.5 Flash-Lite |
 | `gemini-*` | `gemini` (public API, by key) | Gemini 3.8 Flash; also used by the classifier job |
 | `qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `minimax.*`, `openai.gpt-oss-*` | `vertex-maas` (Vertex Model-as-a-Service) | the open models |
@@ -157,8 +156,8 @@ traffic only when the route (or one of its chains) names it, and no `claude-*`
 chain names `anthropic`. The regional deployment serves each Claude model under
 a hidden `vertex-eu-claude-*` alias, priced at Vertex's 10% regional premium.
 The project's Claude quota in `europe-west1` must be requested from Google in
-advance, or the fallback answers 429 too. The separate `anthropic-claude-*` and
-`claude-native-tools` routes name Anthropic as their primary and are unaffected.
+advance, or the fallback answers 429 too. The
+`claude-native-tools` route names Anthropic as its primary and is unaffected.
 
 **Per-project chains.** `by_scope` gives requests attributed to a value in
 one scope dimension their own chain, for example a project's own Vertex

@@ -4,16 +4,10 @@
 //! cannot be called by anyone, and an id that is present is billed at the
 //! pricing written beside it.
 //!
-//! Claude is served twice. The bare `claude-*` ids belong to
-//! `vertex-anthropic` (Claude on Vertex AI), which ordinary `claude-*` requests
-//! use; native web and tool search route to Anthropic. Anthropic carries the
-//! models as `anthropic-claude-*`, each naming the bare id as its upstream
-//! model. That twin is what the route's failover lands on: core finds the
-//! requested model on the fallback provider by upstream name, so a Vertex model
-//! with no twin has nowhere to fail over to. The twins are `hidden`: they are
-//! never listed to a client, so nobody picks an `anthropic-claude-*` id, while
-//! the failover still finds them because it looks up by upstream name, not by
-//! listing.
+//! Claude is served from Anthropic's own API under the bare `claude-*` ids,
+//! listed to every client. The parked `vertex-anthropic` entry keeps hidden
+//! `vertex-claude-*` twins (ids are unique across the catalog) for a later
+//! restore; nothing routes to it while the gateway is Anthropic-only.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -101,46 +95,45 @@ fn assert_rate_card(m: &ProviderModel, input: f64, output: f64, cache_read: f64,
 }
 
 #[test]
-fn the_vertex_lineup_is_exactly_the_served_claude_models() {
-    let ids: Vec<String> = provider("vertex-anthropic")
+fn the_anthropic_lineup_is_exactly_the_served_claude_models() {
+    let anthropic = provider("anthropic");
+    let ids: Vec<String> = anthropic
         .models
         .iter()
         .map(|m| m.id.as_str().to_owned())
         .collect();
     assert_eq!(ids, SERVED);
+    for id in SERVED {
+        let served = anthropic
+            .find_served_model(id)
+            .unwrap_or_else(|| panic!("{id} finds no model on anthropic"));
+        assert_eq!(served.upstream_model.as_deref(), Some(id));
+    }
 }
 
+// Why: Claude Desktop (via the bridge) only accepts `claude-*` ids from an
+// `anthropic`-surface provider; hidden ids leave it with no model at all.
 #[test]
-fn every_served_claude_model_has_an_anthropic_api_twin_to_fail_over_to() {
-    let anthropic = provider("anthropic");
-    let twins: Vec<String> = anthropic
-        .models
-        .iter()
-        .map(|m| m.id.as_str().to_owned())
-        .collect();
-    let expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
-    assert_eq!(twins, expected);
-
-    for id in SERVED {
-        let twin = anthropic
-            .find_served_model(id)
-            .unwrap_or_else(|| panic!("failover from {id} finds no model on anthropic"));
-        assert_eq!(twin.id.as_str(), format!("anthropic-{id}"));
-        assert_eq!(twin.upstream_model.as_deref(), Some(id));
+fn the_anthropic_models_are_advertised_to_clients() {
+    let listed = registry().advertised_model_ids(&[]);
+    for m in &provider("anthropic").models {
+        assert!(!m.hidden, "{} must not be hidden", m.id.as_str());
+        assert!(
+            listed.iter().any(|id| id == m.id.as_str()),
+            "{} must be advertised",
+            m.id.as_str()
+        );
     }
 }
 
 #[test]
-fn the_anthropic_api_twins_are_hidden_from_every_listing() {
-    let registry = registry();
-    let listed = registry.advertised_model_ids(&[]);
-    for m in &provider("anthropic").models {
+fn the_parked_vertex_lineup_is_hidden_twins_of_the_served_models() {
+    let vertex = provider("vertex-anthropic");
+    let ids: Vec<String> = vertex.models.iter().map(|m| m.id.as_str().to_owned()).collect();
+    let expected: Vec<String> = SERVED.iter().map(|id| format!("vertex-{id}")).collect();
+    assert_eq!(ids, expected);
+    for m in &vertex.models {
         assert!(m.hidden, "{} must be hidden", m.id.as_str());
-        assert!(
-            !listed.iter().any(|id| id == m.id.as_str()),
-            "{} must not be advertised",
-            m.id.as_str()
-        );
     }
 }
 
@@ -180,9 +173,9 @@ fn the_retired_dated_ids_are_gone() {
 fn sonnet_5_5_carries_the_current_rate_card() {
     let vertex = provider("vertex-anthropic").models;
     let anthropic = provider("anthropic").models;
-    assert_rate_card(model(&vertex, "claude-sonnet-5-5"), 2.0, 10.0, 0.2, 2.5);
+    assert_rate_card(model(&vertex, "vertex-claude-sonnet-5-5"), 2.0, 10.0, 0.2, 2.5);
     assert_rate_card(
-        model(&anthropic, "anthropic-claude-sonnet-5-5"),
+        model(&anthropic, "claude-sonnet-5-5"),
         2.0,
         10.0,
         0.2,
@@ -197,8 +190,8 @@ fn haiku_5_5_carries_its_base_tier_rate_card() {
     let vertex = provider("vertex-anthropic").models;
     let anthropic = provider("anthropic").models;
     for haiku in [
-        model(&vertex, "claude-haiku-5-5"),
-        model(&anthropic, "anthropic-claude-haiku-5-5"),
+        model(&vertex, "vertex-claude-haiku-5-5"),
+        model(&anthropic, "claude-haiku-5-5"),
     ] {
         assert_rate_card(haiku, 0.1, 0.5, 0.01, 0.125);
         assert_eq!(haiku.limits.context_window, 1_000_000);
@@ -211,8 +204,8 @@ fn opus_5_5_carries_its_launch_rate_card() {
     let vertex = provider("vertex-anthropic").models;
     let anthropic = provider("anthropic").models;
     for opus in [
-        model(&vertex, "claude-opus-5-5"),
-        model(&anthropic, "anthropic-claude-opus-5-5"),
+        model(&vertex, "vertex-claude-opus-5-5"),
+        model(&anthropic, "claude-opus-5-5"),
     ] {
         assert_rate_card(opus, 4.0, 20.0, 0.2, 5.0);
         assert_eq!(opus.limits.context_window, 1_000_000);
@@ -222,7 +215,7 @@ fn opus_5_5_carries_its_launch_rate_card() {
 
 // Why: since 2026-10-14 the gateway is Anthropic-only (a client's key, no
 // Vertex): the default model routes to `anthropic` with no failover, and the
-// provider serves the bare id through its hidden twin's `upstream_model`.
+// provider serves the bare id directly.
 #[test]
 fn the_gateway_default_model_is_served_by_anthropic_only() {
     let spec = gateway();

@@ -15,7 +15,7 @@ Credential issuing for the Google project is covered in more detail in
 | secret | provider entry | credential | unlocks |
 |---|---|---|---|
 | `vertex` | `vertex`, `vertex-anthropic`, `vertex-maas`, `vertex-maas-us-central1` | Google service-account JSON | the three `claude-*` models (`claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`), the `vertex-gemini-*` models, and the open models (`zai.glm-5.2`, `deepseek.v3.2`, `moonshotai.kimi-k2-thinking`, `qwen.qwen3-coder-480b`, `openai.gpt-oss-120b` and the rest of `vertex-maas`) |
-| `anthropic` | `anthropic` | Anthropic API key | failover for `claude-*` when Vertex is out of capacity (the `anthropic-claude-*` twins it lands on are hidden from clients) |
+| `anthropic` | `anthropic` | Anthropic API key | serves every `claude-*` request (Anthropic-only since 2026-10-14) |
 | `gemini` | `gemini` | Gemini API key | `gemini-3.8-flash` (the classifier job) |
 
 One secret is the minimum: `vertex` alone gives Claude Code and OpenCode a

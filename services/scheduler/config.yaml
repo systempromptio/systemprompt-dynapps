@@ -313,7 +313,7 @@ scheduler:
       enabled: true
       parameters:
         provider: anthropic
-        model: anthropic-claude-haiku-5-5
+        model: claude-haiku-5-5
         batch_size: "20"
         daily_cost_cap_microdollars: "2000000"
         quiet_minutes: "30"

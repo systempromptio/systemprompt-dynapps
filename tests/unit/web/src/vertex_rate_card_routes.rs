@@ -100,7 +100,7 @@ fn native_tool_route_rejects_an_unpriced_upstream_model() {
         .validate(&registry)
         .expect_err("native routing must retain the billable-model check");
     assert!(error.to_string().contains("claude-native-tools"));
-    assert!(error.to_string().contains("anthropic-claude-sonnet-5-5"));
+    assert!(error.to_string().contains("claude-sonnet-5-5"));
 }
 
 // Why: the Vertex rate card is still priced and discovered, but since

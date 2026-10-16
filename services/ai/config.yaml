@@ -12,7 +12,7 @@ ai:
     anthropic:
       enabled: true
       google_search_enabled: true
-      default_model: anthropic-claude-sonnet-5-5
+      default_model: claude-sonnet-5-5
     gemini:
       enabled: false
       google_search_enabled: true

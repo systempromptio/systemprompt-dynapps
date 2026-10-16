@@ -117,4 +117,4 @@ runner:
 # call goes through the gateway as the `farm-eval-judge` job actor.
 evals:
   judge_provider: anthropic
-  judge_model: anthropic-claude-sonnet-5-5
+  judge_model: claude-sonnet-5-5

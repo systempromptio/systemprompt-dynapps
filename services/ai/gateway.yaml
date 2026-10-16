@@ -18,17 +18,12 @@ gateway:
   # Anthropic's own API with the anthropic key, no failover. The Vertex,
   # Gemini and MaaS routes are removed, so no other upstream is reachable;
   # the provider entries stay in providers.yaml for a later restore. The
-  # anthropic provider matches the bare ids by `upstream_model`.
+  # anthropic provider lists the bare ids itself.
   - id: claude-star-4203d1
     name: Claude (Anthropic API)
     description: >-
       Every claude-* request goes to Claude on Anthropic's own API by API key, with no failover.
     model_pattern: claude-*
-    provider: anthropic
-  - name: Claude (Anthropic API, explicit ids)
-    description: >-
-      The anthropic-claude-* ids, also on Anthropic's own API.
-    model_pattern: anthropic-claude-*
     provider: anthropic
   - id: e2e-mock-route
     name: E2E mock
