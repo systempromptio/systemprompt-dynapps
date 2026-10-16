@@ -31,7 +31,9 @@ fn collect(dir: &Path, ext: &str, out: &mut Vec<String>) {
 fn router_sources() -> String {
     let mut out = Vec::new();
     collect(&repo_root().join("extensions/web"), "rs", &mut out);
-    out.join("\n")
+    // Why: rustfmt splits a long `.route(` call across lines, so match with
+    // whitespace removed.
+    out.join("\n").split_whitespace().collect()
 }
 
 #[test]
