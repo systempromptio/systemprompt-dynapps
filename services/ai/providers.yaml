@@ -9,7 +9,9 @@ providers:
   # Claude on Anthropic's own API, by API key. Since 2026-10-14 this is the
   # ONLY Claude upstream: every bare `claude-*` id routes here
   # (services/ai/gateway.yaml, `claude-star-4203d1`), with no failover. The
-  # Vertex entries below stay declared for a later restore and serve nothing.
+  # Vertex entries below stay declared for a later restore and serve nothing;
+  # they and `gemini` are `surface: backend` so boot never looks up their absent
+  # secrets. Restore their original surface when they come back.
   #
   # Every model here is `hidden`; the routes find them by `upstream_model`
   # (ProviderEntry::find_served_model ignores `hidden`) and price the served
@@ -109,7 +111,7 @@ providers:
   description: >-
     Gemini via the public generativelanguage endpoint, authenticated with an API key. The classifier job and the gemini-* route use it; the Vertex copies of the same models are a separate provider.
   wire: gemini
-  surface: gemini
+  surface: backend
   endpoint: https://generativelanguage.googleapis.com/v1beta
   #
   # Why: cache_read_per_million is Google's published context-caching rate for
@@ -191,7 +193,7 @@ providers:
   description: >-
     The Gemini models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret.
   wire: gemini
-  surface: gemini
+  surface: backend
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google
   # Cache writes are billed as storage per hour, not per token, hence an
   # explicit 0.0.
@@ -266,7 +268,7 @@ providers:
   description: >-
     Claude models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Unrouted since 2026-10-14 (Anthropic-only); kept for a later restore.
   wire: anthropic
-  surface: anthropic
+  surface: backend
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
   api_key_secret: vertex
   accepted_betas:
@@ -359,7 +361,7 @@ providers:
   description: >-
     Claude models served from Vertex AI's europe-west1 regional endpoint under the vertex service-account secret. Unrouted since 2026-10-14 (Anthropic-only); kept for a later restore.
   wire: anthropic
-  surface: anthropic
+  surface: backend
   endpoint: https://europe-west1-aiplatform.googleapis.com/v1/projects/{project}/locations/europe-west1/publishers/anthropic
   api_key_secret: vertex
   accepted_betas:
@@ -458,7 +460,7 @@ providers:
   description: >-
     Third-party open models (Qwen, GLM, Kimi, DeepSeek, MiniMax, GPT-OSS) hosted by Vertex AI on an OpenAI-compatible surface on the global endpoint, under the same Google OAuth credential as vertex.
   wire: openai-chat
-  surface: openai
+  surface: backend
   endpoint: https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi
   #
   # Which models: every open model Vertex serves serverless on the global
@@ -744,7 +746,7 @@ providers:
   description: >-
     Open models Vertex AI serves only from the us-central1 endpoint (DeepSeek R1), under the same Google OAuth credential as vertex.
   wire: openai-chat
-  surface: openai
+  surface: backend
   endpoint: https://us-central1-aiplatform.googleapis.com/v1beta1/projects/{project}/locations/us-central1/endpoints/openapi
   api_key_secret: vertex
   governance:

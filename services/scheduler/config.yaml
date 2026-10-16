@@ -175,10 +175,11 @@ scheduler:
     # Re-probes the Vertex AI publisher listing daily and reports the delta.
     # Read-only: the served catalog is fixed at boot, so a newly published
     # priced model is a log warning that a restart would pick it up.
+    # Disabled: Anthropic-only since 2026-10-14; re-enable with the Vertex restore.
     - name: vertex_discovery
       extension: core
       owner: admin
-      enabled: true
+      enabled: false
 
     # Ships the audit trail to the OTLP collector the profile names under
     # `observability.otlp` (core job, every 15 s by its own schedule). Tails
@@ -311,8 +312,8 @@ scheduler:
       schedule: "0 */5 * * * *"
       enabled: true
       parameters:
-        provider: gemini
-        model: gemini-3.8-flash
+        provider: anthropic
+        model: anthropic-claude-haiku-5-5
         batch_size: "20"
         daily_cost_cap_microdollars: "2000000"
         quiet_minutes: "30"
