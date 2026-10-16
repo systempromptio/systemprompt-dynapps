@@ -207,7 +207,8 @@ scheduler:
       enabled: true
 
     # Expires raw evidence older than 90 days — hook events, gateway
-    # requests and what hangs off them — in one transaction (web extension).
+    # requests and what hangs off them — in batches of 5,000 rows per table,
+    # one short transaction each, within a 15-minute budget (web extension).
     # conversation_facts and conversation_skill_facts are kept.
     - name: plugin_usage_retention
       extension: web

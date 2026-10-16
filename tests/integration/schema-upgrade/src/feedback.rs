@@ -188,18 +188,34 @@ async fn retired(pool: &PgPool) {
 async fn retention(pool: &PgPool) {
     rejects(
         pool,
-        "SELECT expire_raw_evidence(clock_timestamp()-interval '89 days')",
+        "SELECT expire_raw_evidence(clock_timestamp()-interval '89 days', 1)",
         "23514",
     )
     .await;
-    assert_eq!(
-        scalar(
+    rejects(
+        pool,
+        "SELECT expire_raw_evidence('2021-01-01T00:00:00Z', 0)",
+        "22023",
+    )
+    .await;
+    let mut calls = 0;
+    loop {
+        calls += 1;
+        let removed = scalar(
             pool,
-            "SELECT expire_raw_evidence('2021-01-01T00:00:00Z')::text"
+            "SELECT expire_raw_evidence('2021-01-01T00:00:00Z', 1)::text",
         )
-        .await,
-        "1"
-    );
+        .await;
+        if removed == "0" {
+            break;
+        }
+        assert!(
+            removed.parse::<i64>().unwrap_or(i64::MAX) <= 8,
+            "a batch of one removes at most one row per table, got {removed}"
+        );
+        assert!(calls < 100, "batched expiry never drained");
+    }
+    assert!(calls > 1, "the expiry ran in more than one batch");
     for table in ["plugin_usage_events", "ai_requests"] {
         assert_eq!(
             scalar(pool, &format!("SELECT count(*)::text FROM {table}")).await,
