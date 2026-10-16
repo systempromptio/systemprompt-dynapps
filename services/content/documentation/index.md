@@ -7,13 +7,17 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-02-18"
-updated_at: "2026-09-29"
+updated_at: "2026-10-16"
 keywords: "get started, dynapps ai platform, claude code, cowork, opencode, bridge, gateway, documentation"
 after_reading_this:
   - "Pick the setup guide for your client and platform"
   - "Verify your first session reached the gateway"
   - "Find the page for any part of the platform"
 related_playbooks:
+  - title: "Set Up Dynapps on Your Laptop"
+    url: "/documentation/setup"
+  - title: "Use Your Skills and Run Them on the Agent Farm"
+    url: "/documentation/run-skills"
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
   - title: "Connect Cowork"
@@ -23,6 +27,18 @@ related_playbooks:
 ---
 
 # Get Started
+
+## Start here
+
+Most people need just two pages, in this order:
+
+1. **[Set Up Dynapps on Your Laptop](/documentation/setup)** — install Dynapps
+   Bridge on Windows or Mac, sign in, connect Dynapps Odoo and DynBrain, and
+   open Claude Cowork with your skills. About 10 minutes.
+2. **[Use Your Skills and Run Them on the Agent Farm](/documentation/run-skills)**
+   — use a Dynapps skill, then run it unattended on the Agent Farm.
+
+The rest of this page is for technical users, administrators and maintainers.
 
 Connect your AI client to your organization's gateway to use the models, skills, and tools your account can access. You need an account and Dynapps Bridge on your computer; you do not need to build or run a server.
 
