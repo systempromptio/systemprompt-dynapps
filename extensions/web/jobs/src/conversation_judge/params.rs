@@ -23,8 +23,8 @@ pub struct JudgeParams {
 impl Default for JudgeParams {
     fn default() -> Self {
         Self {
-            provider: "gemini".to_owned(),
-            model: "gemini-3.8-flash".to_owned(),
+            provider: "anthropic".to_owned(),
+            model: "claude-haiku-5-5".to_owned(),
             batch_size: 20,
             daily_cost_cap_microdollars: 2_000_000,
             quiet_minutes: 30,

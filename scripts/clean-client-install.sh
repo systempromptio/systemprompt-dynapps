@@ -254,8 +254,9 @@ fi
 # Placement is not enough: the block must offer models the gateway can actually
 # serve. A host that filters the catalogue by each provider native wire family
 # hides working models, because surface governs advertisement only and the
-# gateway translates any inbound wire to any provider wire. Gemini and Claude
-# are the canaries — both are served over the OpenAI wire OpenCode speaks.
+# gateway translates any inbound wire to any provider wire. Claude is the
+# canary, served over the OpenAI wire OpenCode speaks; since 2026-10-14 the
+# installation is Anthropic-only, so any gemini-* id is a failure.
 if [ -n "$OC_FOUND" ]; then
     # The trailing digit requirement keeps the npm package name
     # (@ai-sdk/openai-compatible) out of what is meant to be a model list.
@@ -263,8 +264,8 @@ if [ -n "$OC_FOUND" ]; then
         | tr -d "\"" | sort -u | tr "\n" " ")
     echo "[INFO] models offered to OpenCode: ${OC_MODELS:-(none)}"
     case " $OC_MODELS " in
-        *gemini-*) echo "[OK  ] gemini models are offered to OpenCode" ;;
-        *) echo "[FAIL] no gemini-* model offered — the host surface filter is too narrow"; rc=1 ;;
+        *gemini-*) echo "[FAIL] gemini models offered — this installation is Anthropic-only"; rc=1 ;;
+        *) echo "[OK  ] no gemini-* model offered (Anthropic-only)" ;;
     esac
     case " $OC_MODELS " in
         *claude-*) echo "[OK  ] claude models are offered to OpenCode" ;;
@@ -350,8 +351,8 @@ if [ -r "$KEY_FILE" ]; then
         | grep -oE "\"id\": *\"[^\"]+\"" | sed -e "s/.*: *\"//" -e "s/\"//" | sort -u | tr "\n" " ")
     echo "[INFO] proxy /v1/models: ${PROXY_MODELS:-(none)}"
     case " $PROXY_MODELS " in
-        *gemini-*) echo "[OK  ] gemini models discoverable through the proxy" ;;
-        *) echo "[FAIL] no gemini-* model through the proxy"; rc=1 ;;
+        *gemini-*) echo "[FAIL] gemini models through the proxy — this installation is Anthropic-only"; rc=1 ;;
+        *) echo "[OK  ] no gemini-* model through the proxy (Anthropic-only)" ;;
     esac
 
     CHAT_CODE=$(curl -s -o /tmp/chat.json -w "%{http_code}" --max-time 60 \
