@@ -1,15 +1,15 @@
 # Homepage Configuration
 #
-# Front page for the Dynapps AI platform. The page is this hero plus the
+# Front page for the Dynapps AI control plane. The page is this hero plus the
 # client download buttons (services/web/templates/homepage.html), so the hero
-# carries the whole pitch: what the platform does for a Dynapps team, not
-# only that it is governed.
+# carries the whole pitch: the control plane every AI client, model, skill
+# and tool goes through, not one assistant.
 
 hero:
-  title: "Dynapps' Odoo expertise,"
-  title_highlight: "working inside Claude"
-  subtitle: "Every Dynapps team gets Claude with the company's own playbooks built in: lead research, value-based quotations, development assessments and plans, ticket solving, SEO and brand. Skills work on live Odoo records and DynBrain knowledge as your own Odoo account, and the Agent Farm runs them unattended and scores the results. One corporate sign-in covers Claude Code, Cowork, Claude Desktop and OpenCode, and every request runs on Dynapps' Anthropic key and is recorded, costed and audited."
-  eyebrow: "Dynapps · AI Platform"
+  title: "One control plane"
+  title_highlight: "for all of Dynapps' AI"
+  subtitle: "Every AI client, model, skill and tool at Dynapps runs through one place. Claude Code, Cowork, Claude Desktop, OpenCode and any Anthropic- or OpenAI-compatible app sign in with the corporate account and inherit the same entitlements, skills and governed tools, including live Odoo and DynBrain as the user's own account. The gateway routes every request to the approved model, then attributes, costs and audits it per user and project. The Agent Farm runs the same skills unattended and scores the results. Nothing about Dynapps' AI happens off the record."
+  eyebrow: "Dynapps · AI Control Plane"
   cta: "Set up in 10 minutes"
   cta_url: "/documentation/setup"
   cta_secondary: "Documentation"
