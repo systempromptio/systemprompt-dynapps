@@ -202,16 +202,15 @@ else
     echo "Ensuring bootstrap admin user..."
     /app/bin/systemprompt admin bootstrap
 
-    # web/dist is node-local and not shipped in the image. The scheduler's
-    # bootstrap run of publish_pipeline takes a database-wide advisory lock, so
-    # in a multi-node deployment only one node renders its site at boot and the
-    # rest serve 404 until a later tick lands on them. The manual runner takes
-    # no lock: render here, on every node that serves the site, before the
-    # server accepts traffic. A failure is logged rather than fatal so a content
-    # problem never takes the node down.
-    echo "Publishing web assets for this node..."
-    if ! /app/bin/systemprompt infra jobs run publish_pipeline; then
-        echo "WARN: publish_pipeline failed; the public site may 404 on this node until the next scheduled run." >&2
+    # web/dist is node-local and not shipped in the image. Render it from the
+    # database here, on every node that serves the site, before the server
+    # accepts traffic. Content ingestion is not repeated per pod: it writes the
+    # database, so it runs once, in the scheduler's bootstrap publish_pipeline
+    # (one node) and hourly as blog_content_ingestion. A failure is logged
+    # rather than fatal so a content problem never takes the node down.
+    echo "Rendering the site for this node..."
+    if ! /app/bin/systemprompt infra jobs run site_render; then
+        echo "WARN: site_render failed; the public site may 404 on this node until the next scheduled render." >&2
     fi
 fi
 

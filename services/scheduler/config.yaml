@@ -80,15 +80,27 @@ scheduler:
       schedule: "0 15 * * * *"
       enabled: true
 
-    # Web extension jobs (publishing pipeline). Hourly: the bootstrap entry
-    # publishes at boot and content edits go through `just publish` or
-    # `systemprompt infra jobs run publish_pipeline`; every run regenerates
-    # the whole site unconditionally, so a tighter cadence only repeats
-    # identical output.
+    # Web extension jobs (publishing pipeline). The composite publish_pipeline
+    # runs at boot (bootstrap_jobs, and the entrypoint on every node that
+    # serves the site) and by hand (`just publish`, `systemprompt infra jobs
+    # run publish_pipeline`); it is not on the cron, because its two halves
+    # have different scopes. Hourly, content ingestion writes the database once
+    # (cluster scope) and five minutes later site_render rebuilds web.dist on
+    # every replica (node scope), so no replica keeps serving a stale site.
     - name: publish_pipeline
       extension: web
       owner: admin
+      enabled: false
+
+    - name: blog_content_ingestion
+      extension: web
+      owner: admin
       schedule: "0 0 * * * *"
+      enabled: true
+
+    - name: site_render
+      extension: web
+      owner: admin
       enabled: true
 
     # Standalone core jobs, running on each job's built-in default schedule
@@ -377,15 +389,10 @@ scheduler:
       owner: admin
       enabled: true
 
-    # publish_pipeline sub-steps. The composite above runs each of these every
-    # hour in dependency order; scheduling them independently would
-    # double-run them, so they are disabled here (an explicit entry also
-    # records the decision and silences the boot warning).
-    - name: blog_content_ingestion
-      extension: web
-      owner: admin
-      enabled: false
-
+    # Render sub-steps. site_render runs each of these in dependency order;
+    # scheduling them independently would double-run them, so they are
+    # disabled here (an explicit entry also records the decision and silences
+    # the boot warning).
     - name: bundle_admin_css
       extension: web
       owner: admin
@@ -438,7 +445,6 @@ scheduler:
     - managed_inventory_refresh
     - database_cleanup
     - cleanup_inactive_sessions
-    # Publish web assets before the cron loop: web/dist is generated, not
-    # shipped in the image, so without this the site 404s until the first
-    # publish_pipeline tick.
+    # Ingest content and publish web assets before the cron loop: on a fresh
+    # database nothing else ingests until the hourly blog_content_ingestion.
     - publish_pipeline

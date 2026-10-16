@@ -7,6 +7,8 @@
 //!   orchestrates ACL/profile/config bootstrap, asset copy, content ingestion,
 //!   prerender, sitemap/robots/llms.txt generation, and secret migration.
 //!   Sub-jobs are individually addressable via the CLI for targeted re-runs.
+//!   [`SiteRenderJob`] is its render half, node-scoped so every replica
+//!   refreshes its own `web.dist`.
 //! - **Build helpers** ([`BundleAdminCssJob`], [`CopyExtensionAssetsJob`],
 //!   [`SiteContentPrerenderJob`]) — emit the static surface under `web/dist/`
 //!   consumed by the SSR layer.
@@ -68,7 +70,7 @@ pub use governance_bootstrap::GovernanceBootstrapJob;
 pub use ingestion::ContentIngestionJob;
 pub use llms_txt::LlmsTxtGenerationJob;
 pub use prerender::SiteContentPrerenderJob;
-pub use publish::PublishPipelineJob;
+pub use publish::{PublishPipelineJob, SiteRenderJob};
 pub use quota_month_window::QuotaMonthWindowJob;
 pub use retention::{
     MonthlyParams, RetentionDailyReportJob, RetentionExportMonthlyJob, RetentionExportWeeklyJob,

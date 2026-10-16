@@ -1,9 +1,16 @@
-//! `publish_pipeline` job: the ordered composite every other job runs under.
+//! `publish_pipeline` and `site_render`: content ingestion and the site render.
 //!
 //! Order is load-bearing — bundles must exist before assets are copied, and
 //! content must be ingested before it can be prerendered. A failing sub-job is
 //! recorded and the pipeline continues, so one broken stage does not block the
 //! rest.
+//!
+//! The two halves have different scopes. Ingestion writes the database, so the
+//! scheduler runs it once per tick (`blog_content_ingestion`, cluster). The
+//! render writes `web.dist`, which is per node, so [`SiteRenderJob`] is
+//! node-scoped and every replica that serves the site refreshes its own copy
+//! from the database. `publish_pipeline` is both in order, for a manual run
+//! and for boot.
 
 use std::sync::Arc;
 
@@ -11,7 +18,7 @@ use systemprompt::config::AppPaths;
 use systemprompt::content::ContentRepository;
 use systemprompt::database::DbPool;
 use systemprompt::generator::{organize_dist_assets, prerender_pages};
-use systemprompt::traits::{Job, JobContext, JobResult};
+use systemprompt::traits::{Job, JobContext, JobResult, JobScope};
 
 use super::{
     BundleAdminCssJob, ContentIngestionJob, CopyExtensionAssetsJob, SiteContentPrerenderJob,
@@ -164,6 +171,22 @@ impl Job for PublishPipelineJob {
 }
 
 impl PublishPipelineJob {
+    async fn render(
+        &self,
+        ctx: &JobContext,
+        paths: &AppPaths,
+        db_pool: &DbPool,
+        stats: &mut PipelineStats,
+    ) {
+        self.run_bundle_admin_css(paths, stats).await;
+        self.run_asset_copy(paths, stats).await;
+        self.run_prerender(ctx, stats).await;
+        self.run_page_prerender(paths, db_pool, stats).await;
+        self.run_derived_files(ctx, paths, db_pool, stats).await;
+        stats.record_success();
+        self.run_asset_organization(paths, stats).await;
+    }
+
     async fn execute_inner(&self, ctx: &JobContext) -> Result<JobResult, JobError> {
         let start_time = std::time::Instant::now();
 
@@ -175,14 +198,7 @@ impl PublishPipelineJob {
         let mut stats = PipelineStats::default();
 
         self.run_ingestion(ctx, &mut stats).await;
-        self.run_bundle_admin_css(paths, &mut stats).await;
-        self.run_asset_copy(paths, &mut stats).await;
-        self.run_prerender(ctx, &mut stats).await;
-        self.run_page_prerender(paths, db_pool, &mut stats).await;
-        self.run_derived_files(ctx, paths, db_pool, &mut stats)
-            .await;
-        stats.record_success();
-        self.run_asset_organization(paths, &mut stats).await;
+        self.render(ctx, paths, db_pool, &mut stats).await;
 
         let duration_ms = u64::try_from(start_time.elapsed().as_millis()).unwrap_or(u64::MAX);
 
@@ -200,3 +216,60 @@ impl PublishPipelineJob {
 }
 
 systemprompt::traits::submit_job!(&PublishPipelineJob);
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SiteRenderJob;
+
+impl SiteRenderJob {
+    async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
+        let start_time = std::time::Instant::now();
+        let db_pool = ctx.get::<DbPool>()?;
+        let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
+        let mut stats = PipelineStats::default();
+        PublishPipelineJob
+            .render(ctx, paths, db_pool, &mut stats)
+            .await;
+        let duration_ms = u64::try_from(start_time.elapsed().as_millis()).unwrap_or(u64::MAX);
+        tracing::info!(
+            steps_succeeded = stats.succeeded,
+            steps_failed = stats.failed,
+            duration_ms,
+            "Site render completed"
+        );
+        Ok(JobResult::success()
+            .with_stats(stats.succeeded, stats.failed)
+            .with_duration(duration_ms))
+    }
+}
+
+#[async_trait::async_trait]
+impl Job for SiteRenderJob {
+    fn name(&self) -> &'static str {
+        "site_render"
+    }
+
+    fn tags(&self) -> Vec<&'static str> {
+        vec![crate::registry::JOB_TAG]
+    }
+
+    fn description(&self) -> &'static str {
+        "Renders this node's web.dist from the database: assets, prerender, pages, sitemap, robots.txt, RSS, llms.txt"
+    }
+
+    fn schedule(&self) -> &'static str {
+        "0 5 * * * *"
+    }
+
+    fn scope(&self) -> JobScope {
+        JobScope::Node
+    }
+
+    async fn execute(
+        &self,
+        ctx: &JobContext,
+    ) -> Result<JobResult, systemprompt::traits::ProviderError> {
+        Ok(Self::execute_inner(ctx).await?)
+    }
+}
+
+systemprompt::traits::submit_job!(&SiteRenderJob);

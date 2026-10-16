@@ -53,7 +53,7 @@ fn a_gateway_node_skips_the_bootstrap_and_the_render() {
         .find("/app/bin/systemprompt admin bootstrap\n\n    #")
         .expect("the boot-time admin bootstrap");
     let publish = text
-        .find("infra jobs run publish_pipeline")
+        .find("infra jobs run site_render")
         .expect("the boot-time render");
     let start = text.find("infra services start").expect("the server start");
     assert!(gateway < bootstrap && bootstrap < publish && publish < start);
