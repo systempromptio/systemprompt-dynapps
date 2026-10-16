@@ -50,7 +50,7 @@ pub(crate) async fn update_gateway_settings_handler(
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<UpdateGatewaySettingsRequest>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path()?;
+    let gateway_path = shared::get_gateway_file_path_for_write()?;
     systemprompt_web_admin_core::repositories::gateway_catalog::update_gateway_settings(
         &gateway_path,
         &body,
@@ -62,7 +62,7 @@ pub(crate) async fn create_gateway_route_handler(
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<GatewayRouteView>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path()?;
+    let gateway_path = shared::get_gateway_file_path_for_write()?;
     let index = editor::create_route_entry(&pool, &gateway_path, &body).await?;
     Ok((StatusCode::CREATED, Json(CreateRouteResponse { index })).into_response())
 }
@@ -72,7 +72,7 @@ pub(crate) async fn update_gateway_route_handler(
     Path(idx): Path<usize>,
     Json(body): Json<GatewayRouteView>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path()?;
+    let gateway_path = shared::get_gateway_file_path_for_write()?;
     editor::update_route_at(&pool, &gateway_path, idx, &body).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
@@ -81,7 +81,7 @@ pub(crate) async fn delete_gateway_route_handler(
     State(pool): State<Arc<PgPool>>,
     Path(idx): Path<usize>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path()?;
+    let gateway_path = shared::get_gateway_file_path_for_write()?;
     editor::delete_route_at(&pool, &gateway_path, idx).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
@@ -90,7 +90,7 @@ pub(crate) async fn reorder_gateway_routes_handler(
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<ReorderRoutesRequest>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path()?;
+    let gateway_path = shared::get_gateway_file_path_for_write()?;
     editor::reorder_route_positions(&pool, &gateway_path, &body.order).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
