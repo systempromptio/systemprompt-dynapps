@@ -19,6 +19,9 @@
 #
 #   ./demo/vet/seed.sh            seed (or re-seed)
 #   ./demo/vet/seed.sh --clean    remove the demo rows only
+#   ./demo/vet/seed.sh --hide-nondemo   seed, then move every non-demo user's
+#                                       usage into schema demo_hidden
+#   ./demo/vet/seed.sh --unhide-nondemo restore what --hide-nondemo moved
 set -euo pipefail
 export PGOPTIONS="${PGOPTIONS:-} -c client_min_messages=warning"
 
@@ -55,6 +58,16 @@ trap 'rm -rf "$TMP"' EXIT
   cat "$HERE/cleanup.sql"
 } > "$TMP/seed.sql"
 
+run_tx() {
+  { echo "\\set ON_ERROR_STOP on"; echo "BEGIN;"; echo "SET LOCAL systemprompt.audit_maintenance = 'on';"
+    cat "$1"; echo "COMMIT;"; } | psql "$DB_URL" -q > /dev/null
+}
+if [[ "${1:-}" == "--unhide-nondemo" ]]; then
+  run_tx "$HERE/unhide-nondemo.sql"
+  echo "non-demo rows restored"
+  exit 0
+fi
+
 if [[ "${1:-}" == "--clean" ]]; then
   echo "COMMIT;" >> "$TMP/seed.sql"
   psql "$DB_URL" -q -f "$TMP/seed.sql"
@@ -83,3 +96,8 @@ UNION ALL SELECT 'farm_runs', count(*)::text FROM agent_farm_runs WHERE farm_id 
 UNION ALL SELECT 'last_request', max(r.created_at)::text FROM ai_requests r JOIN users u ON u.id = r.user_id
   WHERE u.email LIKE '%@vetgroup-demo.example';
 SQL
+
+if [[ "${1:-}" == "--hide-nondemo" ]]; then
+  run_tx "$HERE/hide-nondemo.sql"
+  echo "non-demo usage moved to schema demo_hidden (undo: $0 --unhide-nondemo)"
+fi

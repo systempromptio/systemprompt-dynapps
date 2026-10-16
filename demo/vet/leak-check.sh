@@ -33,7 +33,7 @@ SELECT row_to_json(x)::text FROM clients x WHERE id LIKE 'vg-%';
 SQL
 echo "dumped $(wc -l < "$TMP/dump.txt") rows"
 
-{ echo "dynapps.be"; echo "astound";
+{ echo "dynapps.be"; echo "astound"; echo "systemprompt.io"; echo "dynapps.es"; echo "dynapps.local"; echo "dynapps.test";
   psql "$REF" -At -c "SELECT lower(email) FROM users WHERE email NOT LIKE '%@anonymous.local'
                       UNION SELECT lower(display_name) FROM users WHERE length(coalesce(display_name,'')) >= 4
                       UNION SELECT lower(full_name) FROM users WHERE length(coalesce(full_name,'')) >= 4"
