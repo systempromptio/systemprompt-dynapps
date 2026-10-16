@@ -118,7 +118,13 @@ impl FakeOidcIdp {
 
     // A single-use code the token endpoint redeems for `spec`'s ID token,
     // provided the caller presents a verifier hashing to `code_challenge`.
+    // The keys the token and JWKS endpoints serve are generated here, on the
+    // test's side: left to those handlers, a first RSA-2048 keygen runs inside the identity
+    // crate's 10s HTTP timeout, which an instrumented build overruns and the
+    // sign-in is refused as `unavailable`.
     pub fn issue_code(&self, spec: IdTokenSpec, code_challenge: &str) -> String {
+        TestIdpKeys::get();
+        signing_keys(&spec);
         let code = format!("code-{}", uuid::Uuid::new_v4().simple());
         self.inner
             .codes
@@ -148,12 +154,16 @@ pub fn pkce_challenge(verifier: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
 }
 
-fn mint(issuer: &str, spec: &IdTokenSpec) -> String {
-    let keys = if spec.sign_with_other_key {
+fn signing_keys(spec: &IdTokenSpec) -> &'static TestIdpKeys {
+    if spec.sign_with_other_key {
         TestIdpKeys::other()
     } else {
         TestIdpKeys::get()
-    };
+    }
+}
+
+fn mint(issuer: &str, spec: &IdTokenSpec) -> String {
+    let keys = signing_keys(spec);
     let now = Utc::now();
     let iat = spec.iat.unwrap_or(now);
     let exp = spec.exp.unwrap_or(iat + Duration::hours(1));
