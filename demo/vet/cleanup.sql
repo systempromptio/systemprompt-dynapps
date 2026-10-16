@@ -9,6 +9,7 @@ CREATE TEMP TABLE vet_users ON COMMIT DROP AS
 DELETE FROM conversation_context_aliases a
  USING conversation_session_contexts c
  WHERE c.context_id = a.context_id AND c.user_id IN (SELECT id FROM vet_users);
+DELETE FROM conversation_analyses WHERE user_id IN (SELECT id FROM vet_users);
 DELETE FROM conversation_facts WHERE user_id IN (SELECT id FROM vet_users);
 DELETE FROM trace_facts WHERE trace_id IN (
     SELECT trace_id FROM ai_requests WHERE user_id IN (SELECT id FROM vet_users));

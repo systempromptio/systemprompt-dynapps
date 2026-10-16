@@ -330,6 +330,7 @@ counters = dict(requests=0, gov=0, mcp=0, events=0, findings=0)
 rate_state = {}
 bridge_sessions = set()
 contexts = []
+CONV_META = []
 
 
 def gov_row(u, session_id, tool, decision, policy, reason, rules, ctx, trace, at, tool_use_id=None,
@@ -639,6 +640,7 @@ def run_session(u, start, n_req, project, client_kind, day_key, idx):
             tt += timedelta(milliseconds=RNG.randint(300, 2500))
         t = max(tt, done) + timedelta(seconds=int(RNG.expovariate(1 / 25)) + 2)
         first = False
+    CONV_META.append((ctx, u["id"], sess_hook, project, t, n_req))
     hook_event(u, sess_hook, "Stop", t)
     hook_event(u, sess_hook, "SessionEnd", t + timedelta(seconds=3),
                meta={"cwd": "/home/user/work", "reason": "prompt_input_exit", "session_id": sess_hook,
@@ -746,7 +748,7 @@ for a in AGENTS:
         add("agent_farm_eval_cases", ["suite_id", "id", "prompt", "fixture", "timeout_secs", "assertions",
                                       "judge_rubric", "judge_threshold"],
             [f"{FARM_ID}:{aid}", case, None, None, 900, [{"kind": "file_exists", "path": "REPORT.md"}],
-             "Report is accurate against Odoo, cites record ids, makes no unrequested writes.", 0.7])
+             "Report is accurate against Odoo, cites record ids, makes no unrequested writes.", 70])
 
 
 def cadence_days(cad):
@@ -926,8 +928,8 @@ for a in AGENTS:
             # one nightly eval run per scheduled run: the judge scores its report
             key = (aid, frid)
             eval_runs[key] = dict(id=uid("evalrun", frid), scores=[], at=finish, last=finish)
-            score = round(min(1.0, max(0.35, RNG.gauss(0.86, 0.08))), 2)
-            passed = score >= 0.7
+            score = float(round(min(100, max(35, RNG.gauss(86, 8)))))
+            passed = score >= 70
             eval_id = uid("evalres", frid)
             er = eval_runs[key]
             er["scores"].append(score)
@@ -958,7 +960,7 @@ for (aid, _run), er in eval_runs.items():
                                  "finished_at", "passed", "failed", "errored", "mean_score", "cost_microdollars",
                                  "created_at", "triggered_via", "client_id"],
         [er["id"], f"{FARM_ID}:{aid}", FARM_ID, aid, admin_id, "completed", er["at"], er["last"],
-         sum(1 for s in scores if s >= 0.7), sum(1 for s in scores if s < 0.7), 0,
+         sum(1 for s in scores if s >= 70), sum(1 for s in scores if s < 70), 0,
          round(sum(scores) / len(scores), 3), 0, er["at"], "scheduler", None])
 
 # Bridge (gateway) sessions the requests ride on.
@@ -980,12 +982,66 @@ for ctx, user_id, client_sess in contexts:
         add("conversation_session_contexts", ["user_id", "client_session_id", "context_id"],
             [user_id, client_sess, ctx])
 
+# ── installs and judge scores ─────────────────────────────────────────────
+# Installs: share of each entity's people whose host holds a verified receipt
+# for the skills their workspaces carry (resolved against the live managed
+# publications in post.sql).
+INSTALL_RATE = {"vg-data-solutions": 0.9, "vg-group-finance": 0.85, "vg-labs-diagnostics": 0.8,
+                "vg-clinics-be-finance": 0.8, "vg-clinics-nl-finance": 0.75, "vg-clinics-be-frontdesk": 0.65,
+                "vg-clinics-nl-frontdesk": 0.62, "vg-ambulatory-field": 0.6, "vg-clinics-de-acquired": 0.35}
+INSTALLS = []
+for u in people:
+    if RNG.random() > INSTALL_RATE[u["group"]]:
+        continue
+    keys = {"who_am_i"}
+    for p in u["projects"]:
+        keys.update(s.split(":")[1] for s in PROJECT_PALETTE[p]["skills"])
+    host = "claude-code" if u["group"] == "vg-data-solutions" else "claude-desktop"
+    for k in sorted(keys):
+        INSTALLS.append((u["id"], k, host, CREATED + timedelta(days=RNG.randint(1, 20), minutes=RNG.randint(0, 600))))
+
+CATEGORY = {"vg-dunning": "business-analysis", "vg-invoice-recon": "business-analysis",
+            "vg-ticket-followup": "operations", "vg-no-shows": "operations",
+            "vg-lab-results": "writing-comms", "vg-metrics-pilot": "research-learning"}
+TITLES = {"vg-dunning": ["Overdue invoice reminders", "Second-reminder drafts", "Dunning status for stand-up"],
+          "vg-invoice-recon": ["Bank line matching", "Unreconciled payments review", "AR vs bank difference"],
+          "vg-ticket-followup": ["Stale clinic tickets", "Printer ticket investigation", "Ticket closure notes"],
+          "vg-no-shows": ["Yesterday's no-shows", "Rebooking messages", "Monday no-show pattern"],
+          "vg-lab-results": ["Haematology summary", "Renal trend comparison", "Weekly results cover note"],
+          "vg-metrics-pilot": ["Clinic revenue comparison", "Active client definition", "Revenue variance check"]}
+RATIONALE = {
+    "achieved": ["The user got the records and a usable draft; figures were taken from Odoo and not altered.",
+                 "Request answered in full with record ids cited; no unrequested writes.",
+                 "Clear outcome: activities logged as asked and confirmed back to the user."],
+    "partial": ["Draft produced, but two records needed a human decision and were left open.",
+                "Answered the main question; the follow-up comparison was not completed."],
+    "abandoned": ["The user stopped after the first answer; the task was not finished in this session."],
+    "unclear": ["Short exploratory exchange; no explicit goal to judge against."]}
+AN_COLS = ["context_id", "user_id", "status", "category", "summary", "tags", "skills_used", "outcome", "confidence",
+           "provider", "model", "source_request_count", "source_last_at", "classified_at", "attempts",
+           "next_attempt", "title", "completion", "completion_rationale", "input_tokens", "output_tokens",
+           "cost_microdollars", "trigger", "created_at", "updated_at"]
+for ctx, user_id, client_sess, project, last_at, n_req in CONV_META:
+    if RNG.random() > 0.82:
+        continue
+    outcome = pick_w([("achieved", 0.66), ("partial", 0.22), ("abandoned", 0.07), ("unclear", 0.05)])
+    base = {"achieved": 88, "partial": 62, "abandoned": 25, "unclear": 45}[outcome]
+    completion = int(max(0, min(100, RNG.gauss(base, 9))))
+    title = RNG.choice(TITLES[project])
+    at = last_at + timedelta(minutes=RNG.randint(6, 40))
+    add("conversation_analyses", AN_COLS,
+        [ctx, user_id, "classified", CATEGORY[project], f"{title}: worked through Odoo records for {project[3:]}.",
+         pgarr([project[3:], "odoo"]), pgarr([s.split(":")[1].replace("_", "-") for s in PROJECT_PALETTE[project]["skills"][:1]]),
+         outcome, round(RNG.uniform(0.7, 0.97), 2), "anthropic", "claude-haiku-4-5-20251001", n_req, last_at, at, 1,
+         at, title, completion, RNG.choice(RATIONALE[outcome]), RNG.randint(3000, 12000), RNG.randint(150, 400),
+         RNG.randint(800, 3500), "automatic", at, at])
+
 # ── assemble ───────────────────────────────────────────────────────────────
 for table in ["users", "groups", "group_ad_mappings", "group_members", "projects", "project_members",
               "user_scope_defaults", "user_manual_roles", "access_control_rules", "clients", "user_sessions",
               "conversation_session_contexts", "mcp_tool_executions", "ai_requests", "ai_request_attributions",
               "ai_request_client_evidence", "ai_request_messages", "ai_request_tool_calls", "ai_safety_findings",
-              "governance_decisions", "plugin_usage_events", "agent_farms", "agent_farm_agents",
+              "governance_decisions", "plugin_usage_events", "conversation_analyses", "agent_farms", "agent_farm_agents",
               "agent_farm_eval_suites", "agent_farm_eval_cases", "agent_runs", "agent_run_events",
               "agent_farm_eval_runs", "agent_farm_runs", "agent_farm_run_reports", "agent_farm_eval_results"]:
     flush(table)
@@ -997,5 +1053,10 @@ for rid, pid in SCOPE_UPD:
     OUT.write(f"{rid}\t{pid}\n")
 OUT.write("\\.\n")
 OUT.write("UPDATE ai_request_scopes s SET project_id = v.project_id FROM vet_scope v WHERE s.request_id = v.request_id;\n")
-sys.stderr.write(json.dumps(dict(counters, farm_runs=farm_runs, users=len(users),
+OUT.write("CREATE TEMP TABLE vet_installs (user_id text, skill_key text, host text, at timestamptz) ON COMMIT DROP;\n")
+OUT.write("COPY vet_installs FROM STDIN;\n")
+for row in INSTALLS:
+    OUT.write("\t".join(esc(v) for v in row) + "\n")
+OUT.write("\\.\n")
+sys.stderr.write(json.dumps(dict(counters, installs=len(INSTALLS), farm_runs=farm_runs, users=len(users),
                                  conversations=len(contexts))) + "\n")

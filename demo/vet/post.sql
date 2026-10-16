@@ -60,3 +60,16 @@ UPDATE admin_usage_daily_rollups r
    SET group_id = d.primary_group_id, project_id = d.primary_project_id
   FROM user_scope_defaults d
  WHERE d.user_id = r.user_id AND r.user_id IN (SELECT id FROM vet_users2);
+
+-- Verified installation receipts: what the skills page's install rate counts.
+INSERT INTO managed_installation_receipts
+    (id, consumer_id, host, consumer_evidence, fully_verified, owner_id, installation_id, publication_id,
+     resource_id, generation, bundle_digest, installed_manifest, client_evidence, verified_at)
+SELECT md5('vet-receipt' || i.user_id || i.skill_key)::uuid::text, i.user_id, i.host,
+       jsonb_build_object('host', i.host, 'source', 'vetgroup-demo'), TRUE, p.owner_id,
+       md5('vet-install' || i.user_id || i.host)::uuid::text, p.id, p.resource_id, p.generation,
+       COALESCE(p.bundle_digest, encode(sha256(convert_to(p.id, 'UTF8')), 'hex')), '[]'::jsonb, '{}'::jsonb, i.at
+FROM vet_installs i
+JOIN managed_resources r ON r.kind = 'skill' AND r.resource_key = i.skill_key
+JOIN LATERAL (SELECT * FROM managed_publications mp WHERE mp.resource_id = r.id AND mp.owner_id = r.owner_id
+              ORDER BY mp.generation DESC LIMIT 1) p ON TRUE;
