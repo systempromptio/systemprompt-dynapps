@@ -1,8 +1,0 @@
-{
-  "_comment": "Mapeo OPCIONAL de módulo -> [slug-area, Nombre del Área]. Colócalo como <out_dir>/areas.json antes de build_facts.py. Si no existe, cada módulo es su propia área.",
-  "control_presencial": ["01-rrhh", "RRHH y Personal"],
-  "empleadosirluc_nuevo": ["01-rrhh", "RRHH y Personal"],
-  "official_timesheets": ["02-partes-horas", "Partes de Horas"],
-  "facturaflow_connector": ["03-contabilidad", "Contabilidad y Facturación"],
-  "Ext_crm": ["04-crm", "CRM y Ventas"]
-}

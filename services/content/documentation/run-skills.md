@@ -65,7 +65,7 @@ laptop. A run reaches your data like this:
 ### 1. Check you have access
 
 You need the `staff` group or an admin role. That opens the `dynapps-portal`
-and `indaws-dynapps-spain` marketplaces, the `indaws-farm` plugin and both
+marketplace, its `dynapps-showcase` and `dynapps-farm` plugins and both
 portal servers. To see a farm's agents you also need the marketplace that farm
 names. If anything is missing, ask an admin.
 
@@ -76,8 +76,8 @@ Done in setup. If a tool call later returns 401, reconnect at
 
 ### 3. Install the farm plugin
 
-In Claude Code, install `indaws-farm` from `indaws-dynapps-spain`. It brings
-the `indaws-agent-farm` skill (launch, follow, cancel and schedule farm tasks
+In Claude Code, install `dynapps-farm` from `dynapps-portal`. It brings
+the `dynapps-agent-farm` skill (launch, follow, cancel and schedule farm tasks
 in plain language) plus both portal servers.
 
 ### 4. Launch
@@ -85,7 +85,7 @@ in plain language) plus both portal servers.
 Pick whichever is easiest:
 
 - **Ask Claude**, naming the farm: "run the CRM report on the agent farm".
-  The `indaws-agent-farm` skill only acts when you mention the farm.
+  The `dynapps-agent-farm` skill only acts when you mention the farm.
 - **From the console**: [/admin/farm](/admin/farm) → farm → agent → launch.
 - **From the API**: `POST /api/public/agent-farm/runs`.
 

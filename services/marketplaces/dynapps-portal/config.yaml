@@ -1,7 +1,7 @@
 marketplace:
   id: dynapps-portal
   name: "Dynapps — Portal"
-  description: "Dynapps' Odoo control and DynBrain knowledge servers from portal.dynapps.es, used as the Odoo account each person connects."
+  description: "Dynapps' Odoo control and DynBrain knowledge servers from portal.dynapps.es, used as the Odoo account each person connects, plus the showcase workflows that run on them (lead data collection, value-based quotations, brand, SEO audit, ticket solving, development assessment and planning) and the agent-farm launcher with the accounting auditor it demos."
   version: "1.0.0"
   visibility: private
   author:
@@ -18,6 +18,8 @@ marketplace:
     source: explicit
     include:
       - dynapps-portal
+      - dynapps-showcase
+      - dynapps-farm
   mcp_servers:
     source: explicit
     include:

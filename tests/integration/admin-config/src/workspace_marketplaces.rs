@@ -1,4 +1,5 @@
-//! The Dynapps workspaces (`dynapps-portal`, `indaws-dynapps-spain`, and the
+//! The Dynapps workspaces (`dynapps-portal`, which carries the showcase and
+//! farm plugins, and the
 //! agent-farm workspace `dynapps-engineering`) resolve through the runtime
 //! policy resolver against the shipped `rules.yaml`: each one reaches the
 //! principals it names and stays hidden from a plain signed-in user.
@@ -22,11 +23,7 @@ use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
 use crate::fixtures::{insert_user_with_roles, unique};
 use crate::tempdb::TempDb;
 
-const WORKSPACES: [&str; 3] = [
-    "dynapps-portal",
-    "indaws-dynapps-spain",
-    "dynapps-engineering",
-];
+const WORKSPACES: [&str; 2] = ["dynapps-portal", "dynapps-engineering"];
 
 fn services_path() -> PathBuf {
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -94,13 +91,13 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
     let chains = ParentChainIndex::load(&repo, Arc::new(ChainSources::from_services(&services)))
         .await
         .expect("parent policies");
-    // (role, staff member, portal, spain, engineering)
-    for (role, staff, portal, spain, engineering) in [
-        ("user", false, false, false, false),
-        ("user", true, true, true, false),
-        ("developer", false, false, false, true),
-        ("project_manager", false, false, false, true),
-        ("admin", false, true, true, true),
+    // (role, staff member, portal, engineering)
+    for (role, staff, portal, engineering) in [
+        ("user", false, false, false),
+        ("user", true, true, false),
+        ("developer", false, false, true),
+        ("project_manager", false, false, true),
+        ("admin", false, true, true),
     ] {
         let user = UserId::new(unique("workspace-access"));
         let roles = vec!["user".to_owned(), role.to_owned()];
@@ -132,7 +129,7 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
         )
         .await
         .expect("runtime policy");
-        for (id, expected) in WORKSPACES.iter().zip([portal, spain, engineering]) {
+        for (id, expected) in WORKSPACES.iter().zip([portal, engineering]) {
             assert_eq!(
                 allowed.contains(*id),
                 expected,

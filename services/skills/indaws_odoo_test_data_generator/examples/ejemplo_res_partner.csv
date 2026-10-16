@@ -1,6 +1,0 @@
-id,name,email,phone,street,city,zip,country_id/id,is_company,customer_rank,supplier_rank
-__demo__cliente_hotel_plaza,Hotel Plaza Mayor,info@hotelplazamayor.com,91 555 1234,Calle Mayor 23,Madrid,28013,base.es,True,1,0
-__demo__cliente_oficinas_modernas,Oficinas Modernas S.L.,comercial@oficinasmoder.es,93 666 5678,Avda. Diagonal 456,Barcelona,08006,base.es,True,1,0
-__demo__cliente_rest_gourmet,Restaurante El Gourmet,pedidos@elgourmet.com,96 777 8901,Calle Colón 89,Valencia,46004,base.es,True,1,0
-__demo__proveedor_maderas_sur,Maderas del Sur S.A.,ventas@maderasdelsur.es,95 444 3210,Polígono Industrial Sur Nave 12,Sevilla,41006,base.es,True,0,1
-__demo__proveedor_textiles,Textiles Europa S.L.,info@textileseuropa.com,91 333 2109,Calle Industrial 45,Madrid,28023,base.es,True,0,1

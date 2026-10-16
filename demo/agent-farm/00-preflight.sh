@@ -34,7 +34,7 @@ roles_sql="(SELECT unnest(roles) FROM users WHERE id = $u)"
 groups_sql="(SELECT group_id FROM group_members WHERE user_id = $u AND revoked_at IS NULL
   AND (valid_from IS NULL OR valid_from <= NOW()) AND (valid_until IS NULL OR valid_until > NOW()))"
 console=$(db_count "SELECT COUNT(*) FROM users WHERE id = $u AND roles && ARRAY['admin','platform_admin','super_admin']::text[]")
-for ent in "marketplace:$FARM_MARKETPLACE" "mcp_server:$ODOO_SERVER" "mcp_server:$BRAIN_SERVER" "plugin:indaws-management"; do
+for ent in "marketplace:$FARM_MARKETPLACE" "mcp_server:$ODOO_SERVER" "mcp_server:$BRAIN_SERVER" "plugin:dynapps-farm"; do
   t="${ent%%:*}"; e="${ent#*:}"
   row=$(sql_rows "SELECT
       COUNT(*) FILTER (WHERE access = 'allow' AND ((rule_type = 'user' AND rule_value = $u) OR (rule_type = 'role' AND rule_value IN $roles_sql) OR (rule_type = 'group' AND rule_value IN $groups_sql))) AS allows,
