@@ -1,0 +1,9 @@
+{
+  "_comment": "Relative regression budgets for compare.py --budgets: the candidate (--after) against the reference (--before), both measured in the same session on the same host. Ratios are candidate / reference.",
+  "ceiling_min_ratio": 0.9,
+  "statements_per_request_max_ratio": 1.1,
+  "overhead_p99_max_ratio": 1.2,
+  "overhead_ref": "s1-ramp-buffered-hpa-off-c50",
+  "pg_mem_max_ratio": 1.2,
+  "denial_scenarios": ["s4-hot-quota", "s6-failover", "s9-quota-enforce"]
+}

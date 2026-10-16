@@ -1393,6 +1393,10 @@ loadtest-kind-run NAME *ARGS:
 loadtest-kind-matrix FILTER=".":
     deploy/loadtest/kind/matrix.sh '{{FILTER}}'
 
+# The ~15-minute pre-release subset (scenarios.json `smoke`).
+loadtest-kind-smoke FILTER=".":
+    LOADTEST_SUITE=smoke deploy/loadtest/kind/matrix.sh '{{FILTER}}'
+
 # Image from locally built release binaries (run `just build --release` first).
 loadtest-kind-image-local:
     deploy/loadtest/kind/cluster.sh image-local

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One load-test run against the kind rig; writes reports/loadtest/kind/<ts>/<name>.*
-#   run.sh <name> [--concurrency 200] [--set u100] [--body buffered|stream|long]
+#   run.sh <name> [--concurrency 200] [--set u100] [--body buffered|stream|long|claude-code]
 #          [--duration 120s] [--pods 4] [--mock-mode ok|5xx] [--mock-latency 300:900]
 #          [--chain on|off] [--policies default|enforce] [--helm k=v[,k=v]]
 #          [--kill-pod-after SECONDS] [--out DIR]
@@ -88,6 +88,7 @@ case "$BODY" in
 m=[{"role":("user" if i%2==0 else "assistant"),"content":"turn %d: lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor." % i} for i in range(39)]
 m.append({"role":"user","content":"and now?"})
 print(json.dumps({"model":"claude-sonnet-5-5","max_tokens":32,"messages":m}))' > "$B" ;;
+    claude-code) python3 -I "$HERE/claude_code_body.py" > "$B" ;;
     *) echo "unknown body $BODY" >&2; exit 2 ;;
 esac
 $K create configmap loadtest-body --from-file=body.json="$B" --dry-run=client -o yaml | $K apply -f - >/dev/null

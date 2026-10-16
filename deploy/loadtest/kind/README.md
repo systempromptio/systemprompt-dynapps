@@ -46,6 +46,16 @@ just loadtest-kind-matrix                 # every entry in scenarios.json
 just loadtest-kind-matrix 's1|s5'         # a subset
 ```
 
+### Request bodies
+
+`--body` picks what each request sends: `buffered` and `stream` are a one-word
+`ping`, `long` is 40 plain text turns, and `claude-code` is shaped like a real
+coding-agent turn (`claude_code_body.py`): a ~30 KB `system`, 60 tool
+definitions that are identical for every user, and 50 `tool_use`/`tool_result`
+pairs of history. Use `claude-code` to see the costs a `ping` hides: the
+per-`tool_use` signature lookups and the shared tool-catalog row every request
+writes.
+
 Each run writes `reports/loadtest/kind/<ts>/<name>/` (raw data) plus
 `<name>.json` and `<name>.md` (summary). Ramps record their ceiling in
 `ceilings.json`. A ramp stops at the first step with any non-200 status, or
@@ -59,6 +69,35 @@ through NodePort 18080.
 
 Each run also proves that nothing left the cluster: the mocks' `/stats`
 counters must match `gateway_deployment_selected_total`.
+
+## Regression check between two images
+
+The full matrix takes hours; `smoke` (`just loadtest-kind-smoke`, about 15
+minutes) is the subset to run before every release: the buffered ramp to 100,
+the long conversation, the hot quota row with `policies-enforce`, and
+`s11-claude-code` at 200 concurrent.
+
+Measure the reference image and the candidate in the same session, on the same
+host, then compare them against the relative budgets in `budgets.json`:
+
+```bash
+LOADTEST_OUT=reports/loadtest/kind/ref just loadtest-kind-smoke
+LOADTEST_IMAGE_TAG=loadtest-local just loadtest-kind-deploy
+LOADTEST_OUT=reports/loadtest/kind/cand just loadtest-kind-smoke
+python3 deploy/loadtest/kind/compare.py --before reports/loadtest/kind/ref \
+  --after reports/loadtest/kind/cand --ref s1-ramp-buffered-hpa-off-c50 \
+  --budgets deploy/loadtest/kind/budgets.json
+```
+
+`compare.py --budgets` exits 1 when the candidate's ramp ceiling falls below
+90 % of the reference, DB statements per request rise above 110 %, p99
+`gateway_overhead_seconds` at 50 concurrent rises above 120 %, Postgres peak
+memory rises above 120 %, or any scenario that should not deny returns an
+error (ramp steps above the ceiling and the scenarios in `denial_scenarios`
+are exempt). Budgets are relative because absolute numbers move with the host;
+both sides must come from the same machine and session. The rig needs about
+16 CPUs, so run it by hand before a release or nightly on a dedicated runner,
+not on every pull request.
 
 ## Phase 3: a locally built image
 
