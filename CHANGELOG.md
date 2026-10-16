@@ -20,8 +20,29 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.69.1 — 2026-10-16
+
+Bridge hotfix on the published core 0.69.0: the server crates are unchanged and the bridge
+builds from core tag `v0.69.0-bridge.1` (`v0.69.0` plus bridge-only changes).
+
+### Changed
+
+- **`bridge/CORE_REF` may name a bridge-only core hotfix tag.** `scripts/check-core-ref.sh`
+  and `scripts/sync-core-version.sh` accept `v<pin>-bridge.N` in published-core mode, and
+  where a core checkout is present they refuse one that changes anything outside
+  `bin/bridge`, so a bridge fix ships without a core release.
+
 ### Fixed
 
+- **Claude Desktop connects for a Windows administrator running unelevated.** Windows ACLs
+  `HKCU\SOFTWARE\Policies` read-only for a UAC-filtered token, so Connect and Update as
+  administrator failed with `administrator rights required to write SOFTWARE\Policies\Claude
+  under HKCU` and never prompted. That denial now takes the elevated-writer-then-UAC path, and
+  a refused install reports `elevation_required` so its toast offers Update as administrator
+  rather than Sign in again.
+- **Setup health failures carry an action.** A drifted `policy <key>` row offers the Claude
+  Desktop repair; host warnings with no local repair (evidence pending, feedback outbox full)
+  offer Sync now.
 - **The nightly audit run is scored and its delivery is counted honestly.** `farm_scheduled_run` takes a `case` (the scheduler entry names `nightly_previous_month`) and launches the run as that eval case, so it gets an eval result and a judge score; migration `019_farm_eval_scheduler_trigger.sql` lets eval runs record the `scheduler` trigger. A tool result whose body carries an `error` key now counts as a failed call, and DynBrain delivery needs a write that names the created document's `id` (run 1 reported a `Parent not found` reply as delivered).
 - **Every dynapps-odoo write is gated, under either name.** `orm_post_message` and `orm_send_mail` join the nightly farm's denied tools, the governance write-gate also matches `post` and `send`, and it covers the bridge's `mcp__plugin_dynapps-portal_dynapps-odoo__` names as well as the gateway's `mcp__dynapps-odoo__`.
 
