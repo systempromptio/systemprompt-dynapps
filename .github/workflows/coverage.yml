@@ -119,9 +119,11 @@ jobs:
           tool: cargo-nextest
       - uses: Swatinem/rust-cache@v2
         with:
+          # scripts/coverage.sh builds root and tests/ into one shared target
+          # dir and bridge/ into its own; these must name those dirs or the
+          # cache saves nothing it later restores.
           workspaces: |
-            . -> coverage-report/target-root
-            tests -> ../coverage-report/target-tests
+            . -> coverage-report/target-shared
             bridge -> ../coverage-report/target-bridge
           # The instrumented build is a different rustflags set from `test`,
           # so it must not share that job's cache entry.

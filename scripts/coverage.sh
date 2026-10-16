@@ -126,7 +126,10 @@ echo "==> [1/3] Instrumented tests: root workspace"
 run_instrumented "$TBASE-shared" --workspace --tests
 
 echo "==> [2/3] Instrumented tests: tests/ workspace"
-run_instrumented "$TBASE-shared" --manifest-path tests/Cargo.toml --workspace
+# Only tests/ declares the `coverage` nextest profile (tests/.config/nextest.toml,
+# resolved from the workspace root); the other two define no tests, and nextest
+# refuses a profile its config does not name.
+run_instrumented "$TBASE-shared" --manifest-path tests/Cargo.toml --workspace --profile coverage
 
 echo "==> [3/3] Instrumented tests: bridge/ workspace"
 run_instrumented "$TBASE-bridge" --manifest-path bridge/Cargo.toml --workspace
@@ -156,11 +159,19 @@ find "$PROFDIR" -name '*.profraw' > "$ROOT/coverage-report/profraw-list.txt"
 # very tests this job is meant to measure.
 # Why: BSD find (macOS) has no -printf, so the mtime is read with stat on
 # either platform instead; GNU stat and BSD stat spell the format differently.
+# The flavour is probed once: GNU `stat -f` is not an error but --file-system,
+# which prints "Blocks: Total: ..." to stdout and fed `Total:` to llvm-cov as
+# an object.
+if stat -c '%Y' / >/dev/null 2>&1; then
+    STAT_MTIME=(stat -c '%Y %n')
+else
+    STAT_MTIME=(stat -f '%m %N')
+fi
 collect_bin_candidates() {
     find "$1/debug/deps" -maxdepth 1 -type f -perm -u+x ! -name '*.d' ! -name '*.so' \
         ! -name '*.dylib' ! -name '*.rlib' ! -name '*.rmeta' 2>/dev/null \
         | while IFS= read -r bin; do
-            if stat -f '%m %N' "$bin" 2>/dev/null; then :; else stat -c '%Y %n' "$bin"; fi
+            if [ -f "$bin" ]; then "${STAT_MTIME[@]}" "$bin"; fi
           done | sort -rn
 }
 BINS="$(
@@ -176,7 +187,9 @@ if [ "$BIN_COUNT" -eq 0 ]; then
 fi
 echo "==> Reporting over $BIN_COUNT globally deduplicated test objects"
 OBJ_ARGS=()
-for b in $BINS; do OBJ_ARGS+=(--object "$b"); done
+for b in $BINS; do
+    if [ -f "$b" ]; then OBJ_ARGS+=(--object "$b"); fi
+done
 
 # Denominator exclusions, kept explicit per-file (per-directory only for test
 # code) so ordinary testable code added alongside them still counts:
