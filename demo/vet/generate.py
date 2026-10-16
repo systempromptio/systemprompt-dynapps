@@ -991,9 +991,14 @@ INSTALL_RATE = {"vg-data-solutions": 0.9, "vg-group-finance": 0.85, "vg-labs-dia
                 "vg-clinics-nl-frontdesk": 0.62, "vg-ambulatory-field": 0.6, "vg-clinics-de-acquired": 0.35}
 INSTALLS = []
 for u in people:
+    # One workspace per person: the skills page sums installs across
+    # marketplaces over distinct entitled people, so a person counted in two
+    # marketplaces would push the rate past 100%.
     if RNG.random() > INSTALL_RATE[u["group"]]:
+        if RNG.random() < 0.5:
+            INSTALLS.append((u["id"], "who_am_i", "claude-desktop", CREATED + timedelta(days=RNG.randint(1, 20))))
         continue
-    keys = {"who_am_i"}
+    keys = set()
     for p in u["projects"]:
         keys.update(s.split(":")[1] for s in PROJECT_PALETTE[p]["skills"])
     host = "claude-code" if u["group"] == "vg-data-solutions" else "claude-desktop"

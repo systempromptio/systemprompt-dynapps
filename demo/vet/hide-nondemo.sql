@@ -45,6 +45,8 @@ SELECT pg_temp.hide('plugin_usage_events', 'user_id IN (SELECT id FROM nd_users)
 SELECT pg_temp.hide('plugin_session_summaries', 'user_id IN (SELECT id FROM nd_users)');
 SELECT pg_temp.hide('plugin_usage_daily', 'user_id IN (SELECT id FROM nd_users)');
 SELECT pg_temp.hide('admin_usage_daily_rollups', 'user_id IN (SELECT id FROM nd_users)');
+SELECT pg_temp.hide('managed_consumer_session_bindings', 'receipt_id IN (SELECT id FROM managed_installation_receipts WHERE consumer_id IN (SELECT id FROM nd_users))');
+SELECT pg_temp.hide('managed_installation_receipts', 'consumer_id IN (SELECT id FROM nd_users)');
 SELECT pg_temp.hide('agent_runs', 'id IN (SELECT id FROM nd_runs)');
 
 -- archive the people (not the instance admin, who signs in to run the demo)

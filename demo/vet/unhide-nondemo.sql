@@ -11,7 +11,8 @@ SELECT pg_temp.unhide(t) FROM unnest(ARRAY[
     'ai_request_scopes', 'ai_request_attributions', 'ai_request_client_evidence', 'ai_request_payloads',
     'ai_safety_findings', 'mcp_artifacts', 'agent_run_events', 'agent_farm_runs', 'trace_facts',
     'conversation_facts', 'conversation_analyses', 'governance_decisions', 'plugin_usage_events',
-    'plugin_session_summaries', 'plugin_usage_daily', 'admin_usage_daily_rollups']) AS t;
+    'plugin_session_summaries', 'plugin_usage_daily', 'admin_usage_daily_rollups',
+    'managed_installation_receipts', 'managed_consumer_session_bindings']) AS t;
 UPDATE users u SET status = a.prior_status, roles = a.prior_roles, archived_at = NULL, archive_reason = NULL
   FROM demo_hidden.archived_users a WHERE a.id = u.id;
 DROP SCHEMA demo_hidden CASCADE;
