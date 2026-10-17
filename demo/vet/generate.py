@@ -716,10 +716,11 @@ for k, (slug, project, ds_model) in enumerate(PAIRS):
     start = to_utc(day_local.replace(hour=10, minute=15)) + timedelta(minutes=k * 7)
     prompt = f"[A/B {k + 1}] " + PROJECT_PALETTE[project]["prompts"][k % len(PROJECT_PALETTE[project]["prompts"])]
     state = RNG.getstate()
-    run_session(u, start, 6, project, "claude-code", day_local.strftime("%Y%m%d"), f"ab-claude-{k}",
+    run_session(u, start, 6, project, "claude-code", day_local.strftime("%Y%m%d") + "-ab", f"ab-claude-{k}",
                 forced_model="claude-opus-5-5", forced_prompt=prompt)
     RNG.setstate(state)
-    run_session(u, start + timedelta(minutes=40), 6, project, "claude-code", day_local.strftime("%Y%m%d"),
+    # own gateway session, so the request page's session totals stay per model
+    run_session(u, start + timedelta(minutes=40), 6, project, "claude-code", day_local.strftime("%Y%m%d") + "-ds",
                 f"ab-deepseek-{k}", forced_model=ds_model, forced_prompt=prompt,
                 shape_model="claude-opus-5-5")
 
