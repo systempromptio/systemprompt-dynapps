@@ -18,8 +18,8 @@
 //! vendor's rate card.
 //!
 //! These tests pin the served id set, the live-provider invariant (Anthropic
-//! and `DeepSeek`, one secret each, every route onto one of them), the `DeepSeek`
-//! rate card, the Sonnet 5 rate that was
+//! and `DeepSeek`, one secret each, every route onto one of them), the
+//! `DeepSeek` rate card, the Sonnet 5 rate that was
 //! wrong here until 2026-09-04, the Opus 5.5 rate card, and the fact that the
 //! gateway's default model resolves inside the catalog through the `claude-*`
 //! route. Changing any of them is then a deliberate, review-visible edit rather
