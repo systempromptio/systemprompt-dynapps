@@ -94,11 +94,18 @@ HOUR_W = [0.05, 0.02, 0.01, 0.01, 0.01, 0.03, 0.12, 0.45, 0.85, 1.0, 1.3, 1.55,
 # Model mix (Claude only) with per-model cache-read medians, output medians
 # and price per token in microdollars (input, output, cache read, cache write).
 MODELS = {
-    "claude-opus-5-5": dict(w=0.42, cr=105000, out=360, lat=5100, price=(2.0, 25.0, 0.2, 3.75)),
-    "claude-haiku-4-5-20251001": dict(w=0.30, cr=34000, out=160, lat=2400, price=(1.0, 5.0, 0.1, 1.25)),
-    "claude-sonnet-5": dict(w=0.26, cr=120000, out=320, lat=5000, price=(2.0, 11.0, 0.2, 2.4)),
-    "claude-opus-5": dict(w=0.02, cr=95000, out=420, lat=6200, price=(2.0, 25.0, 0.2, 3.75)),
+    "claude-opus-5-5": dict(w=0.44, cr=105000, out=360, lat=5100, price=(4.0, 20.0, 0.2, 5.0)),
+    "claude-haiku-5-5": dict(w=0.30, cr=34000, out=160, lat=2400, price=(0.1, 0.5, 0.01, 0.125)),
+    "claude-sonnet-5-5": dict(w=0.26, cr=120000, out=320, lat=5000, price=(2.0, 10.0, 0.2, 2.5)),
 }
+# DeepSeek, as declared in services/ai/providers.yaml (route deepseek-route).
+# Reachable only by an explicit deepseek-* id, so it is never in the default mix.
+DEEPSEEK = {
+    "deepseek-flash": dict(w=0.7, cr=60000, out=300, lat=3200, price=(0.3, 1.2, 0.006, 0.3)),
+    "deepseek-v4-pro": dict(w=0.3, cr=100000, out=380, lat=6400, price=(1.32, 3.96, 0.044, 1.32)),
+}
+ALL_MODELS = {**MODELS, **DEEPSEEK}
+ROUTE = {"anthropic": "route:claude-star-4203d1", "deepseek": "route:deepseek-route"}
 
 GOV_CHAIN_PASS = [
     {"detail": "No plaintext secrets detected in governed input", "result": "pass", "policy_id": "secret_scan"},
@@ -518,7 +525,7 @@ def ramp(day_index):
     return min(1.0, 0.3 + 0.7 * (day_index / 22.0) ** 1.3)
 
 
-def run_session(u, start, n_req, project, client_kind, day_key, idx):
+def run_session(u, start, n_req, project, client_kind, day_key, idx, forced_model=None, forced_prompt=None, shape_model=None):
     palette = PROJECT_PALETTE[project]
     sess_hook = uid("hooksess", u["slug"], day_key, idx)
     bridge = "sess_" + uid("bridge", u["slug"], day_key)
@@ -540,7 +547,7 @@ def run_session(u, start, n_req, project, client_kind, day_key, idx):
             if not first:
                 t += timedelta(seconds=RNG.randint(90, 900))
                 hook_event(u, sess_hook, "Stop", t - timedelta(seconds=5))
-            prompt_text = RNG.choice(palette["prompts"])
+            prompt_text = forced_prompt or RNG.choice(palette["prompts"])
             slash = first and RNG.random() < 0.08
             if slash:
                 sk = RNG.choice(palette["skills"]).split(":")
@@ -553,10 +560,12 @@ def run_session(u, start, n_req, project, client_kind, day_key, idx):
                              "permission_mode": "default"})
         if t > END_UTC:
             break
-        model = pick_w([(m, v["w"]) for m, v in MODELS.items()])
-        if client_kind == "claude-code" and i > 0 and RNG.random() < 0.25:
-            model = "claude-haiku-4-5-20251001"  # tool-loop side calls
-        spec = MODELS[model]
+        model = forced_model or pick_w([(m, v["w"]) for m, v in MODELS.items()])
+        if not forced_model and client_kind == "claude-code" and i > 0 and RNG.random() < 0.25:
+            model = "claude-haiku-5-5"  # tool-loop side calls
+        # A/B pairs keep the Claude run's token shape and price only the model
+        spec = dict(ALL_MODELS[shape_model or model], price=ALL_MODELS[model]["price"])
+        provider = "deepseek" if model in DEEPSEEK else "anthropic"
         probe = i == 0 and RNG.random() < 0.06
         req_id = uid("req", sess_hook, i)
         trace = uid("trace", req_id)
@@ -574,8 +583,8 @@ def run_session(u, start, n_req, project, client_kind, day_key, idx):
         n_tools = 0 if probe else (0 if RNG.random() < 0.4 else (1 if RNG.random() < 0.75 else 2))
         msg_target = 2 + i * 2 + RNG.randint(0, 6)
         add("ai_requests", REQ_COLS,
-            [req_id, req_id, u["id"], bridge, ctx, gconv, sess_hook, trace, "anthropic", model, model,
-             "route:claude-native-tools;when:tool_names_any", 64000,
+            [req_id, req_id, u["id"], bridge, ctx, gconv, sess_hook, trace, provider, model, model,
+             ROUTE[provider], 64000,
              None if status == "failed" else inp + out + cr + cw, None if status == "failed" else inp,
              None if status == "failed" else out, cost, lat if status == "completed" else 0,
              int(lat * 0.92), None if status == "failed" else ("tool_use" if n_tools else "end_turn"),
@@ -648,6 +657,7 @@ def run_session(u, start, n_req, project, client_kind, day_key, idx):
 
 
 people = [u for u in users.values() if u["kind"] == "person"]
+DEEPSEEK_FROM = datetime(2026, 9, 28)  # the evaluation starts mid-window
 day = START_LOCAL
 day_index = 0
 while day <= END_LOCAL:
@@ -680,11 +690,38 @@ while day <= END_LOCAL:
             project = RNG.choice(u["projects"]) if RNG.random() < 0.4 else u["projects"][0]
             ck = client_kind if RNG.random() < 0.85 else (
                 "claude-code" if client_kind == "claude-desktop" else "claude-desktop")
-            run_session(u, start, n, project, ck, day_key, idx)
+            forced = None
+            if (u["group"] == "vg-data-solutions" or project == "vg-metrics-pilot") and \
+                    day >= DEEPSEEK_FROM and RNG.random() < 0.3:
+                forced = pick_w([(m, v["w"]) for m, v in DEEPSEEK.items()])
+            run_session(u, start, n, project, ck, day_key, idx, forced_model=forced)
             idx += 1
             n_day -= n
     day += timedelta(days=1)
     day_index += 1
+
+# Side-by-side pairs: the same task, same user, same token shape, run once on
+# Claude and once on DeepSeek, so the cost comparison reads like for like.
+PAIRS = [("kevin.hermans", "vg-metrics-pilot", "deepseek-v4-pro"),
+         ("julie.thys", "vg-metrics-pilot", "deepseek-flash"),
+         ("sarah.dumont", "vg-ticket-followup", "deepseek-flash"),
+         ("arthur.pauwels", "vg-invoice-recon", "deepseek-v4-pro"),
+         ("vincent.moreau", "vg-metrics-pilot", "deepseek-flash"),
+         ("kevin.hermans", "vg-invoice-recon", "deepseek-flash"),
+         ("julie.thys", "vg-metrics-pilot", "deepseek-v4-pro"),
+         ("sarah.dumont", "vg-metrics-pilot", "deepseek-v4-pro")]
+for k, (slug, project, ds_model) in enumerate(PAIRS):
+    u = users[slug]
+    day_local = datetime(2026, 10, 5) + timedelta(days=k + (2 if k >= 4 else 0))
+    start = to_utc(day_local.replace(hour=10, minute=15)) + timedelta(minutes=k * 7)
+    prompt = "[A/B] " + PROJECT_PALETTE[project]["prompts"][k % len(PROJECT_PALETTE[project]["prompts"])]
+    state = RNG.getstate()
+    run_session(u, start, 6, project, "claude-code", day_local.strftime("%Y%m%d"), f"ab-claude-{k}",
+                forced_model="claude-opus-5-5", forced_prompt=prompt)
+    RNG.setstate(state)
+    run_session(u, start + timedelta(minutes=40), 6, project, "claude-code", day_local.strftime("%Y%m%d"),
+                f"ab-deepseek-{k}", forced_model=ds_model, forced_prompt=prompt,
+                shape_model="claude-opus-5-5")
 
 FARM_REQ_START = len(TABLES.get("ai_requests", ([], []))[1])
 
@@ -704,7 +741,7 @@ add("agent_farms", ["id", "name", "description", "marketplace_id", "source_repo"
 # (agent id, name, project, mode, identity slug, client, trigger, cadence, model, budget, tools, summary)
 AGENTS = [
     ("dunning_reminders", "Dunning reminders", "vg-dunning", "service_account", "svc-dunning-farm", None,
-     "scheduler", "weekday02", "claude-sonnet-5", 3.0,
+     "scheduler", "weekday02", "claude-sonnet-5-5", 3.0,
      T_ODOO_READ + T_ODOO_PARTNER + T_ODOO_WRITE,
      "Drafted {w} reminder activities for {r} overdue invoices across Clinics BE and NL; {s} skipped (dispute flag)."),
     ("invoice_reconciliation", "Odoo invoice reconciliation", "vg-invoice-recon", "client", "svc-finance-client",
@@ -712,15 +749,15 @@ AGENTS = [
      T_ODOO_READ + T_ODOO_PARTNER + [("odoo", "note_add", True)],
      "Matched {r} bank lines to invoices; {w} reconciliation notes logged; {s} lines left for Group Finance review."),
     ("noshow_followup", "Appointment no-show follow-up", "vg-no-shows", "service_account", "svc-noshow-farm",
-     None, "scheduler", "weekday0630", "claude-haiku-4-5-20251001", 1.5,
+     None, "scheduler", "weekday0630", "claude-haiku-5-5", 1.5,
      T_ODOO_READ + T_ODOO_PARTNER + [("odoo", "activity_create", True)],
      "Found {r} no-shows yesterday; created {w} rebooking activities for front desk; {s} clients opted out."),
     ("lab_results_digest", "Lab results digest", "vg-lab-results", "user", "katrien.jacobs", None,
-     "dashboard", "weekday_often", "claude-sonnet-5", 2.0,
+     "dashboard", "weekday_often", "claude-sonnet-5-5", 2.0,
      T_ODOO_READ[:2] + T_BRAIN + T_BRAIN_WRITE,
      "Summarised {r} result panels for referring vets; published {w} digest page(s) to the knowledge base."),
     ("ticket_followup", "Ticket follow-up", "vg-ticket-followup", "user", "elke.maes", None,
-     "mcp", "sometimes", "claude-sonnet-5", 2.0,
+     "mcp", "sometimes", "claude-sonnet-5-5", 2.0,
      T_ODOO_READ[:2] + T_BRAIN + [("odoo", "note_add", True)],
      "Reviewed {r} stale tickets; {w} follow-up notes logged; {s} escalated to Data & Solutions."),
     ("metrics_pilot_snapshot", "Metrics pilot snapshot", "vg-metrics-pilot", "user", "kevin.hermans", None,
@@ -829,7 +866,7 @@ for a in AGENTS:
             done = t + timedelta(milliseconds=lat)
             add("ai_requests", REQ_COLS,
                 [req_id, req_id, u["id"], bridge, ctx, "ctx_" + sha(ctx)[:16], None, trace, "anthropic", model,
-                 model, "route:claude-native-tools;when:tool_names_any", 32000, 30 + out + cr + cw, 30, out, c,
+                 model, ROUTE["anthropic"], 32000, 30 + out + cr + cw, 30, out, c,
                  lat, int(lat * 0.93), "tool_use" if i < turns - 1 else "end_turn", True, cr, cw, 0, True,
                  "completed", None, "user", u["id"], "turn", "claude-code", "bridge-secret", 0, t, done, done,
                  True, "anthropic.messages"])
@@ -1037,7 +1074,7 @@ for ctx, user_id, client_sess, project, last_at, n_req in CONV_META:
     add("conversation_analyses", AN_COLS,
         [ctx, user_id, "classified", CATEGORY[project], f"{title}: worked through Odoo records for {project[3:]}.",
          pgarr([project[3:], "odoo"]), pgarr([s.split(":")[1].replace("_", "-") for s in PROJECT_PALETTE[project]["skills"][:1]]),
-         outcome, round(RNG.uniform(0.7, 0.97), 2), "anthropic", "claude-haiku-4-5-20251001", n_req, last_at, at, 1,
+         outcome, round(RNG.uniform(0.7, 0.97), 2), "anthropic", "claude-haiku-5-5", n_req, last_at, at, 1,
          at, title, completion, RNG.choice(RATIONALE[outcome]), RNG.randint(3000, 12000), RNG.randint(150, 400),
          RNG.randint(800, 3500), "automatic", at, at])
 
