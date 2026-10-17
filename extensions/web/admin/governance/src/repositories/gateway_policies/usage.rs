@@ -1,9 +1,10 @@
 //! Usage against ceiling, per subject, for every window the gateway is
 //! enforcing right now.
 //!
-//! The gateway reserves against one bucket per `(subject, window)` — the
-//! one whose `window_start` is the current aligned boundary — so that is
-//! the one bucket read here; nothing is summed across periods. A subject
+//! The gateway reserves against the buckets of `(subject, window)` whose
+//! `window_start` is the current aligned boundary — one row per `shard`, so
+//! a shared subject's usage is the sum of its shards — and that is what is
+//! read here; nothing is summed across periods. A subject
 //! with no bucket has made no request in the window and is not listed.
 
 use chrono::{DateTime, Utc};
@@ -43,12 +44,17 @@ pub async fn get_window_usage(
         window_start + chrono::Duration::seconds(i64::from(window.window_seconds.max(1)));
     let subjects = sqlx::query_as!(
         SubjectUsage,
-        r"SELECT subject_kind, subject_id, requests, input_tokens, output_tokens,
-                 cost_microdollars, updated_at
+        r#"SELECT subject_kind, subject_id,
+                 SUM(requests)::BIGINT AS "requests!",
+                 SUM(input_tokens)::BIGINT AS "input_tokens!",
+                 SUM(output_tokens)::BIGINT AS "output_tokens!",
+                 SUM(cost_microdollars)::BIGINT AS "cost_microdollars!",
+                 MAX(updated_at) AS "updated_at!"
             FROM ai_quota_buckets
            WHERE subject_kind = $1 AND window_seconds = $2 AND window_start = $3
-           ORDER BY cost_microdollars DESC, requests DESC, subject_id ASC
-           LIMIT 500",
+           GROUP BY subject_kind, subject_id
+           ORDER BY 6 DESC, 3 DESC, subject_id ASC
+           LIMIT 500"#,
         window.subject,
         window.window_seconds,
         window_start

@@ -111,6 +111,7 @@ fn normalise_window(window: &QuotaWindow) -> QuotaWindow {
         max_input_tokens: window.max_input_tokens,
         max_output_tokens: window.max_output_tokens,
         max_cost_microdollars: window.max_cost_microdollars,
+        calendar: window.calendar,
     }
 }
 
@@ -120,6 +121,7 @@ pub fn normalise_spec(spec: &GatewayPolicySpec) -> GatewayPolicySpec {
         quota_mode: spec.quota_mode,
         quota_windows: spec.quota_windows.iter().map(normalise_window).collect(),
         safety: spec.safety.clone(),
+        rate_windows: spec.rate_windows.clone(),
     }
 }
 

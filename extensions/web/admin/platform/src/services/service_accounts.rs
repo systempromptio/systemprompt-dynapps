@@ -96,16 +96,16 @@ impl ServiceAccounts {
                 "An account with that email already exists".to_owned(),
             ));
         }
-        let user = self
+        let ensured = self
             .users
-            .insert_service_account(NewServiceAccount {
+            .ensure_service_account(NewServiceAccount {
                 name: name.to_owned(),
                 email: email.to_owned(),
                 created_by: created_by.clone(),
             })
             .await
             .map_err(AdminError::internal)?;
-        Ok(user.id)
+        Ok(ensured.user.id)
     }
 
     pub async fn delete(&self, user: &UserId, actor: &UserId) -> AdminResult<()> {

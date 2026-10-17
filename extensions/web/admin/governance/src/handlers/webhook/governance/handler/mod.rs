@@ -22,7 +22,7 @@ use systemprompt_security::authz::Decision;
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, AuditOrigin, AuditTarget, DecisionAudit, GovernanceEngine, GovernedInput,
-    GovernedTarget, PolicyContext, PrincipalSnapshot, record_decision,
+    GovernedTarget, PolicyContext, PrincipalSnapshot, RateChargeSubject, record_decision,
 };
 
 use systemprompt_web_admin_core::repositories::ingestion::usage as ingestion;
@@ -94,6 +94,13 @@ async fn evaluate_and_record(
     governed: Governed<'_>,
 ) -> Result<Decision, &'static str> {
     let call_id = CallId::generate();
+    let rate_counts = engine
+        .charge_rate_windows(RateChargeSubject {
+            session: governed.session_id,
+            user: &governed.user_id,
+            call: &call_id,
+        })
+        .await;
     let mut evaluation = engine.evaluate(&PolicyContext {
         target: governed.target.clone(),
         agent_scope: AgentScope::User {
@@ -105,6 +112,7 @@ async fn evaluate_and_record(
         user_id: &governed.user_id,
         input: governed.input,
         call_id: &call_id,
+        rate_counts: &rate_counts,
     });
     if let Some(detail) = governed.allowlist_violation {
         farm_allowlist::enforce(&mut evaluation, detail);

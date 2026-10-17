@@ -164,6 +164,7 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
         windows: std::slice::from_ref(&tiny),
         fault_mode: systemprompt::manifest::services::QuotaFaultMode::default(),
         estimate: QuotaEstimate::default(),
+        sharding: systemprompt::manifest::profile::QuotaConfig::default(),
     };
 
     let first = precheck_and_reserve(&buckets, params)

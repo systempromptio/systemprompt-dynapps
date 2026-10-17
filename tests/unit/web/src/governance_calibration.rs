@@ -7,9 +7,12 @@ use systemprompt_security::policy::secrets::redact_spans;
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
-    PolicyContext,
+    PolicyContext, RateCounts,
 };
 use systemprompt_web_admin_governance::gateway_safety::PiiScanner;
+
+// Why: this engine enables secret_scan alone, so no policy reads a rate window.
+static NO_RATE_WINDOWS: RateCounts = RateCounts::empty();
 
 fn engine(mode: &str) -> GovernanceEngine {
     GovernanceEngine::from_config(
@@ -38,6 +41,7 @@ fn context<'a>(
         session_id: session,
         call_id: call,
         input,
+        rate_counts: &NO_RATE_WINDOWS,
     }
 }
 

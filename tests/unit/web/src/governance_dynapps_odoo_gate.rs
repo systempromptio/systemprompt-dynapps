@@ -8,12 +8,12 @@
 //! would-be refusal is recorded as `Warn`; restoring `mode: enforce` turns
 //! these back to `Deny`.
 
-use systemprompt::identifiers::{CallId, McpToolName, SessionId, UserId};
+use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
 use systemprompt_security::authz::types::{Decision, DecisionTag};
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
-    PolicyContext,
+    PolicyContext, RateCounts,
 };
 
 fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
@@ -25,6 +25,8 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
     let session = SessionId::generate();
     let call = CallId::generate();
     let input = GovernedInput::tool_arguments(McpToolInput::new(serde_json::json!({})));
+    let mut rate_counts = RateCounts::empty();
+    rate_counts.record(PolicyId::new("rate_limit"), 1);
     engine
         .evaluate(&PolicyContext {
             target: GovernedTarget::Tool {
@@ -39,6 +41,7 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
             session_id: &session,
             call_id: &call,
             input: &input,
+            rate_counts: &rate_counts,
         })
         .decision
 }

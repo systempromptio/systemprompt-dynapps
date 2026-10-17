@@ -18,14 +18,14 @@
 use std::path::PathBuf;
 
 use serde_json::json;
-use systemprompt::identifiers::{CallId, McpToolName, SessionId, UserId};
+use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
 use systemprompt_security::authz::list_governance_warnings;
 use systemprompt_security::authz::types::DecisionTag;
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, AuditOrigin, AuditTarget, ChainEntryResult, DecisionAudit, Evaluation,
     GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput, PolicyContext,
-    PolicyMode, PrincipalSnapshot, record_decision,
+    PolicyMode, PrincipalSnapshot, RateCounts, record_decision,
 };
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
@@ -89,6 +89,14 @@ impl<'a> Call<'a> {
     }
 
     fn evaluate(&self, engine: &GovernanceEngine) -> Evaluation {
+        self.evaluate_as_call(engine, 1)
+    }
+
+    // Why: core charges rate_limit's window in Postgres before evaluation and
+    // hands the chain the call's position; a test of the chain alone states it.
+    fn evaluate_as_call(&self, engine: &GovernanceEngine, position: u64) -> Evaluation {
+        let mut rate_counts = RateCounts::empty();
+        rate_counts.record(PolicyId::new("rate_limit"), position);
         engine.evaluate(&PolicyContext {
             target: self.target.clone(),
             agent_scope: AgentScope::User {
@@ -100,6 +108,7 @@ impl<'a> Call<'a> {
             user_id: self.user,
             input: &self.input,
             call_id: &self.id,
+            rate_counts: &rate_counts,
         })
     }
 
@@ -308,9 +317,9 @@ fn an_exhausted_rate_limit_window_is_a_warn_from_rate_limit() {
     let session = SessionId::new(unique("session"));
 
     let mut last = None;
-    for _ in 0..301 {
+    for position in 1..=301 {
         let call = Call::prompt("hello", &user, &session);
-        last = Some(call.evaluate(&engine));
+        last = Some(call.evaluate_as_call(&engine, position));
     }
     let evaluation = last.expect("301 evaluations ran");
 

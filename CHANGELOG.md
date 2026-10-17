@@ -20,6 +20,27 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **DeepSeek is a second live upstream** (user-approved 2026-10-17), so the console can show a
+  cost comparison against Claude. `services/ai/providers.yaml` gains the `deepseek` provider on
+  DeepSeek's Anthropic-compatible endpoint (`https://api.deepseek.com/anthropic/v1`, anthropic
+  wire: streaming, tools and thinking blocks pass through) serving `deepseek-flash`
+  (DeepSeek-V4.1-Flash) and `deepseek-v4-pro` at DeepSeek's peak list rates;
+  `services/ai/gateway.yaml` routes only `deepseek-*` ids to it, and Claude stays the default
+  provider and model. The key is the `deepseek` profile secret. A running instance needs the new
+  `gateway_route/deepseek-route` entitlement applied from `/admin/sync` (insert-only is not
+  enough: the entity default changes from closed to open, so apply "overwrite" scoped to it).
+
+### Changed
+
+- **`next` builds against core `next` again** (`bridge/CORE_REF` = 37c000a36): both
+  `[patch.crates-io]` blocks are active. Integration for core's breaking changes: the governance
+  hook charges core's Postgres rate windows before evaluating the chain (`rate_limit` now
+  refuses an uncharged call), the calendar-month quota rewrite carries buckets per `shard` and
+  the quota usage page sums a window's shards, service accounts are created through
+  `ensure_service_account`, and farm runs mint keys under `security.api_keys.max_lifetime_days`.
+
 ## 0.69.1 — 2026-10-16
 
 Bridge hotfix on the published core 0.69.0: the server crates are unchanged and the bridge
