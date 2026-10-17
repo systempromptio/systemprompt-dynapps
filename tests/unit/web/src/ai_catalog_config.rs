@@ -7,7 +7,9 @@
 //! Claude is served from Anthropic's own API under the bare `claude-*` ids,
 //! listed to every client. Since 2026-10-16 the installation is Anthropic-only
 //! by customer requirement: every other upstream (Gemini, Vertex, Cerebras) is
-//! commented out of the file and its secret removed from the profiles.
+//! commented out of the file and its secret removed from the profiles. On
+//! 2026-10-17 `DeepSeek` was added beside it (user-approved, for a cost
+//! comparison against Claude), reachable only by an explicit `deepseek-*` id.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -15,8 +17,9 @@
 //! every finance report derived from them — nothing downstream re-checks the
 //! vendor's rate card.
 //!
-//! These tests pin the served id set, the Anthropic-only invariant (one live
-//! provider, one secret, every route onto it), the Sonnet 5 rate that was
+//! These tests pin the served id set, the live-provider invariant (Anthropic
+//! and `DeepSeek`, one secret each, every route onto one of them), the `DeepSeek`
+//! rate card, the Sonnet 5 rate that was
 //! wrong here until 2026-09-04, the Opus 5.5 rate card, and the fact that the
 //! gateway's default model resolves inside the catalog through the `claude-*`
 //! route. Changing any of them is then a deliberate, review-visible edit rather
@@ -204,11 +207,14 @@ fn the_gateway_default_model_is_served_by_anthropic_only() {
 }
 
 #[test]
-fn every_route_goes_to_anthropic() {
+fn every_route_goes_to_a_live_provider() {
     for route in &gateway().routes {
         assert!(
-            matches!(route.provider.as_str(), "anthropic" | "e2e-mock"),
-            "route {:?} reaches {}: the gateway is Anthropic-only",
+            matches!(
+                route.provider.as_str(),
+                "anthropic" | "deepseek" | "e2e-mock"
+            ),
+            "route {:?} reaches {}: only Anthropic and DeepSeek are live",
             route.name,
             route.provider.as_str()
         );
@@ -216,27 +222,68 @@ fn every_route_goes_to_anthropic() {
 }
 
 // Why: the customer requires that only their Anthropic API key is used; the
-// other providers' secrets were deleted on 2026-10-16.
+// other providers' secrets were deleted on 2026-10-16. DeepSeek was added on
+// 2026-10-17 with the user's approval.
 #[test]
-fn anthropic_is_the_only_live_provider() {
+fn anthropic_and_deepseek_are_the_only_live_providers() {
     let names: Vec<String> = registry()
         .providers
         .iter()
         .map(|p| p.name.as_str().to_owned())
         .collect();
-    assert_eq!(names, ["anthropic", "e2e-mock"]);
+    assert_eq!(names, ["anthropic", "deepseek", "e2e-mock"]);
 }
 
 #[test]
-fn no_provider_names_a_secret_other_than_anthropic() {
+fn every_provider_reads_a_secret_the_installation_holds() {
     for p in &registry().providers {
+        let expected = if p.name.as_str() == "deepseek" {
+            "deepseek"
+        } else {
+            "anthropic"
+        };
         assert_eq!(
             p.api_key_secret.as_str(),
-            "anthropic",
-            "{} reads a secret this installation no longer holds",
+            expected,
+            "{} reads a secret this installation does not hold",
             p.name.as_str()
         );
     }
+}
+
+// Why: DeepSeek bills by time of day; the catalog carries the peak list rate
+// and bills a cache write at the cache-miss rate (DeepSeek charges no write).
+#[test]
+fn deepseek_carries_its_peak_rate_card_and_only_deepseek_ids_reach_it() {
+    let deepseek = provider("deepseek");
+    assert!(!deepseek.governance.european && !deepseek.governance.no_retain);
+    assert_rate_card(
+        model(&deepseek.models, "deepseek-flash"),
+        0.3,
+        1.2,
+        0.006,
+        0.3,
+    );
+    assert_rate_card(
+        model(&deepseek.models, "deepseek-v4-pro"),
+        1.32,
+        3.96,
+        0.044,
+        1.32,
+    );
+    let spec = gateway();
+    let route = spec
+        .routes
+        .iter()
+        .find(|r| r.matches("deepseek-flash"))
+        .expect("a route for deepseek-flash");
+    assert_eq!(route.provider.as_str(), "deepseek");
+    assert!(
+        !spec
+            .routes
+            .iter()
+            .any(|r| r.matches("claude-sonnet-5-5") && r.provider.as_str() == "deepseek")
+    );
 }
 
 #[test]

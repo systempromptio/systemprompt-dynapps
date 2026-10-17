@@ -9,6 +9,12 @@ ai:
       enabled: true
       google_search_enabled: true
       default_model: claude-sonnet-5-5
+    # Added 2026-10-17 (user-approved) for the Claude cost comparison; not
+    # the default provider.
+    deepseek:
+      enabled: true
+      google_search_enabled: false
+      default_model: deepseek-flash
     # Anthropic-only by customer requirement (2026-10-16): the secrets for the
     # providers below were removed. Restore = uncomment here and in
     # services/ai/providers.yaml, then add the secret to the profile.

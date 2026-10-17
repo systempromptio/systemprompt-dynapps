@@ -12,6 +12,12 @@
 # restore is: uncomment the entry, add its secret to the profile, and add a
 # gateway route (services/ai/gateway.yaml) and an ai.providers entry
 # (services/ai/config.yaml) for it.
+#
+# DEEPSEEK ADDED (Ed, 2026-10-17). The user approved DeepSeek as a second
+# live upstream, locally and in production, so the console can show a cost
+# comparison against Claude. Claude stays the default provider and default
+# model; DeepSeek is reachable only by asking for a deepseek-* id. Its key is
+# the `deepseek` secret, in the profile secret stores only.
 providers:
 - name: anthropic
   # Claude on Anthropic's own API, by the customer's API key. This is the
@@ -817,6 +823,75 @@ providers:
 #     limits:
 #       context_window: 131072
 #       max_output_tokens: 32768
+- name: deepseek
+  # DeepSeek on its own API, through its Anthropic-compatible endpoint: the
+  # anthropic wire streams, calls tools and returns thinking blocks there
+  # unchanged (checked directly against the endpoint, 2026-10-17). Not
+  # European, and DeepSeek's terms allow it to retain prompts.
+  #
+  # Ids and limits are DeepSeek's own `GET /models` answer on 2026-10-17:
+  # `deepseek-flash` (DeepSeek-V4.1-Flash, text+image) and `deepseek-v4-pro`.
+  # Why: DeepSeek prices by time of day and its pricing page
+  # (api-docs.deepseek.com/quick_start/pricing) was unreachable from here on
+  # 2026-10-17, so the rates are the PEAK list rates as republished by
+  # benchlm.ai/deepseek/api-pricing (updated 2026-10-17); off-peak is half.
+  # Peak overstates cost, which keeps the Claude comparison conservative.
+  # DeepSeek bills no cache write, so a write costs the cache-miss rate.
+  display_name: DeepSeek
+  description: >-
+    DeepSeek models on DeepSeek's own API (Anthropic-compatible endpoint), authenticated with the deepseek key. Served only when a deepseek-* id is requested.
+  wire: anthropic
+  surface: backend
+  endpoint: https://api.deepseek.com/anthropic/v1
+  api_key_secret: deepseek
+  governance:
+    european: false
+    no_retain: false
+  models:
+  - id: deepseek-flash
+    upstream_model: deepseek-flash
+    pricing:
+      input_per_million: 0.3
+      output_per_million: 1.2
+      cache_read_per_million: 0.006
+      cache_write_per_million: 0.3
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1048576
+      max_output_tokens: 393216
+  - id: deepseek-v4-pro
+    upstream_model: deepseek-v4-pro
+    pricing:
+      input_per_million: 1.32
+      output_per_million: 3.96
+      cache_read_per_million: 0.044
+      cache_write_per_million: 1.32
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1048576
+      max_output_tokens: 393216
 - name: e2e-mock
   display_name: E2E mock (loopback)
   description: >-
