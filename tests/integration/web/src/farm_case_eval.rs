@@ -291,3 +291,61 @@ async fn a_cancel_from_any_replica_stops_the_driver_and_survives_its_close() {
     assert_eq!(row.cost_microdollars, 1_000);
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn a_live_replica_keeps_its_eval_run_and_a_dead_one_loses_it() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let seeded = seed(&db.pool).await;
+    seed_suite(&seeded).await;
+    let pool = &seeded.state.pool;
+    let id = EvalRunId::new(uuid::Uuid::new_v4().to_string());
+    evals::insert_eval_run(
+        pool,
+        &evals::NewEvalRun {
+            id: &id,
+            suite_id: &eval_suite_id(&seeded.farm, seeded.agent.as_str()),
+            farm_id: &seeded.farm,
+            agent_id: &seeded.agent,
+            user_id: &seeded.user,
+            triggered_via: TriggeredVia::Api,
+            client_id: None,
+        },
+    )
+    .await
+    .expect("insert eval run");
+    let a = systemprompt::identifiers::InstanceId::new("replica-a");
+    let b = systemprompt::identifiers::InstanceId::new("replica-b");
+
+    assert!(
+        evals::claim_eval_run_driver(pool, &id, &a)
+            .await
+            .expect("claim")
+    );
+    sqlx::query(
+        "INSERT INTO services (instance_id, name, module_name, port, status, heartbeat_at) \
+         VALUES ('replica-a', 'api', 'api', 8080, 'running', NOW())",
+    )
+    .execute(&*db.pool)
+    .await
+    .expect("replica a heartbeats");
+    assert!(
+        !evals::claim_eval_run_driver(pool, &id, &b)
+            .await
+            .expect("claim"),
+        "a booting replica does not take an eval run a live replica drives"
+    );
+
+    sqlx::query("UPDATE services SET heartbeat_at = NOW() - INTERVAL '5 minutes' WHERE instance_id = 'replica-a'")
+        .execute(&*db.pool)
+        .await
+        .expect("replica a stops heartbeating");
+    assert!(
+        evals::claim_eval_run_driver(pool, &id, &b)
+            .await
+            .expect("claim"),
+        "an eval run whose driver stopped heartbeating is resumed"
+    );
+    db.cleanup().await;
+}

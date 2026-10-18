@@ -92,6 +92,7 @@ pub async fn start_case_eval(
         },
     };
     evals::update_eval_result_run(pool, &result_id, &run.id).await?;
+    evals::claim_eval_run_driver(pool, &eval_run_id, &state.instance).await?;
     evals::update_eval_run_status(pool, &eval_run_id, EvalRunStatus::Running).await?;
     let settling = Settling {
         farm_id,

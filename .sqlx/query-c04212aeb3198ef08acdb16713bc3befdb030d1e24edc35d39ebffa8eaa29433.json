@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_eval_runs r\nSET driver_instance_id = $2\nWHERE r.id = $1\n  AND r.status IN ('queued', 'running')\n  AND (\n      r.driver_instance_id IS NULL\n      OR r.driver_instance_id = $2\n      OR NOT EXISTS (\n          SELECT 1 FROM services s\n          WHERE s.instance_id = r.driver_instance_id\n            AND s.heartbeat_at > NOW() - INTERVAL '90 seconds'\n      )\n  )\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c04212aeb3198ef08acdb16713bc3befdb030d1e24edc35d39ebffa8eaa29433"
+}

@@ -13,8 +13,8 @@ pub use results::{
     update_eval_result_outcome, update_eval_result_run,
 };
 pub use runs::{
-    NewEvalRun, find_eval_run, insert_eval_run, is_eval_run_cancelled, list_eval_runs_paged,
-    list_recent_eval_runs, update_eval_run_counts, update_eval_run_finished,
+    NewEvalRun, claim_eval_run_driver, find_eval_run, insert_eval_run, is_eval_run_cancelled,
+    list_eval_runs_paged, list_recent_eval_runs, update_eval_run_counts, update_eval_run_finished,
     update_eval_run_status,
 };
 pub use suites::{

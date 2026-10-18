@@ -7,6 +7,8 @@
 //! it: cancelling marks the row `cancelled` from whichever replica took the
 //! request, the driver reads the row before each case and stops, and closing
 //! the run records its tallies without overwriting the `cancelled` status.
+//! The row also names the replica driving it, so a booting replica resumes
+//! only eval runs whose driver has stopped heartbeating.
 
 use std::sync::Arc;
 
@@ -149,6 +151,7 @@ async fn drive(
         eval_run_id,
     } = *scope;
     let pool = &state.pool;
+    evals::claim_eval_run_driver(pool, eval_run_id, &state.instance).await?;
     evals::update_eval_run_status(pool, eval_run_id, EvalRunStatus::Running).await?;
     let mut tally = Tally::default();
     for (case, result_id) in &planned {
