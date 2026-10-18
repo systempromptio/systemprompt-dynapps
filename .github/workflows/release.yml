@@ -1038,6 +1038,7 @@ jobs:
     env:
       IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
       B: ${{ fromJSON(needs.params.outputs.json).CI_BRIDGE_PREFIX }}
+      SERVER_BINS: ${{ fromJSON(needs.params.outputs.json).CI_SERVER_BINS }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1060,8 +1061,8 @@ jobs:
           [ -n "$core" ] && echo "$out" | grep -q "$core" || { echo "::error::--version does not report core $core"; exit 1; }
           docker run --rm --entrypoint ls "$ref" -la /app/storage/files/downloads
           docker run --rm -e B="$B" --entrypoint sh "$ref" -c 'for f in "$B-linux-x86_64.tar.gz" "$B-linux-aarch64.tar.gz" "$B-macos.dmg" "$B-windows.exe" install.sh; do test -s "/app/storage/files/downloads/$f" || exit 1; done'
-          docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent
-          docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent-farm
+          # Every binary ci-params.env lists must ship executable in /app/bin.
+          docker run --rm -e BINS="$SERVER_BINS" --entrypoint sh "$ref" -c 'for b in $BINS; do test -x "/app/bin/$b" || { echo "missing or not executable: /app/bin/$b"; exit 1; }; done'
           docker buildx imagetools inspect "$ref" | tee inspect.txt
           grep -q 'linux/amd64' inspect.txt && grep -q 'linux/arm64' inspect.txt
           cosign verify \
