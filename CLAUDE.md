@@ -22,16 +22,25 @@ Two branches, two different cores. Which one you are on decides where
 blocks in `Cargo.toml` and `tests/Cargo.toml` are commented out and the pins sit
 at the released version.
 
-**`next` builds against core `next`** — a preview of the next release, shipped
-before it is perfect. The patch blocks are **active** and point straight at the
-sibling checkout, `../systemprompt-core`; there is no vendored copy. The
-production image copies **pre-built** binaries (the profile Dockerfile), so the
-core source never has to be inside this repo. `just deploy` runs `core-guard`
-first: with the patch active it refuses unless `../systemprompt-core` is clean
-and its HEAD equals `bridge/CORE_REF` — that is what "build `next` and `next`
-together" means, and it is the only way the image, CI and the bridge all see
-the same core commit. Commit core on its `next`, push, `just core-pin`, then
-deploy.
+**`next` runs in one of two modes, and which one is active changes over time** —
+read the tree, never assume:
+
+- **Patch-active (core preview).** The `[patch.crates-io]` blocks in
+  `Cargo.toml` and `tests/Cargo.toml` are uncommented and point straight at the
+  sibling checkout, `../systemprompt-core`; there is no vendored copy.
+  `bridge/CORE_REF` holds a 40-char core SHA. `just deploy` runs `core-guard`
+  first: it refuses unless `../systemprompt-core` is clean and its HEAD equals
+  `bridge/CORE_REF`, so the image, CI and the bridge all see the same core
+  commit. Commit core on its `next`, push, `just core-pin`, then deploy.
+- **Published core.** The patch blocks are commented out, exactly as on `main`,
+  and the pins name a released core. `bridge/CORE_REF` holds `vX.Y.Z` matching
+  those pins.
+
+To tell which is active: check whether the `[patch.crates-io]` lines are
+commented, and whether `bridge/CORE_REF` is a SHA or a `vX.Y.Z` tag.
+`scripts/check-core-ref.sh` enforces the pairing (commented patch requires the
+`v<pin>` tag). Either way the production image copies **pre-built** binaries
+(the profile Dockerfile), so the core source never has to be inside this repo.
 
 **The version pins must match the sibling core's workspace version.** For a 0.x
 crate, `version = "0.40.0"` means `>=0.40.0, <0.41.0`, so a patch pointing at a

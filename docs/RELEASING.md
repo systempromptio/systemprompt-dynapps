@@ -20,7 +20,7 @@ tag `vX.Y.Z` → image tag `X.Y.Z`; `scripts/sync-release-version.sh X.Y.Z`
 writes it and `--check` gates it. The core pins in both manifests and
 `bridge/CORE_REF = vC.D.E` name the published core it builds on;
 `scripts/sync-core-version.sh C.D.E` writes them and `--check` gates them. A
-core release normally means an dynapps release, but an dynapps release (a
+core release normally means a dynapps release, but a dynapps release (a
 fix, or a re-release after a failed run) needs no core release: bump only
 Dynapps's version.
 
