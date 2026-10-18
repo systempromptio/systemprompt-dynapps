@@ -110,7 +110,7 @@ inventory = "0.3"
 walkdir = "2.0"
 nix = { version = "0.31", default-features = false, features = ["user"] }
 tempfile = "3.0"
-zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
 url = "2.5"
 urlencoding = "2.1"
 
