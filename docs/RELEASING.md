@@ -287,7 +287,7 @@ so the site can only ever describe the release it is running.
 
 - [ ] Repository → Actions → General → *Workflow permissions: read and write* (or rely on the per-workflow `permissions:` block, which is set).
 - [ ] After the first successful run: Packages → `systemprompt-dynapps` → *Manage access* → grant the team read.
-- [ ] Branch protection on `main` requiring `Gates passed` — unavailable on the Free plan for a private repo; `just release` enforces it instead (`scripts/check-gates-green.sh`).
+- [ ] A ruleset on `main` requiring a pull request and `Gates passed`, with no bypass, as core's `main is release-only` ruleset does. The repository is public, so rulesets are available; until one is applied, `just release` enforces the proof instead (`scripts/check-gates-green.sh`).
 - [ ] Provision the required Apple signing secrets above; optionally add Windows signing.
 
 ## Fly (our own production) and other targets
