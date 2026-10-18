@@ -51,11 +51,10 @@ permissions:
 jobs:
   build:
     # The root phase builds instrumented lib-test binaries that run no tests
-    # (20-36 min cold, runs 39132602152 and 39110377259) but whose objects
-    # carry the root crates' coverage maps into the report. It shares nothing
-    # with the tests/ phase's build (that phase compiles the same dependency
-    # graph under its own feature set), so it runs on its own runner beside
-    # tests/ + bridge instead of ahead of them.
+    # but whose objects carry the root crates' coverage maps into the report.
+    # It shares nothing with the tests/ phase's build (that phase compiles the
+    # same dependency graph under its own feature set), so it runs on its own
+    # runner beside tests/ + bridge instead of ahead of them.
     name: Coverage build (${{ matrix.part }})
     runs-on: ubuntu-latest
     strategy:
@@ -71,13 +70,13 @@ jobs:
     timeout-minutes: 150
     env:
       CARGO_INCREMENTAL: "0"
-      # Why: instrumenting every crate already inflates each object, and the
-      # runner ran out of memory linking them (a bare exit 143). Coverage does
+      # Why: instrumenting every crate inflates each object, and linking them
+      # can exhaust the runner's memory (a bare exit 143). Coverage does
       # not need DWARF: the line mapping comes from the instrumentation's own
       # coverage section.
       CARGO_PROFILE_DEV_DEBUG: "0"
-      # Same failure, second cause: four instrumented binaries linking at once
-      # exceeds the runner's memory even without debug info.
+      # Four instrumented binaries linking at once exceed the runner's memory
+      # even without debug info.
       COVERAGE_BUILD_JOBS: "2"
       SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
     services:
@@ -105,21 +104,18 @@ jobs:
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
         with:
           just-version: ${{ env.JUST_VERSION }}
-      # libdbus: scripts/coverage.sh instruments the bridge workspace too, and
-      # bridge pulls keyring -> dbus-secret-service. Without it that phase
-      # fails to build and the run reports a partial number.
+      # libdbus: the bridge workspace pulls keyring -> dbus-secret-service.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3 libdbus-1-dev zstd
       - run: rustup show
       # scripts/coverage.sh calls llvm-profdata and llvm-cov out of the
       # toolchain's own sysroot rather than installing cargo-llvm-cov, which
-      # re-injects the mold linker flags and silently produces zero profraws.
+      # re-injects the mold linker flags and produces zero profraws.
       - run: rustup component add llvm-tools-preview
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
-      # Registry and git checkouts only. Caching the instrumented trees would
-      # cost several GB of a repository cache already near its 10 GB, evicting
-      # the Gates caches whose misses are what make those runs time out.
+      # Registry and git checkouts only. The instrumented trees would take
+      # several GB of the repository's 10 GB cache and evict the Gates caches.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: coverage-${{ matrix.part }}
@@ -178,8 +174,8 @@ jobs:
           path: /mnt/coverage-target-pack/coverage-${{ matrix.part }}.tar.zst
           retention-days: 1
           compression-level: 0
-      # Memory and disk at the end, so a run that dies the way 39132602152 did
-      # says which one it ran out of.
+      # Memory and disk at the end, so a run that dies says which one it ran
+      # out of.
       - if: always()
         run: free -h; swapon --show; df -h / /mnt
 
@@ -226,11 +222,9 @@ jobs:
       # `tee` so the totals survive into the summary below; `pipefail` keeps
       # the job red when the ratchet trips.
       #
-      # The mkdir is load-bearing: the shell opens tee's output file before
-      # `just` runs, and on a fresh checkout coverage-report/ does not exist
-      # yet. GNU tee then keeps copying to stdout and exits 1 at the very end,
-      # which turned four correct 83.86% runs into red jobs whose logs said
-      # "coverage-check passed" immediately above the failure.
+      # Why the mkdir: the shell opens tee's output file before `just` runs,
+      # and on a fresh checkout coverage-report/ does not exist yet; GNU tee
+      # then copies to stdout and exits 1 at the end, failing a passing check.
       - timeout-minutes: 15
         env:
           COVERAGE_PHASES: report

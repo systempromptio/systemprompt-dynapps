@@ -430,8 +430,8 @@ jobs:
           retention-days: 7
 
   # The server binaries, compiled natively per arch with a warm cargo cache
-  # instead of inside the image build (where a cache mount was the only cache
-  # and gha never exported it, so every release compiled cold). ubuntu-22.04
+  # rather than inside the image build, whose cache mount the gha cache
+  # backend does not export. ubuntu-22.04
   # on purpose: glibc 2.35 is older than the bookworm runtime's 2.36, so the
   # binaries run there.
   server:
@@ -960,11 +960,10 @@ jobs:
     env:
       IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
       RELEASE_GATE_EMAIL: ${{ fromJSON(needs.params.outputs.json).CI_RELEASE_GATE_EMAIL }}
-    # Why: a 0.58 -> 0.60 client upgrade failed five ways the gates never saw
-    # (stale triggers, a retirement split across extensions, a named trigger
-    # toggle, a blind retry, a root-owned /app/storage/data). Only this path —
-    # the published image, its entrypoint, an old release's database with
-    # rows in it, a fresh named volume — exercises all of them together.
+    # Upgrade faults (stale triggers, a retirement split across extensions,
+    # trigger toggles, retries, a root-owned /app/storage/data) only surface
+    # together on this path: the published image, its entrypoint, an older
+    # release's database with rows in it, and a fresh named volume.
     services:
       postgres:
         image: postgres:18

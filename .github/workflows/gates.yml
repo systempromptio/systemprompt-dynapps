@@ -148,10 +148,9 @@ jobs:
         if: ${{ !cancelled() }}
         timeout-minutes: 12
 
-  # Why: lint and test do not wait on static. Each skipped the moment static
-  # went red, so a release-script self-test failure in 0.59 hid clippy and
-  # every test tier for a whole round. All run and report together;
-  # `Gates passed` still needs every one.
+  # lint and test do not wait on static, so a red static job never hides
+  # their findings. All run and report together; `Gates passed` still needs
+  # every one.
   lint:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Lint (clippy ×3, rustdoc, MSRV)
@@ -161,8 +160,7 @@ jobs:
       RUSTFLAGS: "-D warnings"
     steps:
       # Why: three clippy workspaces plus the Windows cross-lint's second
-      # dependency tree overflow the runner's ~14 GB (run 35063638721 died in
-      # doc-check on ENOSPC).
+      # dependency tree overflow the runner's ~14 GB root disk.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
@@ -197,10 +195,9 @@ jobs:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Test (unit, integration, admin contract)
     runs-on: ubuntu-latest
-    # Integration is dominated by CREATE/DROP DATABASE round-trips. Green runs
-    # sit at 47-57 minutes, and a cold cache (every core re-pin) adds the full
-    # compile on top, which cancelled run 34691892313 at 60 with the unit tier
-    # already green and nothing failing.
+    # Integration is dominated by CREATE/DROP DATABASE round-trips, and a cold
+    # cache (every core re-pin) adds the full compile on top; the timeout
+    # leaves room for both.
     timeout-minutes: 100
     env:
       CARGO_INCREMENTAL: "0"

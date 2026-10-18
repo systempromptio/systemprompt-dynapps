@@ -143,8 +143,8 @@ schema-baseline VERSION="":
     trap cleanup EXIT
     docker exec "$container" psql -U systemprompt -d postgres -qc "CREATE DATABASE \"$scratch\""
     echo "schema-baseline: fresh install of $version (core $core_ref) into $scratch"
-    # Why: core 0.65 ignores SYSTEMPROMPT_DATABASE_URL once a profile is named and
-    # installs into the profile's own database; the flag is the override that bypasses it.
+    # Why: core ignores SYSTEMPROMPT_DATABASE_URL once a profile is named and
+    # installs into the profile's own database; the flag overrides it.
     if ! log="$("$cli" infra db migrate --profile local --database-url "$scratch_url" 2>&1)"; then
         echo "$log" | tail -30; echo "schema-baseline: fresh install failed" >&2; exit 1
     fi

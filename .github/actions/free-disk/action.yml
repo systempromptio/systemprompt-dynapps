@@ -40,9 +40,9 @@ runs:
           /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku 2>/dev/null || true
         sudo docker image prune --all --force >/dev/null 2>&1 || true
         echo "after:"; df -h / | tail -1
-    # Why swap: an instrumented build was SIGTERMed (exit 143) while two test
-    # binaries linked at once, the runner out of memory with no diagnostic.
-    # Swap on the second disk turns that peak into slower linking.
+    # Why swap: linking instrumented test binaries in parallel can exhaust the
+    # runner's memory, which ends the job with a bare exit 143. Swap on the
+    # second disk turns that peak into slower linking.
     - name: Prepare the second disk
       if: inputs.swap-gb != '0' || inputs.mnt-dirs != ''
       shell: bash

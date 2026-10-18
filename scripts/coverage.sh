@@ -38,9 +38,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CI_REPO_NAME="$(sed -n 's/^CI_REPO_NAME=//p' "$ROOT/.github/ci-params.env")"
 [ -n "$CI_REPO_NAME" ] || { echo "error: CI_REPO_NAME missing from .github/ci-params.env" >&2; exit 1; }
 
-# Peak memory is several instrumented binaries linking at once, and a GitHub
-# runner dies there — the job is SIGTERMed with no diagnostic, which reads as
-# a mystery rather than as "out of memory". Lower it where the machine is
+# Peak memory is several instrumented binaries linking at once; a runner out
+# of memory ends the job with a bare SIGTERM. Lower it where the machine is
 # small; the default suits a workstation.
 BUILD_JOBS="${COVERAGE_BUILD_JOBS:-4}"
 
@@ -95,11 +94,8 @@ run_instrumented() {
     # test binary; the rlibs stay cached.
     find "$tdir/debug/deps" -maxdepth 1 -type f -executable \
         ! -name '*.d' ! -name '*.so' ! -name '*.rlib' -delete 2>/dev/null || true
-    # Why `if` rather than a bare call: this script runs under `set -e`, and
-    # the phases below deliberately survive a red workspace. The construct
-    # this replaces was `|| echo "warning: ..."`, which suppressed the abort
-    # but also discarded the status, so a failed phase and a clean one were
-    # indistinguishable to the caller.
+    # `if` rather than a bare call: this script runs under `set -e`, and the
+    # phases below survive a red workspace while keeping its exit status.
     local status=0
     if CARGO_BUILD_RUSTC_WRAPPER="" \
         RUSTC_WRAPPER="" \
@@ -119,11 +115,8 @@ run_instrumented() {
     #      workspaces here — they are instrumented for their objects, not for
     #      tests — so it is the expected answer, not a failure.
     #   *  a build failure or a red test. The report is still produced, since a
-    #      partial number beats none while iterating, but the run is marked so
-    #      the caller can tell. A CI job that reported a healthy percentage
-    #      while a whole workspace failed to compile is what this exists to
-    #      prevent: it happened, with libdbus missing and the bridge workspace
-    #      contributing nothing.
+    #      partial number beats none while iterating, but the run exits non-zero
+    #      so a workspace that did not compile never passes as a healthy number.
     case "$status" in
         0|4) ;;
         *)
@@ -187,7 +180,7 @@ find "$PROFDIR" -name '*.profraw' > "$ROOT/coverage-report/profraw-list.txt"
 
 # Test binaries land in <target>/debug/deps. Emit candidates from both
 # instrumented dirs, then dedupe the combined stream by crate basename,
-# keeping the newest build of each. Dedupe must be global: doing it once per target directory
+# keeping the newest build of each. Dedupe must be global: per target directory it
 # feeds llvm-cov multiple feature/build variants of the same crate. Their
 # function names overlap but their mapping hashes differ, so llvm-cov discards
 # profile records with "functions have mismatched data" and under-reports the
@@ -195,8 +188,7 @@ find "$PROFDIR" -name '*.profraw' > "$ROOT/coverage-report/profraw-list.txt"
 # Why: BSD find (macOS) has no -printf, so the mtime is read with stat on
 # either platform instead; GNU stat and BSD stat spell the format differently.
 # The flavour is probed once: GNU `stat -f` is not an error but --file-system,
-# which prints "Blocks: Total: ..." to stdout and fed `Total:` to llvm-cov as
-# an object.
+# whose "Total:" output would reach llvm-cov as an object path.
 if stat -c '%Y' / >/dev/null 2>&1; then
     STAT_MTIME=(stat -c '%Y %n')
 else
@@ -242,10 +234,9 @@ done
 # explicit process-entry exclusions.
 # extensions/mcp/*/src/main.rs are `tokio::main` shells that build a server and
 # serve it over stdio — the same kind of process entry as the CLI mains beside
-# them. They are excluded for a second reason too: whether their object is
-# picked up depends on which binaries a run happened to build, so leaving them
-# in made a crate's number move by several points when an unrelated test crate
-# took a new dependency.
+# them. Whether their object is picked up also depends on which binaries a run
+# builds, so counting them would move a crate's number with unrelated test
+# dependencies.
 IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|${CI_REPO_NAME}/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)"
 
 echo "==> Coverage report"
