@@ -23,7 +23,6 @@ SHARED=(
     .github/actions/core-checkout/action.yml
     .github/actions/apple-signing/action.yml
     .github/actions/free-disk/action.yml
-    .github/dependabot.yml
     ci.just
     scripts/ci-sync-check.sh
     scripts/ci-retry.sh
