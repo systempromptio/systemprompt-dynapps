@@ -10,9 +10,9 @@
 #   docker compose -f docker-compose.single.yml run --rm app migrate   # schema + admin, once
 #   docker compose -f docker-compose.single.yml up -d
 #
-# Bundled Postgres is pgvector/pgvector:pg18: plain postgres:18 plus pgvector,
-# kept so volumes created by earlier releases (which installed `vector`) keep
-# working. pgvector is no longer required. To use your own PostgreSQL instead, point --database-url and
+# Bundled Postgres is pgvector/pgvector:pg18: plain postgres:18 plus pgvector.
+# Nothing requires pgvector; the image keeps volumes that have the `vector`
+# extension installed working. To use your own PostgreSQL instead, point --database-url and
 # DATABASE_URL at it and start only the app: `... up -d app`.
 services:
   postgres:

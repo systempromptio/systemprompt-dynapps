@@ -21,13 +21,13 @@ includes:
   # reads it directly as WebConfigRaw (branding at top level). Including it
   # via the aggregator would require a `web:` wrapper, which is incompatible.
   - ../ai/config.yaml
-  # Provider catalog and gateway routes. These were profile sections until
-  # core 0.44; they are implementation configuration and ship in the image.
+  # Provider catalog and gateway routes: implementation configuration that
+  # ships in the image, not profile sections.
   - ../ai/providers.yaml
   - ../ai/gateway.yaml
   - ../scheduler/config.yaml
 
-  # External agents (super-agents — native apps + CLI tools that run off our infra, distinct from A2A agents above)
+  # External agents (native apps and CLI tools that run off our infra; not A2A agents)
   - ../external_agents/claude_desktop.yaml
   - ../external_agents/codex_cli.yaml
   - ../external_agents/hermes.yaml

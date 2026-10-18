@@ -117,7 +117,7 @@ deployment. A value the route does not list is refused unless
       dimension: project
       unmapped: shared
       chains:
-        storefront:
+        odoo-delivery:
           provider: anthropic
           fallbacks:
           - provider: anthropic-secondary

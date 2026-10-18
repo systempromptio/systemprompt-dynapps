@@ -2,8 +2,8 @@
 #
 # The only sign-in on this instance: an App Registration with a client secret.
 #
-# ENABLED 2026-10-14; admin consent, groups claim and real group ids in place
-# 2026-10-15. Original steps:
+# Enabled, with admin consent, the groups claim and real group ids in place.
+# Setting up a new tenant:
 #   1. Fill in `tenant_id` and `client_id` below (App Registration > Overview).
 #   2. Store the client secret VALUE in the secrets store under the key named
 #      by `client_secret_secret` (default `entra_oidc_client_secret`). The
@@ -52,7 +52,7 @@ allowed_email_domains:
   - dynapps.es
   - dynapps.ch
   - dynapps.eu
-  # Test only (2026-10-14): Ed's user in the Dynapps tenant is ed@systemprompt.io.
+  # Test only: the operator's guest user in the Dynapps tenant is ed@systemprompt.io.
   - systemprompt.io
 
 # Attach a first sign-in to the active local account that owns the asserted
@@ -67,7 +67,7 @@ trust_guest_email: true
 # A sign-in whose token carries no group at all gets no session.
 deny_without_group: true
 
-# Entra group object id -> roles (ids from Dynapps IT, 2026-10-15).
+# Entra group object id -> roles (ids from Dynapps IT).
 group_roles:
   # Systemprompt - Admin
   "720095b5-6d25-4f5f-9cce-6074b5904b89": [platform_admin, admin, user]

@@ -83,8 +83,8 @@ scheduler:
     # Web extension jobs (publishing pipeline). Hourly: the bootstrap entry
     # publishes at boot and content edits go through `just publish` or
     # `systemprompt infra jobs run publish_pipeline`; every run regenerates
-    # the whole site unconditionally, so a 15-minute cadence was ~2 700 runs
-    # a month of identical output.
+    # the whole site unconditionally, so a tighter cadence only repeats
+    # identical output.
     - name: publish_pipeline
       extension: web
       owner: admin
@@ -172,10 +172,8 @@ scheduler:
       owner: admin
       enabled: true
 
-    # Re-probes the Vertex AI publisher listing daily and reports the delta.
-    # Read-only: the served catalog is fixed at boot, so a newly published
-    # priced model is a log warning that a restart would pick it up.
-    # Disabled: Anthropic-only since 2026-10-14; re-enable with the Vertex restore.
+    # Re-probes the Vertex AI publisher listing and reports the delta. Off:
+    # no Vertex provider is configured on this Anthropic-only installation.
     - name: vertex_discovery
       extension: core
       owner: admin
@@ -263,7 +261,7 @@ scheduler:
 
     # Audit hash chain sealer (NFR-5.6): links new ai_requests and
     # ai_safety_findings rows into the chain every 10 s, one replica at a time
-    # (advisory lock). The gateway insert path no longer locks the chain head;
+    # (advisory lock). The gateway insert path does not lock the chain head;
     # the seal lags by at most one interval. Schema 51_audit_integrity.sql.
     - name: audit_chain_seal
       extension: web
@@ -378,7 +376,7 @@ scheduler:
       enabled: true
 
     # publish_pipeline sub-steps. The composite above runs each of these every
-    # 15 minutes in dependency order; scheduling them independently would
+    # hour in dependency order; scheduling them independently would
     # double-run them, so they are disabled here (an explicit entry also
     # records the decision and silences the boot warning).
     - name: blog_content_ingestion
@@ -440,5 +438,5 @@ scheduler:
     - cleanup_inactive_sessions
     # Publish web assets before the cron loop: web/dist is generated, not
     # shipped in the image, so without this the site 404s until the first
-    # 15-minute publish_pipeline tick.
+    # publish_pipeline tick.
     - publish_pipeline
