@@ -7,7 +7,7 @@
 //! process-per-test isolation is required.
 
 use chrono::{Duration, Utc};
-use dynapps_test_common::{FakeOidcIdp, IdTokenSpec};
+use dynapps_test_common::{FakeOidcIdp, IdTokenSpec, KidForm, TokenForm};
 use systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig;
 
 use crate::fixtures::unique;
@@ -128,6 +128,53 @@ async fn oidc_refuses_when_the_idp_rejects_the_client_secret() {
         |_| {},
         "invalid_assertion",
         "invalid_assertion",
+    )
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn oidc_refuses_an_unsigned_token() {
+    invalid(|s| s.header.form = TokenForm::Unsigned).await;
+}
+
+// HS256 keyed with the public key the JWKS publishes: a verifier that took
+// `alg` from the header would accept it.
+#[tokio::test(flavor = "multi_thread")]
+async fn oidc_refuses_hs256_keyed_with_the_public_key() {
+    invalid(|s| s.header.form = TokenForm::Hs256WithPublicKey).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn oidc_refuses_a_token_without_a_kid() {
+    invalid(|s| s.header.kid = KidForm::Absent).await;
+}
+
+// Signed by the tenant key, but naming a `kid` the JWKS does not publish.
+#[tokio::test(flavor = "multi_thread")]
+async fn oidc_refuses_an_unknown_kid() {
+    invalid(|s| s.header.kid = KidForm::Named("not-a-published-kid".to_owned())).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn oidc_refuses_a_crit_header() {
+    invalid(|s| s.header.crit = Some(vec!["exp".to_owned()])).await;
+}
+
+// Ten minutes ahead is well past the default 120s clock skew.
+#[tokio::test(flavor = "multi_thread")]
+async fn oidc_refuses_a_token_not_yet_valid() {
+    invalid(|s| s.nbf = Some(Utc::now() + Duration::minutes(10))).await;
+}
+
+// The fake serves JWKS from loopback; with loopback off the allowlist the
+// key fetch is never attempted.
+#[tokio::test(flavor = "multi_thread")]
+async fn oidc_refuses_jwks_from_a_host_off_the_allowlist() {
+    refused(
+        |c| c.jwks_allowed_hosts = vec!["login.microsoftonline.com".to_owned()],
+        |_| {},
+        "unavailable",
+        "unavailable",
     )
     .await;
 }
