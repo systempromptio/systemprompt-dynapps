@@ -5,15 +5,6 @@
 gateway:
   enabled: true
   routes:
-  # Server web and deferred-tool search need Anthropic's native tool service.
-  # Kept ahead of the general claude-* route so these tools stay on Anthropic
-  # whatever that route points at.
-  - id: claude-native-tools
-    name: Claude native web and tool search
-    model_pattern: claude-*
-    provider: anthropic
-    when:
-      tool_names_any: [WebSearch, WebFetch, ToolSearch, web_search, web_fetch, tool_search, tool_search_tool_regex, tool_search_tool_bm25]
   # Anthropic-only by customer requirement: every claude-* id is served from
   # Anthropic's own API with the anthropic key, no failover.
   - id: claude-star-4203d1

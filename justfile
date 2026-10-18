@@ -432,6 +432,7 @@ _lint-gates-uncoordinated:
         check-dropped-schema.sh
         check-retired-features.sh
         validate-services.sh
+        check-gateway-routes.sh
         check-core-ref.sh
         check-schema-baseline.sh
         check-skill-cli-flags.sh
