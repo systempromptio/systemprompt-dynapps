@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.70.0 — 2026-10-18
+
 ### Added
 
 - **DeepSeek is a second live upstream** (user-approved 2026-10-17), so the console can show a
@@ -34,6 +36,14 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Built against published systemprompt-core 0.70.0.** Every core pin in `Cargo.toml` and
+  `tests/Cargo.toml` moves to `0.70.0` and the `[patch.crates-io]` blocks are commented out, so
+  the release compiles against crates.io rather than the sibling checkout. Core 0.70.0 ships
+  migration `ai/043`, which a 0.69 replica cannot run beside, so the production rollout must
+  stop the old machine before the new one starts (Recreate), not roll.
+- **The `awscli` Docker stage pulls `docker.io/amazon/aws-cli:2.36.18`** instead of
+  `public.ecr.aws/aws-cli/aws-cli`: ECR Public's anonymous pull limit failed image builds
+  during the 0.69 release. Same image and tag, different registry.
 - **`next` builds against core `next` again** (`bridge/CORE_REF` = 37c000a36): both
   `[patch.crates-io]` blocks are active. Integration for core's breaking changes: the governance
   hook charges core's Postgres rate windows before evaluating the chain (`rate_limit` now

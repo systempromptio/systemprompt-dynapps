@@ -100,6 +100,7 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
         journal,
         materializer,
         systemprompt::traits::BackgroundTasks::new(),
+        systemprompt::traits::CacheEpochs::new(),
     );
     let raw = Vec::from(
         br#"{"model":"test-model","max_tokens":16,"messages":[{"role":"user","content":"test"}]}"#

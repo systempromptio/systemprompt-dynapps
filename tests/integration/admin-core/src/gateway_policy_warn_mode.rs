@@ -94,7 +94,7 @@ async fn the_resolver_keeps_both_mode_switches_after_ingestion() {
     let pool = ingest_shipped(&db).await;
 
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo)
+    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
         .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
         .await
         .expect("policy row resolves");
@@ -126,7 +126,7 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     };
     let pool = ingest_shipped(&db).await;
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo)
+    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
         .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
         .await
         .expect("policy row resolves");
