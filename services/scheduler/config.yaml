@@ -81,10 +81,9 @@ scheduler:
       enabled: true
 
     # Web extension jobs (publishing pipeline). The composite publish_pipeline
-    # runs at boot (bootstrap_jobs, and the entrypoint on every node that
-    # serves the site) and by hand (`just publish`, `systemprompt infra jobs
-    # run publish_pipeline`); it is not on the cron, because its two halves
-    # have different scopes. Hourly, content ingestion writes the database once
+    # runs by hand (`just publish`, `systemprompt infra jobs run
+    # publish_pipeline`); it is not on the cron or at boot, because its two
+    # halves have different scopes. Hourly, content ingestion writes the database once
     # (cluster scope) and five minutes later site_render rebuilds web.dist on
     # every replica (node scope), so no replica keeps serving a stale site.
     - name: publish_pipeline
@@ -445,6 +444,8 @@ scheduler:
     - managed_inventory_refresh
     - database_cleanup
     - cleanup_inactive_sessions
-    # Ingest content and publish web assets before the cron loop: on a fresh
-    # database nothing else ingests until the hourly blog_content_ingestion.
-    - publish_pipeline
+    # Render this node's web/dist before the server is ready. site_render is
+    # node-scoped, so every replica that runs the scheduler renders its own
+    # copy here, once; it ingests first when no release (or an older one) has
+    # ingested, so a fresh replica never serves an empty site.
+    - site_render

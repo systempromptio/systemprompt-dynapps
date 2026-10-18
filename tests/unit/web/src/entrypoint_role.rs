@@ -43,18 +43,25 @@ fn the_entrypoint_reads_the_server_role() {
 }
 
 #[test]
-fn a_gateway_node_skips_the_bootstrap_and_the_render() {
+fn a_gateway_node_skips_the_bootstrap_and_no_node_renders_twice() {
     let text =
         std::fs::read_to_string(repo_root().join("docker/entrypoint.sh")).expect("read entrypoint");
     let gateway = text
         .find("if [ \"$ROLE\" = \"gateway\" ]; then")
         .expect("the entrypoint branches on the gateway role");
     let bootstrap = text
-        .find("/app/bin/systemprompt admin bootstrap\n\n    #")
+        .rfind("/app/bin/systemprompt admin bootstrap")
         .expect("the boot-time admin bootstrap");
-    let publish = text
-        .find("infra jobs run site_render")
-        .expect("the boot-time render");
     let start = text.find("infra services start").expect("the server start");
-    assert!(gateway < bootstrap && bootstrap < publish && publish < start);
+    assert!(gateway < bootstrap && bootstrap < start);
+    assert!(
+        !text.contains("infra jobs run publish_pipeline")
+            && !text.contains("infra jobs run site_render"),
+        "web.dist is rendered by the scheduler's bootstrap site_render, not again here"
+    );
+    let scheduler = std::fs::read_to_string(repo_root().join("services/scheduler/config.yaml"))
+        .expect("read scheduler config");
+    let bootstrap_jobs = &scheduler[scheduler.find("bootstrap_jobs:").expect("bootstrap list")..];
+    assert!(bootstrap_jobs.contains("- site_render"));
+    assert!(!bootstrap_jobs.contains("- publish_pipeline"));
 }

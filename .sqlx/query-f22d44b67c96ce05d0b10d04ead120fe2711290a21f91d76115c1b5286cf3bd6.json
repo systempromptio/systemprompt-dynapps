@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO content_ingestion_stamp (id, version, ingested_at)\n             VALUES (TRUE, $1, CURRENT_TIMESTAMP)\n             ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version,\n                                            ingested_at = EXCLUDED.ingested_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f22d44b67c96ce05d0b10d04ead120fe2711290a21f91d76115c1b5286cf3bd6"
+}

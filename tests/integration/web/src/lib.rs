@@ -46,6 +46,8 @@ mod jobs_context;
 #[cfg(test)]
 mod jobs_db;
 #[cfg(test)]
+mod jobs_ingestion_stamp;
+#[cfg(test)]
 mod jobs_retention_archive;
 #[cfg(test)]
 mod jobs_usage;

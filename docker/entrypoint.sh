@@ -185,9 +185,10 @@ else
 fi
 
 # server.role from the profile: gateway nodes serve neither the console nor the
-# public site, so they skip the admin bootstrap and the site render and go
-# straight to serving. An HPA scale-out then neither re-ingests content nor
-# re-renders a site the pod never serves.
+# public site, so they skip the admin bootstrap and go straight to serving.
+# web/dist is rendered by the scheduler's bootstrap site_render on every node
+# that runs the scheduler, before the server reports ready, so a gateway
+# scale-out neither re-ingests content nor renders a site it never serves.
 server_role() {
     awk '/^server:/ { in_server = 1; next }
          /^[^ #]/ { in_server = 0 }
@@ -197,21 +198,10 @@ ROLE="$(server_role)"
 ROLE="${ROLE:-all}"
 
 if [ "$ROLE" = "gateway" ]; then
-    echo "server.role is gateway: skipping admin bootstrap and the site render."
+    echo "server.role is gateway: skipping admin bootstrap."
 else
     echo "Ensuring bootstrap admin user..."
     /app/bin/systemprompt admin bootstrap
-
-    # web/dist is node-local and not shipped in the image. Render it from the
-    # database here, on every node that serves the site, before the server
-    # accepts traffic. Content ingestion is not repeated per pod: it writes the
-    # database, so it runs once, in the scheduler's bootstrap publish_pipeline
-    # (one node) and hourly as blog_content_ingestion. A failure is logged
-    # rather than fatal so a content problem never takes the node down.
-    echo "Rendering the site for this node..."
-    if ! /app/bin/systemprompt infra jobs run site_render; then
-        echo "WARN: site_render failed; the public site may 404 on this node until the next scheduled render." >&2
-    fi
 fi
 
 echo "Starting services..."

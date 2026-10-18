@@ -4,6 +4,15 @@
 //! The blog config and `delete_orphans` come from this job's own context, never
 //! process-wide state: `BlogConfigValidated::cached()` pins the first caller's
 //! profile in a `OnceLock`, and an environment variable would reach every job.
+//!
+//! Every ingestion is versioned. It runs under an advisory lock and records the
+//! release that ingested in `content_ingestion_stamp`; a release older than the
+//! recorded one refuses, so a previous-image pod restarting mid-rollout cannot
+//! ingest its older tree and delete the newer pages as orphans.
+//! `ensure_current` is the site render's variant: it ingests only when no
+//! release, or an older one, is recorded, and a replica that finds another
+//! already ingesting waits on the lock and then skips, so a fresh node renders
+//! the content rather than an empty site.
 
 use std::sync::Arc;
 
@@ -100,8 +109,85 @@ impl Job for ContentIngestionJob {
         &self,
         ctx: &JobContext,
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
-        Ok(execute_inner(ctx).await?)
+        Ok(versioned(ctx, IngestWhen::Always).await?)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IngestWhen {
+    Always,
+    IfBehind,
+}
+
+const RELEASE: &str = env!("CARGO_PKG_VERSION");
+
+#[must_use]
+pub fn release_key(version: &str) -> Vec<u64> {
+    version
+        .split(['-', '+'])
+        .next()
+        .unwrap_or_default()
+        .split('.')
+        .map(|part| part.parse().unwrap_or(0))
+        .collect()
+}
+
+pub(crate) async fn ensure_current(ctx: &JobContext) -> Result<JobResult, JobError> {
+    versioned(ctx, IngestWhen::IfBehind).await
+}
+
+async fn versioned(ctx: &JobContext, when: IngestWhen) -> Result<JobResult, JobError> {
+    let pool = ctx.get::<DbPool>()?.write_pool();
+    let mut conn = pool.acquire().await?;
+    // Why: core's scheduler holds pg_advisory_lock(hashtext(<job name>)) for
+    // the job's run, so the stamp lock takes a key of its own.
+    sqlx::query!("SELECT pg_advisory_lock(hashtext('content_ingestion:stamp'))")
+        .execute(&mut *conn)
+        .await?;
+    let outcome = ingest_under_lock(ctx, &mut conn, when).await;
+    if let Err(error) = sqlx::Connection::close(conn.detach()).await {
+        tracing::warn!(%error, "content ingestion lock connection did not close cleanly");
+    }
+    outcome
+}
+
+async fn ingest_under_lock(
+    ctx: &JobContext,
+    conn: &mut sqlx::PgConnection,
+    when: IngestWhen,
+) -> Result<JobResult, JobError> {
+    let recorded = sqlx::query_scalar!("SELECT version FROM content_ingestion_stamp WHERE id")
+        .fetch_optional(&mut *conn)
+        .await?;
+    if let Some(recorded) = &recorded {
+        let ours = release_key(RELEASE);
+        let theirs = release_key(recorded);
+        if theirs > ours {
+            tracing::warn!(
+                recorded = %recorded,
+                release = RELEASE,
+                "content ingestion skipped: a newer release already ingested"
+            );
+            return Ok(JobResult::success()
+                .with_message(format!("skipped: release {recorded} already ingested")));
+        }
+        if when == IngestWhen::IfBehind && theirs == ours {
+            return Ok(JobResult::success().with_message("content already current"));
+        }
+    }
+    let result = execute_inner(ctx).await?;
+    if result.success {
+        sqlx::query!(
+            "INSERT INTO content_ingestion_stamp (id, version, ingested_at)
+             VALUES (TRUE, $1, CURRENT_TIMESTAMP)
+             ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version,
+                                            ingested_at = EXCLUDED.ingested_at",
+            RELEASE
+        )
+        .execute(&mut *conn)
+        .await?;
+    }
+    Ok(result)
 }
 
 fn load_blog_config(

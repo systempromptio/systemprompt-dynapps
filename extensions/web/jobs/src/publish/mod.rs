@@ -9,8 +9,10 @@
 //! scheduler runs it once per tick (`blog_content_ingestion`, cluster). The
 //! render writes `web.dist`, which is per node, so [`SiteRenderJob`] is
 //! node-scoped and every replica that serves the site refreshes its own copy
-//! from the database. `publish_pipeline` is both in order, for a manual run
-//! and for boot.
+//! from the database, ingesting first when no release (or an older one) has
+//! ingested, so a fresh node never renders an empty site. It is the boot job
+//! on every replica that runs the scheduler, before the server is ready.
+//! `publish_pipeline` is both halves in order, for a manual run.
 
 use std::sync::Arc;
 
@@ -226,6 +228,13 @@ impl SiteRenderJob {
         let db_pool = ctx.get::<DbPool>()?;
         let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
         let mut stats = PipelineStats::default();
+        match crate::ingestion::ensure_current(ctx).await {
+            Ok(_) => stats.record_success(),
+            Err(e) => {
+                tracing::error!(error = %e, "Content ingestion before render failed");
+                stats.record_failure();
+            },
+        }
         PublishPipelineJob
             .render(ctx, paths, db_pool, &mut stats)
             .await;

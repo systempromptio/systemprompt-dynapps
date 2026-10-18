@@ -67,7 +67,7 @@ pub use copy_assets::CopyExtensionAssetsJob;
 pub use farm_scheduled_run::FarmScheduledRunJob;
 pub use gateway_overhead::GatewayOverheadRollupJob;
 pub use governance_bootstrap::GovernanceBootstrapJob;
-pub use ingestion::ContentIngestionJob;
+pub use ingestion::{ContentIngestionJob, release_key};
 pub use llms_txt::LlmsTxtGenerationJob;
 pub use prerender::SiteContentPrerenderJob;
 pub use publish::{PublishPipelineJob, SiteRenderJob};
