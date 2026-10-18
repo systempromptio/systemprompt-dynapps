@@ -17,15 +17,11 @@ pub struct ReportInput {
         description = "Which report to run. `costs` is the only kind: AI usage, spend, models and sessions from this platform's own audit tables."
     )]
     pub report: ReportKind,
-    // Why: schemars renders `Option<u16>` as a type list, which Gemini/Vertex
-    // rejects in a function declaration, refusing the whole server's tools.
     #[schemars(description = "Lookback window in days, 1-90. Defaults to 7.")]
     #[serde(default = "seven_days")]
     pub days: u16,
 }
 
-// Why: schemars `inline` keeps the enum out of `$defs`; Gemini rejects a `$ref`
-// into `$defs` as an unknown keyword.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[schemars(inline)]

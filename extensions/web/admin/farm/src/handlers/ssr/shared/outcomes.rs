@@ -8,6 +8,7 @@
 use chrono::NaiveDate;
 use serde::Serialize;
 use systemprompt_web_admin_core::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::tone::score_display;
 use systemprompt_web_admin_core::ssr::types::sparkline::sparkline_toned;
 use systemprompt_web_admin_core::ssr::types::svg_line::{
     LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart,
@@ -50,10 +51,6 @@ impl OutcomeTotals {
 
 pub(crate) fn pct_display(value: Option<f64>) -> String {
     value.map_or_else(|| "—".to_owned(), |v| format!("{v:.0}%"))
-}
-
-pub(crate) fn score_display(value: Option<f64>) -> String {
-    value.map_or_else(|| "—".to_owned(), |v| format!("{v:.0}"))
 }
 
 pub(crate) fn rate_tone(pct: Option<f64>) -> &'static str {

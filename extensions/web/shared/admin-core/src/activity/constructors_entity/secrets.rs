@@ -24,8 +24,7 @@ impl NewActivity {
                 name: Some("Secrets".to_owned()),
             }),
             description: format!("Reloaded secrets to generation {generation} ({changed})"),
-            // JSON: JSONB column — the generation and changed key names, so the
-            // event page shows what moved without any value
+            // JSON: JSONB column — generation and changed key names, never a value
             metadata: serde_json::json!({
                 "generation": generation,
                 "changed_keys": changed_keys,

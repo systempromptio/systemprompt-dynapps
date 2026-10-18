@@ -13,9 +13,9 @@ use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparklin
 use crate::handlers::ssr::shared::{RunRowView, run_row_views};
 use crate::repositories::agents::count_agents;
 use crate::repositories::farms::count_farms;
-use crate::repositories::filters::RunFilter;
+use crate::repositories::filters::FarmRunFilter;
 use crate::repositories::runs::{get_run_stats, list_active_runs, list_daily_run_counts};
-use crate::repositories::summaries::{DailyRunCount, RunStats};
+use crate::repositories::summaries::{DailyRunCount, FarmRunStats};
 
 pub(crate) const ACTIVITY_PARTIAL: &str = "farm/activity-live";
 const SPARK_DAYS: i64 = 14;
@@ -46,8 +46,8 @@ pub(crate) struct ActivityView {
 struct Figures {
     farms: i64,
     agents: i64,
-    today: RunStats,
-    week: RunStats,
+    today: FarmRunStats,
+    week: FarmRunStats,
     daily: Vec<i64>,
     active: usize,
     queued: usize,
@@ -56,13 +56,13 @@ struct Figures {
 pub(crate) async fn load_activity(pool: &PgPool, faults: &mut Faults) -> ActivityView {
     let before = faults.as_slice().len();
     let now = Utc::now();
-    let today = RunFilter {
+    let today = FarmRunFilter {
         since: Some(start_of_day(now)),
-        ..RunFilter::default()
+        ..FarmRunFilter::default()
     };
-    let week = RunFilter {
+    let week = FarmRunFilter {
         since: Some(now - Duration::days(7)),
-        ..RunFilter::default()
+        ..FarmRunFilter::default()
     };
     let spark_since = start_of_day(now) - Duration::days(SPARK_DAYS - 1);
     let (farms, agents, today_stats, week_stats, daily, active) = tokio::join!(
@@ -110,7 +110,7 @@ pub(crate) fn fill_days(rows: &[DailyRunCount], first: NaiveDate) -> Vec<i64> {
         .collect()
 }
 
-pub(crate) fn success_rate(stats: &RunStats) -> Option<f64> {
+pub(crate) fn success_rate(stats: &FarmRunStats) -> Option<f64> {
     let finished = stats.succeeded + stats.failed + stats.timed_out;
     (finished > 0).then(|| stats.succeeded as f64 / finished as f64)
 }

@@ -81,9 +81,7 @@ impl ServerHandler for SystempromptServer {
                 .enable_extensions_with(build_extension_capabilities())
                 .build(),
         )
-        // Why: MCP Apps (SEP-1865) needs a 2026-era protocol; negotiating
-        // 2025-06-18 skips the UI handshake, so core drops every embedded
-        // artifact without an error.
+        // Why: MCP Apps (SEP-1865) needs this protocol; an older one silently drops UI artifacts.
         .with_protocol_version(ProtocolVersion::V_2026_07_28)
         .with_server_info(
             Implementation::new(

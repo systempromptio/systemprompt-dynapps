@@ -5,11 +5,9 @@
 //! pricing written beside it.
 //!
 //! Claude is served from Anthropic's own API under the bare `claude-*` ids,
-//! listed to every client. Since 2026-10-16 the installation is Anthropic-only
-//! by customer requirement: every other upstream (Gemini, Vertex, Cerebras) is
-//! commented out of the file and its secret removed from the profiles. On
-//! 2026-10-17 `DeepSeek` was added beside it (user-approved, for a cost
-//! comparison against Claude), reachable only by an explicit `deepseek-*` id.
+//! listed to every client. By customer requirement the only other upstream is
+//! `DeepSeek`, kept for a cost comparison against Claude and reachable only by
+//! an explicit `deepseek-*` id.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -19,8 +17,7 @@
 //!
 //! These tests pin the served id set, the live-provider invariant (Anthropic
 //! and `DeepSeek`, one secret each, every route onto one of them), the
-//! `DeepSeek` rate card, the Sonnet 5 rate that was
-//! wrong here until 2026-09-04, the Opus 5.5 rate card, and the fact that the
+//! `DeepSeek`, Sonnet 5 and Opus 5.5 rate cards, and the fact that the
 //! gateway's default model resolves inside the catalog through the `claude-*`
 //! route. Changing any of them is then a deliberate, review-visible edit rather
 //! than a one-line drift.
@@ -182,9 +179,7 @@ fn opus_5_5_carries_its_launch_rate_card() {
     assert_eq!(opus.limits.max_output_tokens, 128_000);
 }
 
-// Why: since 2026-10-14 the gateway is Anthropic-only (a client's key, no
-// Vertex): the default model routes to `anthropic` with no failover, and the
-// provider serves the bare id directly.
+// The default model routes to `anthropic` with no failover, served by bare id.
 #[test]
 fn the_gateway_default_model_is_served_by_anthropic_only() {
     let spec = gateway();
@@ -221,9 +216,8 @@ fn every_route_goes_to_a_live_provider() {
     }
 }
 
-// Why: the customer requires that only their Anthropic API key is used; the
-// other providers' secrets were deleted on 2026-10-16. DeepSeek was added on
-// 2026-10-17 with the user's approval.
+// Why: the customer requires their own Anthropic key; DeepSeek is the approved
+// comparison.
 #[test]
 fn anthropic_and_deepseek_are_the_only_live_providers() {
     let names: Vec<String> = registry()

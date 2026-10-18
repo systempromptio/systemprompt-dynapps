@@ -92,7 +92,6 @@ impl ArtifactKind {
     }
 }
 
-/// The column the rows sort by.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToolSort {
     #[default]

@@ -46,11 +46,8 @@ async fn seed_second_admin(pool: &PgPool) -> String {
     .to_owned()
 }
 
-// Why: this rule used to be asserted against `POST /invites`. Invites are gone
-// — SSO is the only door and an AD group is the invitation — but the escalation
-// rule they carried still governs the surviving operator-created door, so it is
-// re-asserted there rather than deleted with them. What must hold is that the
-// *admin role* is the boundary — a non-admin cannot mint an admin.
+// The *admin role* is the boundary on the operator-created door: a non-admin
+// cannot mint an admin.
 #[tokio::test]
 async fn an_admin_may_create_a_user_with_elevated_roles() {
     if !globals::init() {

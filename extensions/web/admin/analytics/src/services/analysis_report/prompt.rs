@@ -36,8 +36,8 @@ skill to fix or retire, which model route to change, whose spend to review, whic
 tool to allow or block — each with a one-sentence rationale and a priority (high | medium \
 | low). Never quote credentials or personal data beyond a display name.";
 
-// JSON: the response schema handed to the provider API — an OpenAPI subset
-// (Gemini's responseSchema), so enums and `required` are all it carries.
+// JSON: the response schema handed to the provider API; core strips anything
+// past enums and `required`.
 #[must_use]
 pub(crate) fn findings_schema() -> serde_json::Value {
     let evidence = serde_json::json!({

@@ -12,7 +12,7 @@ use systemprompt_web_shared::format::format_cost;
 
 use super::status::{BadgeView, trigger_badge};
 use crate::handlers::ssr::farm_evals::matrix::score_tone;
-use crate::handlers::ssr::farm_evals::{eval_status_badge, score_display};
+use crate::handlers::ssr::farm_evals::{eval_status_badge, score_cell};
 use crate::repositories::rows::{EvalDayRow, EvalRunRow};
 use crate::types::FarmAgentId;
 
@@ -69,7 +69,7 @@ fn trend_row(days: &[&EvalDayRow]) -> Option<EvalTrendRowView> {
         || ("—".to_owned(), "muted"),
         |r| (format!("{r:.0}%"), score_tone(r)),
     );
-    let (score_text, mean_tone) = score_display(mean);
+    let (score_text, mean_tone) = score_cell(mean);
     let pass_values: Vec<i64> = days
         .iter()
         .filter_map(|d| pct(d.passed, d.decided).map(|r| r.round() as i64))
@@ -124,7 +124,7 @@ pub fn eval_trend_rows(history: &[EvalDayRow]) -> Vec<EvalTrendRowView> {
 pub fn eval_run_items(runs: &[EvalRunRow]) -> Vec<EvalRunItemView> {
     runs.iter()
         .map(|run| {
-            let (score_text, run_tone) = score_display(run.mean_score);
+            let (score_text, run_tone) = score_cell(run.mean_score);
             EvalRunItemView {
                 href: format!("/admin/farm/evals/runs/{}", run.id.as_str()),
                 relative: relative_time(run.created_at),

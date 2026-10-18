@@ -9,7 +9,7 @@ use std::sync::Arc;
 use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use systemprompt::agent_runs::{AgentRunRepository, ErrorClass, RunOutcome, RunStatus};
-use systemprompt_web_admin_farm::repositories::filters::RunFilter;
+use systemprompt_web_admin_farm::repositories::filters::FarmRunFilter;
 use systemprompt_web_admin_farm::repositories::{farms, runs};
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 
@@ -70,10 +70,10 @@ async fn count(pool: &PgPool, sql: &'static str, user: &str) -> i64 {
         .expect("count")
 }
 
-fn all_time() -> RunFilter {
-    RunFilter {
+fn all_time() -> FarmRunFilter {
+    FarmRunFilter {
         since: Some(Utc::now() - Duration::days(1)),
-        ..RunFilter::default()
+        ..FarmRunFilter::default()
     }
 }
 

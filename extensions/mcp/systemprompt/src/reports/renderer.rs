@@ -18,9 +18,7 @@ impl UiRenderer for AdminRenderer {
     }
 
     fn render(&self, artifact: &Artifact) -> McpDomainResult<UiResource> {
-        // Why: core drops the embedded resource when a renderer errors, and
-        // DashboardRenderer cannot read a ReportOutput, so a parse failure is
-        // surfaced here instead of falling through to it.
+        // Why: core drops the resource on a renderer error; surface parse failures.
         let mut failure: Option<serde_json::Error> = None;
         let report = artifact.parts.iter().find_map(|part| {
             let PartContent::Data(data) = &part.content else {

@@ -3,7 +3,7 @@
 //! uses, built into the same `GovernanceEngine`, and driven with the inputs
 //! that were denying real traffic before the mode existed. Every stage must
 //! still find what it found. Every stage inherits the window (no stage
-//! overrides it with `mode: enforce` since 2026-10-15), so each finding is a
+//! overrides it with `mode: enforce`), so each finding is a
 //! recorded warn and nothing is refused.
 //!
 //! The write side is exercised too: each warn verdict is recorded through

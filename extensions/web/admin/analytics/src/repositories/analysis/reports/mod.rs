@@ -65,7 +65,6 @@ impl Assessment {
     }
 }
 
-/// How serious one theme is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Severity {
@@ -85,7 +84,6 @@ impl Severity {
     }
 }
 
-/// How urgent one recommendation is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Priority {

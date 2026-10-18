@@ -1,22 +1,19 @@
-//! `/admin/mcp` and `/admin/mcp/{id}` — the fleet as the page shows it, the
-//! raw call log, and the per-tool split.
+//! `/admin/mcp` and `/admin/mcp/{id}` — the fleet as the page shows it and the
+//! raw call log. The per-tool split lives in `mcp_tools`.
 //!
 //! The fleet rows are the page's own rows
 //! (`handlers::catalog::mcp::fleet_rows`), so a downloaded number is the number
 //! that was on screen. The call log is every `mcp_tool_executions` row in the
 //! window with its `source`, because a data dump must let the reader tell a
 //! server-observed run from the client's attestation of it; `?server=` narrows
-//! either to one server, as the detail page's export does. The per-tool split
-//! always loads the whole aggregate up to its cap, ignoring the preview limit.
+//! either to one server, as the detail page's export does.
 
 use async_trait::async_trait;
 use serde::Deserialize;
 
 
 use crate::handlers::catalog::mcp::{McpServerRow, fleet_rows};
-use crate::repositories::mcp::runtime::{
-    CallLogQuery, McpExecutionRow, McpToolStat, list_mcp_executions_paged, list_mcp_tool_stats,
-};
+use crate::repositories::mcp::runtime::{CallLogQuery, McpExecutionRow, list_mcp_executions_paged};
 use systemprompt_web_admin_core::error::AdminResult;
 use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
@@ -26,7 +23,6 @@ use systemprompt_web_admin_core::export::window::time_range;
 
 pub(crate) struct McpServers;
 pub(crate) struct McpCalls;
-pub(crate) struct McpTools;
 
 inventory::submit! {
     DataSetRegistration {
@@ -40,16 +36,10 @@ inventory::submit! {
         dataset: &McpCalls,
     }
 }
-inventory::submit! {
-    DataSetRegistration {
-        order: 20,
-        dataset: &McpTools,
-    }
-}
 
 #[derive(Debug, Default, Deserialize)]
-struct ServerQuery {
-    server: Option<String>,
+pub(super) struct ServerQuery {
+    pub(super) server: Option<String>,
 }
 
 const SERVER_COLUMNS: &[Column] = &[
@@ -168,36 +158,6 @@ fn call_row(r: &McpExecutionRow) -> Vec<Cell> {
     ]
 }
 
-const TOOL_COLUMNS: &[Column] = &[
-    Column::new("server", "Server", CellKind::Text),
-    Column::new("tool", "Tool", CellKind::Text),
-    Column::new("calls", "Calls", CellKind::Integer),
-    Column::new("failed", "Failed or timed out", CellKind::Integer),
-    Column::new("attested", "Attested", CellKind::Integer),
-    Column::new("users", "Users", CellKind::Integer),
-    Column::new("avg_ms", "Avg (ms)", CellKind::Decimal),
-    Column::new("p95_ms", "p95 (ms)", CellKind::Decimal),
-    Column::new("max_ms", "Max (ms)", CellKind::Integer),
-    Column::new("payload_bytes", "Payload bytes", CellKind::Integer),
-    Column::new("last_call_at", "Last call", CellKind::Timestamp),
-];
-
-fn tool_row(r: &McpToolStat) -> Vec<Cell> {
-    vec![
-        r.server_name.as_str().into(),
-        r.tool_name.as_str().into(),
-        r.calls.into(),
-        r.failures.into(),
-        r.attested.into(),
-        r.distinct_users.into(),
-        Cell::opt_decimal(r.avg_ms),
-        Cell::opt_decimal(r.p95_ms),
-        Cell::opt_int(r.max_ms),
-        r.payload_bytes.into(),
-        Cell::opt_time(r.last_call_at),
-    ]
-}
-
 #[async_trait]
 impl DataSet for McpServers {
     fn id(&self) -> &'static str {
@@ -256,38 +216,5 @@ impl DataSet for McpCalls {
             rows: rows.iter().map(call_row).collect(),
             total,
         })
-    }
-}
-
-#[async_trait]
-impl DataSet for McpTools {
-    fn id(&self) -> &'static str {
-        "mcp-tools"
-    }
-    fn title(&self) -> &'static str {
-        "MCP tools"
-    }
-    fn description(&self) -> &'static str {
-        "One row per server and tool: calls, errors, attestation, latency and payload over the window."
-    }
-    fn columns(&self) -> &'static [Column] {
-        TOOL_COLUMNS
-    }
-    fn window(&self) -> Window {
-        Window::Live
-    }
-    async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
-        let query: ServerQuery = ctx.query()?;
-        let range = time_range(ctx)?;
-        let row_cap = self.cap();
-        let rows = list_mcp_tool_stats(
-            ctx.pool,
-            query.server.as_deref().filter(|s| !s.is_empty()),
-            range.from,
-            range.to,
-            row_cap,
-        )
-        .await?;
-        Ok(Table::complete(rows.iter().map(tool_row).collect()))
     }
 }

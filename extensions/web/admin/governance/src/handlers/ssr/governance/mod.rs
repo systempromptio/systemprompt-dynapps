@@ -37,6 +37,7 @@ use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, p
 mod columns;
 mod context;
 mod data;
+mod filters;
 mod kpis;
 mod sync_tab;
 mod urls;

@@ -13,10 +13,9 @@ name = "systemprompt-mcp-agent-farm"
 path = "src/main.rs"
 
 [features]
-# Dynapps builds with the farm on; `workflows` is the alternative default.
+# Dynapps builds with the farm on.
 default = ["farm"]
 farm = ["dep:systemprompt-web-admin-farm"]
-workflows = []
 
 [dependencies]
 # Audit: uses agent_runs, config, database, identifiers, logging, mcp, models, security, system — requires `full`.

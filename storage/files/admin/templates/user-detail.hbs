@@ -109,10 +109,6 @@
                 <div class="sp-kv-row"><dt>External subject</dt><dd class="sp-u-mono">{{#if identity.external_sub}}{{identity.external_sub}}{{else}}&mdash;{{/if}}</dd></div>
                 <div class="sp-kv-row"><dt>Linked at</dt><dd class="sp-u-num">{{#if identity.linked_at}}{{identity.linked_at}}{{else}}&mdash;{{/if}}</dd></div>
                 <div class="sp-kv-row">
-                    <dt>Slack</dt>
-                    <dd><span class="sp-kv-row__value"><span class="sp-u-mono">{{#if identity.slack_user_id}}{{identity.slack_user_id}}{{else}}Not linked{{/if}}</span>{{#if can_write}}{{#if identity.slack_user_id}}<button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-unlink="slack">Unlink</button>{{/if}}{{/if}}</span></dd>
-                </div>
-                <div class="sp-kv-row">
                     <dt>Share token</dt>
                     <dd><span class="sp-kv-row__value"><span class="sp-u-num">version {{identity.share_token_version}}</span>{{#if can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-issue-share-token>Issue</button>{{/if}}</span></dd>
                 </div>

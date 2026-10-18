@@ -9,7 +9,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::repositories::reports::{customer, internal};
+use crate::repositories::reports::customer;
 use systemprompt_web_admin_core::error::AdminResult;
 use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
@@ -236,52 +236,4 @@ dataset!(
     }
 );
 
-const SUPPLIER_COLUMNS: &[Column] = &[
-    Column::new("key", "Supplier", CellKind::Text),
-    Column::new("requests", "Requests", CellKind::Integer),
-    Column::new("tokens", "Tokens", CellKind::Integer),
-    Column::new("cost_usd", "Cost (USD)", CellKind::Money),
-];
-
-fn supplier_rows(rows: &[internal::SupplierMonthCost]) -> Table {
-    Table::complete(
-        rows.iter()
-            .map(|r| {
-                vec![
-                    r.key.as_str().into(),
-                    r.requests.into(),
-                    r.tokens.into(),
-                    Cell::Money(r.cost_microdollars),
-                ]
-            })
-            .collect(),
-    )
-}
-
-dataset!(
-    InternalProviders,
-    "report-internal-providers",
-    "Provider cost for the month",
-    "One row per provider for the month: requests, tokens and cost.",
-    SUPPLIER_COLUMNS,
-    |ctx| {
-        let m = month(ctx)?;
-        Ok(supplier_rows(
-            &internal::list_provider_month_costs(ctx.pool, m.from, m.to).await?,
-        ))
-    }
-);
-
-dataset!(
-    InternalModels,
-    "report-internal-models",
-    "Model cost for the month",
-    "One row per model for the month: requests, tokens and cost.",
-    SUPPLIER_COLUMNS,
-    |ctx| {
-        let m = month(ctx)?;
-        Ok(supplier_rows(
-            &internal::list_model_month_costs(ctx.pool, m.from, m.to).await?,
-        ))
-    }
-);
+mod internal_costs;

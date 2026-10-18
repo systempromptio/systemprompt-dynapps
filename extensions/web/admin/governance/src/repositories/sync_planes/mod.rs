@@ -10,4 +10,5 @@
 
 pub mod gateway_policies;
 pub mod gateway_routes;
+mod gateway_routes_drift;
 pub mod governance;

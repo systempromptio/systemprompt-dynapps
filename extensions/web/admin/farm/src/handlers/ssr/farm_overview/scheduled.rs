@@ -4,9 +4,10 @@
 //! expected here: the farm denies every dynapps-odoo write tool.
 
 use systemprompt_web_admin_core::ssr::format::{format_cost, local_time, short_num};
+use systemprompt_web_admin_core::ssr::tone::score_display;
 
 use super::activity::KpiTile;
-use crate::handlers::ssr::shared::outcomes::{pct_display, rate_tone, score_display, tile};
+use crate::handlers::ssr::shared::outcomes::{pct_display, rate_tone, tile};
 use crate::repositories::reports::ScheduledStatsRow;
 
 fn pct(part: i64, whole: i64) -> Option<f64> {

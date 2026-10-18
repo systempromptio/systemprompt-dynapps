@@ -202,8 +202,7 @@ pub(crate) async fn detect_after_the_fact(
                 .as_ref()
                 .map(|s| s.as_str().to_owned())
                 .unwrap_or_default();
-            // JSON: JSONB column — `governance_decisions.evaluated_rules`,
-            // serialized from the typed `AclDetectAudit` below
+            // JSON: JSONB `evaluated_rules`, from typed `AclDetectAudit`
             let evaluated = serde_json::to_value(AclDetectAudit {
                 ai_request_id: &row.id,
                 model: &row.model,

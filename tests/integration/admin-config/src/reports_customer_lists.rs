@@ -14,7 +14,7 @@ use crate::fixtures::{
 use crate::tempdb::TempDb;
 
 // Two users on different projects, both of whom made a request inside the
-// historical window, plus one request outside it.
+// past window, plus one request outside it.
 struct Scenario {
     heavy: String,
     light: String,

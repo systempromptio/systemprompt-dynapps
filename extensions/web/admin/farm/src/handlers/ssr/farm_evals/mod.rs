@@ -23,7 +23,7 @@ use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
 
 use context::{EvalSuiteRowView, KpiView, OptionView, WINDOWS};
-pub(crate) use context::{eval_status_badge, is_eval_live, score_display};
+pub(crate) use context::{eval_status_badge, is_eval_live, score_cell};
 use matrix::{EvalMatrixView, eval_matrix};
 
 use crate::handlers::ssr::shared::{

@@ -4,13 +4,16 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::filters::RunFilter;
-use crate::repositories::summaries::{DailyRunCount, RunStats};
+use crate::repositories::filters::FarmRunFilter;
+use crate::repositories::summaries::{DailyRunCount, FarmRunStats};
 use crate::types::{FarmAgentId, FarmId, RunStatus, TriggeredVia};
 
-pub async fn get_run_stats(pool: &PgPool, filter: &RunFilter) -> Result<RunStats, sqlx::Error> {
+pub async fn get_run_stats(
+    pool: &PgPool,
+    filter: &FarmRunFilter,
+) -> Result<FarmRunStats, sqlx::Error> {
     sqlx::query_file_as!(
-        RunStats,
+        FarmRunStats,
         "src/repositories/runs/get_run_stats.sql",
         filter.farm_id.as_ref().map(FarmId::as_str),
         filter.agent_id.as_ref().map(FarmAgentId::as_str),

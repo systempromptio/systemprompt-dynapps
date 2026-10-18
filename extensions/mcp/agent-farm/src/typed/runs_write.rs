@@ -53,14 +53,6 @@ async fn start(ctx: &ToolCtx<'_>, input: RunStartInput) -> ToolResult<(RunStartO
     }
 }
 
-#[cfg(feature = "workflows")]
-fn workflow_unavailable() -> ToolError {
-    ToolError::Invalid(
-        "`origin: workflow` runs are started by the workflow engine, not by this tool".to_owned(),
-    )
-}
-
-#[cfg(not(feature = "workflows"))]
 fn workflow_unavailable() -> ToolError {
     ToolError::Invalid(
         "`origin: workflow` is not available on this instance; use `origin: farm`".to_owned(),

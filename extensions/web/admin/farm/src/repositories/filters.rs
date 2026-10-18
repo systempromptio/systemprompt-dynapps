@@ -123,7 +123,7 @@ pub struct NewEvalCase {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct RunFilter {
+pub struct FarmRunFilter {
     pub farm_id: Option<FarmId>,
     pub agent_id: Option<FarmAgentId>,
     pub user_id: Option<UserId>,
@@ -158,7 +158,7 @@ impl RunSort {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PageWindow {
+pub struct RowWindow {
     pub limit: i64,
     pub offset: i64,
 }

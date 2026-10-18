@@ -11,6 +11,7 @@
 
 mod detail;
 mod preview;
+mod provenance;
 
 use std::sync::Arc;
 

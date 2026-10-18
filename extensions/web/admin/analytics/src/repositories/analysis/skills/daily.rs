@@ -8,7 +8,6 @@ use systemprompt::identifiers::UserId;
 
 use super::SkillWindow;
 
-/// One day of a skill's record.
 #[derive(Debug, Clone, Copy)]
 pub struct SkillDayRow {
     pub day: NaiveDate,
@@ -104,7 +103,6 @@ impl SkillBreakdownBy {
     }
 }
 
-/// One bucket of a skill breakdown.
 #[derive(Debug, Clone)]
 pub struct SkillBucketRow {
     pub label: String,

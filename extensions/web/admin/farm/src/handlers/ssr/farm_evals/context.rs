@@ -4,6 +4,7 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt_web_admin_core::ssr::format::relative_time;
+use systemprompt_web_admin_core::ssr::tone::score_display;
 use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparkline_toned};
 use systemprompt_web_shared::format::format_cost;
 
@@ -72,11 +73,8 @@ pub(crate) fn is_eval_live(status: &str) -> bool {
     )
 }
 
-pub(crate) fn score_display(score: Option<f64>) -> (String, &'static str) {
-    score.map_or_else(
-        || ("—".to_owned(), "muted"),
-        |s| (format!("{s:.0}"), score_tone(s)),
-    )
+pub(crate) fn score_cell(score: Option<f64>) -> (String, &'static str) {
+    (score_display(score), score.map_or("muted", score_tone))
 }
 
 pub(crate) fn farm_options(farms: &[FarmRow], selected: Option<&str>) -> Vec<OptionView> {
@@ -117,7 +115,7 @@ pub(crate) fn kpis(suites: &[EvalSuiteRow], runs: &[EvalRunRow], days: u32) -> V
     let cases: i64 = suites.iter().map(|s| i64::from(s.case_count)).sum();
     let scores: Vec<f64> = runs.iter().filter_map(|r| r.mean_score).collect();
     let mean = (!scores.is_empty()).then(|| scores.iter().sum::<f64>() / scores.len() as f64);
-    let (mean_value, mean_tone) = score_display(mean);
+    let (mean_value, mean_tone) = score_cell(mean);
     let passed: i64 = runs.iter().map(|r| i64::from(r.passed)).sum();
     let decided: i64 = runs
         .iter()
@@ -173,7 +171,7 @@ pub(crate) fn kpis(suites: &[EvalSuiteRow], runs: &[EvalRunRow], days: u32) -> V
 }
 
 fn last_run(run: &EvalRunRow) -> LastRunView {
-    let (score_display, score_tone) = score_display(run.mean_score);
+    let (score_display, score_tone) = score_cell(run.mean_score);
     LastRunView {
         status: eval_status_badge(&run.status),
         href: format!("/admin/farm/evals/runs/{}", run.id.as_str()),

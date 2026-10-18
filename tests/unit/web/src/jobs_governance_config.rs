@@ -121,8 +121,8 @@ fn an_unknown_mode_fails_the_job() {
 }
 
 // Why: the entropy tunables must live in the file explicitly — a silent core
-// default is how one SRI hash in forwarded assets denied every gateway prompt
-// (2026-08-26). This pins the shipped block: all four stages on, the backstop
+// default let one SRI hash in forwarded assets deny every gateway prompt.
+// This pins the shipped block: all four stages on, the backstop
 // configured, and the SRI digest shapes allowlisted.
 #[test]
 fn the_shipped_governance_config_declares_the_entropy_tunables() {

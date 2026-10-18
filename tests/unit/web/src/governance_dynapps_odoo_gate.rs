@@ -4,7 +4,7 @@
 //! (`mcp__plugin_dynapps-portal_dynapps-odoo__`) naming, is flagged for
 //! a plain caller and passes for `odoo_writer` or admin, its read tools pass,
 //! and the role unlocks nothing outside `mcp__dynapps-odoo__`. The tool plane
-//! runs in warn mode (services/governance/config.yaml, 2026-10-15), so a
+//! runs in warn mode (services/governance/config.yaml), so a
 //! would-be refusal is recorded as `Warn`; restoring `mode: enforce` turns
 //! these back to `Deny`.
 

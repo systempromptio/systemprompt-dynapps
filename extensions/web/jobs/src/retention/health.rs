@@ -1,9 +1,9 @@
-//! The monthly health check: the checks from `docs/ops/db-analysis/queries/
-//! health/` that a job can run without operator input, as one JSON report
-//! with ranked findings. P1 is a queue that is not draining or a window
-//! that is not being applied; P2 is growth that will hurt within a year;
-//! P3 is hygiene. Dead tuples above a fifth mean autovacuum is behind; an
-//! oldest row a week past its window means retention is not being enforced.
+//! The monthly health check: the database health checks a job can run
+//! without operator input, as one JSON report with ranked findings. P1 is a
+//! queue that is not draining or a window that is not being applied; P2 is
+//! growth that will hurt within a year; P3 is hygiene. Dead tuples above a
+//! fifth mean autovacuum is behind; an oldest row a week past its window means
+//! retention is not being enforced.
 
 use chrono::{Duration, Utc};
 use serde::Serialize;

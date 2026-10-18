@@ -10,8 +10,7 @@
 //! audit and the reporting-privacy projection are unchanged.
 //!
 //! Every input is a flat struct: `String` fields default to `""` and integer
-//! fields to a number, never `Option`, because schemars renders an `Option`
-//! as a type list and Gemini refuses a function declaration that holds one.
+//! fields to a number, never `Option`, so every schema field has one type.
 //! A page size above `MAX_PAGE` is clamped and reported rather than refused,
 //! since a refusal is one more error the model has to reason around.
 

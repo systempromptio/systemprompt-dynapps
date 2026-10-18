@@ -58,8 +58,7 @@ pub async fn list_chain_policies(pool: &PgPool) -> Result<Vec<ChainPolicyRow>, s
             position: r.position,
             enabled: r.enabled,
             mode: r.mode,
-            // JSON: JSONB column — the policy entry as written, read back as
-            // YAML for the renderer; discard-ok: JSON is always YAML
+            // JSON: JSONB read back as YAML; discard-ok: JSON is valid YAML
             entry: serde_yaml::to_value(r.entry).unwrap_or(serde_yaml::Value::Null),
             source: r.source,
             updated_at: r.updated_at,

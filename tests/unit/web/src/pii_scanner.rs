@@ -71,8 +71,8 @@ async fn an_e164_phone_is_flagged_but_a_bare_digit_run_is_not() {
     );
 }
 
-// The strings that were actually flowing through the production gateway on
-// 2026-08-31, when core's heuristic scanner was denying them as credit cards.
+// Real production gateway strings that core's heuristic scanner denied as
+// credit cards.
 // This scanner never did — that is the property worth pinning, because it is
 // what makes `pii_ssn` safe to keep in `block_categories` when the other two
 // request-side categories had to be demoted to audit-only.

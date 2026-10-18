@@ -3,8 +3,8 @@
 //! the boot job uses, written to `ai_gateway_policies` in a throwaway
 //! database, and read back through the gateway's `PolicyResolver` — the merge
 //! that decides what the dispatch path actually enforces. `safety.mode` has to
-//! come out the far side as `warn` and so does `quota_mode` (back to warn
-//! 2026-10-15), or the file says one thing and the gateway does another.
+//! come out the far side as `warn` and so does `quota_mode`, or the file says
+//! one thing and the gateway does another.
 //!
 //! The quota plane gets its own proof: the resolved windows are driven to
 //! exhaustion with the real reservation code, which must report the breach

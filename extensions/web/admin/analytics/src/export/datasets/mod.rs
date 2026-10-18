@@ -3,6 +3,7 @@
 //! `export_rows`, so the export never drifts from the page.
 
 pub(crate) mod analysis_conversation;
+pub(crate) mod analysis_conversation_breakdown;
 pub(crate) mod analysis_conversations;
 pub(crate) mod analysis_skill_conversations;
 pub(crate) mod analysis_skill_runs;

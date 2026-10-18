@@ -4,12 +4,9 @@
 //! and a category *blocking* is the difference between an audit row and a
 //! customer's 400.
 //!
-//! On 2026-08-31 `jailbreak` and `pii_credit_card` blocked ordinary developer
-//! traffic in production: core's Luhn check slid a 16-digit window over merged
-//! digit runs, and its phrase list carried the literal "you are now". On
-//! 2026-09-04 the same class of false positive was still stopping work, so both
-//! block lists were emptied: everything is scanned and audited, nothing is
-//! denied, until core's warn mode (Stream D2) can show what would have blocked.
+//! `jailbreak` and `pii_credit_card` produce false positives on ordinary
+//! developer traffic, so they are scanned and audited but never block, and
+//! the scanners run in warn mode so the report shows what would have blocked.
 //! These tests exist so that putting any category back into a live block list
 //! is a deliberate, review-visible act rather than a one-word edit.
 
@@ -50,8 +47,7 @@ fn the_scanners_are_in_warn_mode_and_block_nothing() {
     assert_eq!(default_quotas().spec.safety.mode, SafetyMode::Warn);
 }
 
-// Why: enforce (2026-10-14) refused active users with 429 at the $5/h window,
-// so on 2026-10-15 the quota plane returned to warning thresholds.
+// Why: enforced quotas refused active users with 429, so the windows only warn.
 #[test]
 fn the_quota_windows_are_warning_thresholds() {
     assert_eq!(default_quotas().spec.quota_mode, QuotaMode::Warn);
@@ -83,7 +79,7 @@ fn the_false_positive_prone_categories_never_block_a_request() {
     }
 }
 
-// Nothing blocks in either direction (2026-09-04). Scanning is untouched, so
+// Nothing blocks in either direction. Scanning is untouched, so
 // the audit trail is complete; under warn mode the lists below deny nothing and
 // only decide what the warnings report counts as would-have-blocked.
 #[test]
@@ -133,7 +129,7 @@ fn request_history_is_not_rescanned() {
     assert_eq!(default_quotas().spec.safety.history, SafetyHistoryMode::Off);
 }
 
-// Ceilings sized for the pilot (Ed, 2026-10-14): about ten $0.50 farm runs an
+// Ceilings sized for the pilot: about ten $0.50 farm runs an
 // hour per account, $40 a day for the whole installation. Pinned so raising
 // them is review-visible.
 fn window(subject: &str, seconds: i32) -> Option<i64> {

@@ -48,7 +48,7 @@ fn days_defaults_to_seven_when_omitted() {
 #[test]
 fn stored_reports_from_before_request_and_highlights_are_still_renderable() {
     // These fields were added after reports had already been persisted. The
-    // viewer must be able to open that historical data rather than dropping
+    // viewer must be able to open that past data rather than dropping
     // the artifact because an optional display enhancement is absent.
     let report: ReportOutput = serde_json::from_value(json!({
         "report":"costs", "title":"AI Usage & Cost", "checked_at":"2026-09-01T00:00:00Z",

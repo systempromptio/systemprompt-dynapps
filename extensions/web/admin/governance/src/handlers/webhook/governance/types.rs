@@ -26,8 +26,7 @@ impl GovernanceDecision {
     pub const fn from_decision(d: &Decision) -> Self {
         match d {
             Decision::Allow { .. } | Decision::Warn { .. } => Self::Allow,
-            // Why: the Claude Code hook contract has no "hold" answer and this
-            // webhook is synchronous, so a pending decision degrades to deny.
+            // Why: the Claude Code hook contract has no "hold" answer, so pending degrades to deny.
             Decision::Deny { .. } | Decision::Pending { .. } => Self::Deny,
         }
     }

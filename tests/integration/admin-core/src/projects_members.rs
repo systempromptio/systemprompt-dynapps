@@ -138,7 +138,7 @@ async fn directory_refresh_replaces_project_claims_but_preserves_manual_attribut
     db.cleanup().await;
 }
 
-// A previously revoked manual grant is audit history, not a permanent bar on
+// A revoked manual grant is audit history, not a permanent bar on
 // granting the same person access again.  The upsert must revive that row and
 // restore its visibility to project reads.
 #[tokio::test]

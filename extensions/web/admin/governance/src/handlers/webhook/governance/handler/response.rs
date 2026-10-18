@@ -28,8 +28,7 @@ impl IntoResponse for HookVerdict {
         let permission_decision = GovernanceDecision::from_decision(&self.decision);
         let permission_decision_reason = match self.decision {
             Decision::Allow { .. } => None,
-            // Why: Claude Code shows `permissionDecisionReason` to the user as a
-            // refusal, so a warn-mode reason stays in the audit row only.
+            // Why: Claude Code shows any reason as a refusal, so a warn reason stays in the audit.
             Decision::Warn { reason } => {
                 tracing::warn!(%reason, "governance warn-mode finding; allowing the tool call");
                 None

@@ -6,7 +6,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use systemprompt_web_shared::format::{format_cost, format_duration_ms, short_id};
 
-use crate::handlers::ssr::farm_evals::{eval_status_badge, is_eval_live, score_display};
+use crate::handlers::ssr::farm_evals::{eval_status_badge, is_eval_live, score_cell};
 use crate::handlers::ssr::shared::{BadgeView, status_badge};
 use crate::repositories::rows::{EvalResultRow, EvalRunRow};
 use crate::types::EvalResultStatus;
@@ -68,7 +68,7 @@ fn result_badge(status: &str) -> BadgeView {
 fn case_row(result: &EvalResultRow) -> CaseRowView {
     let assertions = Vec::<AssertionView>::deserialize(&result.assertions).unwrap_or_default();
     let held = assertions.iter().filter(|a| a.passed).count();
-    let (score_display, score_tone) = score_display(result.judge_score);
+    let (score_display, score_tone) = score_cell(result.judge_score);
     CaseRowView {
         case_id: result.case_id.clone(),
         detail_id: format!("eval-case-{}", result.id.as_str()),
@@ -96,7 +96,7 @@ fn duration_display(run: &EvalRunRow) -> String {
 }
 
 fn kpis(run: &EvalRunRow, results: &[EvalResultRow]) -> Vec<LiveKpiView> {
-    let (score, score_tone) = score_display(run.mean_score);
+    let (score, score_tone) = score_cell(run.mean_score);
     let kpi = |key, label, value: String, tone| LiveKpiView {
         key,
         label,

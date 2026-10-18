@@ -60,6 +60,30 @@ fn tabs(on_entitlements: bool, members: usize, entitlements: usize) -> Vec<TabLi
     ]
 }
 
+fn member_page(
+    member_rows: &[members::RoleHolderRow],
+    query: &RolesQuery,
+) -> (Vec<members::RoleHolderRow>, i64, PageWindow) {
+    let matching = data::filtered_sorted(member_rows, query);
+    let total = i64::try_from(matching.len()).unwrap_or(i64::MAX);
+    let index = data::page_index(query, total);
+    let start = usize::try_from(index * DEFAULT_PAGE_SIZE).unwrap_or(0);
+    let page_rows: Vec<_> = matching
+        .iter()
+        .skip(start)
+        .take(usize::try_from(DEFAULT_PAGE_SIZE).unwrap_or(50))
+        .cloned()
+        .collect();
+    let window = PageWindow::new(
+        index,
+        DEFAULT_PAGE_SIZE,
+        total,
+        i64::try_from(page_rows.len()).unwrap_or(0),
+        "people",
+    );
+    (page_rows, total, window)
+}
+
 pub(crate) async fn roles_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -83,23 +107,7 @@ pub(crate) async fn roles_page(
     );
 
     let cards = rows::cards(&member_rows, &entitlement_rows, &query);
-    let matching = data::filtered_sorted(&member_rows, &query);
-    let total = i64::try_from(matching.len()).unwrap_or(i64::MAX);
-    let index = data::page_index(&query, total);
-    let start = usize::try_from(index * DEFAULT_PAGE_SIZE).unwrap_or(0);
-    let page_rows: Vec<_> = matching
-        .iter()
-        .skip(start)
-        .take(usize::try_from(DEFAULT_PAGE_SIZE).unwrap_or(50))
-        .cloned()
-        .collect();
-    let window = PageWindow::new(
-        index,
-        DEFAULT_PAGE_SIZE,
-        total,
-        i64::try_from(page_rows.len()).unwrap_or(0),
-        "people",
-    );
+    let (page_rows, total, window) = member_page(&member_rows, &query);
 
     let on_entitlements = query.on_entitlements();
     let entitlement_groups = entitlement_groups(on_entitlements, &entitlement_rows, &mut faults);

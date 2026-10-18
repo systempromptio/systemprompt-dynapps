@@ -1,8 +1,7 @@
 //! The typed tools: flat inputs, bounded outputs, one handler per tool.
 //!
 //! Every input is a flat struct of `String` (empty = unset) and numeric
-//! fields with defaults, never `Option`, because schemars renders an `Option`
-//! as a type list and Gemini refuses a function declaration that holds one.
+//! fields with defaults, never `Option`, so every schema field has one type.
 //! Every handler runs over a [`ToolCtx`]: the resolved caller and the server
 //! environment. Scope words are shared across tools — `mine` is the caller's
 //! own runs, `project` the runs of every project they belong to, `all` the

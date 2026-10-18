@@ -115,7 +115,7 @@ async fn an_inactive_account_is_refused_at_consent_and_at_the_broker() {
     let (status, location, _) = h
         .get("/connectors/dynapps-odoo/start", &carol.jwt, &[])
         .await;
-    // An inactive account no longer has a live session, so consent refuses it
+    // An inactive account has no live session, so consent refuses it
     // as unauthenticated before any entitlement check.
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert!(location.is_none(), "no redirect to the portal");

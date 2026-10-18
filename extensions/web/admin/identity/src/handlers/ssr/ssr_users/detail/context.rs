@@ -88,7 +88,6 @@ pub(crate) struct IdentityTabView {
     pub idp_issuer: String,
     pub external_sub: String,
     pub linked_at: String,
-    pub slack_user_id: String,
     pub share_token_version: i32,
 }
 

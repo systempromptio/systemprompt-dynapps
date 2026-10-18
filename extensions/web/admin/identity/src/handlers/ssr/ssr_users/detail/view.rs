@@ -23,8 +23,6 @@ use systemprompt_web_admin_core::types::UserContext;
 pub(super) use super::usage::usage_tab;
 use systemprompt_web_admin_core::ssr::list_view::paginate_prefixed;
 
-const SLACK_ISSUER: &str = "https://slack.com";
-
 pub(super) fn export(
     user_id: &UserId,
     viewer: &UserContext,
@@ -69,12 +67,6 @@ pub(super) fn identity_tab(
         idp_issuer: primary.map(|i| i.issuer.clone()).unwrap_or_default(),
         external_sub: primary.map(|i| i.external_sub.clone()).unwrap_or_default(),
         linked_at: primary.map_or_else(String::new, |i| stamp(Some(i.linked_at))),
-        slack_user_id: data
-            .identities
-            .iter()
-            .find(|i| i.issuer == SLACK_ISSUER)
-            .map(|i| i.external_sub.clone())
-            .unwrap_or_default(),
         share_token_version: data.share_token_version,
     }
 }
