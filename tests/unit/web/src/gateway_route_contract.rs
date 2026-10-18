@@ -5,7 +5,7 @@
 //! turn, because Claude Code declares its whole catalogue on every request.
 //! The contract resolves real requests against the real files: every
 //! `claude-*` request, whatever tools it declares, lands on `anthropic`,
-//! DeepSeek answers only an explicit `deepseek-*` id, and no route may match
+//! `DeepSeek` answers only an explicit `deepseek-*` id, and no route may match
 //! on a client tool name.
 
 use systemprompt::identifiers::ModelId;
