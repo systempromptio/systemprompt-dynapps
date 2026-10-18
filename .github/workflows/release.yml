@@ -279,12 +279,13 @@ jobs:
           path: ~/.cache/cargo-xwin
           key: cargo-xwin-${{ runner.os }}
 
-      # Cache dependencies, not workspace outputs. Every packaging script
-      # still invokes Cargo; the pinned core ref separates bridge dependencies.
+      # Cache dependencies, not workspace outputs. rust-cache already keys on
+      # bridge/Cargo.lock, so a core bump re-resolves only what changed; keying
+      # on CORE_REF as well threw the whole cache away on every bump.
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: bridge
-          key: bridge-${{ matrix.asset }}-${{ hashFiles('bridge/CORE_REF') }}
+          key: bridge-${{ matrix.asset }}
           cache-workspace-crates: false
 
       - name: Import Apple signing credentials
@@ -456,7 +457,7 @@ jobs:
           build-args: |
             SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
           cache-from: type=gha,scope=release-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=release-${{ matrix.arch }}
+          cache-to: type=gha,mode=min,scope=release-${{ matrix.arch }}
           outputs: ${{ env.DRY_RUN == 'true' && 'type=cacheonly' || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
 
       # Same build, exported as a tarball of the server binaries for anyone
