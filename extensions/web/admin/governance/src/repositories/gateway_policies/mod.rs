@@ -9,18 +9,15 @@
 //! [`sync::gateway_policies`](crate::repositories::sync_planes::gateway_policies)
 //! is the plane the sync page drives.
 //!
-//! Calendar-month quota windows are an extension-side interim over core's
-//! fixed-length windows: [`month_window`] holds the arithmetic and
-//! [`month_window_db`] the daily rewrite. Read that module head before
-//! touching a window longer than 31 days.
+//! A calendar-month window is declared `calendar: month` and core resets it on
+//! the month boundary; [`windows`] labels windows for the console.
 
 pub mod declared;
 pub mod drift;
 pub mod export;
 pub mod form;
 pub mod form_error;
-pub mod month_window;
-pub mod month_window_db;
 pub mod rows;
 pub mod unedited;
 pub mod usage;
+pub mod windows;

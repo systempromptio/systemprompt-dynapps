@@ -1,16 +1,13 @@
 //! Database → `policies.yaml`: the rows rendered as the file the loader
 //! reads.
 //!
-//! Every monthly window goes out as its sentinel, never the day's live
-//! value, so the exported file is the declaration and not a snapshot of
-//! the rewrite. The header is regenerated with the export date; the long
+//! The header is regenerated with the export date; the long
 //! operational commentary in the committed file is the operator's to keep
 //! when they merge the result.
 
 use chrono::{DateTime, Utc};
 use systemprompt::gateway::{GatewayPolicyConfig, GatewayPolicyEntry};
 
-use super::month_window::{MONTH_WINDOW_SECONDS, normalise_spec};
 use super::rows::PolicyRow;
 
 fn header(exported_at: DateTime<Utc>) -> String {
@@ -21,8 +18,7 @@ fn header(exported_at: DateTime<Utc>) -> String {
          # direction on request.\n\
          #\n\
          # Exported from the database on {} by the console. A quota window with\n\
-         # `window_seconds: {MONTH_WINDOW_SECONDS}` is a calendar month: the daily\n\
-         # quota_month_window job keeps the live row aligned to the month end.\n\
+         # `calendar: month` resets on the UTC calendar month.\n\
          #\n\
          # Spec fields (systemprompt_ai::GatewayPolicySpec):\n\
          #   quota_mode, quota_windows, safety {{ mode, scanners, block_categories,\n\
@@ -40,7 +36,7 @@ pub fn render_policies_export(rows: &[PolicyRow], exported_at: DateTime<Utc>) ->
                 name: r.name.clone(),
                 enabled: r.enabled,
                 priority: r.priority,
-                spec: normalise_spec(&r.spec),
+                spec: r.spec.clone(),
             })
             .collect(),
     };

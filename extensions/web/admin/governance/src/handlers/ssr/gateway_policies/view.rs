@@ -7,10 +7,8 @@ use serde::Serialize;
 use systemprompt::gateway::{QuotaWindow, SafetyHistoryMode};
 
 use crate::repositories::gateway_policies::form::{CATEGORIES, MAX_WINDOWS, SCANNERS, SUBJECTS};
-use crate::repositories::gateway_policies::month_window::{
-    MONTH_WINDOW_SECONDS, is_month_window, window_label,
-};
 use crate::repositories::gateway_policies::rows::PolicyRow;
+use crate::repositories::gateway_policies::windows::{is_calendar_month, window_label};
 use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
 use systemprompt_web_admin_core::ssr::sync_plane::PlaneCardView;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
@@ -59,12 +57,14 @@ fn subjects(selected: Option<&str>) -> Vec<SelectOptionView> {
     out
 }
 
-fn choice(window_seconds: i32) -> &'static str {
-    match window_seconds {
+const fn choice(w: &QuotaWindow) -> &'static str {
+    if is_calendar_month(w) {
+        return "month";
+    }
+    match w.window_seconds {
         3_600 => "hour",
         86_400 => "day",
         604_800 => "week",
-        s if is_month_window(s) => "month",
         _ => "custom",
     }
 }
@@ -79,7 +79,7 @@ fn dollars(n: Option<i64>) -> String {
 }
 
 pub(crate) fn window_view(index: usize, w: &QuotaWindow, today: NaiveDate) -> WindowView {
-    let choice = choice(w.window_seconds);
+    let choice = choice(w);
     WindowView {
         index,
         subjects: subjects(Some(&w.subject)),
@@ -89,8 +89,8 @@ pub(crate) fn window_view(index: usize, w: &QuotaWindow, today: NaiveDate) -> Wi
         } else {
             String::new()
         },
-        label: window_label(w.window_seconds, today),
-        is_month: is_month_window(w.window_seconds),
+        label: window_label(w, today),
+        is_month: is_calendar_month(w),
         max_requests: optional(w.max_requests),
         max_input_tokens: optional(w.max_input_tokens),
         max_output_tokens: optional(w.max_output_tokens),
@@ -183,10 +183,7 @@ pub(crate) fn policy_view(row: &PolicyRow, today: NaiveDate, in_force: InForce) 
             .clone()
             .unwrap_or_default()
             .join("\n"),
-        has_month_window: s
-            .quota_windows
-            .iter()
-            .any(|w| is_month_window(w.window_seconds)),
+        has_month_window: s.quota_windows.iter().any(is_calendar_month),
         updated_at: row.updated_at.to_rfc3339(),
         in_force,
     }
@@ -222,13 +219,6 @@ pub(crate) struct GatewayPoliciesPageData {
     pub can_write: bool,
     pub policies: Vec<PolicyView>,
     pub new_policy: PolicyView,
-    pub month_sentinel: i32,
     pub quotas_url: &'static str,
     pub docs_url: &'static str,
-}
-
-impl GatewayPoliciesPageData {
-    pub(crate) const fn month_sentinel() -> i32 {
-        MONTH_WINDOW_SECONDS
-    }
 }

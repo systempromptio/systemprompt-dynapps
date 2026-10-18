@@ -26,7 +26,6 @@ fn all_jobs_registered() {
         "llms_txt_generation",
         "plugin_usage_retention",
         "publish_pipeline",
-        "quota_month_window",
         "retention_daily_report",
         "retention_export_monthly",
         "retention_export_weekly",

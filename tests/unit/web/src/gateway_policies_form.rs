@@ -1,9 +1,8 @@
 //! The policy editor's form pairs → a spec core would accept, with every
 //! refusal in the operator's words.
 
-use systemprompt::gateway::{QuotaMode, SafetyHistoryMode, SafetyMode};
+use systemprompt::gateway::{CalendarPeriod, QuotaMode, SafetyHistoryMode, SafetyMode};
 use systemprompt_web_admin_governance::repositories::gateway_policies::form::parse_policy_form;
-use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::MONTH_WINDOW_SECONDS;
 
 fn pairs(list: &[(&str, &str)]) -> Vec<(String, String)> {
     list.iter()
@@ -61,7 +60,7 @@ fn a_complete_form_becomes_the_spec_the_file_would_declare() {
         spec.quota_windows[0].max_cost_microdollars,
         Some(20_000_000)
     );
-    assert_eq!(spec.quota_windows[1].window_seconds, MONTH_WINDOW_SECONDS);
+    assert_eq!(spec.quota_windows[1].calendar, Some(CalendarPeriod::Month));
     assert_eq!(
         spec.quota_windows[1].max_cost_microdollars,
         Some(200_500_000)

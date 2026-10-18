@@ -31,9 +31,6 @@ use systemprompt_web_admin_governance::repositories::gateway_policies::declared:
     POLICIES_FILE, parse_declared_policies,
 };
 use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::{
-    MONTH_WINDOW_SECONDS, normalise_spec,
-};
 use systemprompt_web_admin_governance::repositories::gateway_policies::rows::PolicyRow;
 use systemprompt_web_admin_identity::repositories::sync_planes::groups_db::{
     parse_groups_doc, render_groups_export,
@@ -195,22 +192,19 @@ fn groups_yaml_round_trips_through_the_export() {
 }
 
 #[test]
-fn policies_yaml_parses_and_the_month_sentinel_survives_normalisation() {
+fn policies_yaml_parses_and_declares_calendar_months_natively() {
     let declared = parse_declared_policies(&read(POLICIES_FILE)).expect("policies.yaml");
     assert!(!declared.entries.is_empty(), "the file declares policies");
     for entry in &declared.entries {
-        let normalised = normalise_spec(&entry.spec);
-        assert_eq!(
-            serde_json::to_value(&normalised).expect("spec"),
-            serde_json::to_value(&entry.spec).expect("spec"),
-            "policy '{}' is already in declared form",
-            entry.name
-        );
         for window in &entry.spec.quota_windows {
             assert!(
-                window.window_seconds <= MONTH_WINDOW_SECONDS
-                    || window.window_seconds > 2 * MONTH_WINDOW_SECONDS,
-                "policy '{}' hand-sets a window inside the live month range",
+                window.calendar.is_some() || window.window_seconds > 0,
+                "policy '{}' has a window with neither a calendar period nor a length",
+                entry.name
+            );
+            assert_ne!(
+                window.window_seconds, 2_678_400,
+                "policy '{}' still declares the retired 31-day month sentinel",
                 entry.name
             );
         }

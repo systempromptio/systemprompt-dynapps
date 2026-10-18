@@ -10,7 +10,9 @@
 //! These tests exist so that putting any category back into a live block list
 //! is a deliberate, review-visible act rather than a one-word edit.
 
-use systemprompt::gateway::{GatewayPolicyConfig, QuotaMode, SafetyHistoryMode, SafetyMode};
+use systemprompt::gateway::{
+    CalendarPeriod, GatewayPolicyConfig, QuotaMode, SafetyHistoryMode, SafetyMode,
+};
 
 use crate::support::repo_root;
 
@@ -137,7 +139,16 @@ fn window(subject: &str, seconds: i32) -> Option<i64> {
         .spec
         .quota_windows
         .into_iter()
-        .find(|w| w.subject == subject && w.window_seconds == seconds)
+        .find(|w| w.subject == subject && w.calendar.is_none() && w.window_seconds == seconds)
+        .and_then(|w| w.max_cost_microdollars)
+}
+
+fn calendar_window(subject: &str, period: CalendarPeriod) -> Option<i64> {
+    default_quotas()
+        .spec
+        .quota_windows
+        .into_iter()
+        .find(|w| w.subject == subject && w.calendar == Some(period))
         .and_then(|w| w.max_cost_microdollars)
 }
 
@@ -146,5 +157,8 @@ fn the_cost_ceilings_are_pinned() {
     assert_eq!(window("user", 3_600), Some(5_000_000));
     assert_eq!(window("user", 86_400), Some(15_000_000));
     assert_eq!(window("organization", 86_400), Some(40_000_000));
-    assert_eq!(window("organization", 2_678_400), Some(150_000_000));
+    assert_eq!(
+        calendar_window("organization", CalendarPeriod::Month),
+        Some(150_000_000)
+    );
 }

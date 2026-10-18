@@ -26,7 +26,7 @@
                 {{#if max_output_tokens}}<span>≤ {{formatNumber max_output_tokens}} output tokens</span>{{/if}}
                 {{#if max_cost}}<span>≤ {{max_cost}}</span>{{/if}}
                 {{#if breached}}{{> components/badge tone="err" text=(concat breached " past ceiling")}}{{/if}}
-                {{#if is_month}}{{> components/badge tone="info" text="calendar month (interim)"}}{{/if}}
+                {{#if is_month}}{{> components/badge tone="info" text="calendar month"}}{{/if}}
             </div>
         </div>
         {{#if rows}}

@@ -11,13 +11,9 @@
 # Insert only adds what is declared and missing, Overwrite from code repeats
 # the boot load, Export renders the table back as this file.
 #
-# A quota window with `window_seconds: 2678400` (31 days) is a CALENDAR
-# MONTH. Core's windows are fixed-length and epoch-aligned, so the admin
-# extension's daily `quota_month_window` job rewrites the live row to run out
-# at the month's end and carries yesterday's bucket into today's; drift and
-# export fold the live value back to 2678400. Interim until core has calendar
-# windows — extensions/web/admin/governance/src/repositories/gateway_policies/month_window.rs
-# is the contract.
+# A quota window with `calendar: month` (instead of `window_seconds`) resets at
+# the start of each UTC calendar month; `calendar: day` and `calendar: week`
+# (from Monday) work the same way.
 #
 # Spec fields (systemprompt_ai::GatewayPolicySpec):
 #   quota_mode, quota_windows, safety { mode, scanners, block_categories,
@@ -107,7 +103,7 @@ policies:
           max_cost_microdollars: 40000000
         # Whole installation, calendar month: $150.
         - subject: organization
-          window_seconds: 2678400
+          calendar: month
           max_cost_microdollars: 150000000
       # No redact_categories: core refuses un-redactable content even in warn mode, so it is enabled only with the enforce flip.
       safety:

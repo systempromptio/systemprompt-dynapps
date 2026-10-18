@@ -1,18 +1,17 @@
 //! Usage against ceiling, per subject, for every window the gateway is
 //! enforcing right now.
 //!
-//! The gateway reserves against the buckets of `(subject, window)` whose
-//! `window_start` is the current aligned boundary — one row per `shard`, so
-//! a shared subject's usage is the sum of its shards — and that is what is
-//! read here; nothing is summed across periods. A subject
-//! with no bucket has made no request in the window and is not listed.
+//! The gateway reserves against the bucket of the window's current span (a
+//! fixed epoch-aligned span, or the UTC calendar period), split across shard
+//! rows on a hot subject, so the shards of that one span are summed per
+//! subject; nothing is summed across periods. A subject with no bucket has
+//! made no request in the window and is not listed.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::gateway::QuotaWindow;
 
-use super::month_window::align_window;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SubjectUsage {
@@ -39,9 +38,9 @@ pub async fn get_window_usage(
     window: &QuotaWindow,
     now: DateTime<Utc>,
 ) -> Result<WindowUsage, sqlx::Error> {
-    let window_start = align_window(now, window.window_seconds);
-    let window_end =
-        window_start + chrono::Duration::seconds(i64::from(window.window_seconds.max(1)));
+    let span = window.span(now);
+    let window_start = span.start;
+    let window_end = span.end;
     let subjects = sqlx::query_as!(
         SubjectUsage,
         r#"SELECT subject_kind, subject_id,
@@ -56,7 +55,7 @@ pub async fn get_window_usage(
            ORDER BY 6 DESC, 3 DESC, subject_id ASC
            LIMIT 500"#,
         window.subject,
-        window.window_seconds,
+        span.bucket_seconds,
         window_start
     )
     .fetch_all(pool)

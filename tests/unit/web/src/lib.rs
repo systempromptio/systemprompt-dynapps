@@ -109,8 +109,6 @@ mod gateway_policies_drift;
 #[cfg(test)]
 mod gateway_policies_form;
 #[cfg(test)]
-mod gateway_policies_month_window;
-#[cfg(test)]
 mod gateway_policies_unedited;
 #[cfg(test)]
 mod gateway_policy_config;

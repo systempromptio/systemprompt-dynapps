@@ -1,15 +1,11 @@
-//! `policies.yaml` against `ai_gateway_policies`: the drift is blind to the
-//! daily month-window rewrite and sees every console edit; the export is
-//! the loader's inverse and always declares the sentinel.
+//! `policies.yaml` against `ai_gateway_policies`: the drift sees every console
+//! edit, and the export is the loader's inverse, calendar windows included.
 
-use chrono::{NaiveDate, Utc};
-use systemprompt::gateway::{GatewayPolicyConfig, QuotaMode, SafetyMode};
+use chrono::Utc;
+use systemprompt::gateway::{CalendarPeriod, GatewayPolicyConfig, QuotaMode, SafetyMode};
 use systemprompt_web_admin_governance::repositories::gateway_policies::declared::parse_declared_policies;
 use systemprompt_web_admin_governance::repositories::gateway_policies::drift::compute_policy_drift;
 use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::{
-    MONTH_WINDOW_SECONDS, month_window_seconds,
-};
 use systemprompt_web_admin_governance::repositories::gateway_policies::rows::{
     PolicyRow, effective_spec,
 };
@@ -25,7 +21,7 @@ policies:
           window_seconds: 3600
           max_requests: 600
         - subject: organization
-          window_seconds: 2678400
+          calendar: month
           max_cost_microdollars: 200000000
       safety:
         mode: warn
@@ -60,13 +56,22 @@ fn the_declared_hash_ignores_formatting_and_notices_a_ceiling() {
 }
 
 #[test]
-fn a_row_the_daily_job_rewrote_is_not_drift() {
+fn a_row_equal_to_the_declaration_is_not_drift() {
     let declared = parse_declared_policies(DECLARED).expect("parses");
-    let mut row = row_from_declared("default-quotas");
-    let today = NaiveDate::from_ymd_opt(2026, 9, 17).unwrap_or_default();
-    row.spec.quota_windows[1].window_seconds = month_window_seconds(today);
+    let row = row_from_declared("default-quotas");
     let drift = compute_policy_drift(&declared, &[row]);
     assert!(drift.is_clean(), "{drift:?}");
+}
+
+#[test]
+fn a_window_moved_off_the_calendar_month_is_drift() {
+    let declared = parse_declared_policies(DECLARED).expect("parses");
+    let mut row = row_from_declared("default-quotas");
+    row.spec.quota_windows[1].calendar = None;
+    row.spec.quota_windows[1].window_seconds = 2_678_400;
+    let drift = compute_policy_drift(&declared, &[row]);
+    assert_eq!(drift.changed.len(), 1, "{drift:?}");
+    assert_eq!(drift.changed[0].fields, vec!["quota_windows".to_owned()]);
 }
 
 #[test]
@@ -123,10 +128,8 @@ fn missing_and_orphan_policies_are_reported_by_name() {
 }
 
 #[test]
-fn the_export_declares_the_sentinel_and_the_loader_accepts_it() {
-    let mut row = row_from_declared("default-quotas");
-    let today = NaiveDate::from_ymd_opt(2026, 9, 17).unwrap_or_default();
-    row.spec.quota_windows[1].window_seconds = month_window_seconds(today);
+fn the_export_declares_the_calendar_month_and_the_loader_accepts_it() {
+    let row = row_from_declared("default-quotas");
     let yaml = render_policies_export(&[row], Utc::now());
     assert!(yaml.starts_with("# Gateway policy baseline."));
     assert!(
@@ -137,7 +140,7 @@ fn the_export_declares_the_sentinel_and_the_loader_accepts_it() {
         serde_yaml::from_str(&yaml).expect("the export parses as the file");
     cfg.validate().expect("the export validates as the file");
     let month = &cfg.policies[0].spec.quota_windows[1];
-    assert_eq!(month.window_seconds, MONTH_WINDOW_SECONDS);
+    assert_eq!(month.calendar, Some(CalendarPeriod::Month));
     assert_eq!(month.subject, "organization");
     assert_eq!(cfg.policies[0].spec.quota_mode, QuotaMode::Warn);
 }

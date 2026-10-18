@@ -42,7 +42,6 @@ mod ingestion;
 mod llms_txt;
 mod prerender;
 mod publish;
-mod quota_month_window;
 mod retention;
 mod robots;
 mod scope_defaults;
@@ -71,7 +70,6 @@ pub use ingestion::{ContentIngestionJob, release_key};
 pub use llms_txt::LlmsTxtGenerationJob;
 pub use prerender::SiteContentPrerenderJob;
 pub use publish::{PublishPipelineJob, SiteRenderJob};
-pub use quota_month_window::QuotaMonthWindowJob;
 pub use retention::{
     MonthlyParams, RetentionDailyReportJob, RetentionExportMonthlyJob, RetentionExportWeeklyJob,
     WeeklyParams,

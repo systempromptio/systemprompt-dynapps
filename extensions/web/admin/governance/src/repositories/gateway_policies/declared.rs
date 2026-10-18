@@ -9,7 +9,6 @@ use systemprompt::config::ProfileBootstrap;
 use systemprompt::gateway::{GATEWAY_POLICIES_FILE, GatewayPolicyConfig, GatewayPolicyEntry};
 use systemprompt::loader::services_root::ServicesRootBootstrap;
 
-use super::month_window::normalise_spec;
 use systemprompt_web_admin_core::error::AdminResult;
 
 pub const POLICIES_FILE: &str = GATEWAY_POLICIES_FILE;
@@ -49,14 +48,7 @@ pub fn parse_declared_policies(yaml: &str) -> Result<DeclaredPolicies, String> {
     let cfg: GatewayPolicyConfig = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
     cfg.validate().map_err(|e| e.to_string())?;
     Ok(DeclaredPolicies {
-        entries: cfg
-            .policies
-            .into_iter()
-            .map(|e| GatewayPolicyEntry {
-                spec: normalise_spec(&e.spec),
-                ..e
-            })
-            .collect(),
+        entries: cfg.policies.into_iter().collect(),
     })
 }
 
