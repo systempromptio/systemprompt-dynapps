@@ -86,9 +86,6 @@ systemprompt infra jobs run retention_export_weekly -p weeks_back=4   # backfill
 systemprompt infra jobs run retention_export_monthly
 ```
 
-The health queries the job runs are also kept as plain SQL for a DBA in
-`docs/ops/db-analysis/queries/health/`.
-
 ## Dead schema
 
 A crate that is deleted must take its tables with it. `infra db doctor`
@@ -142,3 +139,68 @@ UPDATE analytics_projection_state SET initialized = TRUE WHERE singleton;
 ```bash
 systemprompt analytics projection rebuild   # after upgrading
 ```
+
+## Open: there is no local reset recipe
+
+CLAUDE.md is correct that no reset recipe exists. Doing it by hand needed:
+
+- the FK graph, because `managed_*` and `analytics_*` reference `users` with
+  `NO ACTION`, so a test user still referenced there blocks the delete;
+- knowledge that `tool_call_ledger`, `conversation_*`, `reporting_source_*`
+  and `v_*` are views (TRUNCATE rejects them);
+- the user-privacy protocol (`begin_user_privacy()` / `finish_user_privacy()`
+  and the `reporting_capture` trigger on `users`) — bypassing it is harmless
+  today (the trigger still emits the delete facts into `event_outbox`) but
+  that is luck, not contract;
+- the analytics pipeline singletons (`analytics_fact_consumers`,
+  `analytics_fact_checkpoints`, `analytics_ingestion_producers`,
+  `analytics_projection_state`, `analytics_snapshot_state`) which are
+  registration state and must survive a wipe.
+
+The runbook below stands in for it. A `just db-reset-activity` recipe that
+owns this list is the tooling answer, once the list is agreed.
+
+### Runbook — reset local activity data (verified 2026-09-17)
+
+Runs in one transaction against the per-clone Docker Postgres; keeps schema,
+seeds, content, marketplaces, sync state, the analytics registration rows and
+the `admin` user. Re-materialises access control afterwards through the sync
+plane rather than the bootstrap job, and applies it **twice** if the
+`gateway_route` catalog was empty at the first pass (the glob expands over the existing catalog).
+
+```sql
+\set ON_ERROR_STOP on
+BEGIN;
+CREATE TEMP TABLE keep(t text) ON COMMIT DROP;
+INSERT INTO keep VALUES
+ ('extension_migrations'),('services'),('service_owned_ids'),('service_sources'),('sync_state'),
+ ('scheduled_jobs'),('gateway_routes'),('ai_gateway_policies'),('governance_chain_settings'),('anomaly_thresholds'),
+ ('access_control_entities'),('access_control_rules'),('access_control_rule_validity'),
+ ('files'),('content_files'),('markdown_categories'),('markdown_content'),('markdown_content_enrichment'),('markdown_fts'),
+ ('marketplace_versions'),('campaign_links'),('funnels'),('funnel_steps'),
+ ('groups'),('group_ad_mappings'),('group_members'),('projects'),('project_ad_mappings'),('project_members'),
+ ('users'),('user_encryption_keys'),('user_settings'),('user_scope_defaults'),('user_manual_roles'),('user_profile_ext'),
+ ('federated_identities'),('salesforce_user_identities'),('webauthn_credentials'),('user_device_certs'),('user_device_cert_validity'),
+ ('bridge_user_host_prefs'),('bridge_user_host_model_prefs'),('device_app_links'),
+ ('oauth_clients'),('oauth_client_contacts'),('oauth_client_grant_types'),('oauth_client_redirect_uris'),('oauth_client_response_types'),('oauth_client_scopes'),
+ ('mcp_connector_accounts'),('mcp_connector_credentials'),
+ ('analytics_fact_consumers'),('analytics_fact_checkpoints'),('analytics_ingestion_producers'),('analytics_projection_state'),('analytics_snapshot_state'),('analytics_snapshot_dimensions');
+SELECT string_agg(quote_ident(tablename), ', ' ORDER BY tablename) AS wipe_list
+FROM pg_tables WHERE schemaname='public' AND tablename NOT IN (SELECT t FROM keep) AND tablename NOT LIKE 'managed\_%' \gset
+TRUNCATE :wipe_list CASCADE;
+DELETE FROM users WHERE name <> 'admin';
+COMMIT;
+```
+
+```bash
+docker exec -i <pg-container> psql -U systemprompt -d systemprompt < wipe.sql
+# then, with an admin session token:
+curl -X POST -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"mode":"overwrite"}' http://localhost:8080/api/public/admin/sync/planes/access_control/apply
+# confirm every gateway_route entity has rules; if not, POST once more
+```
+
+Attribution needs the user in a group and a project (`POST
+/api/public/admin/groups/{g}/members`, `…/projects/{p}/members` with
+`{"user_id": …}`); each call recomputes `user_scope_defaults`, and the
+`request_scope_stamp_ai_requests` trigger stamps every request from then on.
