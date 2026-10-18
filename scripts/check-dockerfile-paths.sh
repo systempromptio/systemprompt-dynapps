@@ -22,6 +22,10 @@
 #      only in the release. Every other image is built with its own directory as
 #      the context, which a Dockerfile does not state, so guessing would only
 #      produce false positives — they get rule 1 alone.
+#      The one untracked source allowed is a directory release.yml itself
+#      stages before building (`mkdir -p "<dir>"`, with the Dockerfile's
+#      ${TARGETARCH} written as the workflow's ${{ matrix.arch }}): the
+#      prebuilt-binaries stage COPYs what the release compiled outside Docker.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -55,6 +59,11 @@ while IFS= read -r file; do
             [ "$count" -gt 0 ] || break
             count=$((count - 1))
             case "$src" in /*|\$*|"") continue ;; esac
+            staged="${src%/}"
+            staged="${staged//\$\{TARGETARCH\}/\$\{\{ matrix.arch \}\}}"
+            if grep -qF "mkdir -p \"$staged\"" .github/workflows/release.yml 2>/dev/null; then
+                continue
+            fi
             # Tracked, not merely present: a glob that matches no tracked file
             # is as broken as a missing literal.
             if [ -z "$(git ls-files -- "$src" | head -1)" ]; then

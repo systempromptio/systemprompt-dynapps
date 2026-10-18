@@ -294,7 +294,7 @@ schema-ladder RUNGS="2":
     [ "${#rungs[@]}" -gt 0 ] || { echo "schema-ladder: no release-baseline rungs" >&2; exit 1; }
     filter=""
     for v in "${rungs[@]}"; do
-        filter="${filter:+$filter | }test(=release_${v//./_}_upgrades_to_a_fresh_install)"
+        filter="${filter:+$filter | }test(=upgrade::release_${v//./_}_upgrades_to_a_fresh_install)"
     done
     echo "schema-ladder: upgrading from ${rungs[*]}"
     cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml \
@@ -317,7 +317,7 @@ supply-chain:
         m="${w%/}/Cargo.toml"
         echo "==> cargo deny: $w"
         if bash scripts/ci-retry.sh 3 cargo deny --manifest-path "$m" fetch; then
-            cargo deny --manifest-path "$m" check --disable-fetch || failed+=("deny $w")
+            cargo deny --offline --manifest-path "$m" check || failed+=("deny $w")
         else
             failed+=("deny fetch $w")
         fi
