@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Line-coverage run over tests/ and bridge/ (root crates are instrumented as
-# tests/ path dependencies), ported
+# Line-coverage run for all three workspaces (root, tests/, bridge/), ported
 # from systemprompt-core's `just coverage` recipe. Raw llvm-cov rather than
 # cargo-llvm-cov, for the same host-toolchain reasons core documents:
 #
@@ -33,6 +32,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Brand values (the repo name in the ignore regex) live in the one per-repo CI
+# file, so this script is byte-identical across the downstream repos.
+CI_REPO_NAME="$(sed -n 's/^CI_REPO_NAME=//p' "$ROOT/.github/ci-params.env")"
+[ -n "$CI_REPO_NAME" ] || { echo "error: CI_REPO_NAME missing from .github/ci-params.env" >&2; exit 1; }
 
 # Peak memory is several instrumented binaries linking at once, and a GitHub
 # runner dies there — the job is SIGTERMed with no diagnostic, which reads as
@@ -47,7 +50,16 @@ cd "$ROOT"
 PROFDIR="$ROOT/coverage-report/profraw"
 TBASE="${COVERAGE_TARGET_DIR:-$ROOT/coverage-report/target}"
 
-rm -rf "$PROFDIR" "$ROOT/coverage-report/tests.profdata"
+# COVERAGE_PHASES picks a subset of root, tests, bridge and report, so CI can
+# build the root workspace on one runner while another builds and runs the
+# rest, and a third reports over both. Any build phase starts a fresh profile;
+# a report-only run reads the profraw and objects it was handed.
+PHASES=" ${COVERAGE_PHASES:-root tests bridge report} "
+has_phase() { [[ "$PHASES" == *" $1 "* ]]; }
+
+if has_phase root || has_phase tests || has_phase bridge; then
+    rm -rf "$PROFDIR" "$ROOT/coverage-report/tests.profdata"
+fi
 mkdir -p "$PROFDIR"
 
 if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ] && [ -f .systemprompt/profiles/local/secrets.json ]; then
@@ -94,15 +106,17 @@ run_instrumented() {
         LLVM_PROFILE_FILE="$PROFDIR/$PROFRAW_PATTERN.profraw" \
         RUSTFLAGS="$COVERAGE_RUSTFLAGS" \
         SQLX_OFFLINE=true \
-        cargo nextest run --no-fail-fast --no-tests=pass --build-jobs "$BUILD_JOBS" "$@"
+        cargo nextest run --no-fail-fast --build-jobs "$BUILD_JOBS" "$@"
     then
         status=0
     else
         status=$?
     fi
     # nextest exit codes, treated by consequence rather than lumped together:
-    #   0  everything ran (--no-tests=pass: a workspace instrumented for its
-    #      objects rather than for tests, like bridge/, is not a failure)
+    #   0  everything ran
+    #   4  the workspace defines no tests. True of the root and bridge
+    #      workspaces here — they are instrumented for their objects, not for
+    #      tests — so it is the expected answer, not a failure.
     #   *  a build failure or a red test. The report is still produced, since a
     #      partial number beats none while iterating, but the run is marked so
     #      the caller can tell. A CI job that reported a healthy percentage
@@ -110,7 +124,7 @@ run_instrumented() {
     #      prevent: it happened, with libdbus missing and the bridge workspace
     #      contributing nothing.
     case "$status" in
-        0) ;;
+        0|4) ;;
         *)
             echo "warning: workspace failed (nextest exit $status) — continuing to coverage report" >&2
             PHASE_FAILURES=$((PHASE_FAILURES + 1))
@@ -118,19 +132,41 @@ run_instrumented() {
     esac
 }
 
-# Why no root phase: the root workspace defines no tests, and every root crate
-# is compiled — instrumented — as a path dependency of the tests/ workspace. A
-# separate root build into the same target dir produced a second feature
-# variant of each crate whose mapping hashes differ, which llvm-cov discards as
-# "functions have mismatched data".
-echo "==> [1/2] Instrumented tests: tests/ workspace"
-# Only tests/ declares the `coverage` nextest profile (tests/.config/nextest.toml,
-# resolved from the workspace root); nextest refuses a profile its config does
-# not name.
-run_instrumented "$TBASE-tests" --manifest-path tests/Cargo.toml --workspace --profile coverage
+# One target dir per workspace. A shared root+tests dir saved no compile:
+# the two workspaces resolve the dependency graph under different feature
+# sets, so each phase rebuilt what the other had just written, and CI runs
+# the phases on separate runners anyway.
+# Why --no-tests=pass: the root and bridge workspaces are instrumented for
+# their objects and define no tests; nextest's default for that is exit 4.
+if has_phase root; then
+    echo "==> [1/3] Instrumented tests: root workspace"
+    run_instrumented "$TBASE-root" --workspace --tests --no-tests=pass
+fi
 
-echo "==> [2/2] Instrumented tests: bridge/ workspace"
-run_instrumented "$TBASE-bridge" --manifest-path bridge/Cargo.toml --workspace
+if has_phase tests; then
+    echo "==> [2/3] Instrumented tests: tests/ workspace"
+    # A repo whose tests/.config/nextest.toml declares a `coverage` profile
+    # (longer slow-timeouts under instrumentation) gets it; nextest refuses a
+    # profile its config does not name, so it is never passed blind.
+    profile=()
+    if grep -q '^\[profile\.coverage\]' tests/.config/nextest.toml 2>/dev/null; then
+        profile=(--profile coverage)
+    fi
+    run_instrumented "$TBASE-tests" --manifest-path tests/Cargo.toml --workspace "${profile[@]}"
+fi
+
+if has_phase bridge; then
+    echo "==> [3/3] Instrumented tests: bridge/ workspace"
+    run_instrumented "$TBASE-bridge" --manifest-path bridge/Cargo.toml --workspace --no-tests=pass
+fi
+
+if ! has_phase report; then
+    if [ "$PHASE_FAILURES" -gt 0 ]; then
+        echo "error: $PHASE_FAILURES workspace(s) did not run cleanly" >&2
+        exit 1
+    fi
+    exit 0
+fi
 
 PROFRAW_COUNT=$(find "$PROFDIR" -name '*.profraw' | wc -l)
 echo "==> Generated $PROFRAW_COUNT profraw files"
@@ -174,6 +210,7 @@ collect_bin_candidates() {
 }
 BINS="$(
     {
+        collect_bin_candidates "$TBASE-root"
         collect_bin_candidates "$TBASE-tests"
         collect_bin_candidates "$TBASE-bridge"
     } | awk '{ base=$2; sub(".*/", "", base); sub(/-[0-9a-f]+$/, "", base); if (!seen[base]++) print $2 }'
@@ -207,7 +244,7 @@ done
 # picked up depends on which binaries a run happened to build, so leaving them
 # in made a crate's number move by several points when an unrelated test crate
 # took a new dependency.
-IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-dynapps/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)"
+IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|${CI_REPO_NAME}/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)"
 
 echo "==> Coverage report"
 WARNINGS="$ROOT/coverage-report/llvm-cov-warnings.txt"
@@ -218,9 +255,9 @@ WARNINGS="$ROOT/coverage-report/llvm-cov-warnings.txt"
     2> >(tee "$WARNINGS" >&2) \
     | tee "$ROOT/coverage-report/report.txt"
 
-# Why: the bridge workspace builds into its own target dir, so a crate both
-# workspaces compile (core, via the path patch) can leave a stray function or
-# two with differing hashes. That is noise; a broken dedupe drops hundreds.
+# Why: each workspace builds into its own target dir, so a crate two of them
+# compile (core, via the path patch) can leave a stray function or two with
+# differing hashes. That is noise; a broken dedupe drops hundreds.
 MISMATCHED=$(sed -n 's/^.*warning: \([0-9][0-9]*\) functions have mismatched data.*$/\1/p' "$WARNINGS" | head -n 1)
 MISMATCH_LIMIT="${COVERAGE_MISMATCH_LIMIT:-10}"
 if [ -n "$MISMATCHED" ] && [ "$MISMATCHED" -gt "$MISMATCH_LIMIT" ]; then

@@ -1,0 +1,63 @@
+name: Free runner disk
+description: >-
+  Reclaim the hosted runner's root disk for the cargo target trees, and
+  optionally put a swap file and work directories on the second disk (/mnt).
+inputs:
+  swap-gb:
+    description: Size of a swap file on /mnt, in GB. 0 (the default) adds none.
+    required: false
+    default: "0"
+  mnt-dirs:
+    description: Space-separated directories to create on /mnt, owned by the runner user.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
+    # it — `just test` failed with "No space left on device" while linking the
+    # contract crate, which reads as a compile error rather than as a full
+    # disk. Everything removed is a preinstalled SDK or runtime nothing here
+    # uses. `|| true` because the image's contents drift between runner
+    # releases and a path that has moved must not fail the build. The hosted
+    # toolcache stays: setup-just installs `just` there.
+    - name: Reclaim the root disk
+      shell: bash
+      run: |
+        echo "before:"; df -h / | tail -1
+        sudo rm -rf \
+          /usr/local/lib/android \
+          /usr/share/dotnet \
+          /opt/ghc /usr/local/.ghcup \
+          /usr/share/swift \
+          /usr/local/share/powershell \
+          /usr/share/miniconda \
+          /usr/local/lib/node_modules \
+          /usr/lib/google-cloud-sdk \
+          /opt/microsoft /opt/az /usr/share/az_* \
+          /usr/local/graalvm /usr/share/kotlinc \
+          /usr/local/share/boost /usr/local/julia* \
+          /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku 2>/dev/null || true
+        sudo docker image prune --all --force >/dev/null 2>&1 || true
+        echo "after:"; df -h / | tail -1
+    # Why swap: an instrumented build was SIGTERMed (exit 143) while two test
+    # binaries linked at once, the runner out of memory with no diagnostic.
+    # Swap on the second disk turns that peak into slower linking.
+    - name: Prepare the second disk
+      if: inputs.swap-gb != '0' || inputs.mnt-dirs != ''
+      shell: bash
+      env:
+        SWAP_GB: ${{ inputs.swap-gb }}
+        MNT_DIRS: ${{ inputs.mnt-dirs }}
+      run: |
+        for d in $MNT_DIRS; do
+          sudo mkdir -p "$d"
+          sudo chown -R "$USER" "$d"
+        done
+        if [ "$SWAP_GB" != "0" ]; then
+          sudo fallocate -l "${SWAP_GB}G" /mnt/ci.swap
+          sudo chmod 600 /mnt/ci.swap
+          sudo mkswap /mnt/ci.swap
+          sudo swapon /mnt/ci.swap
+        fi
+        free -h; df -h / /mnt | tail -2

@@ -5,23 +5,29 @@ name: Release
 # IS the release — there is no separate tag step; this workflow creates the
 # tag. See docs/RELEASING.md and docs/BRANCHING.md.
 #
-#   * the gateway image  ghcr.io/systempromptio/systemprompt-dynapps
+# Shared byte-for-byte with the sibling downstream repo; every brand value
+# (image, asset prefix, product name) comes from .github/ci-params.env through
+# the `params` job, and scripts/ci-sync-check.sh proves the rest. Below,
+# <bridge> is CI_BRIDGE_PREFIX and <repo> is CI_REPO_NAME.
+#
+#   * the gateway image  CI_IMAGE
 #       :X.Y.Z (create-once)  :latest  :sha-<short>   — amd64 + arm64, cosign-signed
 #   * a GitHub Release vX.Y.Z (create-once) carrying
-#       dynapps-bridge-linux-{x86_64,aarch64}.tar.gz, dynapps-bridge-macos.dmg,
-#       dynapps-bridge-macos.zip, dynapps-bridge-windows.exe, their .sha256
+#       <bridge>-linux-{x86_64,aarch64}.tar.gz, <bridge>-macos.dmg,
+#       <bridge>-macos.zip, <bridge>-windows.exe, their .sha256
 #       sidecars, install.sh,
-#       systemprompt-dynapps-server-<version>-linux-{amd64,arm64}.tar.gz,
+#       <repo>-server-<version>-linux-{amd64,arm64}.tar.gz,
 #       SHA256SUMS, and a cosign keyless .sig/.pem per asset
 #
-# The bridge is built BEFORE the image on purpose: the image serves those
-# binaries at /files/downloads (storage/files/downloads/ is gitignored and
-# COPYed in), so the download artifacts are staged into the build context
-# first. Asset names are version-less and load-bearing — they are referenced by
-# extensions/web/admin/platform/src/handlers/ssr/ssr_connect.rs,
-# storage/files/admin/templates/bridge-setup.hbs and
-# scripts/fetch-remote-downloads.sh, and by the `assets:` map of the gateway's
-# `bridge_releases` config (services/ai/gateway.yaml — the in-app self-updater).
+# The server binaries are compiled natively per arch (the `server` job, with
+# a warm cargo cache) and COPYed into a thin image; nothing compiles inside
+# Docker. The bridge is built BEFORE the image on purpose: the image serves
+# those binaries at /files/downloads (storage/files/downloads/ is gitignored
+# and COPYed in), so the download artifacts are staged into the build context
+# first. Asset names are version-less and load-bearing — they are referenced
+# by the admin connect/bridge-setup pages, scripts/fetch-remote-downloads.sh,
+# and the `assets:` map of the gateway's `bridge_releases` config
+# (services/ai/gateway.yaml — the in-app self-updater).
 # macOS publishes two artifacts from one stapled bundle: the .dmg humans
 # download, and the .zip the updater installs. Only the .dmg is baked into the
 # image; the updater's zip is a release asset the gateway feed proxies.
@@ -35,6 +41,11 @@ name: Release
 # image. OS-native signing switches on by adding secrets and nothing else:
 # Apple credentials are required: the app and DMG must both be notarized.
 # Windows (WINDOWS_CERT_PFX_BASE64 …) Authenticode-signs the exe when present.
+#
+# Retries: registry logins, pushes, manifest edits and the core checkout run
+# under scripts/ci-retry.sh or a second attempt that only runs when the first
+# failed. The last attempt's failure fails the job; nothing is retried to hide
+# a deterministic error.
 
 on:
   push:
@@ -45,22 +56,6 @@ on:
         description: "Build everything, publish nothing (no image push, no tag, no release)"
         type: boolean
         default: true
-      repair_macos:
-        description: "Build and notarize a v0.47.0 macOS repair entirely in CI"
-        type: boolean
-        default: false
-      repair_candidate_run:
-        description: "Successful candidate run ID to publish without rebuilding the tested artifact"
-        type: string
-        default: ""
-      repair_base_digest:
-        description: "Original 0.47.0 multi-arch image digest (sha256:...)"
-        type: string
-        default: ""
-      repair_publish:
-        description: "Replace v0.47.0 assets and image tags after testing the candidate"
-        type: boolean
-        default: false
 
 concurrency:
   group: release-main
@@ -75,24 +70,38 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  IMAGE: ghcr.io/systempromptio/systemprompt-dynapps
+  CARGO_NET_RETRY: "10"
+  RUSTUP_MAX_RETRIES: "10"
   DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+  JUST_VERSION: "1.42.4"
+  NEXTEST_VERSION: "0.9.148"
 
 jobs:
-  repair:
-    if: github.event_name == 'workflow_dispatch' && inputs.repair_macos
-    uses: ./.github/workflows/repair-release.yml
-    with:
-      candidate_run: ${{ inputs.repair_candidate_run }}
-      base_digest: ${{ inputs.repair_base_digest }}
-      publish: ${{ inputs.repair_publish }}
-    secrets: inherit
+  # The brand values every later job reads, from the one per-repo CI file.
+  params:
+    name: CI parameters
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      json: ${{ steps.p.outputs.json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .github
+            scripts
+      - run: bash scripts/ci-sync-check.sh
+      - id: p
+        run: |
+          json=$(grep -v '^#' .github/ci-params.env | grep '=' \
+            | jq -Rnc '[inputs | capture("^(?<key>[A-Z_]+)=(?<value>.*)$")] | from_entries')
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          jq . <<<"$json"
 
   hotfix-validation:
     name: Emergency hotfix validation before publication
-    if: inputs.repair_macos != true
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
       SQLX_OFFLINE: "true"
@@ -102,7 +111,7 @@ jobs:
       CC: clang
       CXX: clang++
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Detect isolated hotfix
@@ -117,28 +126,36 @@ jobs:
           fi
       - uses: ./.github/actions/core-checkout
         if: steps.candidate.outputs.hotfix == 'true'
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
         if: steps.candidate.outputs.hotfix == 'true'
+        with:
+          just-version: ${{ env.JUST_VERSION }}
       - name: Install build and validation dependencies
         if: steps.candidate.outputs.hotfix == 'true'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml ripgrep jq
       - run: rustup show
         if: steps.candidate.outputs.hotfix == 'true'
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         if: steps.candidate.outputs.hotfix == 'true'
         with:
-          tool: cargo-nextest
-      - uses: Swatinem/rust-cache@v2
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         if: steps.candidate.outputs.hotfix == 'true'
         with:
           workspaces: |
             .
             tests
+          cache-on-failure: true
       - name: Validate the exact released hotfix tree
         if: steps.candidate.outputs.hotfix == 'true'
+        timeout-minutes: 50
         run: |
           set -euo pipefail
-          ! grep -q '^\[patch.crates-io\]' Cargo.toml tests/Cargo.toml
+          # Why not a bare `! grep`: a negated command never trips errexit, so
+          # an active patch block passed this step.
+          if grep -q '^\[patch.crates-io\]' Cargo.toml tests/Cargo.toml; then
+            echo "::error::[patch.crates-io] is active on a hotfix release"; exit 1
+          fi
           bash scripts/check-core-ref.sh
           bash tests/scripts/release-merge.sh
           just preflight-static
@@ -146,10 +163,12 @@ jobs:
           just test-hotfix
 
   version:
-    needs: [hotfix-validation]
-    if: inputs.repair_macos != true && needs.hotfix-validation.result == 'success'
+    needs: [params, hotfix-validation]
     name: Resolve version & release state
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
     outputs:
       version: ${{ steps.v.outputs.version }}
       core_version: ${{ steps.v.outputs.core_version }}
@@ -158,7 +177,7 @@ jobs:
       publish_release: ${{ steps.v.outputs.publish_release }}
       publish_version_tag: ${{ steps.v.outputs.publish_version_tag }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 2
       - name: Verify merged promotion and exact release proofs
@@ -180,6 +199,11 @@ jobs:
             exit 1
           fi
           bash scripts/check-core-ref.sh
+      - name: Registry login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci-retry.sh 4 bash -c 'docker login ghcr.io -u "$REGISTRY_USER" --password-stdin <<<"$REGISTRY_TOKEN"'
       - name: Read version and check every pin agrees
         id: v
         env:
@@ -205,7 +229,6 @@ jobs:
           fi
 
           publish_version_tag=true
-          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           if docker manifest inspect "$IMAGE:$version" >/dev/null 2>&1; then
             echo "::notice::image $IMAGE:$version already exists — left untouched."
             publish_version_tag=false
@@ -223,13 +246,15 @@ jobs:
   # The gates are not re-run here. `just release` refuses to fast-forward
   # `next` onto `main` without a green `Gates passed` on that exact SHA
   # (scripts/check-gates-green.sh), so the commit that lands is the tree the
-  # gates proved; re-running gates.yml here added ~55 min of coverage to every
-  # release for no new information.
+  # gates proved.
   bridge:
-    name: Bridge ${{ matrix.asset }}
-    needs: version
+    name: Bridge ${{ matrix.os_asset }}
+    needs: [params, version]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    env:
+      ASSET: ${{ fromJSON(needs.params.outputs.json).CI_BRIDGE_PREFIX }}-${{ matrix.os_asset }}
+      UPDATER_ASSET: ${{ matrix.updater_os_asset && format('{0}-{1}', fromJSON(needs.params.outputs.json).CI_BRIDGE_PREFIX, matrix.updater_os_asset) || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -237,24 +262,24 @@ jobs:
           # ubuntu-22.04: oldest runner glibc, so the tarball runs on the most
           # distributions. The packaging script derives the arch from uname.
           - runner: ubuntu-22.04
-            asset: dynapps-bridge-linux-x86_64.tar.gz
+            os_asset: linux-x86_64.tar.gz
             script: scripts/package-bridge-linux.sh
           - runner: ubuntu-22.04-arm
-            asset: dynapps-bridge-linux-aarch64.tar.gz
+            os_asset: linux-aarch64.tar.gz
             script: scripts/package-bridge-linux.sh
           # Windows is cross-built from Linux with cargo-xwin — the same path
           # `just bridge-package-windows` takes locally, so there is exactly one
           # Windows build definition and its two refuse-to-ship gates.
           - runner: ubuntu-22.04
-            asset: dynapps-bridge-windows.exe
+            os_asset: windows.exe
             script: scripts/package-bridge-windows.sh
           - runner: macos-14
-            asset: dynapps-bridge-macos.dmg
+            os_asset: macos.dmg
             # What the in-app updater downloads; the dmg stays the human one.
-            updater_asset: dynapps-bridge-macos.zip
+            updater_os_asset: macos.zip
             script: scripts/package-bridge-macos.sh
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/core-checkout
 
       - name: Install build deps (linux)
@@ -264,29 +289,32 @@ jobs:
       - name: Add cross targets
         shell: bash
         run: |
-          case "${{ matrix.asset }}" in
-            *windows*) rustup target add x86_64-pc-windows-msvc ;;
-            *macos*)   rustup target add aarch64-apple-darwin x86_64-apple-darwin ;;
+          case "${{ matrix.os_asset }}" in
+            windows*) rustup target add x86_64-pc-windows-msvc ;;
+            macos*)   rustup target add aarch64-apple-darwin x86_64-apple-darwin ;;
           esac
-      - uses: taiki-e/install-action@v2
-        if: contains(matrix.asset, 'windows')
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        if: startsWith(matrix.os_asset, 'windows')
         with:
-          tool: cargo-xwin
+          tool: cargo-xwin@0.23.1
       # The Windows SDK/CRT cargo-xwin fetches is ~300 MB; keep it between runs.
-      - uses: actions/cache@v4
-        if: contains(matrix.asset, 'windows')
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        if: startsWith(matrix.os_asset, 'windows')
         with:
           path: ~/.cache/cargo-xwin
           key: cargo-xwin-${{ runner.os }}
 
-      # Cache dependencies, not workspace outputs. rust-cache already keys on
-      # bridge/Cargo.lock, so a core bump re-resolves only what changed; keying
-      # on CORE_REF as well threw the whole cache away on every bump.
-      - uses: Swatinem/rust-cache@v2
+      # Cache dependencies, not workspace outputs. Every packaging script
+      # still invokes Cargo. No core-ref hash in the key: rust-cache already
+      # suffixes it with the bridge lockfile hash, which moves with every core
+      # pin, and restores the newest entry under the stable prefix when that
+      # suffix misses. A hashed key made each release's first build cold.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: bridge
-          key: bridge-${{ matrix.asset }}
+          key: bridge-${{ matrix.os_asset }}
           cache-workspace-crates: false
+          cache-on-failure: true
 
       - name: Import Apple signing credentials
         if: runner.os == 'macOS' && needs.version.outputs.publish_release == 'true'
@@ -303,6 +331,7 @@ jobs:
       - name: Package
         if: needs.version.outputs.publish_release == 'true'
         shell: bash
+        timeout-minutes: 75
         env:
           XWIN_ACCEPT_LICENSE: "1"
         run: bash ${{ matrix.script }}
@@ -315,15 +344,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.version.outputs.tag }}
-          ASSET: ${{ matrix.asset }}
-          UPDATER_ASSET: ${{ matrix.updater_asset }}
         run: |
           mkdir -p storage/files/downloads
           # Releases before the updater zip existed do not carry it; its
           # pattern matches nothing there and only the dmg is re-served.
           patterns=(--pattern "$ASSET" --pattern "$ASSET.sha256" --pattern install.sh)
           [ -z "$UPDATER_ASSET" ] || patterns+=(--pattern "$UPDATER_ASSET" --pattern "$UPDATER_ASSET.sha256")
-          gh release download "$RELEASE_TAG" --dir storage/files/downloads "${patterns[@]}"
+          bash scripts/ci-retry.sh 3 gh release download "$RELEASE_TAG" --clobber --dir storage/files/downloads "${patterns[@]}"
           cd storage/files/downloads
           for sums in *.sha256; do
             if command -v sha256sum >/dev/null; then
@@ -336,9 +363,9 @@ jobs:
       - name: Verify the staged macOS download
         if: runner.os == 'macOS'
         run: |
-          dmg=storage/files/downloads/dynapps-bridge-macos.dmg
+          dmg="storage/files/downloads/$ASSET"
           bash tests/release/macos-smoke.sh "$dmg" "$(shasum -a 256 "$dmg" | cut -d' ' -f1)"
-          zip=storage/files/downloads/dynapps-bridge-macos.zip
+          zip="storage/files/downloads/$UPDATER_ASSET"
           [ ! -f "$zip" ] || bash tests/release/macos-updater-zip.sh "$zip"
 
       - name: Tear down signing keychain
@@ -350,7 +377,7 @@ jobs:
       # ── Windows Authenticode: on only when the secrets exist ───────────────
       - name: Detect Windows signing credentials
         id: win
-        if: contains(matrix.asset, 'windows') && needs.version.outputs.publish_release == 'true'
+        if: startsWith(matrix.os_asset, 'windows') && needs.version.outputs.publish_release == 'true'
         env:
           WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
         run: |
@@ -365,117 +392,107 @@ jobs:
         env:
           WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+          SIGN_NAME: ${{ fromJSON(needs.params.outputs.json).CI_BRIDGE_DISPLAY_NAME }}
+          SIGN_URL: ${{ fromJSON(needs.params.outputs.json).CI_HOMEPAGE }}
         run: |
           sudo apt-get install -y --no-install-recommends osslsigncode
           echo "$WINDOWS_CERT_PFX_BASE64" | base64 -d > "$RUNNER_TEMP/cert.pfx"
-          exe=storage/files/downloads/dynapps-bridge-windows.exe
+          exe="storage/files/downloads/$ASSET"
           osslsigncode sign -pkcs12 "$RUNNER_TEMP/cert.pfx" -pass "$WINDOWS_CERT_PASSWORD" \
-            -n "Dynapps Bridge" -i https://www.dynapps.es \
+            -n "$SIGN_NAME" -i "$SIGN_URL" \
             -t http://timestamp.digicert.com -h sha256 -in "$exe" -out "$exe.signed"
           rm -f "$RUNNER_TEMP/cert.pfx"
           mv "$exe.signed" "$exe"
-          (cd storage/files/downloads && sha256sum dynapps-bridge-windows.exe > dynapps-bridge-windows.exe.sha256)
+          (cd storage/files/downloads && sha256sum "$ASSET" > "$ASSET.sha256")
           osslsigncode verify "$exe"
 
       - name: Record signing status
         shell: bash
         run: |
           status=signed-cosign-only
-          case "${{ matrix.asset }}" in
-            *macos*)   status=notarized ;;
-            *windows*) [ "${{ steps.win.outputs.enabled }}" = "true" ] && status=authenticode ;;
+          case "${{ matrix.os_asset }}" in
+            macos*)   status=notarized ;;
+            windows*) [ "${{ steps.win.outputs.enabled }}" = "true" ] && status=authenticode ;;
           esac
-          echo "$status" > "storage/files/downloads/${{ matrix.asset }}.signing"
+          echo "$status" > "storage/files/downloads/$ASSET.signing"
           ls -la storage/files/downloads
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: downloads-${{ matrix.asset }}
+          name: downloads-${{ matrix.os_asset }}
           path: |
-            storage/files/downloads/${{ matrix.asset }}
-            storage/files/downloads/${{ matrix.asset }}.sha256
-            storage/files/downloads/${{ matrix.asset }}.signing
-            storage/files/downloads/dynapps-bridge-macos.zip*
+            storage/files/downloads/${{ env.ASSET }}
+            storage/files/downloads/${{ env.ASSET }}.sha256
+            storage/files/downloads/${{ env.ASSET }}.signing
+            storage/files/downloads/*-macos.zip*
             storage/files/downloads/install.sh
           if-no-files-found: error
           retention-days: 7
 
-  image:
-    name: Image (${{ matrix.arch }})
-    needs: [version, bridge]
+  # The server binaries, compiled natively per arch with a warm cargo cache
+  # instead of inside the image build (where a cache mount was the only cache
+  # and gha never exported it, so every release compiled cold). ubuntu-22.04
+  # on purpose: glibc 2.35 is older than the bookworm runtime's 2.36, so the
+  # binaries run there.
+  server:
+    name: Server (${{ matrix.arch }})
+    needs: [params, version]
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 120
+    timeout-minutes: 90
+    env:
+      SQLX_OFFLINE: "true"
+      CC: clang
+      CXX: clang++
+      SERVER_BINS: ${{ fromJSON(needs.params.outputs.json).CI_SERVER_BINS }}
+      SERVER_NAME: ${{ fromJSON(needs.params.outputs.json).CI_REPO_NAME }}-server-${{ needs.version.outputs.version }}-linux-${{ matrix.arch }}
     strategy:
       fail-fast: true
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
           - arch: arm64
-            runner: ubuntu-24.04-arm
+            runner: ubuntu-22.04-arm
     steps:
-      - uses: actions/checkout@v7
-
-      # The bridge assets the image serves at /files/downloads. Every platform
-      # must be present — a missing one 404s a link the admin page already
-      # renders (the DOWNLOADS_STRICT=1 rule from scripts/fetch-remote-downloads.sh).
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/free-disk
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang libpq-dev libssl-dev pkg-config
+      - run: rustup show
+      # One entry per arch, written by main pushes (the only release trigger),
+      # so the next release restores every dependency of this one.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          pattern: downloads-*
-          merge-multiple: true
-          path: storage/files/downloads
-      - name: Assert every download asset is staged
+          shared-key: server-${{ matrix.arch }}
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # Every binary the runtime's manifests (extensions/mcp/*/manifest.yaml
+      # and services/mcp/*.yaml) name must land in the image's /app/bin — the
+      # MCP validator resolves binary -> manifest at boot and a missing one is
+      # a startup failure.
+      - name: Build
+        timeout-minutes: 75
         run: |
-          cd storage/files/downloads
-          for f in dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz \
-                   dynapps-bridge-macos.dmg dynapps-bridge-windows.exe install.sh; do
-            [ -s "$f" ] || { echo "::error::missing download asset $f"; exit 1; }
+          cargo build --release --workspace
+          mkdir -p ".release-bin/${{ matrix.arch }}"
+          for b in $SERVER_BINS; do
+            cp "target/release/$b" ".release-bin/${{ matrix.arch }}/"
           done
-          for f in *.sha256; do sha256sum -c "$f"; done
-          rm -f *.signing dynapps-bridge-macos.zip dynapps-bridge-macos.zip.sha256
-          ls -la
-
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+          ls -la ".release-bin/${{ matrix.arch }}"
+      # The image's input. tar keeps the exec bit, which upload-artifact drops.
+      - name: Pack binaries for the image
+        run: tar -cf "bin-${{ matrix.arch }}.tar" ".release-bin/${{ matrix.arch }}"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ${{ env.IMAGE }}
-          labels: |
-            org.opencontainers.image.version=${{ needs.version.outputs.version }}
-
-      - uses: docker/build-push-action@v6
-        id: build
-        with:
-          context: .
-          platforms: linux/${{ matrix.arch }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
-          cache-from: type=gha,scope=release-${{ matrix.arch }}
-          cache-to: type=gha,mode=min,scope=release-${{ matrix.arch }}
-          outputs: ${{ env.DRY_RUN == 'true' && 'type=cacheonly' || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
-
-      # Same build, exported as a tarball of the server binaries for anyone
-      # running outside Docker. Hits the builder cache, so no second compile.
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/${{ matrix.arch }}
-          target: artifacts
-          build-args: |
-            SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
-          outputs: type=local,dest=server-out
+          name: bin-${{ matrix.arch }}
+          path: bin-${{ matrix.arch }}.tar
+          if-no-files-found: error
+          retention-days: 1
+      # The same binaries as a tarball for anyone running outside Docker.
       - name: Stage server tarball
         run: |
-          v=${{ needs.version.outputs.version }}
-          name=systemprompt-dynapps-server-$v-linux-${{ matrix.arch }}
+          name="$SERVER_NAME"
           mkdir -p "stage/$name/extensions/mcp"
-          cp -r server-out/bin "stage/$name/bin"
+          cp -r ".release-bin/${{ matrix.arch }}" "stage/$name/bin"
           cp -r services "stage/$name/services"
           for m in extensions/mcp/*/manifest.yaml; do
             d="stage/$name/$(dirname "$m")"; mkdir -p "$d"; cp "$m" "$d/"
@@ -485,24 +502,120 @@ jobs:
           tar --sort=name --owner=0 --group=0 --numeric-owner \
             --mtime="@$(git log -1 --format=%ct)" -czf "dist/$name.tar.gz" -C stage "$name"
           ls -la dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: server-${{ matrix.arch }}
           path: dist/*.tar.gz
           if-no-files-found: error
           retention-days: 7
 
+  image:
+    name: Image (${{ matrix.arch }})
+    needs: [params, version, bridge, server]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
+      BRIDGE_PREFIX: ${{ fromJSON(needs.params.outputs.json).CI_BRIDGE_PREFIX }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The bridge assets the image serves at /files/downloads. Every platform
+      # must be present — a missing one 404s a link the admin page already
+      # renders (the DOWNLOADS_STRICT=1 rule from scripts/fetch-remote-downloads.sh).
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: downloads-*
+          merge-multiple: true
+          path: storage/files/downloads
+      - name: Assert every download asset is staged
+        run: |
+          cd storage/files/downloads
+          for f in "$BRIDGE_PREFIX-linux-x86_64.tar.gz" "$BRIDGE_PREFIX-linux-aarch64.tar.gz" \
+                   "$BRIDGE_PREFIX-macos.dmg" "$BRIDGE_PREFIX-windows.exe" install.sh; do
+            [ -s "$f" ] || { echo "::error::missing download asset $f"; exit 1; }
+          done
+          for f in *.sha256; do sha256sum -c "$f"; done
+          rm -f ./*.signing "$BRIDGE_PREFIX-macos.zip" "$BRIDGE_PREFIX-macos.zip.sha256"
+          ls -la
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: bin-${{ matrix.arch }}
+      - name: Stage the prebuilt server binaries
+        run: |
+          tar -xf "bin-${{ matrix.arch }}.tar"
+          rm "bin-${{ matrix.arch }}.tar"
+          ls -la ".release-bin/${{ matrix.arch }}"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Registry login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci-retry.sh 4 bash -c 'docker login ghcr.io -u "$REGISTRY_USER" --password-stdin <<<"$REGISTRY_TOKEN"'
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        id: meta
+        with:
+          images: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+
+      # Why two attempts: a registry blip on the push failed whole releases.
+      # The layers are in the gha cache by then, so the second attempt is a
+      # push, not a rebuild; it runs only when the first failed.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: build1
+        continue-on-error: true
+        timeout-minutes: 30
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
+            BIN_STAGE=prebuilt
+          cache-from: type=gha,scope=release-${{ matrix.arch }}
+          # Why mode=min: max also exported every intermediate layer, about
+          # 3.4 GB of the repository's 10 GB cache, which evicted the Gates
+          # caches.
+          cache-to: type=gha,mode=min,scope=release-${{ matrix.arch }}
+          outputs: ${{ env.DRY_RUN == 'true' && 'type=cacheonly' || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: build2
+        if: steps.build1.outcome == 'failure'
+        timeout-minutes: 30
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
+            BIN_STAGE=prebuilt
+          cache-from: type=gha,scope=release-${{ matrix.arch }}
+          cache-to: type=gha,mode=min,scope=release-${{ matrix.arch }}
+          outputs: ${{ env.DRY_RUN == 'true' && 'type=cacheonly' || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
+
       - name: Export digest
         if: env.DRY_RUN != 'true'
+        env:
+          DIGEST: ${{ steps.build1.outputs.digest || steps.build2.outputs.digest }}
         run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-      - uses: actions/upload-artifact@v4
+          [ -n "$DIGEST" ] || { echo "::error::no image digest from either build attempt"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: env.DRY_RUN != 'true'
         with:
           name: digests-${{ matrix.arch }}
-          path: /tmp/digests/*
+          path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
 
@@ -515,39 +628,53 @@ jobs:
     name: Base services bundle
     # Why: GHCR tags are create-once and this account cannot delete an org
     # package version, so the versioned base bundle waits for the image proofs.
-    needs: [version, image, smoke, upgrade-boot]
+    needs: [params, version, server, smoke, upgrade-boot]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       VERSION: ${{ needs.version.outputs.version }}
+      REPO_NAME: ${{ fromJSON(needs.params.outputs.json).CI_REPO_NAME }}
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
       GHCR_AUTH: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
-      DYNAPPS_BUNDLE_SIGNING_SEED: ${{ secrets.DYNAPPS_BUNDLE_SIGNING_SEED }}
+      # Each repo keeps its own secret name; params names it, so no secret moves.
+      BUNDLE_SIGNING_SEED: ${{ secrets[fromJSON(needs.params.outputs.json).CI_BUNDLE_SIGNING_SECRET_NAME] }}
+      SEED_SECRET_NAME: ${{ fromJSON(needs.params.outputs.json).CI_BUNDLE_SIGNING_SECRET_NAME }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: server-amd64
           path: server
       - name: Unpack the server binary
         run: |
-          tar -xzf server/systemprompt-dynapps-server-$VERSION-linux-amd64.tar.gz -C server
-          echo "$PWD/server/systemprompt-dynapps-server-$VERSION-linux-amd64/bin" >> "$GITHUB_PATH"
+          tar -xzf "server/$REPO_NAME-server-$VERSION-linux-amd64.tar.gz" -C server
+          echo "$PWD/server/$REPO_NAME-server-$VERSION-linux-amd64/bin" >> "$GITHUB_PATH"
       - name: Pack and sign
         run: |
           mkdir -p dist
           sign=()
-          if [ -n "$DYNAPPS_BUNDLE_SIGNING_SEED" ]; then sign=(--sign-key env:DYNAPPS_BUNDLE_SIGNING_SEED); fi
+          # Fail closed: only a dispatched dry run (which publishes nothing)
+          # may pack an unsigned bundle.
+          if [ -n "$BUNDLE_SIGNING_SEED" ]; then
+            sign=(--sign-key env:BUNDLE_SIGNING_SEED)
+          elif [ "$DRY_RUN" = "true" ]; then
+            echo "::notice::dry run without $SEED_SECRET_NAME — packing an unsigned bundle that is never published."
+          else
+            echo "::error::secret $SEED_SECRET_NAME is empty or missing; refusing to publish an unsigned base bundle."
+            exit 1
+          fi
           systemprompt core services bundle \
-            --root services --out "dist/systemprompt-dynapps-base-$VERSION.tar.gz" \
+            --root services --out "dist/$REPO_NAME-base-$VERSION.tar.gz" \
             --version "$VERSION" "${sign[@]}" \
             --source-repo "$GITHUB_REPOSITORY" --source-commit "$GITHUB_SHA" --workflow-run "$GITHUB_RUN_ID"
       - name: Publish to GHCR
         if: env.DRY_RUN != 'true'
         run: |
-          systemprompt core services publish \
-            --bundle "dist/systemprompt-dynapps-base-$VERSION.tar.gz" \
-            --to "oci://ghcr.io/systempromptio/systemprompt-dynapps-base:$VERSION" \
+          bash scripts/ci-retry.sh 3 systemprompt core services publish \
+            --bundle "dist/$REPO_NAME-base-$VERSION.tar.gz" \
+            --to "oci://$IMAGE-base:$VERSION" \
             --auth env:GHCR_AUTH
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: base-bundle
           path: dist/*.tar.gz
@@ -556,43 +683,44 @@ jobs:
 
   image-merge:
     name: Merge manifest, tag, sign
-    needs: [version, image]
+    needs: [params, version, image]
     if: needs.version.result == 'success' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
     outputs:
       digest: ${{ steps.digest.outputs.digest }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: /tmp/digests
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          path: ${{ runner.temp }}/digests
           pattern: digests-*
           merge-multiple: true
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ${{ env.IMAGE }}
-          tags: |
-            type=raw,value=sha-${{ needs.version.outputs.short }}
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Registry login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci-retry.sh 4 bash -c 'docker login ghcr.io -u "$REGISTRY_USER" --password-stdin <<<"$REGISTRY_TOKEN"'
       - name: Create and push manifest list
-        working-directory: /tmp/digests
+        env:
+          SHORT: ${{ needs.version.outputs.short }}
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
-            $(printf "$IMAGE@sha256:%s " *)
+          refs=()
+          for d in "$RUNNER_TEMP"/digests/*; do refs+=("$IMAGE@sha256:$(basename "$d")"); done
+          bash scripts/ci-retry.sh 3 docker buildx imagetools create -t "$IMAGE:sha-$SHORT" "${refs[@]}"
       - name: Resolve manifest digest
         id: digest
         run: |
           digest=$(docker buildx imagetools inspect "$IMAGE:sha-${{ needs.version.outputs.short }}" --format '{{json .Manifest.Digest}}' | tr -d '"')
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-      - uses: sigstore/cosign-installer@v3
+      - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
       - name: Cosign sign (keyless)
-        run: cosign sign --yes "$IMAGE@${{ steps.digest.outputs.digest }}"
+        run: bash scripts/ci-retry.sh 3 cosign sign --yes "$IMAGE@${{ steps.digest.outputs.digest }}"
 
   # Why: GHCR `:X.Y.Z` is create-once and this account cannot delete an org
   # package version, so the versioned tag (and `:latest`) may only point at a
@@ -600,16 +728,22 @@ jobs:
   # nothing but its own `:sha-*`.
   promote-tags:
     name: Tag the proven image
-    needs: [version, image-merge, smoke, upgrade-boot]
+    needs: [params, version, image-merge, smoke, upgrade-boot]
     if: needs.image-merge.result == 'success' && needs.smoke.result == 'success' && needs.upgrade-boot.result == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          sparse-checkout: scripts
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Registry login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci-retry.sh 4 bash -c 'docker login ghcr.io -u "$REGISTRY_USER" --password-stdin <<<"$REGISTRY_TOKEN"'
       - name: Point :latest and :X.Y.Z at the proven digest
         env:
           DIGEST: ${{ needs.image-merge.outputs.digest }}
@@ -622,34 +756,97 @@ jobs:
           fi
           args=()
           for t in "${published[@]}"; do args+=(-t "$IMAGE:$t"); done
-          docker buildx imagetools create "${args[@]}" "$IMAGE@$DIGEST"
+          bash scripts/ci-retry.sh 3 docker buildx imagetools create "${args[@]}" "$IMAGE@$DIGEST"
           for t in "${published[@]}"; do
             got=$(docker buildx imagetools inspect "$IMAGE:$t" --format '{{json .Manifest.Digest}}' | tr -d '"')
             [ "$got" = "$DIGEST" ] || { echo "::error::$IMAGE:$t is $got, expected $DIGEST"; exit 1; }
           done
 
+  # The headless step runner image (`:X.Y.Z-runner`, `:latest-runner`): the
+  # proven gateway image plus Node 22 and a pinned Claude Code, for the Helm
+  # `runner` Deployment (`server.role: runner`). Built from the Dockerfile's
+  # `runner` stage over the promoted digest, so it adds layers and never
+  # recompiles. Only where CI_RUNNER_IMAGE is true (the Dockerfile has that
+  # stage).
+  runner-image:
+    name: Runner image
+    needs: [params, version, image-merge, promote-tags]
+    if: needs.promote-tags.result == 'success' && fromJSON(needs.params.outputs.json).CI_RUNNER_IMAGE == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Registry login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci-retry.sh 4 bash -c 'docker login ghcr.io -u "$REGISTRY_USER" --password-stdin <<<"$REGISTRY_TOKEN"'
+      - name: Runner tags
+        id: tags
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PUBLISH_VERSION_TAG: ${{ needs.version.outputs.publish_version_tag }}
+        run: |
+          tags="$IMAGE:latest-runner"
+          if [ "$PUBLISH_VERSION_TAG" = "true" ]; then tags="$tags,$IMAGE:$VERSION-runner"; fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: push1
+        continue-on-error: true
+        timeout-minutes: 20
+        with:
+          context: .
+          target: runner
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            RUNNER_BASE=${{ env.IMAGE }}@${{ needs.image-merge.outputs.digest }}
+          tags: ${{ steps.tags.outputs.tags }}
+          push: true
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        if: steps.push1.outcome == 'failure'
+        timeout-minutes: 20
+        with:
+          context: .
+          target: runner
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            RUNNER_BASE=${{ env.IMAGE }}@${{ needs.image-merge.outputs.digest }}
+          tags: ${{ steps.tags.outputs.tags }}
+          push: true
+      - name: Assert the agent host is on the image
+        run: docker run --rm --entrypoint claude "$IMAGE:latest-runner" --version
+
   release:
     name: Publish GitHub Release
-    needs: [version, bridge, image, image-merge, smoke, upgrade-boot, base-bundle, promote-tags]
+    needs: [params, version, bridge, server, image, image-merge, smoke, upgrade-boot, base-bundle, promote-tags]
     if: needs.version.outputs.publish_release == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       TAG: ${{ needs.version.outputs.tag }}
       VERSION: ${{ needs.version.outputs.version }}
       GH_TOKEN: ${{ github.token }}
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
+      B: ${{ fromJSON(needs.params.outputs.json).CI_BRIDGE_PREFIX }}
+      REPO_NAME: ${{ fromJSON(needs.params.outputs.json).CI_REPO_NAME }}
+      PRODUCT_NAME: ${{ fromJSON(needs.params.outputs.json).CI_PRODUCT_NAME }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: downloads-*
           merge-multiple: true
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: server-*
           merge-multiple: true
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: base-bundle
           path: dist
@@ -669,18 +866,18 @@ jobs:
         run: |
           # The per-asset .sha256 sidecars stay: install.sh fetches <base>/<asset>.sha256.
           # The gateway's update feed reads the updater zip's digest from here.
-          sha256sum dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz \
-            dynapps-bridge-macos.dmg dynapps-bridge-macos.zip dynapps-bridge-windows.exe \
-            systemprompt-dynapps-server-*.tar.gz install.sh > SHA256SUMS
+          sha256sum "$B-linux-x86_64.tar.gz" "$B-linux-aarch64.tar.gz" \
+            "$B-macos.dmg" "$B-macos.zip" "$B-windows.exe" \
+            "$REPO_NAME"-server-*.tar.gz install.sh > SHA256SUMS
           cat SHA256SUMS
-      - uses: sigstore/cosign-installer@v3
+      - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
       - name: Sign every asset (cosign keyless)
         working-directory: dist
         run: |
-          for f in dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz \
-                   dynapps-bridge-macos.dmg dynapps-bridge-macos.zip dynapps-bridge-windows.exe \
-                   systemprompt-dynapps-server-*.tar.gz install.sh SHA256SUMS; do
-            cosign sign-blob --yes --output-signature "$f.sig" --output-certificate "$f.pem" "$f"
+          for f in "$B-linux-x86_64.tar.gz" "$B-linux-aarch64.tar.gz" \
+                   "$B-macos.dmg" "$B-macos.zip" "$B-windows.exe" \
+                   "$REPO_NAME"-server-*.tar.gz install.sh SHA256SUMS; do
+            bash ../scripts/ci-retry.sh 3 cosign sign-blob --yes --output-signature "$f.sig" --output-certificate "$f.pem" "$f"
           done
 
       - name: Write release notes
@@ -692,11 +889,11 @@ jobs:
             echo "::error::bridge/Cargo.toml is $bridge_version but the release is $VERSION (run scripts/sync-release-version.sh $VERSION)"
             exit 1
           fi
-          mac=$(cat dist/dynapps-bridge-macos.dmg.signing)
-          win=$(cat dist/dynapps-bridge-windows.exe.signing)
+          mac=$(cat "dist/$B-macos.dmg.signing")
+          win=$(cat "dist/$B-windows.exe.signing")
           rm -f dist/*.signing
           {
-            echo "## Dynapps gateway $TAG"
+            echo "## $PRODUCT_NAME $TAG"
             echo
             core=$(sed -n 's/^systemprompt = { version = "\([0-9.]*\)".*/\1/p' Cargo.toml | head -1)
             echo "Built against published \`systemprompt\` core **$core** (crates.io); the bridge carries the release version."
@@ -714,11 +911,11 @@ jobs:
             echo
             echo "| asset | platform | OS signing |"
             echo "|---|---|---|"
-            echo "| dynapps-bridge-linux-x86_64.tar.gz | Linux x86_64 (glibc ≥ 2.35) | n/a |"
-            echo "| dynapps-bridge-linux-aarch64.tar.gz | Linux aarch64 | n/a |"
-            echo "| dynapps-bridge-macos.dmg | macOS universal (Apple Silicon + Intel) | $mac |"
-            echo "| dynapps-bridge-macos.zip | macOS in-app updater (same bundle as the dmg) | $mac |"
-            echo "| dynapps-bridge-windows.exe | Windows x86_64 | $win |"
+            echo "| $B-linux-x86_64.tar.gz | Linux x86_64 (glibc ≥ 2.35) | n/a |"
+            echo "| $B-linux-aarch64.tar.gz | Linux aarch64 | n/a |"
+            echo "| $B-macos.dmg | macOS universal (Apple Silicon + Intel) | $mac |"
+            echo "| $B-macos.zip | macOS in-app updater (same bundle as the dmg) | $mac |"
+            echo "| $B-windows.exe | Windows x86_64 | $win |"
             echo
             if [ "$mac" != "notarized" ]; then
               echo "**macOS is not notarized**: Gatekeeper will block the first open. Right-click → Open, or \`xattr -d com.apple.quarantine\` the app."
@@ -750,15 +947,19 @@ jobs:
       - name: Create release
         run: |
           gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md \
-            dist/dynapps-bridge-* dist/systemprompt-dynapps-server-* dist/systemprompt-dynapps-base-* \
+            dist/"$B"-* dist/"$REPO_NAME"-server-* dist/"$REPO_NAME"-base-* \
             dist/install.sh dist/install.sh.sig dist/install.sh.pem \
             dist/SHA256SUMS dist/SHA256SUMS.sig dist/SHA256SUMS.pem
 
   upgrade-boot:
     name: Boot the image over every seeded release
-    needs: [version, image-merge]
+    needs: [params, version, image-merge]
     if: needs.image-merge.result == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
+      RELEASE_GATE_EMAIL: ${{ fromJSON(needs.params.outputs.json).CI_RELEASE_GATE_EMAIL }}
     # Why: a 0.58 -> 0.60 client upgrade failed five ways the gates never saw
     # (stale triggers, a retirement split across extensions, a named trigger
     # toggle, a blind retry, a root-owned /app/storage/data). Only this path —
@@ -775,19 +976,20 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U test" --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Registry login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci-retry.sh 4 bash -c 'docker login ghcr.io -u "$REGISTRY_USER" --password-stdin <<<"$REGISTRY_TOKEN"'
       - name: Upgrade and boot from every rung
+        timeout-minutes: 40
         env:
           PGPASSWORD: test
         run: |
           set -euo pipefail
           ref="$IMAGE:sha-${{ needs.version.outputs.short }}"
-          docker pull "$ref"
+          bash scripts/ci-retry.sh 3 docker pull "$ref"
           for fixture in tests/fixtures/schema/release-baseline-*.sql; do
             rung=$(basename "$fixture" .sql); rung=${rung#release-baseline-}
             db="upgrade_${rung//./_}"
@@ -801,7 +1003,7 @@ jobs:
             docker volume create "$vol" > /dev/null
             docker run -d --name "boot_$db" --network host \
               -e ANTHROPIC_API_KEY=sk-ant-release-gate \
-              -e SYSTEMPROMPT_ADMIN_EMAIL=ed@systemprompt.io \
+              -e SYSTEMPROMPT_ADMIN_EMAIL="$RELEASE_GATE_EMAIL" \
               -e DATABASE_URL="postgres://test:test@localhost:5432/$db" \
               -v "$vol:/app/storage/data" "$ref" > /dev/null
             healthy=""
@@ -829,27 +1031,35 @@ jobs:
 
   smoke:
     name: Smoke (pull, run, verify)
-    needs: [version, image-merge]
+    needs: [params, version, image-merge]
     if: needs.image-merge.result == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
+      B: ${{ fromJSON(needs.params.outputs.json).CI_BRIDGE_PREFIX }}
     steps:
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: sigstore/cosign-installer@v3
+          sparse-checkout: scripts
+      - name: Registry login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/ci-retry.sh 4 bash -c 'docker login ghcr.io -u "$REGISTRY_USER" --password-stdin <<<"$REGISTRY_TOKEN"'
+      - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
       - name: Pull, version, downloads, arches, signature
         run: |
+          set -euo pipefail
           ref="$IMAGE:sha-${{ needs.version.outputs.short }}"
-          docker pull "$ref"
+          bash scripts/ci-retry.sh 3 docker pull "$ref"
           out=$(docker run --rm --entrypoint /app/bin/systemprompt "$ref" --version)
           echo "$out"
-          # --version reports the core crate version, not dynapps's.
+          # --version reports the core crate version, not this repo's.
           core="${{ needs.version.outputs.core_version }}"
           [ -n "$core" ] && echo "$out" | grep -q "$core" || { echo "::error::--version does not report core $core"; exit 1; }
           docker run --rm --entrypoint ls "$ref" -la /app/storage/files/downloads
-          docker run --rm --entrypoint sh "$ref" -c 'for f in dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz dynapps-bridge-macos.dmg dynapps-bridge-windows.exe install.sh; do test -s /app/storage/files/downloads/$f || exit 1; done'
+          docker run --rm -e B="$B" --entrypoint sh "$ref" -c 'for f in "$B-linux-x86_64.tar.gz" "$B-linux-aarch64.tar.gz" "$B-macos.dmg" "$B-windows.exe" install.sh; do test -s "/app/storage/files/downloads/$f" || exit 1; done'
           docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent
           docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent-farm
           docker buildx imagetools inspect "$ref" | tee inspect.txt

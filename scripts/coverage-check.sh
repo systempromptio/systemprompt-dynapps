@@ -149,6 +149,12 @@ if failures:
         print(f"  - {msg}", file=sys.stderr)
     print("If the drop is deliberate, re-record with 'just coverage-baseline' "
           "and commit coverage/baseline.json.", file=sys.stderr)
+    # Why: under Actions the floor/ratchet trip gets its own annotation title,
+    # so it never reads like the build timing out (coverage.yml titles that
+    # one "Coverage build timed out").
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        for msg in failures:
+            print(f"::error title=Coverage floor/ratchet::{msg}")
     sys.exit(1)
 
 better = total - baseline["total"]

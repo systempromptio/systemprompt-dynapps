@@ -1,11 +1,12 @@
 name: Coverage
 
 # The coverage floor and ratchet (scripts/coverage-check.sh against the tracked
-# coverage/baseline.json). A measurement, not a gate: it was the slowest job in
-# gates.yml (~55 min instrumented build) and ran again inside release.yml, so
-# it sat twice on the release critical path for a number that never changed
-# the release decision. It runs on the released line, nightly on `next`, and
-# on demand; a trip is a signal to raise tests on `next`, not a block.
+# coverage/baseline.json). A measurement, not a gate: it runs on the released
+# line, nightly on `next`, and on demand; a trip is a signal to raise tests on
+# `next`, not a block.
+#
+# Shared byte-for-byte with the sibling downstream repo; brand values come
+# from .github/ci-params.env and scripts/ci-sync-check.sh proves the rest.
 
 on:
   workflow_dispatch:
@@ -24,32 +25,56 @@ concurrency:
   # that run measure `next`, as promised above, instead of silently measuring
   # `main` again after the release has already landed.
   group: coverage-${{ inputs.ref || (github.event_name == 'schedule' && 'next') || github.ref }}
-  cancel-in-progress: true
+  # Why: the main and nightly runs are the published number and the erosion
+  # signal; a later trigger queues behind them instead of cancelling a
+  # two-hour build. Only an on-demand run supersedes its predecessor.
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: "10"
+  RUSTUP_MAX_RETRIES: "10"
   SQLX_OFFLINE: "true"
   CC: clang
   CXX: clang++
   BUILD_NO_COORD: "1"
+  JUST_VERSION: "1.42.4"
+  NEXTEST_VERSION: "0.9.148"
+  # Why /mnt: the instrumented trees outgrow the root disk; the runner's
+  # second disk is where core's coverage job builds for the same reason.
+  # scripts/coverage.sh appends -root, -tests and -bridge.
+  COVERAGE_TARGET_DIR: /mnt/coverage-target
+
+permissions:
+  contents: read
 
 jobs:
-  coverage:
-    name: Coverage (floor + ratchet)
+  build:
+    # The root phase builds instrumented lib-test binaries that run no tests
+    # (20-36 min cold, runs 39132602152 and 39110377259) but whose objects
+    # carry the root crates' coverage maps into the report. It shares nothing
+    # with the tests/ phase's build (that phase compiles the same dependency
+    # graph under its own feature set), so it runs on its own runner beside
+    # tests/ + bridge instead of ahead of them.
+    name: Coverage build (${{ matrix.part }})
     runs-on: ubuntu-latest
-    # An instrumented build of all three workspaces, then the full suite again
-    # under it: slower than `test`, and the reason this is its own job rather
-    # than a step appended to it.
-    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: root
+            phases: root
+          - part: tests-bridge
+            phases: tests bridge
+    # Nothing instrumented is cached (see the rust-cache step), so every run
+    # is a cold build.
+    timeout-minutes: 150
     env:
       CARGO_INCREMENTAL: "0"
       # Why: instrumenting every crate already inflates each object, and the
-      # first `just coverage` run here was SIGTERMed nine minutes into linking
-      # the root workspace — the runner running out of memory, which surfaces
-      # as a bare exit 143 with no diagnostic. Dropping debug info is what the
-      # gates.yml `test` job already does, and coverage does not need it: the line
-      # mapping comes from the instrumentation's own coverage section, not
-      # from DWARF.
+      # runner ran out of memory linking them (a bare exit 143). Coverage does
+      # not need DWARF: the line mapping comes from the instrumentation's own
+      # coverage section.
       CARGO_PROFILE_DEV_DEBUG: "0"
       # Same failure, second cause: four instrumented binaries linking at once
       # exceeds the runner's memory even without debug info.
@@ -69,81 +94,154 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
-      # it — `just test` began failing with "No space left on device" while
-      # linking the contract crate, which reads as a compile error rather than
-      # as a full disk, and the coverage job builds three instrumented trees on
-      # top of that. Everything removed here is a preinstalled SDK or language
-      # runtime nothing in this repo uses. Ordered roughly by size; `|| true`
-      # throughout because the image's contents drift between runner releases
-      # and a path that has moved must not fail the build.
-      - name: Reclaim runner disk
-        run: |
-          echo "before:"; df -h / | tail -1
-          sudo rm -rf \
-            /usr/local/lib/android \
-            /opt/hostedtoolcache \
-            /usr/share/dotnet \
-            /opt/ghc /usr/local/.ghcup \
-            /usr/share/swift \
-            /usr/local/share/powershell \
-            /usr/share/miniconda \
-            /usr/local/lib/node_modules \
-            /usr/lib/google-cloud-sdk \
-            /opt/microsoft /opt/az /usr/share/az_* \
-            /usr/local/graalvm /usr/share/kotlinc \
-            /usr/local/share/boost /usr/local/julia* \
-            /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku \
-            "${AGENT_TOOLSDIRECTORY:-}" 2>/dev/null || true
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          echo "after:"; df -h / | tail -1
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || (github.event_name == 'schedule' && 'next') || github.sha }}
+      - uses: ./.github/actions/free-disk
+        with:
+          swap-gb: "16"
+          mnt-dirs: /mnt/coverage-target-root /mnt/coverage-target-tests /mnt/coverage-target-bridge /mnt/coverage-target-pack
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
       # libdbus: scripts/coverage.sh instruments the bridge workspace too, and
       # bridge pulls keyring -> dbus-secret-service. Without it that phase
-      # fails to build; coverage.sh logs "continuing to coverage report" and
-      # carries on, so the run still produces a number while the third
-      # workspace contributed nothing.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3 libdbus-1-dev
+      # fails to build and the run reports a partial number.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3 libdbus-1-dev zstd
       - run: rustup show
       # scripts/coverage.sh calls llvm-profdata and llvm-cov out of the
       # toolchain's own sysroot rather than installing cargo-llvm-cov, which
       # re-injects the mold linker flags and silently produces zero profraws.
       - run: rustup component add llvm-tools-preview
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-nextest
-      - uses: Swatinem/rust-cache@v2
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
+      # Registry and git checkouts only. Caching the instrumented trees would
+      # cost several GB of a repository cache already near its 10 GB, evicting
+      # the Gates caches whose misses are what make those runs time out.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          # scripts/coverage.sh builds tests/ and bridge/ into separate target
-          # dirs; these must name those dirs or the cache saves nothing it
-          # later restores.
-          workspaces: |
-            tests -> ../coverage-report/target-tests
-            bridge -> ../coverage-report/target-bridge
-          # The instrumented build is a different rustflags set from `test`,
-          # so it must not share that job's cache entry.
-          key: coverage
-      # `tee` so the totals survive into the summary below; `pipefail` (set by
-      # the shell default here) keeps the job red when the ratchet trips.
+          shared-key: coverage-${{ matrix.part }}
+          cache-targets: false
+          cache-on-failure: true
+          save-if: ${{ github.event_name != 'workflow_dispatch' }}
+      # Why `timeout` inside the step: a step that runs out of time and one
+      # whose tests failed both read "failure"; the wrapper's exit 124 is
+      # annotated as a timeout, so it is never mistaken for a floor trip (that
+      # one is titled by scripts/coverage-check.sh). The step timeout is the
+      # backstop, and the job's leaves room for the pack and upload below.
+      - name: Instrumented build and tests
+        timeout-minutes: 132
+        env:
+          COVERAGE_PHASES: ${{ matrix.phases }}
+        run: |
+          set +e
+          timeout --signal=TERM --kill-after=60 125m just coverage
+          status=$?
+          if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+            echo "::error title=Coverage build timed out::the ${{ matrix.part }} half did not finish in 125 min; this is a runner-time problem, not a coverage drop"
+          fi
+          exit "$status"
+      # The instrumented executables and the raw profiles are the report's
+      # whole input. tar keeps the exec bit, which the report's object scan
+      # selects on and upload-artifact would drop.
+      # Why the condition: a half with a red test still built every object,
+      # and the report job wants them for its partial number. The root half
+      # runs no tests, so it packs objects and no profiles; /mnt itself is
+      # root-owned, so the pack goes in the directory the disk step handed to
+      # the runner user.
+      - name: Pack objects and profiles
+        if: always() && !cancelled()
+        timeout-minutes: 10
+        env:
+          PACK: /mnt/coverage-target-pack
+        run: |
+          set -euo pipefail
+          {
+            for t in "$COVERAGE_TARGET_DIR-root" "$COVERAGE_TARGET_DIR-tests" "$COVERAGE_TARGET_DIR-bridge"; do
+              [ -d "$t/debug/deps" ] || continue
+              find "$t/debug/deps" -maxdepth 1 -type f -perm -u+x ! -name '*.d' ! -name '*.so' ! -name '*.rlib' ! -name '*.rmeta'
+            done
+            if [ -d "$GITHUB_WORKSPACE/coverage-report/profraw" ]; then
+              find "$GITHUB_WORKSPACE/coverage-report/profraw" -name '*.profraw'
+            fi
+          } > "$PACK/list"
+          echo "objects: $(grep -vc '\.profraw$' "$PACK/list" || true)  profiles: $(grep -c '\.profraw$' "$PACK/list" || true)"
+          [ -s "$PACK/list" ] || { echo "::error::nothing to pack"; exit 1; }
+          tar -cPf - -T "$PACK/list" | zstd -T0 -3 -o "$PACK/coverage-${{ matrix.part }}.tar.zst"
+          ls -lh "$PACK/coverage-${{ matrix.part }}.tar.zst"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always() && !cancelled()
+        with:
+          name: coverage-${{ matrix.part }}
+          path: /mnt/coverage-target-pack/coverage-${{ matrix.part }}.tar.zst
+          retention-days: 1
+          compression-level: 0
+      # Memory and disk at the end, so a run that dies the way 39132602152 did
+      # says which one it ran out of.
+      - if: always()
+        run: free -h; swapon --show; df -h / /mnt
+
+  coverage:
+    name: Coverage (floor + ratchet)
+    needs: build
+    # Why always(): a build half that failed (a red test, or a workspace that
+    # did not compile) still uploads what it built, and a partial number is
+    # still wanted; the last step keeps the job red in that case.
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || (github.event_name == 'schedule' && 'next') || github.sha }}
+      - uses: ./.github/actions/free-disk
+        with:
+          mnt-dirs: /mnt/coverage-in /mnt/coverage-target-root /mnt/coverage-target-tests /mnt/coverage-target-bridge
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends zstd jq python3
+      - run: rustup show
+      - run: rustup component add llvm-tools-preview
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: coverage-*
+          path: /mnt/coverage-in
+          merge-multiple: true
+      # Absolute paths in the archives: the objects land where they were
+      # built, and their coverage maps name sources at this same checkout path.
+      - name: Unpack objects and profiles
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          mkdir -p coverage-report/profraw
+          # A half that failed before packing uploads nothing; report over
+          # what arrived, and the last step keeps the job red.
+          shopt -s nullglob
+          for a in /mnt/coverage-in/*.tar.zst; do zstd -dc "$a" | tar -xPf -; done
+          find coverage-report/profraw -name '*.profraw' | wc -l
+      # `tee` so the totals survive into the summary below; `pipefail` keeps
+      # the job red when the ratchet trips.
       #
       # The mkdir is load-bearing: the shell opens tee's output file before
       # `just` runs, and on a fresh checkout coverage-report/ does not exist
       # yet. GNU tee then keeps copying to stdout and exits 1 at the very end,
       # which turned four correct 83.86% runs into red jobs whose logs said
       # "coverage-check passed" immediately above the failure.
-      - run: |
+      - timeout-minutes: 15
+        env:
+          COVERAGE_PHASES: report
+        run: |
           set -o pipefail
           mkdir -p coverage-report
           just coverage-check | tee coverage-report/check.txt
       # Why: coverage/baseline.json is re-recorded from a CI measurement, so
       # the summary must outlive the runner even when the ratchet trips.
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: coverage-summary
           path: coverage-report/summary.json
@@ -159,3 +257,8 @@ jobs:
             cat coverage-report/check.txt 2>/dev/null || echo "no coverage produced"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail on a partial build
+        if: needs.build.result != 'success'
+        run: |
+          echo "::error title=Coverage build incomplete::a coverage build half did not finish cleanly (${{ needs.build.result }}); the number above is partial"
+          exit 1

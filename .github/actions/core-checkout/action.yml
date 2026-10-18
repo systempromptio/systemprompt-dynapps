@@ -10,7 +10,18 @@ runs:
       id: core
       shell: bash
       run: echo "ref=$(tr -d '[:space:]' < bridge/CORE_REF)" >> "$GITHUB_OUTPUT"
-    - uses: actions/checkout@v7
+    # Why two attempts: a transient GitHub fetch failure here failed whole
+    # gate rounds before any code compiled. The second attempt runs only when
+    # the first failed, and its failure fails the job.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      id: first
+      continue-on-error: true
+      with:
+        repository: systempromptio/systemprompt-core
+        ref: ${{ steps.core.outputs.ref }}
+        path: .vendor/systemprompt-core
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      if: steps.first.outcome == 'failure'
       with:
         repository: systempromptio/systemprompt-core
         ref: ${{ steps.core.outputs.ref }}
