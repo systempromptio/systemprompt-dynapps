@@ -1151,6 +1151,7 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     # `just migrate` below still applies every registered migration; this only
     # decides where the compile-time query check reads its schema from.
     SQLX_OFFLINE=true just build --release
+    python3 scripts/setup-local-kit-source.py "$PROFILE_DIR/profile.yaml" "$PROFILE_DIR/secrets.json"
     echo "Running database migrations..."
     just migrate
     echo "Ensuring bootstrap admin user ($ADMIN_EMAIL)..."
