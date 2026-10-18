@@ -196,7 +196,7 @@ pub(super) fn filters(
             bands
                 .into_iter()
                 .map(|b| {
-                    let label = band_label(&super::audience::rule_type_of(&b));
+                    let label = band_label(&super::audience_rows::rule_type_of(&b));
                     let label = if label == "band" {
                         b.clone()
                     } else {

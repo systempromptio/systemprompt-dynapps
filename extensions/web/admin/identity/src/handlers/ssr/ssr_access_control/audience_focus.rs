@@ -9,7 +9,8 @@
 
 use chrono::Utc;
 
-use super::audience::{audience_url, decision_of, rule_type_of};
+use super::audience::audience_url;
+use super::audience_rows::{decision_of, rule_type_of};
 use super::entities::{AcQuery, BASE_URL};
 use super::view::{
     AcAudienceBucketItemView, AcAudienceBucketView, AcAudienceCellView, AcAudienceColumnView,

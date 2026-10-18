@@ -19,11 +19,11 @@ use std::sync::Arc;
 
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::governance::decision_log::{DecisionFilter, DecisionLogRow, DecisionSort};
-use crate::repositories::governance::findings::{FindingFilter, SafetyFindingLogRow};
+use crate::repositories::governance::decision_log::DecisionLogRow;
+use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::repositories::governance::{DecisionPage, PageSlice};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope, membership};
@@ -32,17 +32,20 @@ use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::{DEFAULT_PAGE_SIZE, scope_filter_view};
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
-use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 mod columns;
 mod context;
 mod data;
 mod filters;
 mod kpis;
+mod query;
 mod sync_tab;
 mod urls;
 mod view;
 
+pub(crate) use query::GovernanceQuery;
+use query::{decision_filter, finding_filter, range_of, sort_from};
 
 pub(crate) const BASE_URL: &str = "/admin/governance";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,25 +81,6 @@ impl GovernanceTab {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
-pub(crate) struct GovernanceQuery {
-    pub tab: Option<String>,
-    pub from: Option<String>,
-    pub to: Option<String>,
-    pub preset: Option<String>,
-    pub group: Option<String>,
-    pub project: Option<String>,
-    pub policy: Option<String>,
-    pub decision: Option<String>,
-    pub category: Option<String>,
-    pub blocked: Option<String>,
-    pub q: Option<String>,
-    pub attention: Option<String>,
-    pub sort: Option<String>,
-    pub dir: Option<String>,
-    pub page: Option<i64>,
-}
-
 #[derive(Debug, Serialize)]
 pub(super) struct TabLink {
     label: &'static str,
@@ -110,57 +94,6 @@ fn require_console(user_ctx: &UserContext) -> Result<(), AdminError> {
         return Ok(());
     }
     Err(AdminError::Forbidden("Admin access required.".to_owned()))
-}
-
-fn sort_from(query: &GovernanceQuery) -> DecisionSort {
-    let key = match query.sort.as_deref() {
-        Some("policy") => "policy",
-        Some("decision") => "decision",
-        Some("tool") => "tool",
-        Some("user") => "user",
-        _ => "when",
-    };
-    DecisionSort {
-        key,
-        ascending: query.dir.as_deref() == Some("asc"),
-    }
-}
-
-fn decision_filter(query: &GovernanceQuery) -> DecisionFilter {
-    DecisionFilter {
-        policy: non_empty(query.policy.as_deref()),
-        decision: non_empty(query.decision.as_deref()),
-        search: non_empty(query.q.as_deref()),
-        attention: attention_on(query),
-    }
-}
-
-fn attention_on(query: &GovernanceQuery) -> bool {
-    non_empty(query.attention.as_deref()).is_some_and(|v| v != "0")
-}
-
-fn finding_filter(query: &GovernanceQuery) -> FindingFilter {
-    FindingFilter {
-        category: non_empty(query.category.as_deref()),
-        blocked: match query.blocked.as_deref() {
-            Some("blocked") => Some(true),
-            Some("audited") => Some(false),
-            _ => None,
-        },
-        search: non_empty(query.q.as_deref()),
-    }
-}
-
-fn non_empty(value: Option<&str>) -> Option<String> {
-    value.filter(|v| !v.trim().is_empty()).map(str::to_owned)
-}
-
-fn range_of(query: &GovernanceQuery) -> TimeRange {
-    parse_time_range(&TimeRangeQuery {
-        from: query.from.clone(),
-        to: query.to.clone(),
-        preset: query.preset.clone(),
-    })
 }
 
 async fn resolve_scope(

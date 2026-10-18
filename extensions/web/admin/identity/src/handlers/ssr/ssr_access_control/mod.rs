@@ -19,6 +19,7 @@
 mod audience;
 mod audience_filter;
 mod audience_focus;
+mod audience_rows;
 mod bands;
 mod data;
 pub(crate) mod entities;
