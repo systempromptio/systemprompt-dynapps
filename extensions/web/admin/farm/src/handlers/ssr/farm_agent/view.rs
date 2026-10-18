@@ -6,7 +6,7 @@ use systemprompt::identifiers::PluginId;
 use systemprompt_web_shared::format::{format_cost, format_duration_ms, short_id};
 
 use crate::repositories::rows::{AgentRow, EvalCaseRow, FarmRow, RunRow};
-use crate::repositories::summaries::{MatrixCellRow, RunStats};
+use crate::repositories::summaries::{FarmRunStats, MatrixCellRow};
 use crate::types::RunStatus;
 
 const DASH: &str = "—";
@@ -104,7 +104,7 @@ fn duration(ms: Option<f64>) -> String {
 }
 
 pub(crate) fn kpi_views(
-    stats: &RunStats,
+    stats: &FarmRunStats,
     recent: &[RunRow],
     cells: &[MatrixCellRow],
 ) -> Vec<AgentKpiView> {

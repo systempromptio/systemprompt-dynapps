@@ -129,11 +129,10 @@ forwarded, whether or not a `default_provider` is set.
 
 | Family | Ids a client can request |
 |---|---|
-| Claude (served from Vertex AI, failing over to Anthropic) | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` |
-| Claude on Anthropic's API directly | `anthropic-claude-*`: routable, but hidden from `/v1/models` |
-| Gemini on Vertex AI | `vertex-gemini-3.8-flash` |
-| Gemini by API key | `gemini-3.8-flash` |
-| Open models on Vertex (retiring 2026-10-21 unless noted) | `qwen.*`, `zai.glm-*` (`zai.glm-5.2` stays), `moonshotai.*`, `deepseek.*`, `minimax.*`, `openai.gpt-oss-*` (`openai.gpt-oss-120b` stays) |
+| Claude (Anthropic's API, by key) | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` |
+
+This installation is Anthropic-only: Gemini, Vertex AI and the open models
+are not served.
 
 `GET /v1/models` is the authoritative list for a running instance. The
 Claude 4.x and 5.0 ids and other retired dated ids are no longer

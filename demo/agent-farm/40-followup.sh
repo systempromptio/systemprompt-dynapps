@@ -6,17 +6,26 @@
 # session is resumed and allowed exactly one tool, orm_write, to apply it; the
 # write is then looked up in mcp_tool_executions and governance_decisions.
 #
-# Needs `claude` on PATH configured through the bridge (`just connect <code>`
-# or `just claude <code>`), so the session is governed and recorded like Ed's
-# own. ODOO_TOOL_PREFIX / BRAIN_TOOL_PREFIX override how the bridge names the
-# two servers' tools (default mcp__dynapps-odoo__ / mcp__dynbrain__).
+# Needs a `claude` signed in through the bridge, so the session is governed
+# and recorded like Ed's own. CLAUDE_CONTAINER names a running clean-client
+# container (deploy/clean-client) to run it in, leaving the host's ~/.claude
+# alone; otherwise `claude` on PATH is used. The bridge names the servers'
+# tools mcp__plugin_dynapps-portal_<server>__*; ODOO_TOOL_PREFIX /
+# BRAIN_TOOL_PREFIX override that.
 set -uo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/_night_common.sh"
 header "Night audit 40 — follow-up" "APPROVE_FIX=${APPROVE_FIX:-0}"
-need claude
+if [[ -n "${CLAUDE_CONTAINER:-}" ]]; then need docker; else need claude; fi
+claude_run() {
+  if [[ -n "${CLAUDE_CONTAINER:-}" ]]; then
+    docker exec -i "$CLAUDE_CONTAINER" bash -lc 'cd ~ && claude "$@"' claude "$@"
+  else
+    claude "$@"
+  fi
+}
 reset_step 40
-ODOO_TOOL_PREFIX="${ODOO_TOOL_PREFIX:-mcp__${ODOO_SERVER}__}"
-BRAIN_TOOL_PREFIX="${BRAIN_TOOL_PREFIX:-mcp__${BRAIN_SERVER}__}"
+ODOO_TOOL_PREFIX="${ODOO_TOOL_PREFIX:-mcp__plugin_dynapps-portal_${ODOO_SERVER}__}"
+BRAIN_TOOL_PREFIX="${BRAIN_TOOL_PREFIX:-mcp__plugin_dynapps-portal_${BRAIN_SERVER}__}"
 FOLLOWUP_MODEL="${FOLLOWUP_MODEL:-claude-opus-5-5}"
 article="${DYNBRAIN_ARTICLE_ID:-$(cat "$STATE_DIR/dynbrain_article_id" 2>/dev/null || true)}"
 [[ -n "$article" ]] || { record 40 "DynBrain article id known" false "run 30-assert.sh or set DYNBRAIN_ARTICLE_ID"; exit 1; }
@@ -25,13 +34,14 @@ started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 reads=""
 for t in $ODOO_READ_TOOLS; do reads="$reads,${ODOO_TOOL_PREFIX}$t"; done
-allowed="${BRAIN_TOOL_PREFIX}docs_get,${BRAIN_TOOL_PREFIX}docs_search,${BRAIN_TOOL_PREFIX}docs_metadata$reads"
-denied="${ODOO_TOOL_PREFIX}orm_create,${ODOO_TOOL_PREFIX}orm_write,${ODOO_TOOL_PREFIX}orm_unlink,${ODOO_TOOL_PREFIX}orm_execute_kw"
+allowed="${BRAIN_TOOL_PREFIX}docs_search,${BRAIN_TOOL_PREFIX}docs_answer$reads"
+denied="${ODOO_TOOL_PREFIX}orm_create,${ODOO_TOOL_PREFIX}orm_write,${ODOO_TOOL_PREFIX}orm_unlink,${ODOO_TOOL_PREFIX}orm_execute_kw,${ODOO_TOOL_PREFIX}orm_post_message,${ODOO_TOOL_PREFIX}orm_send_mail"
 
 cat > "$work/propose.txt" <<PROMPT
-Fetch DynBrain document $article with docs_get: it is last night's accounting
-audit of Dynapps (Odoo master, company 1). Read its prioritised correction
-proposal, confirm the record's current value with one orm_search_read on
+Find DynBrain document $article (title "Auditoría contable Dynapps ...") with
+docs_search: it is last night's accounting audit of Dynapps (Odoo master,
+company 1). Read its prioritised correction proposal (docs_answer on that
+document if the search snippet does not show it), confirm the record's current value with one orm_search_read on
 dynapps-odoo, and propose exactly ONE fix. Do not change anything.
 End your answer with a fenced json block and nothing after it:
 {"model": "...", "record_id": 0, "field": "...", "current_value": ..., "proposed_value": ..., "reason": "..."}
@@ -39,7 +49,7 @@ PROMPT
 
 step "1. Proposal (read-only session)"
 cmd "claude -p <propose.txt> --model $FOLLOWUP_MODEL --output-format json --allowedTools <reads> --disallowedTools <writes>"
-( cd "$work" && claude -p "$(cat propose.txt)" --model "$FOLLOWUP_MODEL" --output-format json --max-turns 15 \
+( cd "$work" && claude_run -p "$(cat propose.txt)" --model "$FOLLOWUP_MODEL" --output-format json --max-turns 15 \
     --allowedTools "$allowed" --disallowedTools "$denied" < /dev/null > propose.json 2> propose.err )
 python3 -I - "$work/propose.json" "$STATE_DIR/followup.json" "$article" "$started" <<'PY'
 import json, re, sys
@@ -75,7 +85,7 @@ fi
 step "2. Approved: apply through dynapps-odoo"
 session=$(jq -r '.proposal.session_id // empty' "$STATE_DIR/followup.json")
 applied_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-( cd "$work" && claude -p "Approved by Ed. Apply exactly that one fix with a single orm_write on dynapps-odoo, then read the field back with orm_search_read and report the new value. Change nothing else." \
+( cd "$work" && claude_run -p "Approved by Ed. Apply exactly that one fix with a single orm_write on dynapps-odoo, then read the field back with orm_search_read and report the new value. Change nothing else." \
     --resume "$session" --model "$FOLLOWUP_MODEL" --output-format json --max-turns 6 \
     --allowedTools "${ODOO_TOOL_PREFIX}orm_write,${ODOO_TOOL_PREFIX}orm_search_read" < /dev/null > apply.json 2> apply.err )
 tmp=$(mktemp)

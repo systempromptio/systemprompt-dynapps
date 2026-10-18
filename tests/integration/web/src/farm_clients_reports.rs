@@ -141,7 +141,7 @@ fn event(seq: i64, payload: RunEventPayload) -> RunEvent {
     }
 }
 
-fn call(seq: i64, id: &str, name: &str, is_error: bool) -> [RunEvent; 2] {
+fn call(seq: i64, id: &str, name: &str, is_error: bool, content: &str) -> [RunEvent; 2] {
     [
         event(
             seq,
@@ -155,7 +155,7 @@ fn call(seq: i64, id: &str, name: &str, is_error: bool) -> [RunEvent; 2] {
             seq + 1,
             RunEventPayload::ToolResult {
                 tool_use_id: id.to_owned(),
-                content: String::new(),
+                content: content.to_owned(),
                 is_error,
             },
         ),
@@ -198,11 +198,17 @@ async fn a_finished_run_gets_a_report_with_its_mcp_tally_and_facts() {
     warn_decision(&db.pool, &seeded.user, &context, "allow").await;
     warn_decision(&db.pool, &seeded.user, "another-context", "warn").await;
     let events: Vec<RunEvent> = [
-        call(1, "t1", "mcp__dynapps-odoo__orm_search_read", false),
-        call(3, "t2", "mcp__dynapps-odoo__orm_search_read", false),
-        call(5, "t3", "mcp__dynapps-odoo__orm_write", true),
-        call(7, "t4", "mcp__dynbrain__document_create", false),
-        call(9, "t5", "Read", false),
+        call(1, "t1", "mcp__dynapps-odoo__orm_search_read", false, "[]"),
+        call(3, "t2", "mcp__dynapps-odoo__orm_search_read", false, "[]"),
+        call(5, "t3", "mcp__dynapps-odoo__orm_write", true, "denied"),
+        call(
+            7,
+            "t4",
+            "mcp__dynbrain__document_create",
+            false,
+            r#"{"id": "doc-1"}"#,
+        ),
+        call(9, "t5", "Read", false, ""),
     ]
     .into_iter()
     .flatten()

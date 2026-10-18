@@ -49,8 +49,7 @@ fn the_schema_enumerates_every_category_and_outcome_and_requires_every_field() {
             "{field} must be required"
         );
     }
-    // Why: Gemini's responseSchema rejects `additionalProperties`; the schema
-    // must stay inside the OpenAPI subset the provider accepts.
+    // core's sanitizer strips anything past enums and `required`.
     assert!(schema.get("additionalProperties").is_none());
 }
 
@@ -180,8 +179,8 @@ fn an_oversized_conversation_keeps_its_opening_and_closing_turns() {
     assert!(text.contains("turns omitted"), "no elision marker");
 }
 
-// Why: the judge no longer forces Anthropic tool_choice (Sonnet 5.5 refuses
-// it), so the verdict arrives as text that may be fenced or prefaced.
+// Why: Anthropic models refuse a forced tool_choice, so the verdict arrives as
+// text.
 #[test]
 fn a_verdict_wrapped_in_prose_or_a_fence_still_parses() {
     let raw = "Here is the verdict:\n```json\n{\"title\": \"Fix build\", \"category\": \

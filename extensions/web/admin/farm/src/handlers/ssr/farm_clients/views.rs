@@ -4,9 +4,10 @@
 use serde::Serialize;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::ssr::format::{local_time, relative_time, short_id};
+use systemprompt_web_admin_core::ssr::tone::score_display;
 use systemprompt_web_shared::format::format_cost;
 
-use crate::handlers::ssr::shared::outcomes::{pct_display, rate_tone, score_display};
+use crate::handlers::ssr::shared::outcomes::{pct_display, rate_tone};
 use crate::handlers::ssr::shared::{BadgeView, status_badge, trigger_badge};
 use crate::repositories::clients::{AgentOutcomeRow, ClientSummaryRow, ReportRunRow};
 

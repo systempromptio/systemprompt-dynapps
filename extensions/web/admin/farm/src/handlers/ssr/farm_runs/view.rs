@@ -12,13 +12,13 @@ use super::context::{RunKpiView, RunSortHeaders, RunsLiveView};
 use super::query::{RunSortColumn, RunsQuery};
 use crate::handlers::ssr::shared::run_row_views;
 use crate::repositories::rows::RunRow;
-use crate::repositories::summaries::RunStats;
+use crate::repositories::summaries::FarmRunStats;
 use crate::types::RunStatus;
 
 pub(super) struct RunsPage<'a> {
     pub(super) rows: &'a [RunRow],
     pub(super) total: i64,
-    pub(super) stats: &'a RunStats,
+    pub(super) stats: &'a FarmRunStats,
     pub(super) page: i64,
     pub(super) column: RunSortColumn,
 }
@@ -112,7 +112,7 @@ fn duration(ms: Option<f64>) -> String {
     ms.map_or_else(|| "—".to_owned(), |v| format_duration_ms(v.round() as i64))
 }
 
-pub(super) fn kpis(query: &RunsQuery, stats: &RunStats) -> Vec<RunKpiView> {
+pub(super) fn kpis(query: &RunsQuery, stats: &FarmRunStats) -> Vec<RunKpiView> {
     let finished = stats.succeeded + stats.failed + stats.timed_out + stats.cancelled;
     vec![
         plain_tile(

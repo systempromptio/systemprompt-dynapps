@@ -406,6 +406,7 @@ _lint-gates-uncoordinated:
         lint-raw-ids.sh
         check-glob-reexports.sh
         check-comments.sh
+        check-yaml-comments.sh
         lint-inline-comments.sh
         check-duplicate-types.sh
         check-field-copy-from.sh
@@ -1169,6 +1170,14 @@ whoami:
 # Tenant operations (interactive menu)
 tenant:
     {{CLI}} cloud tenant
+
+# Seed the fictional vet-group demo into the local instance (run after `just start`).
+demo-vet-seed:
+    ./demo/vet/seed.sh
+
+# Grep the vet demo rows for real-tenant markers; expect 0 hits.
+demo-vet-leak-check REF_DB="":
+    ./demo/vet/leak-check.sh {{REF_DB}}
 
 # Set up a local-only profile + Docker Postgres (no cloud, no login required).
 # Pass keys as positional args, or leave blank to be prompted interactively:

@@ -31,7 +31,7 @@ use crate::ssr::faults::Faults;
 use crate::ssr::pickable_users::list_pickable_users;
 use crate::types::Role;
 
-pub const SYNC_URL: &str = "/admin/sync?tab=access";
+pub const SYNC_URL: &str = crate::repositories::sync::access_control::REVIEW_URL;
 
 #[must_use]
 pub fn entity_access_url(entity_type: &str, entity_id: &str) -> Option<String> {

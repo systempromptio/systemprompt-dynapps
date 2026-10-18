@@ -123,14 +123,6 @@ pub struct FarmRunExtras {
     pub assertions: Vec<AssertionOutcome>,
 }
 
-/// A workflow step's own record of one run, beside core's row.
-#[cfg(feature = "workflows")]
-#[derive(Debug, Clone, Serialize, JsonSchema)]
-pub struct WorkflowRunExtras {
-    pub workflow_run_id: String,
-    pub step: String,
-}
-
 /// What the origin knows about a run beyond core's row.
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 #[serde(tag = "origin", rename_all = "snake_case")]
@@ -138,8 +130,6 @@ pub enum RunExtras {
     None,
     #[cfg(feature = "farm")]
     Farm(Box<FarmRunExtras>),
-    #[cfg(feature = "workflows")]
-    Workflow(Box<WorkflowRunExtras>),
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]

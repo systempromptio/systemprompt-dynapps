@@ -1,0 +1,38 @@
+# Upstream pins for scripts/import-dynapps-skills.sh — one commit SHA per
+# repository of Dynapps Spain's Claude Code skills (GitHub org indawsodoo).
+# Move pins with `scripts/import-dynapps-skills.sh --update`; the generated
+# services/{skills/dynapps_*,plugins/dynapps-*} follow.
+marketplace:
+  repo: indawsodoo/ai-claude-marketplace
+  sha: 4ed477e18e79d5e32008cad3b5a0ab56d2f55ecd
+plugins:
+  - repo: indawsodoo/ai-claude-common
+    sha: 1da5c4213f1fd7bc4769fbfcf0e226150ee19d8c
+  - repo: indawsodoo/ai-claude-developer
+    sha: 4939d88e726ce19e5e691ac1dcc75383945e6883
+  - repo: indawsodoo/ai-claude-consultant
+    sha: e27b0ec2321c254ac31e25cd8dd758d6619ae895
+  - repo: indawsodoo/ai-claude-marketing
+    sha: ad50ab8fa157c337a8ccfea6779dc70d554cc848
+  - repo: indawsodoo/ai-claude-sales
+    sha: aa7726bb06bac86456c006476e4e0b3542a59dda
+  - repo: indawsodoo/ai-claude-management
+    sha: d81e522b48b86cdfd311ea104f5556688ad78ddc
+  - repo: indawsodoo/ai-claude-farm
+    sha: 0184ab773f1c44f10aae40ae0c4620455fcbe8d8
+# Only these upstream skills (<repo>/<skill dir>) are imported, grouped into
+# one plugin per key (dynapps-<key>). Keeps install and use light: the showcase workflows plus the
+# one skill demoed through the agent farm. Drop a repo above when no kept
+# skill comes from it.
+keep:
+  showcase:
+    - sales/lead-data-collection
+    - sales/quotation-builder-value-based
+    - common/dynapps-brand
+    - marketing/seo-manager
+    - consultant/ticket-solver
+    - common/dev-assessment
+    - developer/dev-plan
+  farm:
+    - farm/agent-farm
+    - management/accounting-auditor

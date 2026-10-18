@@ -178,3 +178,26 @@ pub(super) fn build_pagination(query: &SessionListQuery, window: PageWindow) -> 
         url_with(query, &["page"], &format!("page={page}"))
     })
 }
+
+pub(super) fn export_view(
+    query: &SessionListQuery,
+    range: TimeRange,
+    preset: &str,
+) -> systemprompt_web_admin_core::export::view::ExportView {
+    let export_query = systemprompt_web_admin_core::export::view::query_string(&[
+        ("preset", Some(preset)),
+        ("from", Some(&range.from.to_rfc3339())),
+        ("to", Some(&range.to.to_rfc3339())),
+        ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+        ("error_only", query.error_only.as_deref()),
+        ("side", query.side.as_deref()),
+        ("sort", query.sort.as_deref()),
+        ("dir", query.dir.as_deref()),
+        ("group", query.group.as_deref()),
+        ("project", query.project.as_deref()),
+    ]);
+    systemprompt_web_admin_core::export::view::ExportView::single("sessions", &export_query)
+        .with_transcripts(
+            systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions,
+        )
+}

@@ -26,10 +26,10 @@ Then walk the scripts in `demo/` in order — they exercise the full governance 
 | `demo/` | Setup + seeding harness (preflight, seed data, sweep) |
 | `services/` | Config-as-code (YAML + Markdown): agents, AI providers, MCP servers, plugins, skills, scheduler |
 | `extensions/` | Compile-time Rust extensions (MCP servers + web rendering) |
-| `storage/`, `content/` | Static assets and Markdown content |
-| `docs/` | Release process + gateway integration guides |
+| `storage/` | Static assets (CSS, admin templates, files) |
+| `docs/` | Branching, release process, ops runbooks and integration notes |
 | `deploy/` | The clean-client test container |
-| `src/main.rs` | Thin binary entry point — delegates to `core/` |
+| `src/main.rs` | Thin binary entry point — delegates to the published `systemprompt` core crates |
 
 Full developer guidance for working in this repo lives in [`CLAUDE.md`](./CLAUDE.md).
 

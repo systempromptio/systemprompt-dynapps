@@ -26,7 +26,7 @@ fn no_evals_block_means_the_default_judge() {
     let config = EvalsConfig::default();
     assert_eq!(config.judge_provider, DEFAULT_JUDGE_PROVIDER);
     assert_eq!(config.judge_model, DEFAULT_JUDGE_MODEL);
-    assert_eq!(DEFAULT_JUDGE_MODEL, "anthropic-claude-sonnet-5-5");
+    assert_eq!(DEFAULT_JUDGE_MODEL, "claude-sonnet-5-5");
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn the_shipped_farms_file_judges_with_sonnet() {
     let root = crate::support::repo_root().join("services");
     let config = read_evals_config(&root);
     assert_eq!(config.judge_provider, "anthropic");
-    assert_eq!(config.judge_model, "anthropic-claude-sonnet-5-5");
+    assert_eq!(config.judge_model, "claude-sonnet-5-5");
 }
 
 #[test]

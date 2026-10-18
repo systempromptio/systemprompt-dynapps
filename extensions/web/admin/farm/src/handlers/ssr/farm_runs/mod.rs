@@ -22,9 +22,9 @@ mod options;
 pub(crate) mod query;
 pub(crate) mod view;
 
-use crate::repositories::filters::PageWindow;
+use crate::repositories::filters::RowWindow;
 use crate::repositories::rows::RunRow;
-use crate::repositories::summaries::RunStats;
+use crate::repositories::summaries::FarmRunStats;
 use crate::repositories::{agents, farms, people, runs};
 use context::{RunsFilterView, RunsPageContext};
 use query::{BASE_URL, FRAGMENT_URL, RunsQuery, run_filter, run_sort};
@@ -50,7 +50,7 @@ fn preset_str(query: &RunsQuery, range: TimeRange) -> String {
 pub(crate) struct RunsRead {
     pub(crate) rows: Vec<RunRow>,
     pub(crate) total: i64,
-    pub(crate) stats: RunStats,
+    pub(crate) stats: FarmRunStats,
 }
 
 pub(crate) async fn read_runs(
@@ -60,7 +60,7 @@ pub(crate) async fn read_runs(
 ) -> Result<RunsRead, sqlx::Error> {
     let filter = run_filter(query, range.from, range.to);
     let (_, sort) = run_sort(query);
-    let window = PageWindow {
+    let window = RowWindow {
         limit: DEFAULT_PAGE_SIZE,
         offset: query.page_index() * DEFAULT_PAGE_SIZE,
     };
@@ -109,7 +109,7 @@ pub(crate) async fn runs_page(
     let read = faults.take_with("runs", read, || RunsRead {
         rows: Vec::new(),
         total: 0,
-        stats: RunStats::default(),
+        stats: FarmRunStats::default(),
     });
     let farm_rows = faults.take("farms", farm_rows);
     let agent_rows = faults.take("agents", agent_rows);

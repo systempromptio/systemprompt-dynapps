@@ -87,7 +87,6 @@ impl FlagFilter {
     }
 }
 
-/// The column the rows sort by.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FactSort {
     #[default]

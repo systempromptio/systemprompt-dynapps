@@ -17,7 +17,7 @@ use systemprompt_web_admin_core::types::UserContext;
 
 use super::run_json::{RunJson, run_json};
 use super::shared::load_visible_run;
-use crate::repositories::filters::{PageWindow, RunFilter, RunSort};
+use crate::repositories::filters::{FarmRunFilter, RowWindow, RunSort};
 use crate::repositories::runs;
 use crate::services::runs::cancel;
 use crate::state::FarmState;
@@ -78,14 +78,14 @@ pub(crate) async fn list_runs(
     Extension(ctx): Extension<UserContext>,
     Query(query): Query<RunListQuery>,
 ) -> AdminResult<Response> {
-    let filter = RunFilter {
+    let filter = FarmRunFilter {
         farm_id: query.farm,
         agent_id: query.agent,
         user_id: user_filter(&ctx, query.user.as_deref())?,
         status: status_filter(query.status.as_deref())?,
-        ..RunFilter::default()
+        ..FarmRunFilter::default()
     };
-    let page = PageWindow {
+    let page = RowWindow {
         limit: query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT),
         offset: query.offset.unwrap_or(0).max(0),
     };

@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use systemprompt::agent_runs::{AgentRunRepository, AgentRunRow, AgentRunsError};
 use systemprompt::identifiers::{AgentRunId, ContextId, UserId};
 
-use crate::repositories::filters::{PageWindow, RunFilter, RunSort};
+use crate::repositories::filters::{FarmRunFilter, RowWindow, RunSort};
 use crate::repositories::rows::RunRow;
 use crate::types::{ClientId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia};
 
@@ -45,9 +45,9 @@ pub async fn find_run_with_agent_run(
 
 pub async fn list_runs_paged(
     pool: &PgPool,
-    filter: &RunFilter,
+    filter: &FarmRunFilter,
     sort: RunSort,
-    page: PageWindow,
+    page: RowWindow,
 ) -> Result<(Vec<RunRow>, i64), sqlx::Error> {
     let farm_id = filter.farm_id.as_ref().map(FarmId::as_str);
     let agent_id = filter.agent_id.as_ref().map(FarmAgentId::as_str);

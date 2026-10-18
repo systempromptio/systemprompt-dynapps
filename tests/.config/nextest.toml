@@ -27,3 +27,22 @@ test-group = "db-contract"
 [profile.default]
 slow-timeout = { period = "60s", terminate-after = 2 }
 failure-output = "immediate-final"
+
+# `scripts/coverage.sh` runs the suite instrumented, which is several times
+# slower; the contract suite's route sweep outlives the default 120s budget
+# there. The test-group overrides are per profile, so they are repeated.
+[profile.coverage]
+slow-timeout = { period = "180s", terminate-after = 3 }
+failure-output = "immediate-final"
+
+[[profile.coverage.overrides]]
+filter = "package(mcp-integration-tests)"
+test-group = "db-integration"
+
+[[profile.coverage.overrides]]
+filter = "package(web-integration-tests)"
+test-group = "db-integration"
+
+[[profile.coverage.overrides]]
+filter = "package(admin-contract-tests)"
+test-group = "db-contract"

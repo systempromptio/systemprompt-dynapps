@@ -132,7 +132,6 @@ pub struct ConversationSeriesPoint {
     pub users: i64,
 }
 
-/// One bucket of the chosen breakdown dimension.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConversationBucketRow {
     pub label: String,

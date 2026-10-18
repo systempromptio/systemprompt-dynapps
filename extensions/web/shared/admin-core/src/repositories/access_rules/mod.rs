@@ -19,5 +19,6 @@ pub mod review;
 pub mod rules;
 pub mod rules_yaml_loader;
 pub mod rules_yaml_types;
+mod rules_yaml_validate;
 pub mod sync;
 pub mod validity;

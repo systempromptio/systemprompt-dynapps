@@ -19,6 +19,7 @@ use systemprompt::agent_runs::repository::RunCredentialRepositories;
 use systemprompt::agent_runs::service::{ClaimLoop, RunHandler, claimer_id};
 use systemprompt::database::DbPool;
 use systemprompt::traits::{JobContext, RunnerService};
+use systemprompt::users::ApiKeyLifetime;
 use tokio_util::sync::CancellationToken;
 
 use super::handler::FarmRunHandler;
@@ -43,14 +44,18 @@ impl FarmRunnerService {
         Self { state }
     }
 
-    fn handler(&self, db: &DbPool, issuer: String) -> Arc<dyn RunHandler> {
+    fn handler(&self, db: &DbPool, issuer: RunIssuer) -> Arc<dyn RunHandler> {
         let gateway = &self.state.gateway;
         let runner = read_runner_config(&self.state.paths.composed_services_root);
         let fly = (runner.mode == RunnerMode::FlyMachine).then(|| runner.fly.unwrap_or_default());
         tracing::info!(mode = runner.mode.as_str(), "farm runner mode");
         Arc::new(FarmRunHandler {
             state: Arc::clone(&self.state),
-            credentials: RunCredentialService::new(RunCredentialRepositories::new(db), issuer),
+            credentials: RunCredentialService::new(
+                RunCredentialRepositories::new(db),
+                issuer.jwt_issuer,
+                issuer.key_lifetime,
+            ),
             hooks: HookBases {
                 govern_url: gateway.govern_url(),
                 track_url: gateway.track_url(),
@@ -67,9 +72,17 @@ fn hostname() -> String {
         .unwrap_or_else(|| FALLBACK_HOSTNAME.to_owned())
 }
 
-fn jwt_issuer() -> Option<String> {
+struct RunIssuer {
+    jwt_issuer: String,
+    key_lifetime: ApiKeyLifetime,
+}
+
+fn run_issuer() -> Option<RunIssuer> {
     match systemprompt::manifest::Config::get() {
-        Ok(config) => Some(config.jwt_issuer.clone()),
+        Ok(config) => Some(RunIssuer {
+            jwt_issuer: config.jwt_issuer.clone(),
+            key_lifetime: ApiKeyLifetime::from_max_days(config.api_key_max_lifetime_days),
+        }),
         Err(error) => {
             tracing::error!(%error, "config unavailable; no farm run will be claimed");
             None
@@ -88,7 +101,7 @@ impl RunnerService for FarmRunnerService {
             tracing::error!("farm runner has no DbPool; no farm run will be claimed");
             return;
         };
-        let Some(issuer) = jwt_issuer() else {
+        let Some(issuer) = run_issuer() else {
             return;
         };
         let mut claim = ClaimLoop::new(

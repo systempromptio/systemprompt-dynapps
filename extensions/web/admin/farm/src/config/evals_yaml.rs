@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{FarmError, FarmResult};
 
 pub const DEFAULT_JUDGE_PROVIDER: &str = "anthropic";
-pub const DEFAULT_JUDGE_MODEL: &str = "anthropic-claude-sonnet-5-5";
+pub const DEFAULT_JUDGE_MODEL: &str = "claude-sonnet-5-5";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

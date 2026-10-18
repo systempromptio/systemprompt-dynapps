@@ -83,6 +83,7 @@ pub(crate) fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
         default_provider: None,
         default_model: None,
         allow_unlisted_models: false,
+        hidden_requires_route: true,
         auth_scheme: "bearer".to_owned(),
         inference_path_prefix: "/v1".to_owned(),
         system_prompt_overrides: Vec::new(),

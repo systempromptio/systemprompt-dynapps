@@ -58,8 +58,8 @@ fn a_console_caller_sees_every_group() {
     );
 }
 
-// Why: `project_manager` used to be a console role; it is now an
-// entitlement role like `developer`, scoped by participation.
+// `project_manager` is an entitlement role like `developer`, scoped by
+// participation.
 #[test]
 fn a_project_manager_is_scoped_like_everyone_else() {
     assert_eq!(

@@ -2,5 +2,6 @@
 //! versions, and plugin evaluation.
 
 mod mcp;
+mod mcp_tools;
 mod plugin_eval;
 mod versions;

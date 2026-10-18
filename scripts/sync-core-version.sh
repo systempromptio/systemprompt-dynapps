@@ -101,7 +101,10 @@ fi
 # active it is a core SHA (just core-pin); published-core mode needs the tag.
 if ! grep -qE '^\[patch\.crates-io\]' Cargo.toml; then
     if [ "$MODE" = "--check" ]; then
-        [ "$(tr -d '[:space:]' < bridge/CORE_REF)" = "v$VERSION" ] || {
+        # A `v<version>-bridge.N` hotfix tag also names this core; check-core-ref.sh
+        # proves it differs from v<version> only under bin/bridge.
+        ref="$(tr -d '[:space:]' < bridge/CORE_REF)"
+        [ "${ref%-bridge.*}" = "v$VERSION" ] || {
             echo "DRIFT: bridge/CORE_REF is $(tr -d '[:space:]' < bridge/CORE_REF), expected v$VERSION"
             fail=1
         }

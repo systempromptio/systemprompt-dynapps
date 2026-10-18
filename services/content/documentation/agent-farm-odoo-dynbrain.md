@@ -38,7 +38,7 @@ are `default: closed`:
 | Entity | Allowed to |
 |--------|-----------|
 | `marketplace/dynapps-portal`, `plugin/dynapps-portal` | roles `admin`, `platform_admin`, `super_admin`; group `staff` |
-| `marketplace/indaws-dynapps-spain`, `plugin/indaws-farm` | roles `admin`, `platform_admin`, `super_admin`; group `staff` |
+| `plugin/dynapps-showcase`, `plugin/dynapps-farm` | roles `admin`, `platform_admin`, `super_admin`; group `staff` |
 | `mcp_server/dynapps-odoo`, `mcp_server/dynbrain` | roles `admin`, `platform_admin`, `super_admin`; groups `staff`, `service-accounts` |
 
 To see and run a farm's agents you also need the marketplace the farm names
@@ -70,7 +70,7 @@ from the instance's marketplaces:
 | Marketplace | Plugin | What you get |
 |-------------|--------|--------------|
 | `dynapps-portal` | `dynapps-portal` | Both servers plus the `dynapps-portal-guide` skill, which routes how-to questions to DynBrain and live-record work to Dynapps Odoo |
-| `indaws-dynapps-spain` | `indaws-farm` | The `indaws-agent-farm` skill (launch farm tasks, follow logs, schedule them in plain language), with both servers |
+| `dynapps-portal` | `dynapps-farm` | The `dynapps-agent-farm` skill and the `dynapps-accounting-auditor` it demos (launch farm tasks, follow logs, schedule them in plain language), with both servers |
 
 Skill ids are snake_case in `services/` and dashed in Claude Code, so
 `dynapps_portal_guide` appears as `/dynapps-portal:dynapps-portal-guide`.
@@ -97,7 +97,7 @@ launch. `deny` is appended to every run's `--disallowedTools`, so Claude Code
 refuses those tools before a call leaves the runner. The nightly audit farm
 allows only `dynapps-odoo` and `dynbrain` and denies every dynapps-odoo write
 tool (`orm_create`, `orm_write`, `orm_unlink`, `orm_execute_kw`,
-`odoo_request_upload`, `odoo_attachment_link`): an unattended run can read Odoo but never change it.
+`odoo_request_upload`, `odoo_attachment_link`, `orm_post_message`, `orm_send_mail`): an unattended run can read Odoo but never change it.
 In an attended session the same writes pass governance only for admin or a
 holder of the `odoo_writer` role.
 
@@ -140,7 +140,7 @@ mode spend that grant; the credential broker issues it only to a
 
 - **Console:** open **/admin/farm**, pick the farm, then the agent
   (`/admin/farm/<farm>/agents/<agent>`), and launch from its dialog.
-- **Claude Code:** ask the `indaws-agent-farm` skill, or use the
+- **Claude Code:** ask the `dynapps-agent-farm` skill, or use the
   [agent-farm MCP server](/documentation/agent-farm) (`run_start`).
 - **API:** `POST /api/public/agent-farm/runs` with the farm, agent and
   optional prompt, fixture, model, `max_turns`, `max_budget_usd` and

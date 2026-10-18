@@ -66,9 +66,7 @@ pub trait EvalJudge: Send + Sync {
 
 // Why: the schema is stated in the prompt, not sent as structured output:
 // Anthropic's current models refuse the forced `tool_choice` core uses for it.
-// Gemini's responseSchema is an OpenAPI subset (enums and `required`
-// only); core's sanitizer strips anything richer, so the schema stays inside
-// what every provider accepts.
+// core's sanitizer strips anything past enums and `required`.
 // JSON: outgoing fixed-shape
 #[must_use]
 pub fn verdict_schema() -> serde_json::Value {

@@ -2,7 +2,7 @@
 # input is the profile directory rendered by render-profile.sh (and even that
 # is the same content everywhere). See README.md.
 #
-#   export SYSTEMPROMPT_TAG=0.69.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
+#   export SYSTEMPROMPT_TAG=0.70.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
 #   docker compose -f docker-compose.node.yml run --rm app migrate   # once, first node
 #   docker compose -f docker-compose.node.yml up -d
 #
@@ -10,7 +10,7 @@
 # `run --rm app migrate` is the one-shot schema step (README.md §5).
 services:
   app:
-    image: ghcr.io/systempromptio/systemprompt-dynapps:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.69.0}
+    image: ghcr.io/systempromptio/systemprompt-dynapps:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.70.0}
     restart: unless-stopped
     # The server has no graceful shutdown: drain the node at the load balancer
     # before stopping it, and give in-flight requests this long to finish.

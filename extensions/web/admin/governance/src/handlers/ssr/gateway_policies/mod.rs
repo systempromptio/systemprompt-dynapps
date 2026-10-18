@@ -141,7 +141,6 @@ pub(crate) async fn gateway_policies_page(
         new_policy: new_policy_view(),
         month_sentinel: GatewayPoliciesPageData::month_sentinel(),
         quotas_url: "/admin/governance/quotas",
-        sync_url: "/admin/gateway/policies?tab=sync",
         docs_url: "/documentation/enterprise-cost-management",
     };
     Ok(

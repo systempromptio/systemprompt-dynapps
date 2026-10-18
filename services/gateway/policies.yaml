@@ -39,31 +39,23 @@
 # it under `block_categories` therefore does nothing — it belongs in
 # `block_response_categories`. `pii_extended` scans both directions.
 #
-# SAFETY SCANNING IS ON AND IN WARN MODE as of 2026-09-04 (REQ-030/033/036,
-# switched on 2026-08-25 for the enterprise rollout). Every listed scanner still
-# runs and every finding is still written to `ai_safety_findings` —
-# `persist_findings` does not consult `block_categories`, so emptying the block
-# lists narrows nothing about what is audited.
+# SAFETY SCANNING IS ON AND IN WARN MODE (REQ-030/033/036). Every listed
+# scanner still runs and every finding is still written to
+# `ai_safety_findings` — `persist_findings` does not consult
+# `block_categories`, so emptying the block lists narrows nothing about what
+# is audited.
 #
-# On 2026-09-04 false positives on this plane and on the governance chain
-# (services/governance/config.yaml) were denying ordinary developer traffic and
-# blocking all work on this instance. The precedent is the file's own history:
-# `jailbreak` and `pii_credit_card` came out of `block_categories` on
-# 2026-08-31 after they denied real traffic in production. Rather than keep
-# trimming the list one category at a time on evidence that only arrives as a
-# broken workflow, both planes now run in core's warn mode (Stream D2): every
-# scanner evaluates, nothing refuses, and /admin/governance/warnings reports
-# what WOULD have blocked. The block lists below carry the pre-warn enforcement
-# set — `[pii_ssn]` on requests, `[secret, pii_ssn]` on responses — so that
-# report is meaningful; under `mode: warn` they never deny. Tests pin the lists
-# and the mode, so changing either is a review-visible act.
-#
-# WARN MODE (2026-09-04). `safety.mode: warn` below removes every refusal on
-# this plane while leaving every scanner running and every finding persisted —
-# including the `blocked` column, which stays false throughout, so the report
-# can say exactly how many calls each category would have refused. The block
-# lists are kept intact and are the point: under enforce they are the
-# behaviour, under warn they are the hypothesis being measured.
+# Warn mode exists because false positives on this plane and on the
+# governance chain (services/governance/config.yaml) denied ordinary developer
+# traffic. Both planes run in core's warn mode: every scanner evaluates,
+# nothing refuses, and /admin/governance/warnings reports what WOULD have
+# blocked. `safety.mode: warn` leaves the `blocked` column false throughout,
+# so the report can say exactly how many calls each category would have
+# refused. The block lists below carry the pre-warn enforcement set —
+# `[pii_ssn]` on requests, `[secret, pii_ssn]` on responses — so that report
+# is meaningful: under enforce they are the behaviour, under warn they are the
+# hypothesis being measured. Tests pin the lists and the mode, so changing
+# either is a review-visible act.
 #
 # The quota windows are the third plane on an inference request and have their
 # own switch, `quota_mode: warn`, set below for the same window. Every window is
@@ -84,8 +76,7 @@
 # inheriting core's builtin. As with services/governance/config.yaml, the values
 # here ARE the live behaviour, never a silent core default.
 #
-# The quota windows below are WARNING THRESHOLDS, not ceilings (Ed,
-# 2026-09-04: no clamp at all, only warnings). Under `quota_mode: warn` a
+# The quota windows below are WARNING THRESHOLDS, not ceilings. Under `quota_mode: warn` a
 # breach is recorded and reported and the request still runs. The per-user
 # hourly window flags a runaway agent; the daily `organization` window (core's
 # subject for the whole installation) flags an unusually expensive day. Costs
@@ -96,9 +87,8 @@ policies:
   - name: default-quotas
     enabled: true
     spec:
-      # WARN (Ed, 2026-10-15): enforce (set 2026-10-14) refused active
-      # users with 429 at the $5/h window. Back to warning thresholds;
-      # breaches are recorded, nothing is refused.
+      # Warning thresholds: enforce refused active users with 429 at the
+      # $5/h window. Breaches are recorded, nothing is refused.
       quota_mode: warn
       quota_windows:
         # Per user, hourly: 120 requests or $5 (about ten farm runs).

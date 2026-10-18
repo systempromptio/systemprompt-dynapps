@@ -65,7 +65,7 @@ async fn a_mapping_is_listed_once_and_deleted_once() {
 }
 
 // Why: the whole point of `source` in the primary key. A sign-in has to be
-// able to withdraw what AD no longer says without touching what an admin
+// able to withdraw what AD stops saying without touching what an admin
 // added by hand.
 #[tokio::test]
 async fn a_sign_in_replaces_directory_rows_and_leaves_manual_ones() {

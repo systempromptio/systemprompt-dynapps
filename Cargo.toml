@@ -39,7 +39,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.69.0"
+version = "0.70.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -49,9 +49,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.69.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.69.0" }
-systemprompt-extension = { version = "0.69.0" }
+systemprompt = { version = "0.70.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.70.0" }
+systemprompt-extension = { version = "0.70.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -274,7 +274,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE on `main`: builds against published core crates (bridge/CORE_REF names the tag).
+# COMMENTED for release: builds against the sibling core checkout (bridge/CORE_REF names its SHA).
 # [patch.crates-io]
 # systemprompt = { path = "../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }

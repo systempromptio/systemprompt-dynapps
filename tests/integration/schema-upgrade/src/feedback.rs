@@ -38,7 +38,7 @@ async fn scalar(pool: &PgPool, sql: &str) -> String {
 }
 
 // These exact columns existed in the release fixture. New nullable receipt
-// identity columns intentionally are not invented for historical evidence.
+// identity columns intentionally are not invented for past evidence.
 async fn legacy_evidence(pool: &PgPool) -> String {
     scalar(pool, "SELECT jsonb_build_array(
       (SELECT jsonb_build_array(digest,manifest,rationale) FROM managed_revisions WHERE id='feedback-revision'),

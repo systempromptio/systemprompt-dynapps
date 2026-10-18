@@ -7,7 +7,7 @@ use serde::Deserialize;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::ssr::list_view::query_string_dropping;
 
-use crate::repositories::filters::{RunFilter, RunSort};
+use crate::repositories::filters::{FarmRunFilter, RunSort};
 use crate::types::{FarmAgentId, FarmId, RunStatus, TriggeredVia};
 
 pub(crate) const BASE_URL: &str = "/admin/farm/runs";
@@ -107,8 +107,8 @@ impl RunsQuery {
 }
 
 #[must_use]
-pub fn run_filter(query: &RunsQuery, since: DateTime<Utc>, until: DateTime<Utc>) -> RunFilter {
-    RunFilter {
+pub fn run_filter(query: &RunsQuery, since: DateTime<Utc>, until: DateTime<Utc>) -> FarmRunFilter {
+    FarmRunFilter {
         farm_id: query.farm().map(FarmId::new),
         agent_id: query.agent().map(FarmAgentId::new),
         user_id: query.user().map(UserId::new),

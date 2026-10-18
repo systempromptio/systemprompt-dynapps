@@ -11,8 +11,8 @@ plugin:
   license: proprietary
   category: productivity
   # `source: explicit` everywhere. Left to default the plugin would claim every
-  # skill and agent on the instance, which is how the marketplace once showed
-  # every plugin with all 230 skills.
+  # skill and agent on the instance, and the marketplace would show every
+  # plugin with every skill.
   skills:
     source: explicit
     include:
@@ -34,9 +34,7 @@ plugin:
   # call per tool, and an owner only some users receive leaves every other
   # session ungoverned and unrecorded — no plugin_usage_events, so no skill
   # invocations on the dashboard.
-  # `judge` is the conversation judge's switch — the name predates the
-  # session-evaluation engine's removal (c791ad5a) and is core's key, so it
-  # stays until core renames it. There is no services/evaluation/ any more.
+  # `judge` is the conversation judge's switch (core's key name).
   # It installs nothing on the client: the judge reads the sessions this
   # plugin's track hook already reports, so it rides on the governance owner
   # and only that plugin may set it. The profile's `judge.automatic`

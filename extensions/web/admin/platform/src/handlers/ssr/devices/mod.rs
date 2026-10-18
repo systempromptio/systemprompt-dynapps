@@ -137,6 +137,22 @@ struct Listing {
     can_manage: bool,
 }
 
+impl Listing {
+    fn from_query(query: &DevicesQuery, tab: DeviceTab, page: i64, can_manage: bool) -> Self {
+        Self {
+            state: resolve_state(query.state.as_deref()),
+            sort: resolve_sort(tab, query.sort.as_deref()),
+            dir: if query.dir.as_deref() == Some("asc") {
+                "asc"
+            } else {
+                "desc"
+            },
+            offset: page * DEFAULT_PAGE_SIZE,
+            can_manage,
+        }
+    }
+}
+
 pub(crate) async fn devices_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -149,21 +165,11 @@ pub(crate) async fn devices_page(
     }
 
     let tab = DeviceTab::parse(query.tab.as_deref());
-    let sort = resolve_sort(tab, query.sort.as_deref());
-    let dir = if query.dir.as_deref() == Some("asc") {
-        "asc"
-    } else {
-        "desc"
-    };
-    let state = resolve_state(query.state.as_deref());
     let page = query.page.unwrap_or(0).max(0);
-    let listing = Listing {
-        state,
-        sort,
-        dir,
-        offset: page * DEFAULT_PAGE_SIZE,
-        can_manage: user_ctx.is_admin,
-    };
+    let listing = Listing::from_query(&query, tab, page, user_ctx.is_admin);
+    let Listing {
+        state, sort, dir, ..
+    } = listing;
 
     let mut faults = Faults::new();
     let fleet = faults.take("fleet stats", stats::get_fleet_stats(&pool).await);

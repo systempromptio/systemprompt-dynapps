@@ -23,7 +23,7 @@ use context::{BASE_URL, PeopleKpi, PeopleTimeRange, farm_options, kpis, time_ran
 use rows::{PersonRowView, person_rows};
 
 use crate::repositories::farms::list_farms;
-use crate::repositories::filters::RunFilter;
+use crate::repositories::filters::FarmRunFilter;
 use crate::repositories::people::list_runs_by_user;
 use crate::repositories::runs::get_run_stats;
 
@@ -71,11 +71,11 @@ pub(crate) async fn people_page(
         .map(|f| f.id.clone());
     let farm_key = farm.as_ref().map(|f| f.as_str().to_owned());
 
-    let filter = RunFilter {
+    let filter = FarmRunFilter {
         farm_id: farm.clone(),
         since: Some(range.from),
         until: Some(range.to),
-        ..RunFilter::default()
+        ..FarmRunFilter::default()
     };
     let stats = faults.take("run stats", get_run_stats(&pool, &filter).await);
     let leaderboard = faults.take(

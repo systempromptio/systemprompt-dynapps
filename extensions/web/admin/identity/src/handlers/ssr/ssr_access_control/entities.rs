@@ -24,7 +24,8 @@ use systemprompt_web_admin_core::repositories::gateway_catalog::RouteLabels;
 use systemprompt_web_admin_core::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
 
 pub(super) const BASE_URL: &str = "/admin/access-control";
-pub(super) const SYNC_URL: &str = "/admin/sync?tab=access";
+pub(super) const SYNC_URL: &str =
+    systemprompt_web_admin_core::repositories::sync::access_control::REVIEW_URL;
 pub(super) const DOCS_URL: &str = "/documentation/access-control";
 
 #[derive(Debug, Default, Deserialize)]

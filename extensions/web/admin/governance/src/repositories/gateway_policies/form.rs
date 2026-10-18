@@ -160,6 +160,7 @@ fn parse_window(
         max_input_tokens: optional_i64(fields, &key("max_input_tokens"))?,
         max_output_tokens: optional_i64(fields, &key("max_output_tokens"))?,
         max_cost_microdollars: optional_dollars_as_microdollars(fields, &key("max_cost"))?,
+        calendar: None,
     };
     if window.max_requests.is_none()
         && window.max_input_tokens.is_none()
@@ -256,6 +257,7 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
             history: parse_history(first(fields, "history"))?,
             ..SafetyConfig::default()
         },
+        rate_windows: Vec::new(),
     };
     let parsed = ParsedPolicy {
         name: name.to_owned(),

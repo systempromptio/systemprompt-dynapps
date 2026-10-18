@@ -1,26 +1,10 @@
-//! Code ↔ Instance: one sync system for every declared service, local and
-//! external.
+//! Code ↔ Instance: one sync system for every declared service.
 //!
-//! Two vocabularies. A **source** is where declarations come from and carries
-//! a content hash — `base` is this repository's `services/` tree, and
-//! `bundle:<name>` is each remote kit the profile pins. A **plane** is what a
-//! source's declarations project into the database — `access_control`
-//! (`rules.yaml` → `access_control_rules`), `groups` (`groups.yaml` →
-//! groups, projects and their AD mappings), `gateway_policies`
-//! (`policies.yaml` → `ai_gateway_policies`), `gateway_routes`
-//! (`ai/gateway.yaml` → `gateway_routes`) and `governance`
-//! (`governance/config.yaml` → `governance_chain`). The last two project a
-//! file core reads at boot, so they take effect after a restart and say so
-//! on their card. Ownership is by id and decided at
-//! composition: a bundle owns its marketplaces, plugins and skills; the base
-//! owns everything else, every entitlement included.
-//!
-//! Nothing here writes on its own. [`sources`] reports what is active and
-//! what is pinned; each [`plane::SyncPlane`] reports drift and applies a
-//! direction only when an administrator chooses one; [`state`] records what
-//! was applied, when, by whom and from which declared hash. [`registry`]
-//! orders the planes each crate registers, [`boot`] seeds them and
-//! [`archive`] bundles them.
+//! A **source** is where declarations come from (`base` is this tree's
+//! `services/`, `bundle:<name>` a pinned remote kit), each with a content
+//! hash. A **plane** is what those declarations project into the database.
+//! Nothing here writes on its own: a plane applies a direction only when an
+//! administrator chooses one, and [`state`] records what was applied.
 
 pub mod access_control;
 pub mod access_control_rows;

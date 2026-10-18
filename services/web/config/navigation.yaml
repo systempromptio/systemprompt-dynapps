@@ -66,6 +66,10 @@ docs_sidebar:
     links:
       - label: "Start here"
         href: "/documentation/"
+      - label: "Set Up Dynapps on Your Laptop"
+        href: "/documentation/setup"
+      - label: "Use Your Skills and the Agent Farm"
+        href: "/documentation/run-skills"
       - label: "Connect Claude Code"
         href: "/documentation/connect-claude-code"
       - label: "Connect Cowork"

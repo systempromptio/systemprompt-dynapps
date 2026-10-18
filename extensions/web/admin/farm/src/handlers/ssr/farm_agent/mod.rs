@@ -32,7 +32,7 @@ use super::curl::{RemoteCommands, remote_commands};
 use super::shared::{
     EvalRunItemView, EvalTrendRowView, RunRowView, eval_run_items, eval_trend_rows, run_row_views,
 };
-use crate::repositories::filters::RunFilter;
+use crate::repositories::filters::FarmRunFilter;
 use crate::repositories::rows::{AgentRow, FarmRow};
 use crate::repositories::{agents, evals, farms, fixtures, runs};
 use crate::services::farm_sync::eval_suite_id;
@@ -140,11 +140,11 @@ pub(crate) async fn render_agent_page(
 ) -> AdminHtmlResult<Response> {
     let pool = &state.pool;
     let mut faults = Faults::new();
-    let filter = RunFilter {
+    let filter = FarmRunFilter {
         farm_id: Some(farm.id.clone()),
         agent_id: Some(agent.id.clone()),
         since: Some(Utc::now() - Duration::days(KPI_WINDOW_DAYS)),
-        ..RunFilter::default()
+        ..FarmRunFilter::default()
     };
     let run_stats = runs::get_run_stats(pool, &filter).await?;
     let recent = runs::list_recent_runs(pool, Some(&farm.id), Some(&agent.id), RECENT_RUNS).await?;
@@ -213,7 +213,7 @@ async fn eval_history(
     state: &FarmState,
     farm: &FarmRow,
     agent: &AgentRow,
-    filter: &RunFilter,
+    filter: &FarmRunFilter,
 ) -> (Vec<EvalTrendRowView>, Vec<EvalRunItemView>) {
     let pool = &state.pool;
     let suite_id = eval_suite_id(&farm.id, agent.id.as_str());

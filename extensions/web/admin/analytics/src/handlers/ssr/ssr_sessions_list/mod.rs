@@ -200,18 +200,6 @@ async fn load_sessions_data(
     let show_side = loaded.filter.include_side_calls;
 
     let preset = preset_str(query, range);
-    let export_query = systemprompt_web_admin_core::export::view::query_string(&[
-        ("preset", Some(preset.as_str())),
-        ("from", Some(&range.from.to_rfc3339())),
-        ("to", Some(&range.to.to_rfc3339())),
-        ("user_id", query.user_id.as_ref().map(UserId::as_str)),
-        ("error_only", query.error_only.as_deref()),
-        ("side", query.side.as_deref()),
-        ("sort", query.sort.as_deref()),
-        ("dir", query.dir.as_deref()),
-        ("group", query.group.as_deref()),
-        ("project", query.project.as_deref()),
-    ]);
     let session_rows: Vec<_> = items.iter().map(rows::session_row).collect();
     let has_sessions = !session_rows.is_empty();
     let shown_rows = i64::try_from(session_rows.len()).unwrap_or(DEFAULT_PAGE_SIZE);
@@ -257,13 +245,7 @@ async fn load_sessions_data(
         error_toggle_url: view::error_toggle_url(query, error_only),
         show_side,
         side_toggle_url: view::side_toggle_url(query, show_side),
-        export: systemprompt_web_admin_core::export::view::ExportView::single(
-            "sessions",
-            &export_query,
-        )
-        .with_transcripts(
-            systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions,
-        ),
+        export: view::export_view(query, range, &preset),
     }
 }
 

@@ -8,7 +8,7 @@ use systemprompt_web_shared::format::format_cost;
 
 use super::rows::{PersonRowView, share_pct};
 use crate::repositories::rows::FarmRow;
-use crate::repositories::summaries::RunStats;
+use crate::repositories::summaries::FarmRunStats;
 
 pub(super) const BASE_URL: &str = "/admin/farm/people";
 
@@ -59,7 +59,7 @@ pub(super) fn farm_options(farms: &[FarmRow], selected: Option<&str>) -> Vec<Sel
     out
 }
 
-pub(super) fn kpis(stats: &RunStats, people: &[PersonRowView]) -> Vec<PeopleKpi> {
+pub(super) fn kpis(stats: &FarmRunStats, people: &[PersonRowView]) -> Vec<PeopleKpi> {
     let finished = stats.succeeded + stats.failed + stats.timed_out;
     let success = if finished > 0 {
         format!("{}%", share_pct(stats.succeeded, finished).round())

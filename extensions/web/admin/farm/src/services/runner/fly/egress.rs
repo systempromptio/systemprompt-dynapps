@@ -99,8 +99,7 @@ impl Net {
 pub fn nft_ruleset(nets: &[Net]) -> String {
     let mut rules = vec![
         "oif \"lo\" accept".to_owned(),
-        // Why: Linux sends IPv6 neighbour discovery as output multicast; dropping it
-        // empties the neighbour cache after ~30s and cuts every 6PN connection.
+        // Why: Linux sends neighbour discovery as output multicast; dropping it cuts 6PN links.
         "icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit } accept"
             .to_owned(),
         "ct state established,related accept".to_owned(),

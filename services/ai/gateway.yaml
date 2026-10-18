@@ -6,30 +6,29 @@ gateway:
   enabled: true
   routes:
   # Server web and deferred-tool search need Anthropic's native tool service.
-  # Redundant while every claude-* id is Anthropic-only (2026-10-14); kept so
-  # a Vertex restore still sends these tools to Anthropic.
+  # Kept ahead of the general claude-* route so these tools stay on Anthropic
+  # whatever that route points at.
   - id: claude-native-tools
     name: Claude native web and tool search
     model_pattern: claude-*
     provider: anthropic
     when:
       tool_names_any: [WebSearch, WebFetch, ToolSearch, web_search, web_fetch, tool_search, tool_search_tool_regex, tool_search_tool_bm25]
-  # ANTHROPIC ONLY (Ed, 2026-10-14): every claude-* id is served from
-  # Anthropic's own API with the anthropic key, no failover. The Vertex,
-  # Gemini and MaaS routes are removed, so no other upstream is reachable;
-  # the provider entries stay in providers.yaml for a later restore. The
-  # anthropic provider matches the bare ids by `upstream_model`.
+  # Anthropic-only by customer requirement: every claude-* id is served from
+  # Anthropic's own API with the anthropic key, no failover.
   - id: claude-star-4203d1
     name: Claude (Anthropic API)
     description: >-
       Every claude-* request goes to Claude on Anthropic's own API by API key, with no failover.
     model_pattern: claude-*
     provider: anthropic
-  - name: Claude (Anthropic API, explicit ids)
+  # Only an explicit deepseek-* id reaches DeepSeek; Claude stays the default.
+  - id: deepseek-route
+    name: DeepSeek (DeepSeek API)
     description: >-
-      The anthropic-claude-* ids, also on Anthropic's own API.
-    model_pattern: anthropic-claude-*
-    provider: anthropic
+      Every deepseek-* request goes to DeepSeek's own API (Anthropic-compatible endpoint), with no failover.
+    model_pattern: deepseek-*
+    provider: deepseek
   - id: e2e-mock-route
     name: E2E mock
     description: >-

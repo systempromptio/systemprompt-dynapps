@@ -224,7 +224,6 @@ pub(crate) struct GatewayPoliciesPageData {
     pub new_policy: PolicyView,
     pub month_sentinel: i32,
     pub quotas_url: &'static str,
-    pub sync_url: &'static str,
     pub docs_url: &'static str,
 }
 

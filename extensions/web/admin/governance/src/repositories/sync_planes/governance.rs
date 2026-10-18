@@ -138,6 +138,10 @@ impl SyncPlane for GovernancePlane {
         "governance_chain"
     }
 
+    fn owner_url(&self) -> &'static str {
+        "/admin/governance"
+    }
+
     fn runtime_note(&self) -> Option<&'static str> {
         Some(RUNTIME_NOTE)
     }

@@ -111,7 +111,7 @@ fn every_admin_template_class_has_a_css_rule() {
 
     let tpl_dir = root.join("storage/files/admin/templates");
     // Why: returning here would report the same green as a run that checked
-    // every template, which is exactly the failure a renamed directory causes.
+    // every template, which is exactly the failure a moved directory causes.
     assert!(
         tpl_dir.is_dir(),
         "no admin templates directory at {}",

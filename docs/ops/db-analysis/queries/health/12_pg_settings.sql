@@ -1,1 +1,0 @@
-SELECT name, setting, unit FROM pg_settings WHERE name IN ('shared_buffers','work_mem','maintenance_work_mem','max_connections','autovacuum','autovacuum_vacuum_scale_factor','autovacuum_naptime','server_version');

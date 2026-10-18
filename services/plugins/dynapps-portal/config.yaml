@@ -20,8 +20,9 @@ plugin:
   # Both servers are external and per-user: a person connects their own portal
   # account once on /admin/connectors, and every client then calls through the
   # gateway's governed proxy with that person's token. Their own plugin rather
-  # than dynapps-commons (which carries no server, by design) or an indaws-*
-  # plugin (generated from upstream, not editable here).
+  # than dynapps-commons (which carries no server, by design) or a generated
+  # dynapps-showcase / dynapps-farm plugin (generated from upstream, not
+  # editable here).
   mcp_servers:
     source: explicit
     include:

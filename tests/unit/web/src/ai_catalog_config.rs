@@ -4,16 +4,10 @@
 //! cannot be called by anyone, and an id that is present is billed at the
 //! pricing written beside it.
 //!
-//! Claude is served twice. The bare `claude-*` ids belong to
-//! `vertex-anthropic` (Claude on Vertex AI), which ordinary `claude-*` requests
-//! use; native web and tool search route to Anthropic. Anthropic carries the
-//! models as `anthropic-claude-*`, each naming the bare id as its upstream
-//! model. That twin is what the route's failover lands on: core finds the
-//! requested model on the fallback provider by upstream name, so a Vertex model
-//! with no twin has nowhere to fail over to. The twins are `hidden`: they are
-//! never listed to a client, so nobody picks an `anthropic-claude-*` id, while
-//! the failover still finds them because it looks up by upstream name, not by
-//! listing.
+//! Claude is served from Anthropic's own API under the bare `claude-*` ids,
+//! listed to every client. By customer requirement the only other upstream is
+//! `DeepSeek`, kept for a cost comparison against Claude and reachable only by
+//! an explicit `deepseek-*` id.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -21,15 +15,12 @@
 //! every finance report derived from them — nothing downstream re-checks the
 //! vendor's rate card.
 //!
-//! The Claude 4.x Opus and Sonnet models were removed on 2026-09-24, and
-//! with them the direct `OpenAI` and Cerebras providers; every Vertex provider
-//! now authenticates with the one `vertex` service-account secret.
-//!
-//! These tests pin the served id set and its twins, the Sonnet 5 rate that was
-//! wrong here until 2026-09-04, the Opus 5.5 rate cards on both
-//! providers, and the fact that the gateway's default model resolves inside
-//! the catalog through the `claude-*` route. Changing any of them is then a
-//! deliberate, review-visible edit rather than a one-line drift.
+//! These tests pin the served id set, the live-provider invariant (Anthropic
+//! and `DeepSeek`, one secret each, every route onto one of them), the
+//! `DeepSeek`, Sonnet 5 and Opus 5.5 rate cards, and the fact that the
+//! gateway's default model resolves inside the catalog through the `claude-*`
+//! route. Changing any of them is then a deliberate, review-visible edit rather
+//! than a one-line drift.
 
 
 use systemprompt::manifest::services::{
@@ -101,44 +92,32 @@ fn assert_rate_card(m: &ProviderModel, input: f64, output: f64, cache_read: f64,
 }
 
 #[test]
-fn the_vertex_lineup_is_exactly_the_served_claude_models() {
-    let ids: Vec<String> = provider("vertex-anthropic")
+fn the_anthropic_lineup_is_exactly_the_served_claude_models() {
+    let anthropic = provider("anthropic");
+    let ids: Vec<String> = anthropic
         .models
         .iter()
         .map(|m| m.id.as_str().to_owned())
         .collect();
     assert_eq!(ids, SERVED);
-}
-
-#[test]
-fn every_served_claude_model_has_an_anthropic_api_twin_to_fail_over_to() {
-    let anthropic = provider("anthropic");
-    let twins: Vec<String> = anthropic
-        .models
-        .iter()
-        .map(|m| m.id.as_str().to_owned())
-        .collect();
-    let expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
-    assert_eq!(twins, expected);
-
     for id in SERVED {
-        let twin = anthropic
+        let served = anthropic
             .find_served_model(id)
-            .unwrap_or_else(|| panic!("failover from {id} finds no model on anthropic"));
-        assert_eq!(twin.id.as_str(), format!("anthropic-{id}"));
-        assert_eq!(twin.upstream_model.as_deref(), Some(id));
+            .unwrap_or_else(|| panic!("{id} finds no model on anthropic"));
+        assert_eq!(served.upstream_model.as_deref(), Some(id));
     }
 }
 
+// Why: Claude Desktop (via the bridge) only accepts `claude-*` ids from an
+// `anthropic`-surface provider; hidden ids leave it with no model at all.
 #[test]
-fn the_anthropic_api_twins_are_hidden_from_every_listing() {
-    let registry = registry();
-    let listed = registry.advertised_model_ids(&[]);
+fn the_anthropic_models_are_advertised_to_clients() {
+    let listed = registry().advertised_model_ids(&[]);
     for m in &provider("anthropic").models {
-        assert!(m.hidden, "{} must be hidden", m.id.as_str());
+        assert!(!m.hidden, "{} must not be hidden", m.id.as_str());
         assert!(
-            !listed.iter().any(|id| id == m.id.as_str()),
-            "{} must not be advertised",
+            listed.iter().any(|id| id == m.id.as_str()),
+            "{} must be advertised",
             m.id.as_str()
         );
     }
@@ -146,83 +125,61 @@ fn the_anthropic_api_twins_are_hidden_from_every_listing() {
 
 #[test]
 fn the_retired_dated_ids_are_gone() {
-    for name in ["vertex-anthropic", "anthropic"] {
-        let models = provider(name).models;
-        for retired in [
-            "claude-opus-4-1-20250805",
-            "claude-sonnet-4-20250514",
-            "claude-opus-4-20250514",
-            "claude-opus-4-5-20251101",
-            "claude-sonnet-4-5-20250929",
-            "claude-sonnet-4-5",
-            "claude-opus-4-5",
-            "claude-opus-4-6",
-            "claude-sonnet-4-6",
-            "claude-opus-4-7",
-            "claude-opus-4-8",
-            "claude-haiku-4-5",
-            "claude-haiku-4-5-20251001",
-            "claude-opus-5",
-            "claude-sonnet-5",
-            "claude-fable-5",
-            "claude-fable-5-1",
-        ] {
-            assert!(
-                !models.iter().any(|m| m.matches(retired)),
-                "{retired} is retired at the vendor, and {name} still serves it: \
-                 serving it prices traffic against a rate card that no longer exists"
-            );
-        }
+    let models = provider("anthropic").models;
+    for retired in [
+        "claude-opus-4-1-20250805",
+        "claude-sonnet-4-20250514",
+        "claude-opus-4-20250514",
+        "claude-opus-4-5-20251101",
+        "claude-sonnet-4-5-20250929",
+        "claude-sonnet-4-5",
+        "claude-opus-4-5",
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+        "claude-opus-4-7",
+        "claude-opus-4-8",
+        "claude-haiku-4-5",
+        "claude-haiku-4-5-20251001",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-fable-5-1",
+    ] {
+        assert!(
+            !models.iter().any(|m| m.matches(retired)),
+            "{retired} is retired at the vendor, and anthropic still serves it: \
+             serving it prices traffic against a rate card that no longer exists"
+        );
     }
 }
 
 #[test]
 fn sonnet_5_5_carries_the_current_rate_card() {
-    let vertex = provider("vertex-anthropic").models;
     let anthropic = provider("anthropic").models;
-    assert_rate_card(model(&vertex, "claude-sonnet-5-5"), 2.0, 10.0, 0.2, 2.5);
-    assert_rate_card(
-        model(&anthropic, "anthropic-claude-sonnet-5-5"),
-        2.0,
-        10.0,
-        0.2,
-        2.5,
-    );
+    assert_rate_card(model(&anthropic, "claude-sonnet-5-5"), 2.0, 10.0, 0.2, 2.5);
 }
 
 // Why: haiku-5-5 is tiered at 100K prompt tokens; the catalog carries the
 // lower tier, and the >100K tier is $0.50 / $2.50.
 #[test]
 fn haiku_5_5_carries_its_base_tier_rate_card() {
-    let vertex = provider("vertex-anthropic").models;
     let anthropic = provider("anthropic").models;
-    for haiku in [
-        model(&vertex, "claude-haiku-5-5"),
-        model(&anthropic, "anthropic-claude-haiku-5-5"),
-    ] {
-        assert_rate_card(haiku, 0.1, 0.5, 0.01, 0.125);
-        assert_eq!(haiku.limits.context_window, 1_000_000);
-        assert_eq!(haiku.limits.max_output_tokens, 128_000);
-    }
+    let haiku = model(&anthropic, "claude-haiku-5-5");
+    assert_rate_card(haiku, 0.1, 0.5, 0.01, 0.125);
+    assert_eq!(haiku.limits.context_window, 1_000_000);
+    assert_eq!(haiku.limits.max_output_tokens, 128_000);
 }
 
 #[test]
 fn opus_5_5_carries_its_launch_rate_card() {
-    let vertex = provider("vertex-anthropic").models;
     let anthropic = provider("anthropic").models;
-    for opus in [
-        model(&vertex, "claude-opus-5-5"),
-        model(&anthropic, "anthropic-claude-opus-5-5"),
-    ] {
-        assert_rate_card(opus, 4.0, 20.0, 0.2, 5.0);
-        assert_eq!(opus.limits.context_window, 1_000_000);
-        assert_eq!(opus.limits.max_output_tokens, 128_000);
-    }
+    let opus = model(&anthropic, "claude-opus-5-5");
+    assert_rate_card(opus, 4.0, 20.0, 0.2, 5.0);
+    assert_eq!(opus.limits.context_window, 1_000_000);
+    assert_eq!(opus.limits.max_output_tokens, 128_000);
 }
 
-// Why: since 2026-10-14 the gateway is Anthropic-only (a client's key, no
-// Vertex): the default model routes to `anthropic` with no failover, and the
-// provider serves the bare id through its hidden twin's `upstream_model`.
+// The default model routes to `anthropic` with no failover, served by bare id.
 #[test]
 fn the_gateway_default_model_is_served_by_anthropic_only() {
     let spec = gateway();
@@ -245,67 +202,98 @@ fn the_gateway_default_model_is_served_by_anthropic_only() {
 }
 
 #[test]
-fn every_route_goes_to_anthropic() {
+fn every_route_goes_to_a_live_provider() {
     for route in &gateway().routes {
         assert!(
-            matches!(route.provider.as_str(), "anthropic" | "e2e-mock"),
-            "route {:?} reaches {}: the gateway is Anthropic-only",
+            matches!(
+                route.provider.as_str(),
+                "anthropic" | "deepseek" | "e2e-mock"
+            ),
+            "route {:?} reaches {}: only Anthropic and DeepSeek are live",
             route.name,
             route.provider.as_str()
         );
     }
 }
 
+// Why: the customer requires their own Anthropic key; DeepSeek is the approved
+// comparison.
 #[test]
-fn the_removed_providers_stay_removed() {
-    let registry = registry();
-    for gone in ["openai", "openai-responses", "cerebras"] {
-        assert!(
-            !registry.providers.iter().any(|p| p.name.as_str() == gone),
-            "{gone} was removed from the catalog on 2026-09-24"
+fn anthropic_and_deepseek_are_the_only_live_providers() {
+    let names: Vec<String> = registry()
+        .providers
+        .iter()
+        .map(|p| p.name.as_str().to_owned())
+        .collect();
+    assert_eq!(names, ["anthropic", "deepseek", "e2e-mock"]);
+}
+
+#[test]
+fn every_provider_reads_a_secret_the_installation_holds() {
+    for p in &registry().providers {
+        let expected = if p.name.as_str() == "deepseek" {
+            "deepseek"
+        } else {
+            "anthropic"
+        };
+        assert_eq!(
+            p.api_key_secret.as_str(),
+            expected,
+            "{} reads a secret this installation does not hold",
+            p.name.as_str()
         );
     }
-    for pattern in ["gpt-oss-120b", "gpt-4.1", "o4-mini"] {
+}
+
+// Why: DeepSeek bills by time of day; the catalog carries the peak list rate
+// and bills a cache write at the cache-miss rate (DeepSeek charges no write).
+#[test]
+fn deepseek_carries_its_peak_rate_card_and_only_deepseek_ids_reach_it() {
+    let deepseek = provider("deepseek");
+    assert!(!deepseek.governance.european && !deepseek.governance.no_retain);
+    assert_rate_card(
+        model(&deepseek.models, "deepseek-flash"),
+        0.3,
+        1.2,
+        0.006,
+        0.3,
+    );
+    assert_rate_card(
+        model(&deepseek.models, "deepseek-v4-pro"),
+        1.32,
+        3.96,
+        0.044,
+        1.32,
+    );
+    let spec = gateway();
+    let route = spec
+        .routes
+        .iter()
+        .find(|r| r.matches("deepseek-flash"))
+        .expect("a route for deepseek-flash");
+    assert_eq!(route.provider.as_str(), "deepseek");
+    assert!(
+        !spec
+            .routes
+            .iter()
+            .any(|r| r.matches("claude-sonnet-5-5") && r.provider.as_str() == "deepseek")
+    );
+}
+
+#[test]
+fn the_open_models_are_unrouted() {
+    for pattern in [
+        "gpt-oss-120b",
+        "gpt-4.1",
+        "o4-mini",
+        "gemini-3.8-flash",
+        "vertex-gemini-3.8-flash",
+        "zai.glm-5.2",
+        "qwen.qwen3-coder-480b",
+    ] {
         assert!(
             !gateway().routes.iter().any(|r| r.matches(pattern)),
             "{pattern} has no provider left to route to"
-        );
-    }
-}
-
-#[test]
-fn every_vertex_provider_shares_the_vertex_secret() {
-    for name in [
-        "vertex",
-        "vertex-anthropic",
-        "vertex-anthropic-eu",
-        "vertex-maas",
-        "vertex-maas-us-central1",
-    ] {
-        assert_eq!(
-            provider(name).api_key_secret.as_str(),
-            "vertex",
-            "{name}: one service-account JSON serves every Vertex provider"
-        );
-    }
-}
-
-// Declared for a later restore, but unreachable while the gateway is
-// Anthropic-only.
-#[test]
-fn the_open_models_stay_declared_but_unrouted() {
-    let spec = gateway();
-    let maas = provider("vertex-maas").models;
-    for id in [
-        "zai.glm-5.2",
-        "deepseek.v3.2",
-        "moonshotai.kimi-k2-thinking",
-        "qwen.qwen3-coder-480b",
-    ] {
-        assert!(maas.iter().any(|m| m.matches(id)), "{id} is not declared");
-        assert!(
-            !spec.routes.iter().any(|r| r.matches(id)),
-            "{id} must not be routable while the gateway is Anthropic-only"
         );
     }
 }

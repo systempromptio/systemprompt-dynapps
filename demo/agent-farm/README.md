@@ -18,7 +18,7 @@ SKIP="40" ./demo/agent-farm/run-all.sh  # no bridge-configured claude here
 
 | Step | What it proves |
 |------|----------------|
-| `00-preflight.sh` | target up; Ed exists; his `dynapps-odoo` and `dynbrain` grants are on file and not revoked; he is entitled to the farm marketplace, both servers and `indaws-management`; his PAT lists the agent |
+| `00-preflight.sh` | target up; Ed exists; his `dynapps-odoo` and `dynbrain` grants are on file and not revoked; he is entitled to the farm marketplace, both servers and `dynapps-farm`; his PAT lists the agent |
 | `10-run.sh` | the `farm_scheduled_run` job, run remotely on the tenant, queues the run as Ed with `triggered_via = scheduler` (`RUN_VIA=api` launches over the API with Ed's PAT instead, recorded as `api`; set `TRIGGER=api` for 30) |
 | `20-wait.sh` | the run reaches `succeeded`; run, report and events are saved under `.state/` |
 | `30-assert.sh` | outputs hold `out/dashboard.md`, `out/DELIVERY.md` and `out/informe_auditoria_Dynapps_YYYY_MM.md`; the eval passed; every `dynapps-odoo` call was a read and governance saw no write attempt; `ai_requests` and MCP trace rows exist; a `dynbrain` `docs_create` succeeded |

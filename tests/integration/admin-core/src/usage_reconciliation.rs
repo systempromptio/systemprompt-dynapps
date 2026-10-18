@@ -99,7 +99,7 @@ async fn the_profile_and_the_dashboard_agree_when_the_provider_reported_no_total
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("recon-null")).await;
 
     // Why: `tokens_used` is nullable, and both readers now aggregate that one
-    // column rather than re-summing the components. The components no longer
+    // column rather than re-summing the components. The components do not
     // partition the total -- cache reads are disjoint from input on every wire
     // -- so a fallback sum would over-count exactly the rows it was meant to
     // rescue. A row with no provider total contributes nothing, on both pages

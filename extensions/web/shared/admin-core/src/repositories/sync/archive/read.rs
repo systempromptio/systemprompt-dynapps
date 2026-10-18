@@ -77,8 +77,7 @@ pub fn unpack_zip(bytes: &[u8]) -> AdminResult<Unpacked> {
             return Err(refuse(&name, "larger than an entry may be"));
         }
         let mut buf = Vec::new();
-        // Why: a zip header can lie about an entry's size; `take` one byte past
-        // the cap so the entry is judged by what it delivers.
+        // Why: zip headers can lie about size; judge by bytes delivered.
         (&mut file)
             .take(MAX_ENTRY_BYTES + 1)
             .read_to_end(&mut buf)

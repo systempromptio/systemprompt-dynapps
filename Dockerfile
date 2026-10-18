@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go install github.com/rakyll/hey@latest
 
-FROM public.ecr.aws/aws-cli/aws-cli:2.36.18 AS awscli
+FROM docker.io/amazon/aws-cli:2.36.18 AS awscli
 
 # 1Password CLI for `secrets.external.kind: onepassword` with `backend: cli`
 # (service accounts). Pinned; TARGETARCH (amd64/arm64) matches 1Password's

@@ -1,17 +1,19 @@
 //! The shipped chain on the hosted Odoo plane: a `dynapps-odoo` write tool
-//! (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`) is flagged for
+//! (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`,
+//! `orm_post_message`, `orm_send_mail`), under the gateway's or the bridge's
+//! (`mcp__plugin_dynapps-portal_dynapps-odoo__`) naming, is flagged for
 //! a plain caller and passes for `odoo_writer` or admin, its read tools pass,
 //! and the role unlocks nothing outside `mcp__dynapps-odoo__`. The tool plane
-//! runs in warn mode (services/governance/config.yaml, 2026-10-15), so a
+//! runs in warn mode (services/governance/config.yaml), so a
 //! would-be refusal is recorded as `Warn`; restoring `mode: enforce` turns
 //! these back to `Deny`.
 
-use systemprompt::identifiers::{CallId, McpToolName, SessionId, UserId};
+use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
 use systemprompt_security::authz::types::{Decision, DecisionTag};
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
-    PolicyContext,
+    PolicyContext, RateCounts,
 };
 
 fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
@@ -23,6 +25,8 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
     let session = SessionId::generate();
     let call = CallId::generate();
     let input = GovernedInput::tool_arguments(McpToolInput::new(serde_json::json!({})));
+    let mut rate_counts = RateCounts::empty();
+    rate_counts.record(PolicyId::new("rate_limit"), 1);
     engine
         .evaluate(&PolicyContext {
             target: GovernedTarget::Tool {
@@ -37,15 +41,21 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
             session_id: &session,
             call_id: &call,
             input: &input,
+            rate_counts: &rate_counts,
         })
         .decision
 }
 
-const WRITES: [&str; 4] = [
+const WRITES: [&str; 9] = [
     "mcp__dynapps-odoo__orm_write",
     "mcp__dynapps-odoo__orm_create",
     "mcp__dynapps-odoo__orm_unlink",
     "mcp__dynapps-odoo__orm_execute_kw",
+    "mcp__dynapps-odoo__orm_post_message",
+    "mcp__dynapps-odoo__orm_send_mail",
+    "mcp__plugin_dynapps-portal_dynapps-odoo__orm_write",
+    "mcp__plugin_dynapps-portal_dynapps-odoo__orm_post_message",
+    "mcp__plugin_dynapps-portal_dynapps-odoo__orm_send_mail",
 ];
 
 #[test]
@@ -72,6 +82,7 @@ fn reads_pass_and_the_role_unlocks_nothing_elsewhere() {
         "mcp__dynapps-odoo__orm_search_read",
         "mcp__dynapps-odoo__odoo_describe_model",
         "mcp__dynapps-odoo__odoo_aggregate",
+        "mcp__plugin_dynapps-portal_dynapps-odoo__orm_search_read",
     ] {
         let decision = decide(tool, AccessScope::User, &["user"]);
         assert!(decision.permits(), "{tool}: {decision:?}");

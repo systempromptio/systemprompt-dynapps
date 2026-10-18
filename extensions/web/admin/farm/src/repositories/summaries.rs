@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::types::{EvalRunId, EvalSuiteId, FarmAgentId};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
-pub struct RunStats {
+pub struct FarmRunStats {
     pub total: i64,
     pub running: i64,
     pub queued: i64,

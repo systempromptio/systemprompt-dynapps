@@ -14,7 +14,7 @@ use systemprompt::database::{HOT_TABLES, audit_one};
 
 use crate::support::repo_root;
 
-// Row counts from the 2026-09-22 production analysis.
+// The largest tables by production row count.
 const DYNAPPS_HOT_TABLES: &[&str] = &[
     "plugin_usage_events",
     "conversation_facts",

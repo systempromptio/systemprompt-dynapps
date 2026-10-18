@@ -5,18 +5,15 @@ ai:
     enable_smart_routing: false
     fallback_enabled: false
   providers:
-    vertex-anthropic:
-      enabled: false
-      google_search_enabled: true
-      default_model: claude-sonnet-5-5
     anthropic:
       enabled: true
       google_search_enabled: true
-      default_model: anthropic-claude-sonnet-5-5
-    gemini:
-      enabled: false
-      google_search_enabled: true
-      default_model: gemini-3.8-flash
+      default_model: claude-sonnet-5-5
+    # Second upstream for the Claude cost comparison; not the default.
+    deepseek:
+      enabled: true
+      google_search_enabled: false
+      default_model: deepseek-flash
   mcp:
     auto_discover: true
     connect_timeout_ms: 5000

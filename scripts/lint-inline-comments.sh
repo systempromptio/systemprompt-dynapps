@@ -37,6 +37,15 @@ set -uo pipefail
 #     block (`// Why: discard-ok:` / `// Why: lint-ok:` / `// Why: fail-soft-ok:`) or its first line names
 #     an external system on the WHY_EXTERNAL allowlist below. Anything else in a
 #     body is extracted into a named `let`, helper fn, or enum instead.
+#   * the external system must be named within the first four words: a name
+#     buried mid-sentence ("a zip header can lie") let any narration through.
+#   * a comment block in a function body (indent >= 8) is one line.
+#     Continuation lines were unchecked, so a one-line `// Why:` or `// JSON:`
+#     licensed a paragraph of narration beneath it; a body that needs more is
+#     explaining logic a named helper should carry.
+#
+# A continuation must directly follow its block: an attribute line ends the
+# block, so `// Why:` above `#[…]` cannot license a plain comment below it.
 #
 # Exemption: a path (one per line, `#` comments) in
 # scripts/rustdoc-exemptions.txt. Reserve it for files where `///` is
@@ -69,7 +78,9 @@ while IFS= read -r file; do
             if (RLENGTH >= 8) {
                 body = $0
                 sub(/^[[:space:]]*\/\/ Why:[[:space:]]*/, "", body)
-                if (body !~ /^(discard-ok|lint-ok|fail-soft-ok):/ && body !~ why_ext_re) {
+                nw = split(body, w, /[[:space:]]+/)
+                lead = w[1] " " w[2] " " w[3] " " w[4]
+                if (body !~ /^(discard-ok|lint-ok|fail-soft-ok):/ && lead !~ why_ext_re) {
                     print FILENAME ":" FNR ": // Why: inside a function body — extract a named let/fn/enum, or lead with the external system that forces it"
                 }
             }
@@ -78,12 +89,23 @@ while IFS= read -r file; do
         /^[[:space:]]*\/\/!/ { prev_allowed = 0; next }
         /^[[:space:]]*\/\// {
             in_doc = 0
-            if ($0 ~ /^[[:space:]]*\/\/ (Why|JSON|SAFETY):/) { prev_allowed = 1; next }
-            if (prev_allowed) { next }
+            if ($0 ~ /^[[:space:]]*\/\/ (Why|JSON|SAFETY):/) {
+                prev_allowed = 1
+                match($0, /^[[:space:]]*/)
+                body_block = (RLENGTH >= 8); block_len = 1; block_start = FNR
+                next
+            }
+            if (prev_allowed) {
+                if (body_block && ++block_len == 2) {
+                    print FILENAME ":" block_start ": comment block in a function body runs past one line — extract a named let/fn/enum, or cut it to the constraint"
+                }
+                next
+            }
             print FILENAME ":" FNR ":" $0
             next
         }
         /^[[:space:]]*#!?\[/ {
+            prev_allowed = 0
             open = gsub(/\[/, "["); close_n = gsub(/\]/, "]")
             if (open > close_n) { in_attr = 1; attr_depth = open - close_n }
             next
@@ -106,6 +128,7 @@ while IFS= read -r file; do
             }
             in_doc = 0
             prev_allowed = 0
+            body_block = 0
         }
         END {
             if (why_count > why_cap) {

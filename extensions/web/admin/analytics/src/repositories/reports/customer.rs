@@ -75,7 +75,6 @@ pub async fn get_customer_month_summary(
     })
 }
 
-/// One user's consumption for the month.
 #[derive(Debug, Clone)]
 pub struct CustomerUserUsage {
     pub email: String,
@@ -140,7 +139,6 @@ pub async fn list_customer_month_users(
         .collect())
 }
 
-/// One project's consumption for the month.
 #[derive(Debug, Clone)]
 pub struct CustomerProjectUsage {
     pub project: String,
@@ -200,7 +198,6 @@ pub async fn list_customer_month_projects(
         .collect())
 }
 
-/// One model's consumption for the month.
 #[derive(Debug, Clone)]
 pub struct CustomerModelUsage {
     pub provider: String,

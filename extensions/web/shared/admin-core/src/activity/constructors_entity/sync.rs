@@ -64,8 +64,7 @@ impl NewActivity {
                 outcome.updated,
                 outcome.deleted
             ),
-            // JSON: JSONB column — the plane, scope and counts, so the event
-            // page can show exactly what moved without re-deriving it
+            // JSON: JSONB column — plane, scope and counts for the event page
             metadata: serde_json::json!({
                 "plane": plane,
                 "mode": mode.label(),
@@ -193,8 +192,7 @@ impl NewActivity {
             } else {
                 "Refreshed services sources: unchanged".to_owned()
             },
-            // JSON: JSONB column — whether the composition moved and whether
-            // the new composition was projected into the authz tables
+            // JSON: JSONB column — composition changed / projected into authz tables
             metadata: serde_json::json!({ "changed": changed, "reconciled": reconciled }),
         }
     }

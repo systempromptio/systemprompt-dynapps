@@ -109,6 +109,53 @@ async fn load_attention(
     rows
 }
 
+async fn load_decision_page(
+    pool: &PgPool,
+    read: &GovernanceRead<'_>,
+    stats_total: i64,
+    faults: &mut Faults,
+) -> (Vec<DecisionCallRow>, i64) {
+    if read.tab != GovernanceTab::Decisions {
+        return (Vec::new(), stats_total);
+    }
+    faults.take(
+        "decision log",
+        list_decision_calls_paged(
+            pool,
+            read.range,
+            read.scope,
+            read.decision_filter,
+            DecisionPage {
+                sort: read.sort,
+                slice: read.slice(),
+            },
+        )
+        .await,
+    )
+}
+
+async fn load_finding_page(
+    pool: &PgPool,
+    read: &GovernanceRead<'_>,
+    stats_total: i64,
+    faults: &mut Faults,
+) -> (Vec<SafetyFindingLogRow>, i64) {
+    if read.tab != GovernanceTab::Safety {
+        return (Vec::new(), stats_total);
+    }
+    faults.take(
+        "safety finding log",
+        list_safety_findings_paged(
+            pool,
+            read.range,
+            read.scope,
+            read.finding_filter,
+            read.slice(),
+        )
+        .await,
+    )
+}
+
 pub(super) async fn load(
     pool: &PgPool,
     read: GovernanceRead<'_>,
@@ -135,40 +182,8 @@ pub(super) async fn load(
         list_decision_policy_counts(pool, read.range, read.scope).await,
     );
 
-    let (decisions, decision_total) = if read.tab == GovernanceTab::Decisions {
-        faults.take(
-            "decision log",
-            list_decision_calls_paged(
-                pool,
-                read.range,
-                read.scope,
-                read.decision_filter,
-                DecisionPage {
-                    sort: read.sort,
-                    slice: read.slice(),
-                },
-            )
-            .await,
-        )
-    } else {
-        (Vec::new(), stats.calls)
-    };
-
-    let (findings, finding_total) = if read.tab == GovernanceTab::Safety {
-        faults.take(
-            "safety finding log",
-            list_safety_findings_paged(
-                pool,
-                read.range,
-                read.scope,
-                read.finding_filter,
-                read.slice(),
-            )
-            .await,
-        )
-    } else {
-        (Vec::new(), safety.findings)
-    };
+    let (decisions, decision_total) = load_decision_page(pool, &read, stats.calls, faults).await;
+    let (findings, finding_total) = load_finding_page(pool, &read, safety.findings, faults).await;
 
     let attention = load_attention(pool, &read, stats.attention_calls, faults).await;
 

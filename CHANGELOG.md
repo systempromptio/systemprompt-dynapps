@@ -20,6 +20,63 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.70.0 — 2026-10-18
+
+### Added
+
+- **DeepSeek is a second live upstream** (user-approved 2026-10-17), so the console can show a
+  cost comparison against Claude. `services/ai/providers.yaml` gains the `deepseek` provider on
+  DeepSeek's Anthropic-compatible endpoint (`https://api.deepseek.com/anthropic/v1`, anthropic
+  wire: streaming, tools and thinking blocks pass through) serving `deepseek-flash`
+  (DeepSeek-V4.1-Flash) and `deepseek-v4-pro` at DeepSeek's peak list rates;
+  `services/ai/gateway.yaml` routes only `deepseek-*` ids to it, and Claude stays the default
+  provider and model. The key is the `deepseek` profile secret. A running instance needs the new
+  `gateway_route/deepseek-route` entitlement applied from `/admin/sync` (insert-only is not
+  enough: the entity default changes from closed to open, so apply "overwrite" scoped to it).
+
+### Changed
+
+- **Built against published systemprompt-core 0.70.0.** Every core pin in `Cargo.toml` and
+  `tests/Cargo.toml` moves to `0.70.0` and the `[patch.crates-io]` blocks are commented out, so
+  the release compiles against crates.io rather than the sibling checkout. Core 0.70.0 ships
+  migration `ai/043`, which a 0.69 replica cannot run beside, so the production rollout must
+  stop the old machine before the new one starts (Recreate), not roll.
+- **The `awscli` Docker stage pulls `docker.io/amazon/aws-cli:2.36.18`** instead of
+  `public.ecr.aws/aws-cli/aws-cli`: ECR Public's anonymous pull limit failed image builds
+  during the 0.69 release. Same image and tag, different registry.
+- **`next` builds against core `next` again** (`bridge/CORE_REF` = 37c000a36): both
+  `[patch.crates-io]` blocks are active. Integration for core's breaking changes: the governance
+  hook charges core's Postgres rate windows before evaluating the chain (`rate_limit` now
+  refuses an uncharged call), the calendar-month quota rewrite carries buckets per `shard` and
+  the quota usage page sums a window's shards, service accounts are created through
+  `ensure_service_account`, and farm runs mint keys under `security.api_keys.max_lifetime_days`.
+
+## 0.69.1 — 2026-10-16
+
+Bridge hotfix on the published core 0.69.0: the server crates are unchanged and the bridge
+builds from core tag `v0.69.0-bridge.1` (`v0.69.0` plus bridge-only changes).
+
+### Changed
+
+- **`bridge/CORE_REF` may name a bridge-only core hotfix tag.** `scripts/check-core-ref.sh`
+  and `scripts/sync-core-version.sh` accept `v<pin>-bridge.N` in published-core mode, and
+  where a core checkout is present they refuse one that changes anything outside
+  `bin/bridge`, so a bridge fix ships without a core release.
+
+### Fixed
+
+- **Claude Desktop connects for a Windows administrator running unelevated.** Windows ACLs
+  `HKCU\SOFTWARE\Policies` read-only for a UAC-filtered token, so Connect and Update as
+  administrator failed with `administrator rights required to write SOFTWARE\Policies\Claude
+  under HKCU` and never prompted. That denial now takes the elevated-writer-then-UAC path, and
+  a refused install reports `elevation_required` so its toast offers Update as administrator
+  rather than Sign in again.
+- **Setup health failures carry an action.** A drifted `policy <key>` row offers the Claude
+  Desktop repair; host warnings with no local repair (evidence pending, feedback outbox full)
+  offer Sync now.
+- **The nightly audit run is scored and its delivery is counted honestly.** `farm_scheduled_run` takes a `case` (the scheduler entry names `nightly_previous_month`) and launches the run as that eval case, so it gets an eval result and a judge score; migration `019_farm_eval_scheduler_trigger.sql` lets eval runs record the `scheduler` trigger. A tool result whose body carries an `error` key now counts as a failed call, and DynBrain delivery needs a write that names the created document's `id` (run 1 reported a `Parent not found` reply as delivered).
+- **Every dynapps-odoo write is gated, under either name.** `orm_post_message` and `orm_send_mail` join the nightly farm's denied tools, the governance write-gate also matches `post` and `send`, and it covers the bridge's `mcp__plugin_dynapps-portal_dynapps-odoo__` names as well as the gateway's `mcp__dynapps-odoo__`.
+
 ## 0.69.0 — 2026-10-15
 
 ### Added

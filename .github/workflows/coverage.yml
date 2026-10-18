@@ -119,9 +119,11 @@ jobs:
           tool: cargo-nextest
       - uses: Swatinem/rust-cache@v2
         with:
+          # scripts/coverage.sh builds root and tests/ into one shared target
+          # dir and bridge/ into its own; these must name those dirs or the
+          # cache saves nothing it later restores.
           workspaces: |
-            . -> coverage-report/target-root
-            tests -> ../coverage-report/target-tests
+            . -> coverage-report/target-shared
             bridge -> ../coverage-report/target-bridge
           # The instrumented build is a different rustflags set from `test`,
           # so it must not share that job's cache entry.
@@ -138,6 +140,14 @@ jobs:
           set -o pipefail
           mkdir -p coverage-report
           just coverage-check | tee coverage-report/check.txt
+      # Why: coverage/baseline.json is re-recorded from a CI measurement, so
+      # the summary must outlive the runner even when the ratchet trips.
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage-report/summary.json
+          if-no-files-found: ignore
       # Why `always()`: the number is most wanted on the run that failed the
       # ratchet, which is exactly when a success-gated step would be skipped.
       - if: always()

@@ -88,8 +88,8 @@ fn the_portal_servers_resolve_as_generic_providers() {
 
 #[test]
 fn the_portal_issuer_endpoints_are_trusted_for_each_resource() {
-    // Why: the values portal.dynapps.es advertised in its RFC 8414 metadata on
-    // 2026-10-14. A move off the resource origin needs `authorization_origins`.
+    // Why: portal.dynapps.es advertises these in its RFC 8414 metadata; another
+    // origin needs `authorization_origins`.
     let advertised = [
         "https://portal.dynapps.es/oauth/master/authorize",
         "https://portal.dynapps.es/oauth/master/token",

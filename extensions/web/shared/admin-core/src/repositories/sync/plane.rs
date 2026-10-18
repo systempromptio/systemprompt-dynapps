@@ -31,6 +31,8 @@ use crate::error::{AdminError, AdminResult};
 
 pub use super::drift_shape::{ActionCounts, DriftKpi, DriftRow, Export, PlaneDrift, resolution};
 
+pub const SYNC_TAB: &str = "sync";
+
 /// Where a plane reads its declaration: the composed services root (every
 /// page and the boot seed), or the text of one uploaded file (an import
 /// preview, and the apply chosen from it).
@@ -181,6 +183,10 @@ pub trait SyncPlane: Send + Sync {
 
     fn owner_url(&self) -> &'static str {
         "/admin/sync"
+    }
+
+    fn sync_url(&self) -> String {
+        format!("{}?tab={SYNC_TAB}", self.owner_url())
     }
 
     async fn drift_from(

@@ -3,8 +3,8 @@
 //! the boot job uses, written to `ai_gateway_policies` in a throwaway
 //! database, and read back through the gateway's `PolicyResolver` — the merge
 //! that decides what the dispatch path actually enforces. `safety.mode` has to
-//! come out the far side as `warn` and so does `quota_mode` (back to warn
-//! 2026-10-15), or the file says one thing and the gateway does another.
+//! come out the far side as `warn` and so does `quota_mode`, or the file says
+//! one thing and the gateway does another.
 //!
 //! The quota plane gets its own proof: the resolved windows are driven to
 //! exhaustion with the real reservation code, which must report the breach
@@ -94,7 +94,7 @@ async fn the_resolver_keeps_both_mode_switches_after_ingestion() {
     let pool = ingest_shipped(&db).await;
 
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo)
+    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
         .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
         .await
         .expect("policy row resolves");
@@ -126,7 +126,7 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     };
     let pool = ingest_shipped(&db).await;
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo)
+    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
         .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
         .await
         .expect("policy row resolves");
@@ -164,6 +164,7 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
         windows: std::slice::from_ref(&tiny),
         fault_mode: systemprompt::manifest::services::QuotaFaultMode::default(),
         estimate: QuotaEstimate::default(),
+        sharding: systemprompt::manifest::profile::QuotaConfig::default(),
     };
 
     let first = precheck_and_reserve(&buckets, params)

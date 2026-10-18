@@ -102,9 +102,7 @@ async fn delete_planned_rows(conn: &mut PgConnection, prepared: &PreparedPlan) -
             .execute(&mut *conn)
             .await?
             .rows_affected();
-        // Why: Postgres rows reached by an earlier CASCADE may already be gone; the
-        // approved closure is the total affected count, not just direct command
-        // counts.
+        // Why: Postgres CASCADE may remove rows early; compare the approved total.
         let expected = prepared
             .receipt
             .effects

@@ -14,10 +14,11 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 
+use super::gateway_routes_drift::rows;
 use crate::repositories::gateway_routes::declared::{
     DeclaredRoutes, GATEWAY_FILE, declared_routes_now, gateway_file_path,
 };
-use crate::repositories::gateway_routes::drift::{RouteDrift, compute_route_drift};
+use crate::repositories::gateway_routes::drift::compute_route_drift;
 use crate::repositories::gateway_routes::render::{regenerate_gateway_file, render_routes_export};
 use crate::repositories::gateway_routes::rows::{
     RouteWrite, SOURCE_CODE, count_gateway_routes, delete_gateway_route, list_gateway_routes,
@@ -26,8 +27,7 @@ use crate::repositories::gateway_routes::rows::{
 use systemprompt_web_admin_core::error::AdminResult;
 use systemprompt_web_admin_core::repositories::sync::access_control::applied_from;
 use systemprompt_web_admin_core::repositories::sync::plane::{
-    ActionCounts, Actor, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
-    resolution,
+    ActionCounts, Actor, ApplyOutcome, DriftKpi, Export, PlaneDrift, SyncMode, SyncPlane,
 };
 use systemprompt_web_admin_core::repositories::sync::plane_ids;
 use systemprompt_web_admin_core::repositories::sync::registry::PlaneRegistration;
@@ -46,83 +46,6 @@ pub struct GatewayRoutesPlane;
 
 inventory::submit! {
     PlaneRegistration { order: 3, build: || Box::new(GatewayRoutesPlane) }
-}
-
-fn row(kind: &'static str, id: &str, in_code: String, in_db: String, dashboard: bool) -> DriftRow {
-    let (kind_label, kind_tone, insert_applies, overwrite_effect) = match (kind, dashboard) {
-        ("missing", _) => ("Added in code", "ok", true, "inserted"),
-        ("orphan", true) => ("Written in console", "warn", false, "deleted"),
-        ("orphan", false) => ("Removed from code", "err", false, "deleted"),
-        ("reordered", _) => ("Order changed in code", "warn", false, "reordered"),
-        (_, true) => ("Edited in console", "warn", false, "updated"),
-        (_, false) => ("Changed in code", "warn", false, "updated"),
-    };
-    let (resolve, resolve_tone) = resolution(insert_applies, true, overwrite_effect);
-    DriftRow {
-        kind,
-        kind_label,
-        kind_tone,
-        entity_type: "gateway_route".to_owned(),
-        entity_type_label: "gateway route".to_owned(),
-        entity_id: id.to_owned(),
-        band: String::new(),
-        band_label: "route",
-        subject: id.to_owned(),
-        in_code,
-        in_db,
-        origin: match kind {
-            "missing" => "",
-            _ if dashboard => "console",
-            _ => "code",
-        },
-        origin_tone: if dashboard { "info" } else { "muted" },
-        governed: true,
-        insert_applies,
-        overwrite_applies: true,
-        overwrite_effect,
-        resolve,
-        resolve_tone,
-    }
-}
-
-fn rows(drift: &RouteDrift) -> Vec<DriftRow> {
-    let mut out = Vec::new();
-    out.extend(
-        drift
-            .missing_in_db
-            .iter()
-            .map(|id| row("missing", id, "declared".to_owned(), "—".to_owned(), false)),
-    );
-    out.extend(drift.only_in_db.iter().map(|o| {
-        row(
-            "orphan",
-            &o.id,
-            "—".to_owned(),
-            o.summary.clone(),
-            o.dashboard,
-        )
-    }));
-    out.extend(drift.changed.iter().map(|c| {
-        let mut r = row(
-            "changed",
-            &c.id,
-            c.in_code.clone(),
-            c.in_db.clone(),
-            c.dashboard,
-        );
-        r.subject = c.fields.join(", ");
-        r
-    }));
-    if let Some((code, db)) = &drift.reordered {
-        out.push(row(
-            "reordered",
-            "order",
-            code.join(" › "),
-            db.join(" › "),
-            true,
-        ));
-    }
-    out
 }
 
 async fn write_declared(
@@ -184,6 +107,10 @@ impl SyncPlane for GatewayRoutesPlane {
 
     fn projection(&self) -> &'static str {
         "gateway_routes"
+    }
+
+    fn owner_url(&self) -> &'static str {
+        "/admin/gateway"
     }
 
     fn runtime_note(&self) -> Option<&'static str> {

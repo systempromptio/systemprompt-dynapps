@@ -11,6 +11,7 @@
 use serde::Serialize;
 
 use super::models::{DispatchRow, ProviderCardView};
+use systemprompt_web_admin_core::ssr::sync_plane::PlaneCardView;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::pickable_user::PickableUserView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
@@ -90,11 +91,17 @@ pub(super) struct GatewayPageData {
     pub load_error: String,
     pub catalog_error: String,
     pub runtime_note: &'static str,
-    pub sync_url: &'static str,
+    pub sync: Option<GatewaySyncView>,
     pub names_note: &'static str,
     pub tabs: Vec<TabLinkView>,
     pub show_overview: bool,
     pub show_providers: bool,
     pub show_routes: bool,
     pub show_settings: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct GatewaySyncView {
+    pub card: PlaneCardView,
+    pub can_write: bool,
 }

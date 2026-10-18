@@ -25,7 +25,7 @@ pub(crate) struct ManifestView {
 pub(crate) struct AbsentPlaneView {
     pub label: &'static str,
     pub source_file: &'static str,
-    pub owner_url: &'static str,
+    pub sync_url: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

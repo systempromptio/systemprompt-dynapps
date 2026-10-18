@@ -8,7 +8,7 @@ public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-06"
 updated_at: "2026-09-29"
-keywords: "claude code, gateway, bridge, settings.json, model routing, gemini, sonnet, verify"
+keywords: "claude code, gateway, bridge, settings.json, model routing, haiku, sonnet, verify"
 after_reading_this:
   - "Configure Claude Code to route through the Dynapps gateway"
   - "Find the settings file the bridge installed"
@@ -77,7 +77,7 @@ claude
 To choose a gateway model explicitly:
 
 ```bash
-claude --model gemini-3.8-flash
+claude --model claude-haiku-5-5
 ```
 
 The example requires that your gateway and account have access to that exact model ID. Your administrator can provide the available IDs.
@@ -97,14 +97,14 @@ Then pass that file when starting a gateway session.
 
 ```bash
 claude --settings "$HOME/Library/Application Support/dynapps/claude-code-settings.json" \
-  --model gemini-3.8-flash
+  --model claude-haiku-5-5
 ```
 
 **Linux or WSL:**
 
 ```bash
 claude --settings "${XDG_CONFIG_HOME:-$HOME/.config}/dynapps/claude-code-settings.json" \
-  --model gemini-3.8-flash
+  --model claude-haiku-5-5
 ```
 
 **Windows PowerShell:**
@@ -112,7 +112,7 @@ claude --settings "${XDG_CONFIG_HOME:-$HOME/.config}/dynapps/claude-code-setting
 ```powershell
 & $Bridge uninstall --host claude-code
 & $Bridge sync
-claude --settings "$env:APPDATA\dynapps\claude-code-settings.json" --model gemini-3.8-flash
+claude --settings "$env:APPDATA\dynapps\claude-code-settings.json" --model claude-haiku-5-5
 ```
 
 With a custom absolute `XDG_CONFIG_HOME`, substitute the actual file path reported by the bridge. Keep paths quoted, especially those containing spaces.
@@ -151,13 +151,12 @@ If it is missing, check `dynapps-bridge status` for the configured directory, th
 
 Claude Code's personal configuration directory can also be customized through `CLAUDE_CONFIG_DIR`; that is distinct from the bridge's `XDG_CONFIG_HOME`. Bridge enrolment targets the default user settings path when it cannot write managed settings. If you use a custom Claude Code directory, use the explicit `--settings` launch and verify routing rather than assuming enrolment changed that directory. See [Claude Code settings and precedence](https://code.claude.com/docs/en/settings).
 
-## Select Gemini or another gateway model
+## Select another gateway model
 
 Use an exact model ID provided by your administrator with `--model`. For example, if enabled:
 
 ```bash
-claude --model gemini-3.8-flash
-claude --model vertex-gemini-3.8-flash
+claude --model claude-haiku-5-5
 ```
 
 For per-session routing, include the `--settings` argument from the previous section in either command.

@@ -30,6 +30,8 @@ mod farm_clients_reports;
 #[cfg(test)]
 mod farm_portal_support;
 #[cfg(test)]
+mod farm_prune;
+#[cfg(test)]
 mod farm_run_as_dimension;
 #[cfg(test)]
 mod farm_run_as_e2e;
