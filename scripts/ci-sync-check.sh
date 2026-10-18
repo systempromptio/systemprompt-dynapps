@@ -32,7 +32,7 @@ SHARED=(
     scripts/check-file-size.sh
 )
 PARAMS=.github/ci-params.env
-PARAM_KEYS="CI_BRIDGE_DISPLAY_NAME CI_BRIDGE_PREFIX CI_BUNDLE_SIGNING_SECRET_NAME CI_GITHUB_REPO CI_HOMEPAGE CI_IMAGE CI_PRODUCT_NAME CI_RELEASE_GATE_EMAIL CI_REPO_NAME CI_RUNNER_IMAGE CI_SERVER_BINS"
+PARAM_KEYS="CI_BRIDGE_DISPLAY_NAME CI_BRIDGE_PREFIX CI_BUNDLE_SIGNING CI_BUNDLE_SIGNING_SECRET_NAME CI_GITHUB_REPO CI_HOMEPAGE CI_IMAGE CI_PRODUCT_NAME CI_RELEASE_GATE_EMAIL CI_REPO_NAME CI_RUNNER_IMAGE CI_SERVER_BINS"
 MANIFEST=.github/ci-shared.sha256
 
 mode=check
@@ -54,6 +54,9 @@ keys="$(grep -v '^#' "$PARAMS" | sed -n 's/^\([A-Z_]*\)=.*/\1/p' | sort | tr '\n
 while IFS='=' read -r k v; do
     case "$k" in ''|\#*) continue ;; esac
     [ -n "$v" ] || fail "$PARAMS: $k is empty"
+    if [ "$k" = CI_BUNDLE_SIGNING ]; then
+        case "$v" in required|disabled) ;; *) fail "$PARAMS: CI_BUNDLE_SIGNING is '$v', expected required or disabled" ;; esac
+    fi
 done < "$PARAMS"
 
 for f in "${SHARED[@]}"; do [ -f "$f" ] || fail "shared file $f is missing"; done

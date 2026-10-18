@@ -636,8 +636,10 @@ jobs:
       REPO_NAME: ${{ fromJSON(needs.params.outputs.json).CI_REPO_NAME }}
       IMAGE: ${{ fromJSON(needs.params.outputs.json).CI_IMAGE }}
       GHCR_AUTH: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
+      BUNDLE_SIGNING: ${{ fromJSON(needs.params.outputs.json).CI_BUNDLE_SIGNING }}
       # Each repo keeps its own secret name; params names it, so no secret moves.
-      BUNDLE_SIGNING_SEED: ${{ secrets[fromJSON(needs.params.outputs.json).CI_BUNDLE_SIGNING_SECRET_NAME] }}
+      # A repo with signing disabled never reads the secret.
+      BUNDLE_SIGNING_SEED: ${{ fromJSON(needs.params.outputs.json).CI_BUNDLE_SIGNING == 'required' && secrets[fromJSON(needs.params.outputs.json).CI_BUNDLE_SIGNING_SECRET_NAME] || '' }}
       SEED_SECRET_NAME: ${{ fromJSON(needs.params.outputs.json).CI_BUNDLE_SIGNING_SECRET_NAME }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -653,9 +655,15 @@ jobs:
         run: |
           mkdir -p dist
           sign=()
-          # Fail closed: only a dispatched dry run (which publishes nothing)
-          # may pack an unsigned bundle.
-          if [ -n "$BUNDLE_SIGNING_SEED" ]; then
+          # CI_BUNDLE_SIGNING=disabled packs unsigned by design. Under
+          # `required` it fails closed: only a dispatched dry run (which
+          # publishes nothing) may pack an unsigned bundle.
+          if [ "$BUNDLE_SIGNING" = "disabled" ]; then
+            echo "::notice::base-bundle signing is disabled for $REPO_NAME (CI_BUNDLE_SIGNING=disabled) — packing an unsigned bundle."
+          elif [ "$BUNDLE_SIGNING" != "required" ]; then
+            echo "::error::CI_BUNDLE_SIGNING must be required or disabled, got '$BUNDLE_SIGNING'."
+            exit 1
+          elif [ -n "$BUNDLE_SIGNING_SEED" ]; then
             sign=(--sign-key env:BUNDLE_SIGNING_SEED)
           elif [ "$DRY_RUN" = "true" ]; then
             echo "::notice::dry run without $SEED_SECRET_NAME — packing an unsigned bundle that is never published."
