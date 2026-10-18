@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Line-coverage run for all three workspaces (root, tests/, bridge/), ported
+# Line-coverage run over tests/ and bridge/ (root crates are instrumented as
+# tests/ path dependencies), ported
 # from systemprompt-core's `just coverage` recipe. Raw llvm-cov rather than
 # cargo-llvm-cov, for the same host-toolchain reasons core documents:
 #
@@ -93,17 +94,15 @@ run_instrumented() {
         LLVM_PROFILE_FILE="$PROFDIR/$PROFRAW_PATTERN.profraw" \
         RUSTFLAGS="$COVERAGE_RUSTFLAGS" \
         SQLX_OFFLINE=true \
-        cargo nextest run --no-fail-fast --build-jobs "$BUILD_JOBS" "$@"
+        cargo nextest run --no-fail-fast --no-tests=pass --build-jobs "$BUILD_JOBS" "$@"
     then
         status=0
     else
         status=$?
     fi
     # nextest exit codes, treated by consequence rather than lumped together:
-    #   0  everything ran
-    #   4  the workspace defines no tests. True of the root and bridge
-    #      workspaces here — they are instrumented for their objects, not for
-    #      tests — so it is the expected answer, not a failure.
+    #   0  everything ran (--no-tests=pass: a workspace instrumented for its
+    #      objects rather than for tests, like bridge/, is not a failure)
     #   *  a build failure or a red test. The report is still produced, since a
     #      partial number beats none while iterating, but the run is marked so
     #      the caller can tell. A CI job that reported a healthy percentage
@@ -111,7 +110,7 @@ run_instrumented() {
     #      prevent: it happened, with libdbus missing and the bridge workspace
     #      contributing nothing.
     case "$status" in
-        0|4) ;;
+        0) ;;
         *)
             echo "warning: workspace failed (nextest exit $status) — continuing to coverage report" >&2
             PHASE_FAILURES=$((PHASE_FAILURES + 1))
@@ -119,19 +118,18 @@ run_instrumented() {
     esac
 }
 
-# Why: cargo keys artifacts by package, not workspace, and the root and
-# tests/ workspaces compile the same dependency graph, so one instrumented
-# target dir serves both at half the disk of two.
-echo "==> [1/3] Instrumented tests: root workspace"
-run_instrumented "$TBASE-shared" --workspace --tests
-
-echo "==> [2/3] Instrumented tests: tests/ workspace"
+# Why no root phase: the root workspace defines no tests, and every root crate
+# is compiled — instrumented — as a path dependency of the tests/ workspace. A
+# separate root build into the same target dir produced a second feature
+# variant of each crate whose mapping hashes differ, which llvm-cov discards as
+# "functions have mismatched data".
+echo "==> [1/2] Instrumented tests: tests/ workspace"
 # Only tests/ declares the `coverage` nextest profile (tests/.config/nextest.toml,
-# resolved from the workspace root); the other two define no tests, and nextest
-# refuses a profile its config does not name.
-run_instrumented "$TBASE-shared" --manifest-path tests/Cargo.toml --workspace --profile coverage
+# resolved from the workspace root); nextest refuses a profile its config does
+# not name.
+run_instrumented "$TBASE-tests" --manifest-path tests/Cargo.toml --workspace --profile coverage
 
-echo "==> [3/3] Instrumented tests: bridge/ workspace"
+echo "==> [2/2] Instrumented tests: bridge/ workspace"
 run_instrumented "$TBASE-bridge" --manifest-path bridge/Cargo.toml --workspace
 
 PROFRAW_COUNT=$(find "$PROFDIR" -name '*.profraw' | wc -l)
@@ -176,7 +174,7 @@ collect_bin_candidates() {
 }
 BINS="$(
     {
-        collect_bin_candidates "$TBASE-shared"
+        collect_bin_candidates "$TBASE-tests"
         collect_bin_candidates "$TBASE-bridge"
     } | awk '{ base=$2; sub(".*/", "", base); sub(/-[0-9a-f]+$/, "", base); if (!seen[base]++) print $2 }'
 )"
