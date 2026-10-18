@@ -13,7 +13,7 @@ use systemprompt::identifiers::UserId;
 
 use super::case::{CaseJob, settle_case};
 use super::judge::EvalJudge;
-use super::orchestrator::{Tally, close_eval_run, fail_eval_run, record_outcome, set_cancelled};
+use super::orchestrator::{Tally, close_eval_run, fail_eval_run, record_outcome};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, EvalCaseRow, EvalRunRow, RunRow};
 use crate::repositories::{agents, evals};
@@ -107,7 +107,6 @@ pub async fn start_case_eval(
         if let Err(err) = settle(&state, judge, &settling, &launched).await {
             fail_eval_run(&state.pool, &id, &err).await;
         }
-        set_cancelled(&id, false);
     });
     Ok(CaseLaunched { eval_run, run })
 }

@@ -43,7 +43,12 @@ impl DbHandles {
         ));
         let paths = app_paths();
         let files = ctx.file_storage();
-        let farm = super::farm_public::build_state(Arc::clone(&write), paths.as_ref());
+        let farm = super::farm_public::build_state(
+            Arc::clone(&write),
+            paths.as_ref(),
+            Arc::clone(&files),
+            ctx.instance_id(),
+        );
         super::farm_public::start(&farm, paths.as_ref());
         Some(Self {
             managed,

@@ -54,6 +54,15 @@ pub async fn find_eval_run(
     .await
 }
 
+pub async fn is_eval_run_cancelled(pool: &PgPool, id: &EvalRunId) -> Result<bool, sqlx::Error> {
+    sqlx::query_file_scalar!(
+        "src/repositories/evals/is_eval_run_cancelled.sql",
+        id.as_str()
+    )
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn list_eval_runs_paged(
     pool: &PgPool,
     farm_id: Option<&FarmId>,

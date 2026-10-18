@@ -2,7 +2,6 @@
 //! status, check its assertions, ask the judge when the case has a rubric,
 //! and record the outcome on the case's result row.
 
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -11,6 +10,7 @@ use systemprompt::identifiers::UserId;
 
 use super::assertions::{AssertionContext, AssertionResult, evaluate_assertions};
 use super::judge::{EvalJudge, JudgeInput};
+use super::run_files::{RunFiles, fetch, referenced_paths};
 use super::transcript::{final_result_text, render_transcript, truncate_utf8};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, EvalCaseRow, RunRow};
@@ -79,25 +79,26 @@ pub(crate) async fn settle_case(job: &CaseJob<'_>, launched: &RunRow) -> FarmRes
     let (run, agent_run) =
         wait_for_terminal(job, &launched.id, timeout + WAIT_GRACE_SECONDS).await?;
     let events = list_events(job.state, &agent_run).await?;
-    let workspace = workspace_of(&agent_run);
     let final_text = final_result_text(&events);
     let assertions: Vec<Assertion> =
         serde_json::from_value(job.case.assertions.clone()).map_err(|source| FarmError::Json {
             at: format!("case {} assertions", job.case.id),
             source,
         })?;
+    let wanted = referenced_paths(&assertions, job.agent.output_path.as_deref());
+    let files = fetch(job.state.artefacts.as_ref(), &run.id, &wanted).await?;
     let results = evaluate_assertions(
         &assertions,
         &AssertionContext {
             run: &agent_run,
             events: &events,
-            workspace: &workspace,
+            files: &files,
             agent_tools: &job.agent.tools,
             output_path: job.agent.output_path.as_deref(),
             final_text: final_text.as_deref(),
         },
     );
-    let verdict = judge_case(job, (&run, &agent_run), &events, &workspace).await;
+    let verdict = judge_case(job, (&run, &agent_run), &events, &files).await;
     let (status, score, rationale) = settle((&run, &agent_run), &results, verdict);
     let assertions_json = serde_json::to_value(&results).map_err(|source| FarmError::Json {
         at: "assertion results".to_owned(),
@@ -162,15 +163,15 @@ async fn judge_case(
     job: &CaseJob<'_>,
     (run, agent_run): (&RunRow, &AgentRunRow),
     events: &[RunEvent],
-    workspace: &Path,
+    files: &RunFiles,
 ) -> Verdict {
     let rubric = job.case.judge_rubric.as_deref()?;
     let judge = job.judge?;
     let mut transcript = render_transcript(&run.prompt, events);
     if let Some(rel) = job.agent.output_path.as_deref()
-        && let Ok(body) = std::fs::read_to_string(workspace.join(rel))
+        && let Some(body) = files.get(rel)
     {
-        let body = truncate_utf8(body, OUTPUT_CAP_BYTES);
+        let body = truncate_utf8(body.to_owned(), OUTPUT_CAP_BYTES);
         transcript = format!("OUTPUT FILE {rel}:\n{body}\n\n{transcript}");
     }
     let threshold = job.case.judge_threshold.map_or_else(
@@ -194,12 +195,6 @@ async fn judge_case(
             .map(|v| (v.score, v.passed, v.rationale))
             .map_err(|e| e.to_string()),
     )
-}
-
-fn workspace_of(run: &AgentRunRow) -> PathBuf {
-    let root = PathBuf::from(run.run_dir.clone().unwrap_or_default());
-    let nested = root.join("workspace");
-    if nested.is_dir() { nested } else { root }
 }
 
 async fn list_events(state: &FarmState, agent_run: &AgentRunRow) -> FarmResult<Vec<RunEvent>> {

@@ -7,6 +7,7 @@ pub mod history;
 pub mod judge;
 mod orchestrator;
 pub mod resume;
+pub mod run_files;
 pub mod transcript;
 mod triggers;
 

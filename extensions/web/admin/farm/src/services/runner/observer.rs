@@ -15,6 +15,9 @@
 //!
 //! A newly stamped run also gets its task-completion report
 //! ([`report::write_run_report`]); a report failure is logged, never fatal.
+//! A newly stamped run that scores an eval case has the workspace files the
+//! case reads stored through file storage ([`run_files::snapshot`]), here on
+//! the node that holds the workspace, so the eval can be judged on any node.
 //!
 //! Evals need no trigger: an eval case waits on the farm row's status, which
 //! this stamp is what moves.
@@ -27,12 +30,14 @@ use systemprompt::agent_runs::{AgentRunRepository, AgentRunRow, RunOutcome};
 use systemprompt::identifiers::{AgentRunId, HostSessionId};
 
 use super::report;
-use crate::error::FarmResult;
+use crate::error::{FarmError, FarmResult};
 use crate::repositories::filters::RunFinish;
 use crate::repositories::rows::RunRow;
-use crate::repositories::runs;
+use crate::repositories::{agents, evals, runs};
+use crate::services::evals::run_files;
+use crate::services::farm_sync::eval_yaml::Assertion;
 use crate::state::FarmState;
-use crate::types::{AgentRunStatus, ErrorClass, FarmRunId, RunEventKind, RunStatus};
+use crate::types::{AgentRunStatus, ErrorClass, EvalResultId, FarmRunId, RunEventKind, RunStatus};
 
 const EVENT_PAGE: i64 = 1_000;
 
@@ -80,7 +85,52 @@ pub async fn observe_finished(state: &FarmState, agent_run_id: &AgentRunId) -> F
         cost_microdollars: agent_run.cost_microdollars.unwrap_or(0),
         host_session_id: agent_run.host_session_id.as_ref(),
     };
-    stamp(&state.pool, &farm_run, &agent_run, facts).await
+    let stamped = stamp(&state.pool, &farm_run, &agent_run, facts).await?;
+    if stamped && let Err(error) = store_eval_files(state, &farm_run, &agent_run).await {
+        tracing::warn!(%error, run = farm_run.id.as_str(), "eval files not stored");
+    }
+    Ok(stamped)
+}
+
+async fn store_eval_files(
+    state: &FarmState,
+    farm_run: &RunRow,
+    agent_run: &AgentRunRow,
+) -> FarmResult<()> {
+    let (Some(result_id), Some(run_dir)) = (&farm_run.eval_result_id, &agent_run.run_dir) else {
+        return Ok(());
+    };
+    let pool = state.pool.as_ref();
+    let Some(result) = evals::find_eval_result(pool, &EvalResultId::new(result_id)).await? else {
+        return Ok(());
+    };
+    let Some(eval_run) = evals::find_eval_run(pool, &result.eval_run_id).await? else {
+        return Ok(());
+    };
+    let Some(case) = evals::list_eval_cases(pool, &eval_run.suite_id)
+        .await?
+        .into_iter()
+        .find(|c| c.id == result.case_id)
+    else {
+        return Ok(());
+    };
+    let assertions: Vec<Assertion> =
+        serde_json::from_value(case.assertions).map_err(|source| FarmError::Json {
+            at: format!("case {} assertions", case.id),
+            source,
+        })?;
+    let output_path = agents::find_agent(pool, &farm_run.farm_id, &farm_run.agent_id)
+        .await?
+        .and_then(|agent| agent.output_path);
+    let wanted = run_files::referenced_paths(&assertions, output_path.as_deref());
+    if wanted.is_empty() {
+        return Ok(());
+    }
+    let root = std::path::PathBuf::from(run_dir);
+    let nested = root.join("workspace");
+    let workspace = if nested.is_dir() { nested } else { root };
+    run_files::snapshot(state.artefacts.as_ref(), &farm_run.id, &workspace, &wanted).await?;
+    Ok(())
 }
 
 pub async fn finish_farm_run(

@@ -1,12 +1,13 @@
-//! The eval assertion evaluators against a temp workspace and synthetic
-//! run events: one pass and one fail per assertion type.
+//! The eval assertion evaluators against stored run files and synthetic run
+//! events: one pass and one fail per assertion type.
 
-use std::path::Path;
+use std::collections::BTreeMap;
 
 use chrono::Utc;
 use serde_json::json;
 use systemprompt::agent_runs::AgentRunRow;
 use systemprompt::identifiers::{AgentRunId, UserId};
+use systemprompt_web_admin_farm::services::evals::run_files::RunFiles;
 use systemprompt_web_admin_farm::services::evals::{
     AssertionContext, AssertionResult, evaluate_assertions,
 };
@@ -78,18 +79,18 @@ fn tool(seq: i64, name: &str, input: serde_json::Value) -> RunEvent {
 struct Case<'a> {
     run: AgentRunRow,
     events: Vec<RunEvent>,
-    workspace: &'a Path,
+    files: &'a RunFiles,
     tools: Vec<String>,
     output_path: Option<&'a str>,
     final_text: Option<&'a str>,
 }
 
 impl<'a> Case<'a> {
-    fn new(workspace: &'a Path) -> Self {
+    fn new(files: &'a RunFiles) -> Self {
         Self {
             run: agent_run_row(Some(5), Some(1_500_000)),
             events: Vec::new(),
-            workspace,
+            files,
             tools: Vec::new(),
             output_path: None,
             final_text: None,
@@ -100,7 +101,7 @@ impl<'a> Case<'a> {
         let ctx = AssertionContext {
             run: &self.run,
             events: &self.events,
-            workspace: self.workspace,
+            files: self.files,
             agent_tools: &self.tools,
             output_path: self.output_path,
             final_text: self.final_text,
@@ -109,20 +110,17 @@ impl<'a> Case<'a> {
     }
 }
 
-fn workspace() -> tempfile::TempDir {
-    let dir = tempfile::tempdir().expect("tempdir");
-    std::fs::write(
-        dir.path().join("REVIEW.md"),
-        "Found sudo( in onchange at line 12\n",
-    )
-    .expect("write review");
-    dir
+fn workspace() -> RunFiles {
+    RunFiles::new(BTreeMap::from([(
+        "REVIEW.md".to_owned(),
+        "Found sudo( in onchange at line 12\n".to_owned(),
+    )]))
 }
 
 #[test]
 fn file_exists_passes_fails_and_rejects_escape() {
     let dir = workspace();
-    let case = Case::new(dir.path());
+    let case = Case::new(&dir);
     let ok = case.check(Assertion::FileExists {
         path: "REVIEW.md".into(),
     });
@@ -145,7 +143,7 @@ fn file_exists_passes_fails_and_rejects_escape() {
 #[test]
 fn output_contains_reads_path_then_output_then_final_text() {
     let dir = workspace();
-    let mut case = Case::new(dir.path());
+    let mut case = Case::new(&dir);
     let explicit = Assertion::OutputContains {
         path: Some("REVIEW.md".into()),
         text: "sudo(".into(),
@@ -178,7 +176,7 @@ fn output_contains_reads_path_then_output_then_final_text() {
 #[test]
 fn regex_matches_and_reports_bad_patterns() {
     let dir = workspace();
-    let case = Case::new(dir.path());
+    let case = Case::new(&dir);
     let hit = Assertion::Regex {
         path: Some("REVIEW.md".into()),
         pattern: r"line \d+".into(),
@@ -200,7 +198,7 @@ fn regex_matches_and_reports_bad_patterns() {
 #[test]
 fn no_tool_outside_allowlist_allows_skill_and_listed_mcp() {
     let dir = workspace();
-    let mut case = Case::new(dir.path());
+    let mut case = Case::new(&dir);
     case.tools = vec![
         "Read".into(),
         "Bash(git:*)".into(),
@@ -223,7 +221,7 @@ fn no_tool_outside_allowlist_allows_skill_and_listed_mcp() {
 #[test]
 fn max_turns_and_max_cost_compare_against_the_recorded_outcome() {
     let dir = workspace();
-    let mut case = Case::new(dir.path());
+    let mut case = Case::new(&dir);
     assert!(case.check(Assertion::MaxTurns { value: 5 }).passed);
     assert!(!case.check(Assertion::MaxTurns { value: 4 }).passed);
     assert!(case.check(Assertion::MaxCostUsd { value: 2.0 }).passed);
@@ -236,7 +234,7 @@ fn max_turns_and_max_cost_compare_against_the_recorded_outcome() {
 #[test]
 fn skill_invoked_normalises_dashes_and_reads_hooks() {
     let dir = workspace();
-    let mut case = Case::new(dir.path());
+    let mut case = Case::new(&dir);
     let wanted = || Assertion::SkillInvoked {
         skill: "odoo_module_review".into(),
     };
@@ -258,4 +256,60 @@ fn skill_invoked_normalises_dashes_and_reads_hooks() {
         },
     )];
     assert!(case.check(wanted()).passed);
+}
+
+#[test]
+fn run_file_paths_are_normalised_and_escapes_refused() {
+    use systemprompt_web_admin_farm::services::evals::run_files::{normalise, referenced_paths};
+    assert_eq!(
+        normalise("./out/REVIEW.md").as_deref(),
+        Some("out/REVIEW.md")
+    );
+    assert_eq!(normalise("../REVIEW.md"), None);
+    assert_eq!(normalise("/etc/passwd"), None);
+    let paths = referenced_paths(
+        &[
+            Assertion::FileExists {
+                path: "a.md".into(),
+            },
+            Assertion::Regex {
+                path: Some("../x".into()),
+                pattern: ".".into(),
+            },
+            Assertion::MaxTurns { value: 3 },
+        ],
+        Some("./b.md"),
+    );
+    assert_eq!(
+        paths.into_iter().collect::<Vec<_>>(),
+        vec!["a.md".to_owned(), "b.md".to_owned()]
+    );
+}
+
+#[tokio::test]
+async fn run_files_written_on_the_runner_are_read_back_from_storage() {
+    use systemprompt::storage::{FileStorageBackend, build_file_storage};
+    use systemprompt_web_admin_farm::services::evals::run_files::{fetch, snapshot};
+    use systemprompt_web_admin_farm::types::FarmRunId;
+
+    let runner_disk = tempfile::tempdir().expect("workspace");
+    std::fs::write(runner_disk.path().join("REVIEW.md"), "sudo( flagged").expect("write");
+    let shared = tempfile::tempdir().expect("storage root");
+    let storage = build_file_storage(FileStorageBackend::Local {
+        root: shared.path().to_path_buf(),
+    });
+    let run = FarmRunId::new("run-files-1");
+    let wanted = ["REVIEW.md".to_owned(), "MISSING.md".to_owned()]
+        .into_iter()
+        .collect();
+
+    let stored = snapshot(storage.as_ref(), &run, runner_disk.path(), &wanted)
+        .await
+        .expect("snapshot");
+    assert_eq!(stored, 1, "only files the run wrote are stored");
+    drop(runner_disk);
+
+    let files = fetch(storage.as_ref(), &run, &wanted).await.expect("fetch");
+    assert_eq!(files.get("REVIEW.md"), Some("sudo( flagged"));
+    assert_eq!(files.get("MISSING.md"), None);
 }

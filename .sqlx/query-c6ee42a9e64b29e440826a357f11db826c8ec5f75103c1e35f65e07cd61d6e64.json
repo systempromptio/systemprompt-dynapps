@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_eval_runs\nSET status = CASE WHEN status = 'cancelled' THEN status ELSE $2 END,\n    mean_score = $3, cost_microdollars = $4, finished_at = NOW()\nWHERE id = $1 AND finished_at IS NULL\n  AND status IN ('queued', 'running', 'cancelled')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Float8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c6ee42a9e64b29e440826a357f11db826c8ec5f75103c1e35f65e07cd61d6e64"
+}

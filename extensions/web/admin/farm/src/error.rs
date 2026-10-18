@@ -82,6 +82,13 @@ pub enum FarmError {
     #[error("I/O: {0}")]
     Io(#[from] std::io::Error),
 
+    #[error("File storage: {object}: {source}")]
+    Storage {
+        object: String,
+        #[source]
+        source: systemprompt::traits::FileStorageError,
+    },
+
     #[error("Database: {0}")]
     Db(#[from] sqlx::Error),
 

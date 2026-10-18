@@ -1,15 +1,13 @@
 //! The deterministic half of an eval: each case assertion checked against
-//! the finished run's row, its event stream and the files it left in the
-//! workspace.
+//! the finished run's row, its event stream and the workspace files the
+//! runner stored for it ([`RunFiles`]).
 //!
-//! Pure apart from reading workspace files, so it runs the same in the
-//! orchestrator and in unit tests.
-
-use std::path::{Component, Path, PathBuf};
+//! Pure, so it runs the same in the orchestrator and in unit tests.
 
 use serde::Serialize;
 use systemprompt::agent_runs::{AgentRunRow, RunEvent};
 
+use super::run_files::{self, RunFiles};
 use crate::services::farm_sync::eval_yaml::Assertion;
 use crate::types::RunEventPayload;
 
@@ -19,7 +17,7 @@ use systemprompt_web_admin_core::util::tool_allowlist::{SKILL_TOOL, tool_permitt
 pub struct AssertionContext<'a> {
     pub run: &'a AgentRunRow,
     pub events: &'a [RunEvent],
-    pub workspace: &'a Path,
+    pub files: &'a RunFiles,
     pub agent_tools: &'a [String],
     pub output_path: Option<&'a str>,
     pub final_text: Option<&'a str>,
@@ -99,23 +97,17 @@ const fn found_word(found: bool) -> &'static str {
     if found { "found" } else { "not found" }
 }
 
-fn safe_join(workspace: &Path, rel: &str) -> Option<PathBuf> {
-    let rel_path = Path::new(rel);
-    let clean = rel_path
-        .components()
-        .all(|c| matches!(c, Component::Normal(_) | Component::CurDir));
-    clean.then(|| workspace.join(rel_path))
-}
-
 fn file_exists(ctx: &AssertionContext<'_>, path: &str) -> AssertionResult {
-    match safe_join(ctx.workspace, path) {
-        Some(full) if full.is_file() => AssertionResult::new("file_exists", true, path),
-        Some(_) => AssertionResult::new("file_exists", false, format!("{path} is missing")),
-        None => AssertionResult::new(
+    if run_files::normalise(path).is_none() {
+        return AssertionResult::new(
             "file_exists",
             false,
             format!("{path} escapes the workspace"),
-        ),
+        );
+    }
+    match ctx.files.get(path) {
+        Some(_) => AssertionResult::new("file_exists", true, path),
+        None => AssertionResult::new("file_exists", false, format!("{path} is missing")),
     }
 }
 
@@ -127,13 +119,17 @@ fn output_check(
 ) -> AssertionResult {
     let (source, body) = match path.or(ctx.output_path) {
         Some(rel) => {
-            let Some(full) = safe_join(ctx.workspace, rel) else {
+            if run_files::normalise(rel).is_none() {
                 return AssertionResult::new(kind, false, format!("{rel} escapes the workspace"));
-            };
-            match std::fs::read_to_string(&full) {
-                Ok(body) => (rel.to_owned(), body),
-                Err(err) => {
-                    return AssertionResult::new(kind, false, format!("cannot read {rel}: {err}"));
+            }
+            match ctx.files.get(rel) {
+                Some(body) => (rel.to_owned(), body.to_owned()),
+                None => {
+                    return AssertionResult::new(
+                        kind,
+                        false,
+                        format!("cannot read {rel}: the run stored no such file"),
+                    );
                 },
             }
         },

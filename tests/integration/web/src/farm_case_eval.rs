@@ -236,3 +236,58 @@ async fn a_scheduled_launch_with_a_case_is_an_eval_the_scheduler_started() {
     assert!(absent.is_none(), "nothing is queued without the launcher");
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn a_cancel_from_any_replica_stops_the_driver_and_survives_its_close() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let seeded = seed(&db.pool).await;
+    seed_suite(&seeded).await;
+    let pool = &seeded.state.pool;
+    let id = EvalRunId::new(uuid::Uuid::new_v4().to_string());
+    evals::insert_eval_run(
+        pool,
+        &evals::NewEvalRun {
+            id: &id,
+            suite_id: &eval_suite_id(&seeded.farm, seeded.agent.as_str()),
+            farm_id: &seeded.farm,
+            agent_id: &seeded.agent,
+            user_id: &seeded.user,
+            triggered_via: TriggeredVia::Api,
+            client_id: None,
+        },
+    )
+    .await
+    .expect("insert eval run");
+    evals::update_eval_run_status(pool, &id, EvalRunStatus::Running)
+        .await
+        .expect("running");
+    assert!(!evals::is_eval_run_cancelled(pool, &id).await.expect("read"));
+
+    systemprompt_web_admin_farm::services::evals::cancel_eval_run(&seeded.state, &id)
+        .await
+        .expect("cancel");
+
+    assert!(
+        evals::is_eval_run_cancelled(pool, &id).await.expect("read"),
+        "the driver sees the cancel through the database, not process memory"
+    );
+    evals::update_eval_run_status(pool, &id, EvalRunStatus::Running)
+        .await
+        .expect("late running");
+    evals::update_eval_run_finished(pool, &id, EvalRunStatus::Completed, Some(80.0), 1_000)
+        .await
+        .expect("close");
+    let row = evals::find_eval_run(pool, &id)
+        .await
+        .expect("find")
+        .expect("eval run");
+    assert_eq!(row.status, EvalRunStatus::Cancelled.as_str());
+    assert!(
+        row.finished_at.is_some(),
+        "closing still records the tallies"
+    );
+    assert_eq!(row.cost_microdollars, 1_000);
+    db.cleanup().await;
+}

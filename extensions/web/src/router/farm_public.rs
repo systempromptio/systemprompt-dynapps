@@ -16,8 +16,10 @@ use axum::middleware::{self as axum_middleware, Next};
 use axum::response::Response;
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
+use systemprompt::identifiers::InstanceId;
 use systemprompt::prelude::PgPool;
-use systemprompt::traits::{JobContext, RunnerService};
+use systemprompt::system::AppContext;
+use systemprompt::traits::{FileStorage, JobContext, RunnerService};
 use systemprompt_web_admin_core::ssr::viewer_tz::with_viewer_tz;
 use systemprompt_web_admin_farm::routes::public::agent_farm_public_routes;
 use systemprompt_web_admin_farm::routes::worker::agent_farm_worker_routes;
@@ -25,7 +27,7 @@ use systemprompt_web_admin_farm::services::farm_sync::boot::sync_missing_checkou
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
 use systemprompt_web_admin_farm::services::runner::report::backfill_missing_reports;
-use systemprompt_web_admin_farm::state::{FarmState, build_farm_state_from_app};
+use systemprompt_web_admin_farm::state::{FarmHost, FarmState, build_farm_state_from_app};
 use tokio_util::sync::CancellationToken;
 
 use super::admin;
@@ -104,11 +106,35 @@ impl RunnerService for FarmRunner {
             },
         };
         let paths = ctx.get::<Arc<AppPaths>>().ok().map(Arc::clone);
-        let state = build_state(pool, paths.as_deref());
+        let app = match ctx.get::<Arc<AppContext>>() {
+            Ok(app) => Arc::clone(app),
+            Err(e) => {
+                tracing::error!(error = %e, "agent farm runner has no app context");
+                return;
+            },
+        };
+        let state = build_state(
+            pool,
+            paths.as_deref(),
+            Arc::clone(app.file_storage()),
+            app.config().instance_id.clone(),
+        );
         FarmRunnerService::new(state).run(ctx, shutdown).await;
     }
 }
 
-pub fn build_state(pool: Arc<PgPool>, app_paths: Option<&AppPaths>) -> Arc<FarmState> {
-    build_farm_state_from_app(pool, app_paths)
+pub fn build_state(
+    pool: Arc<PgPool>,
+    app_paths: Option<&AppPaths>,
+    artefacts: Arc<dyn FileStorage>,
+    instance: InstanceId,
+) -> Arc<FarmState> {
+    build_farm_state_from_app(
+        pool,
+        app_paths,
+        FarmHost {
+            artefacts,
+            instance,
+        },
+    )
 }
