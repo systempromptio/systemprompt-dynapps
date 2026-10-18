@@ -77,13 +77,11 @@ if update:
         with open(baseline_path) as f:
             previous = json.load(f)
         baseline["floor"] = previous.get("floor", 0.0)
-        # Why: a coverage run that produced no usable objects reports 0.00%,
-        # and recording that silently lowers the bar for everyone afterwards.
-        # It has happened: two concurrent runs deleted each other's
-        # instrumented binaries, every object was lost, and the "measurement"
-        # was written straight into the baseline. A run that lost most of its
-        # data is a broken run, never a real regression, so refuse it here and
-        # let a genuine drop be recorded by hand.
+        # A run that lost its instrumented objects (for example to a
+        # concurrent coverage-clean) reports near 0.00%, and recording that
+        # would silently lower the bar. A result under half the previous total
+        # is treated as a broken run and refused; a genuine drop is recorded
+        # by hand.
         floor = previous.get("total", 0.0) / 2.0
         if total < floor:
             print(
@@ -149,6 +147,12 @@ if failures:
         print(f"  - {msg}", file=sys.stderr)
     print("If the drop is deliberate, re-record with 'just coverage-baseline' "
           "and commit coverage/baseline.json.", file=sys.stderr)
+    # Why: under Actions the floor/ratchet trip gets its own annotation title,
+    # so it never reads like the build timing out (coverage.yml titles that
+    # one "Coverage build timed out").
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        for msg in failures:
+            print(f"::error title=Coverage floor/ratchet::{msg}")
     sys.exit(1)
 
 better = total - baseline["total"]

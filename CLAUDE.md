@@ -158,7 +158,7 @@ re-creates the contention. Escape hatches when you truly need them:
 
 ```bash
 just preflight          # optional development confidence: static → lint → tests → coverage
-just preflight-static   # seconds: fmt, sqlx cache, 25 source gates
+just preflight-static   # seconds: fmt, sqlx cache, every source gate in `lint-gates`
 just preflight-lint     # clippy (all three workspaces), doc-check, msrv-check
 just preflight-full     # weekly: preflight + deny + audit + machete + hack
 just init-hooks         # once per clone: tracked .githooks/ (pre-commit only)
@@ -637,8 +637,10 @@ insert-only, overwrite-from-code, or export-to-code. Console edits on a shared b
 reason. Model and procedure: `/documentation/access-control`.
 
 **Sources, planes, sync.** `/admin/sync` ("Code ↔ Instance") is the one sync system. A
-*source* is where declarations come from, each with a content hash; this instance pins no
-remote bundles, so the only source is `base`, this tree. A *plane*
+*source* is where declarations come from, each with a content hash: `base` is this tree and
+`bundle:<name>` is each remote kit the profile pins (`services.sources[]`; production pins
+`dynapps-agent-farm`), and `just deploy` refuses a pin that does not resolve
+(`scripts/check-deploy-sources.py`). A *plane*
 is what those declarations project into the database — `access_control`, `groups` and
 `gateway_policies` (`repositories/sync/registry.rs`; `gateway_policies` is also edited live at
 `/admin/gateway/policies`, since core reads `ai_gateway_policies` per request). Every apply

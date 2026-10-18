@@ -1,0 +1,16 @@
+# Production files allowed to read the process environment. One `path  # reason`
+# per line; the reason names the sanctioned variable(s) or the platform
+# constraint. Gate: scripts/lint-env-vars.sh (in `just lint-gates`).
+#
+# Sanctioned readers: the subprocess boot variables core hands a child it
+# spawns, Fly's machine metadata and injected secrets, and the secrets that
+# core's SecretsBootstrap also serves (env is the Fly secret-injection path).
+extensions/mcp/agent-farm/src/main.rs  # MCP_PORT / MCP_STARTUP_TIMEOUT_SECS / MCP_SERVICE_ID, the subprocess boot variables core's MCP spawner sets on the child
+extensions/mcp/systemprompt/src/main.rs  # MCP_PORT / MCP_STARTUP_TIMEOUT_SECS / MCP_SERVICE_ID, the subprocess boot variables core's MCP spawner sets on the child
+extensions/cli/farm-worker/src/main.rs  # the worker's boot variables (API base, run id, worker token), set by the farm runner on the machine it launches
+extensions/web/admin/farm/src/services/runner/fly/api.rs  # FLY_API_TOKEN, a Fly-injected secret
+extensions/web/admin/farm/src/services/runner/fly/pool.rs  # FLY_APP_NAME / FLY_REGION / FLY_IMAGE_REF / FLY_MACHINE_ID, Fly machine metadata the platform sets; agent-farms.yaml values win
+extensions/web/admin/farm/src/services/runner/service.rs  # HOSTNAME replica identity, as core's config_loader reads it
+extensions/web/admin/farm/src/config/runner_yaml.rs  # FARM_RUNNER_MODE per-environment runner mode (local vs fly_machine), documented in services/web/config/agent-farms.yaml
+extensions/web/admin/platform/src/services/connector_oauth/config.rs  # connector client secrets by name, Fly secret injection ahead of SecretsBootstrap
+extensions/web/shared/admin-core/src/crypto/secret_crypto.rs  # ENCRYPTION_MASTER_KEY, Fly secret injection ahead of SecretsBootstrap

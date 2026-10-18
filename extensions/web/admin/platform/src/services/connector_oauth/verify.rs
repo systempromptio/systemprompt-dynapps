@@ -30,7 +30,10 @@ async fn rpc(
     let response = request
         .send()
         .await
-        .map_err(|_redacted_error| AdminError::Upstream("MCP verification unavailable".into()))?;
+        .map_err(|error| {
+            tracing::warn!(target: "connector_oauth", error = %error.without_url(), "MCP verification unavailable");
+            AdminError::Upstream("MCP verification unavailable".into())
+        })?;
     tracing::info!(target: "connector_oauth", user_id = %grant.user, provider = grant.provider.slug(),
         stage = payload.get("method").and_then(|value| value.as_str()).unwrap_or("request"),
         status = response.status().as_u16(), "MCP verification responded");

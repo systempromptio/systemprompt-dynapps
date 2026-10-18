@@ -2,6 +2,15 @@ name: Gates
 
 # Full matrix on next pushes and ordinary PRs. Frozen promotion PRs reuse
 # the exact next-push proof and validate the base, head and merge tree.
+#
+# Shared byte-for-byte with the sibling downstream repo; brand values come
+# from .github/ci-params.env and scripts/ci-sync-check.sh proves the rest.
+#
+# Every job has a timeout, and every long step a shorter one: a job-level
+# timeout cancels the job, and a cancelled job skips rust-cache's post step,
+# so the dependencies a cold run spent the hour compiling are thrown away and
+# the next run starts cold again. A step timeout fails the step instead,
+# which the cache-on-failure post step still saves.
 
 on:
   workflow_dispatch:
@@ -10,6 +19,10 @@ on:
         description: "Commit SHA or branch to gate. Defaults to the triggering ref."
         type: string
         required: false
+      full_regression:
+        description: "Also run the full hotfix regression tier"
+        type: boolean
+        default: false
   pull_request:
     branches: [main, next]
   push:
@@ -21,6 +34,8 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: "10"
+  RUSTUP_MAX_RETRIES: "10"
   SQLX_OFFLINE: "true"
   # aws-lc-sys refuses to build with GCC <10 and the release profile's LTO
   # trips it; mirror the justfile's CC/CXX toggle.
@@ -29,6 +44,8 @@ env:
   # scripts/build-coordinator.sh serialises builds across agents sharing one
   # clone; a runner is single-tenant, so bypass it.
   BUILD_NO_COORD: "1"
+  JUST_VERSION: "1.42.4"
+  NEXTEST_VERSION: "0.9.148"
 
 permissions:
   contents: read
@@ -40,8 +57,9 @@ jobs:
     name: Verify frozen promotion
     if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const {owner, repo} = context.repo;
@@ -78,8 +96,9 @@ jobs:
     name: Verify frozen hotfix
     if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Verify main base, candidate and published core
@@ -105,74 +124,81 @@ jobs:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Static (fmt, sqlx cache, source gates)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3
       - run: rustup show
+      # The shared CI layout must match the manifest both downstream repos
+      # carry; a fix landed in one repo only is a red build here.
+      - run: bash scripts/ci-sync-check.sh
+        if: ${{ !cancelled() }}
       - run: bash scripts/check-core-crate-versions.sh
+        if: ${{ !cancelled() }}
       - run: bash tests/scripts/release-proof.sh && bash tests/scripts/release-merge.sh && bash tests/scripts/release-helper.sh && bash tests/scripts/deploy-observation.sh
         if: ${{ !cancelled() }}
+        timeout-minutes: 5
       - run: just preflight-static
         if: ${{ !cancelled() }}
+        timeout-minutes: 12
 
-  # Why: lint and test do not wait on static. Each skipped the moment static
-  # went red, so a release-script self-test failure in 0.59 hid clippy and
-  # every test tier for a whole round. All three run and report together;
-  # `Gates passed` still needs every one.
+  # lint and test do not wait on static, so a red static job never hides
+  # their findings. All run and report together; `Gates passed` still needs
+  # every one.
   lint:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Lint (clippy ×3, rustdoc, MSRV)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     env:
       RUSTFLAGS: "-D warnings"
     steps:
-      - uses: actions/checkout@v7
+      # Why: three clippy workspaces plus the Windows cross-lint's second
+      # dependency tree overflow the runner's ~14 GB root disk.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
+      - uses: ./.github/actions/free-disk
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
       # libdbus: keyring → dbus-secret-service in the bridge crate.
       # gcc-mingw-w64: `just clippy` cross-lints the bridge GUI for
       # x86_64-pc-windows-gnu, and ring's build script needs a C compiler
       # with Windows headers (clang alone has no assert.h for that target).
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3 clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev gcc-mingw-w64-x86-64
-      # Why: three clippy workspaces plus the Windows cross-lint's second
-      # dependency tree overflow the runner's ~14 GB (run 35063638721 died in
-      # doc-check on ENOSPC); core's coverage.yml sweep minus the hosted
-      # toolcache, which is where setup-just installed `just` above.
-      - name: Free runner disk
-        run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
-            /usr/local/.ghcup /usr/local/share/boost /usr/local/share/powershell \
-            /usr/local/lib/node_modules
-          sudo docker image prune --all --force >/dev/null 2>&1 || true
-          df -h /
       - run: rustup show
       - run: rustup toolchain install 1.96.0 --profile minimal
-      - uses: Swatinem/rust-cache@v2
+      # One cache entry per job and pinned core ref, written only by pushes
+      # to next: PR runs restore it and never evict it with a branch-scoped
+      # copy the next push cannot read.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: lint-core-${{ hashFiles('bridge/CORE_REF') }}
           workspaces: |
             .
             tests
             bridge
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/next' }}
       - run: just preflight-lint
+        timeout-minutes: 65
 
   test:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Test (unit, integration, admin contract)
     runs-on: ubuntu-latest
-    # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
-    # headroom so a growing suite never turns into a meaningless red X. Green
-    # runs sit at 47-57 minutes, and a cold cache (every core re-pin) adds the
-    # full compile on top, which cancelled run 34691892313 at 60 with the unit
-    # tier already green and nothing failing.
-    timeout-minutes: 90
+    # Integration is dominated by CREATE/DROP DATABASE round-trips, and a cold
+    # cache (every core re-pin) adds the full compile on top; the timeout
+    # leaves room for both.
+    timeout-minutes: 100
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: "0"
@@ -194,76 +220,50 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
-      # it — `just test` began failing with "No space left on device" while
-      # linking the contract crate, which reads as a compile error rather than
-      # as a full disk, and the coverage job builds three instrumented trees on
-      # top of that. Everything removed here is a preinstalled SDK or language
-      # runtime nothing in this repo uses. Ordered roughly by size; `|| true`
-      # throughout because the image's contents drift between runner releases
-      # and a path that has moved must not fail the build.
-      - name: Reclaim runner disk
-        run: |
-          echo "before:"; df -h / | tail -1
-          sudo rm -rf \
-            /usr/local/lib/android \
-            /opt/hostedtoolcache \
-            /usr/share/dotnet \
-            /opt/ghc /usr/local/.ghcup \
-            /usr/share/swift \
-            /usr/local/share/powershell \
-            /usr/share/miniconda \
-            /usr/local/lib/node_modules \
-            /usr/lib/google-cloud-sdk \
-            /opt/microsoft /opt/az /usr/share/az_* \
-            /usr/local/graalvm /usr/share/kotlinc \
-            /usr/local/share/boost /usr/local/julia* \
-            /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku \
-            "${AGENT_TOOLSDIRECTORY:-}" 2>/dev/null || true
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          echo "after:"; df -h / | tail -1
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
+      - uses: ./.github/actions/free-disk
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v4
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
       # The unit tier includes bridge/keyring code and the Python BA importer.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml
       - run: rustup show
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-nextest
-      - uses: Swatinem/rust-cache@v2
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
           workspaces: |
             .
             tests
-      - name: Focused connector emergency gate
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/next' }}
+      - name: Focused emergency hotfix gate
         if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
         run: just test-hotfix
+        timeout-minutes: 60
       - run: just test
         if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'hotfix/')
+        timeout-minutes: 90
 
-  full-hotfix-regression:
-    if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
-    name: Full hotfix regression (nonblocking)
+  # The upgrade ladder's two newest rungs on a Postgres of their own: the
+  # downstream mirror of core's schema-ladder.yml, and its own red context
+  # when a migration only breaks an established database.
+  schema-ladder:
+    if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
+    name: Schema ladder (two newest releases)
     runs-on: ubuntu-latest
-    # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
-    # headroom so a growing suite never turns into a meaningless red X. Green
-    # runs sit at 47-57 minutes, and a cold cache (every core re-pin) adds the
-    # full compile on top, which cancelled run 34691892313 at 60 with the unit
-    # tier already green and nothing failing.
-    timeout-minutes: 90
+    timeout-minutes: 75
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: "0"
-      # The harness accepts a maintenance DB named test, postgres, or *_test.
       SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
     services:
       postgres:
-        # Plain postgres 18: no schema needs an extension beyond uuid-ossp and
-        # pgcrypto, which the stock image ships.
         image: postgres:18
         env:
           POSTGRES_USER: test
@@ -276,52 +276,97 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
-      # it — `just test` began failing with "No space left on device" while
-      # linking the contract crate, which reads as a compile error rather than
-      # as a full disk, and the coverage job builds three instrumented trees on
-      # top of that. Everything removed here is a preinstalled SDK or language
-      # runtime nothing in this repo uses. Ordered roughly by size; `|| true`
-      # throughout because the image's contents drift between runner releases
-      # and a path that has moved must not fail the build.
-      - name: Reclaim runner disk
-        run: |
-          echo "before:"; df -h / | tail -1
-          sudo rm -rf \
-            /usr/local/lib/android \
-            /opt/hostedtoolcache \
-            /usr/share/dotnet \
-            /opt/ghc /usr/local/.ghcup \
-            /usr/share/swift \
-            /usr/local/share/powershell \
-            /usr/share/miniconda \
-            /usr/local/lib/node_modules \
-            /usr/lib/google-cloud-sdk \
-            /opt/microsoft /opt/az /usr/share/az_* \
-            /usr/local/graalvm /usr/share/kotlinc \
-            /usr/local/share/boost /usr/local/julia* \
-            /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku \
-            "${AGENT_TOOLSDIRECTORY:-}" 2>/dev/null || true
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          echo "after:"; df -h / | tail -1
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: ./.github/actions/free-disk
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev
+      - run: rustup show
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
+      # Same build flags as `test`, so the tests/ workspace dependencies it
+      # compiles are the ones that job's cache already holds.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
+          workspaces: tests
+          save-if: false
+      - run: just schema-ladder
+        timeout-minutes: 65
+
+  # cargo-deny and cargo-audit over every workspace (root, tests/, bridge/).
+  # Advisory databases are fetched under a retry, then checked offline, so a
+  # flaky fetch is retried and a real finding fails once.
+  supply-chain:
+    if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
+    name: Supply chain (deny, audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v4
-      # The unit tier includes bridge/keyring code and the Python BA importer.
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+      - run: rustup show
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: cargo-deny@0.20.2,cargo-audit@0.22.2
+      - run: just supply-chain
+        timeout-minutes: 15
+
+  full-hotfix-regression:
+    if: (github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')) || (github.event_name == 'workflow_dispatch' && inputs.full_regression)
+    name: Full hotfix regression (nonblocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: ./.github/actions/free-disk
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml
       - run: rustup show
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-nextest
-      - uses: Swatinem/rust-cache@v2
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
           workspaces: |
             .
             tests
+          save-if: false
       - run: just test
+        timeout-minutes: 90
 
   # One stable context for the `main` ruleset: it fails unless every gate
   # above succeeded, so a skipped or cancelled job can never pass as "not
@@ -329,7 +374,8 @@ jobs:
   gates-passed:
     name: Gates passed
     runs-on: ubuntu-latest
-    needs: [promotion, hotfix, static, lint, test]
+    timeout-minutes: 5
+    needs: [promotion, hotfix, static, lint, test, schema-ladder, supply-chain]
     if: always()
     steps:
       - env:
@@ -337,10 +383,14 @@ jobs:
           IS_HOTFIX: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/') }}
           IS_PROMOTION: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
+          tiers='.static.result == "%s" and .lint.result == "%s" and .test.result == "%s" and .["schema-ladder"].result == "%s" and .["supply-chain"].result == "%s"'
           if [ "$IS_PROMOTION" = true ]; then
-            jq -e '.promotion.result == "success" and .static.result == "skipped" and .lint.result == "skipped" and .test.result == "skipped"' <<<"$NEEDS_JSON" >/dev/null
+            # shellcheck disable=SC2059
+            jq -e ".promotion.result == \"success\" and $(printf "$tiers" skipped skipped skipped skipped skipped)" <<<"$NEEDS_JSON" >/dev/null
           elif [ "$IS_HOTFIX" = true ]; then
-            jq -e '.hotfix.result == "success" and .promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
+            # shellcheck disable=SC2059
+            jq -e ".hotfix.result == \"success\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success)" <<<"$NEEDS_JSON" >/dev/null
           else
-            jq -e '.hotfix.result == "skipped" and .promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
+            # shellcheck disable=SC2059
+            jq -e ".hotfix.result == \"skipped\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success)" <<<"$NEEDS_JSON" >/dev/null
           fi

@@ -20,6 +20,30 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.70.2 — 2026-10-18
+
+### Changed
+
+- **`just deploy` checks that every pinned services bundle can be served.** After
+  `core-guard` it runs `scripts/check-deploy-sources.py`: each `oci.reference` in the deploy
+  profile must resolve on GHCR, and each `owner: bundle:` in `rules.yaml` must match a pinned
+  source and the reverse, so a bundle that would fail to fetch at boot stops the deploy.
+- **A fresh local instance composes the agent-farm kit.** `setup-local` adds the
+  `dynapps-agent-farm` OCI source and a GHCR pull token (`GHCR_PULL_TOKEN`, else
+  `gh auth token`) to the local profile before first boot; without a token the instance boots
+  without the kit and says so.
+- `zip` is on 9; the source gates now also cover production env readers, test seams, ledger
+  re-derivations, and core's swallowed-error and tracing-message scanners. Core stays on 0.70.0.
+
+### Fixed
+
+- **Claude turns route on the model, never on client tool names.** Claude Code resends its
+  client tools (`WebSearch`, `WebFetch`, `ToolSearch`, …) in every request, so a gateway route
+  predicate on those names matched every Claude turn. The route set is model-keyed only: every
+  `claude-*` id is served by Anthropic, an explicit `deepseek-*` id by DeepSeek, and
+  `e2e-mock-*` by the loopback mock. `scripts/check-gateway-routes.sh` (in `lint-gates`)
+  refuses a client tool name in a route predicate.
+
 ## 0.70.1 — 2026-10-18
 
 ### Fixed

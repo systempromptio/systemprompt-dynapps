@@ -6,7 +6,7 @@
 #     --admin-email you@example.com --trusted-proxies <your proxy CIDR> \
 #     --database-url 'postgres://systemprompt:pw@postgres:5432/systemprompt' \
 #     --anthropic-key sk-ant-...
-#   export SYSTEMPROMPT_TAG=0.70.1 POSTGRES_PASSWORD=pw
+#   export SYSTEMPROMPT_TAG=0.70.2 POSTGRES_PASSWORD=pw
 #   docker compose -f docker-compose.single.yml run --rm app migrate   # schema + admin, once
 #   docker compose -f docker-compose.single.yml up -d
 #
@@ -34,7 +34,7 @@ services:
       retries: 10
 
   app:
-    image: ghcr.io/systempromptio/systemprompt-dynapps:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.70.1}
+    image: ghcr.io/systempromptio/systemprompt-dynapps:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.70.2}
     restart: unless-stopped
     stop_grace_period: 30s
     depends_on:

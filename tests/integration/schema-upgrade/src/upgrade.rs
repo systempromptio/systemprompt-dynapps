@@ -105,51 +105,43 @@ async fn restore_and_upgrade(db: &TempDb, rung: &Rung) {
     }
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn every_release_schema_upgrades_with_the_current_installer() {
-    for rung in ladder() {
-        let db = empty_db_or_skip!();
-        restore_and_upgrade(&db, &rung).await;
-        for table in ["ai_requests", "ai_request_messages", "plugin_usage_events"] {
-            let rows: i64 =
-                sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT count(*) FROM {table}")))
-                    .fetch_one(&*db.pool)
-                    .await
-                    .unwrap_or_else(|e| {
-                        panic!("count {table} after upgrading {}: {e}", rung.version)
-                    });
-            assert_eq!(
-                rows, SEEDED_ROWS,
-                "upgrading release {} changed the row count of {table}",
-                rung.version
-            );
-        }
-        db.cleanup().await;
-    }
-}
+include!(concat!(env!("OUT_DIR"), "/rung_tests.rs"));
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn every_upgraded_schema_matches_a_fresh_install() {
+// Why: build.rs emits one test per rung so each release has its own timeout
+// budget; this is the body every generated test runs.
+async fn check_release(version: &str) {
+    let rung = ladder()
+        .into_iter()
+        .find(|r| r.version == version)
+        .unwrap_or_else(|| panic!("rung {version} was generated but is not on the ladder"));
     let fresh = db_or_skip!();
     let fresh_shape = catalog::snapshot(&fresh.pool).await;
     fresh.cleanup().await;
 
-    for rung in ladder() {
-        let upgraded = empty_db_or_skip!();
-        restore_and_upgrade(&upgraded, &rung).await;
-        let upgraded_shape = catalog::snapshot(&upgraded.pool).await;
-        upgraded.cleanup().await;
-
-        let diff = catalog::diff(&upgraded_shape, &fresh_shape);
-        assert!(
-            diff.is_empty(),
-            "a database upgraded from release {} differs from a fresh install \
-             (- only after upgrade, + only on fresh):\n{diff}\n\
-             A migration and the declarative baseline disagree — fix the migration (existing \
-             databases) or the baseline (fresh installs); never both by hand.",
-            rung.version
+    let db = empty_db_or_skip!();
+    restore_and_upgrade(&db, &rung).await;
+    for table in ["ai_requests", "ai_request_messages", "plugin_usage_events"] {
+        let rows: i64 =
+            sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT count(*) FROM {table}")))
+                .fetch_one(&*db.pool)
+                .await
+                .unwrap_or_else(|e| panic!("count {table} after upgrading {version}: {e}"));
+        assert_eq!(
+            rows, SEEDED_ROWS,
+            "upgrading release {version} changed the row count of {table}"
         );
     }
+    let upgraded_shape = catalog::snapshot(&db.pool).await;
+    db.cleanup().await;
+
+    let diff = catalog::diff(&upgraded_shape, &fresh_shape);
+    assert!(
+        diff.is_empty(),
+        "a database upgraded from release {version} differs from a fresh install \
+         (- only after upgrade, + only on fresh):\n{diff}\n\
+         A migration and the declarative baseline disagree — fix the migration (existing \
+         databases) or the baseline (fresh installs); never both by hand."
+    );
 }
 
 #[test]

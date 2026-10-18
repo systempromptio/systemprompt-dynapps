@@ -39,7 +39,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.70.1"
+version = "0.70.2"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -110,7 +110,7 @@ inventory = "0.3"
 walkdir = "2.0"
 nix = { version = "0.31", default-features = false, features = ["user"] }
 tempfile = "3.0"
-zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
 url = "2.5"
 urlencoding = "2.1"
 

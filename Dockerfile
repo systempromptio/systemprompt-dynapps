@@ -8,6 +8,13 @@
 # ghcr.io/systempromptio/systemprompt-dynapps (docs/RELEASING.md). Build it
 # locally with `just docker-build`.
 
+# Where the server binaries come from. `builder` (the default, and what
+# `just docker-build` uses) compiles them in this build. The release passes
+# `prebuilt`: its server job compiles natively per arch with a warm cargo
+# cache, stages /out/bin under .release-bin/<arch>/, and this image only COPYs
+# them — BuildKit then never runs the builder stage at all.
+ARG BIN_STAGE=builder
+
 FROM rust:1-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -49,6 +56,13 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 # gives the release job its server tarball from the same compile.
 FROM scratch AS artifacts
 COPY --from=builder /out/bin /bin
+
+# Binaries the release compiled outside Docker (see BIN_STAGE above).
+FROM scratch AS prebuilt
+ARG TARGETARCH
+COPY .release-bin/${TARGETARCH}/ /out/bin/
+
+FROM ${BIN_STAGE} AS bins
 
 # hey powers the demo/performance load tests; its upstream S3 binary host is
 # dead (403), so build it from source and ship it on PATH — demo/_common.sh's
@@ -119,7 +133,7 @@ RUN mkdir -p /app/bin /app/logs /app/storage/data/scratch /app/storage/exports \
         /app/services-cache /app/web /app/.systemprompt/profiles/docker \
         /app/.systemprompt/sessions
 
-COPY --from=builder /out/bin/ /app/bin/
+COPY --from=bins /out/bin/ /app/bin/
 COPY --from=heybuilder /go/bin/hey /app/bin/hey
 
 COPY services /app/services

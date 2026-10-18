@@ -113,6 +113,8 @@ mod gateway_policies_unedited;
 #[cfg(test)]
 mod gateway_policy_config;
 #[cfg(test)]
+mod gateway_route_contract;
+#[cfg(test)]
 mod gateway_route_selection_keys;
 #[cfg(test)]
 mod gateway_routes_drift;

@@ -67,9 +67,6 @@ pub(super) fn validate_content_source(
     })
 }
 pub(super) fn resolve_blog_config_path() -> PathBuf {
-    if let Ok(override_path) = std::env::var("BLOG_CONFIG") {
-        return PathBuf::from(override_path);
-    }
     ProfileBootstrap::get()
         .map_err(|e| e.to_string())
         .and_then(|profile| {

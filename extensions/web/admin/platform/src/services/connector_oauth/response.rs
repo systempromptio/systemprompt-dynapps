@@ -27,7 +27,10 @@ pub(super) async fn body(response: reqwest::Response) -> AdminResult<Value> {
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_redacted_error| AdminError::Upstream("Provider response interrupted".into()))?
+        .map_err(|error| {
+            tracing::warn!(target: "connector_oauth", error = %error.without_url(), "Provider response interrupted");
+            AdminError::Upstream("Provider response interrupted".into())
+        })?
     {
         if bytes.len() + chunk.len() > 1_048_576 {
             return Err(AdminError::Upstream(

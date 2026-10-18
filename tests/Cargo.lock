@@ -132,7 +132,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1973cfbc1a2daf9cf550e74e1f088c28e7f7d8c1e1418fb6c9dc5184b7e84c99"
 dependencies = [
  "crypto-common 0.2.2",
- "inout 0.2.3",
+ "inout 0.2.4",
 ]
 
 [[package]]
@@ -1129,7 +1129,7 @@ checksum = "e8cf2a2c93cd704877c0858356ed03480ff301ee950b43f1cbe4573b088bfa6c"
 dependencies = [
  "block-buffer 0.12.1",
  "crypto-common 0.2.2",
- "inout 0.2.3",
+ "inout 0.2.4",
 ]
 
 [[package]]
@@ -1436,7 +1436,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d045de693cb712d0b22c6a64be5b953f67b3ce00ab5ad3dd5d8b441886ab8e1a"
 dependencies = [
  "quote",
- "syn 3.0.9",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -3272,9 +3272,9 @@ dependencies = [
 
 [[package]]
 name = "inout"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8c0d789294fb457b791f7797a04478704788f30b407e5d0b01deaa846572d9f"
+checksum = "3ce983bb6fb399067d101fbfc9e74174e07e9f29a2bc679efefeb8c645819c3f"
 dependencies = [
  "hybrid-array",
 ]
@@ -7255,7 +7255,7 @@ dependencies = [
  "winresource",
  "wry",
  "zeroize",
- "zip 9.0.3",
+ "zip",
 ]
 
 [[package]]
@@ -7646,7 +7646,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-kit-export"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -7820,7 +7820,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -7845,7 +7845,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent-farm"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -7873,7 +7873,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-shared"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "jsonschema",
  "rmcp",
@@ -8132,7 +8132,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-secrets-onepassword"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "reqwest",
@@ -8360,7 +8360,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-analytics"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8385,7 +8385,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-catalog"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8408,7 +8408,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-core"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8436,12 +8436,12 @@ dependencies = [
  "url",
  "urlencoding",
  "uuid",
- "zip 8.6.0",
+ "zip",
 ]
 
 [[package]]
 name = "systemprompt-web-admin-farm"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8471,7 +8471,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-governance"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8498,7 +8498,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-identity"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8528,7 +8528,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-platform"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8559,7 +8559,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-content"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "axum",
  "chrono",
@@ -8578,7 +8578,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-extension"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
@@ -8611,7 +8611,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-jobs"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "chrono",
@@ -8641,7 +8641,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-shared"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "axum",
  "chrono",
@@ -8659,7 +8659,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-site"
-version = "0.70.1"
+version = "0.70.2"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9898,7 +9898,7 @@ dependencies = [
  "tokio",
  "toml 1.1.8+spec-1.1.0",
  "tower",
- "zip 8.6.0",
+ "zip",
 ]
 
 [[package]]
@@ -11006,20 +11006,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.9",
-]
-
-[[package]]
-name = "zip"
-version = "8.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
-dependencies = [
- "crc32fast",
- "flate2",
- "indexmap",
- "memchr",
- "typed-path",
- "zopfli",
 ]
 
 [[package]]

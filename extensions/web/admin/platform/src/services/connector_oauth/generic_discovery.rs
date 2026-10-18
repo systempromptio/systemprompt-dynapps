@@ -92,7 +92,10 @@ async fn read<T: serde::de::DeserializeOwned>(
         .get(trusted_endpoint(provider, url)?)
         .send()
         .await
-        .map_err(|_redacted_error| AdminError::Unavailable("OAuth discovery unavailable".into()))?;
+        .map_err(|error| {
+            tracing::warn!(target: "connector_oauth", error = %error.without_url(), "OAuth discovery unavailable");
+            AdminError::Unavailable("OAuth discovery unavailable".into())
+        })?;
     if !response.status().is_success() {
         return Err(AdminError::Unavailable("OAuth discovery rejected".into()));
     }
@@ -106,7 +109,10 @@ pub(super) async fn bounded_json<T: serde::de::DeserializeOwned>(
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_redacted_error| AdminError::Upstream("OAuth response interrupted".into()))?
+        .map_err(|error| {
+            tracing::warn!(target: "connector_oauth", error = %error.without_url(), "OAuth response interrupted");
+            AdminError::Upstream("OAuth response interrupted".into())
+        })?
     {
         if bytes.len() + chunk.len() > 65_536 {
             return Err(AdminError::Upstream(

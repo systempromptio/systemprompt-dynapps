@@ -294,3 +294,4 @@ evals/
 /deploy/loadtest/kind/.profile/
 /deploy/loadtest/kind/.bin/
 services-cache/
+.release-bin/
