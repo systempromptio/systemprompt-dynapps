@@ -26,7 +26,10 @@ pub(super) async fn generic_identity(http: &reqwest::Client, grant: &mut Grant) 
         .bearer_auth(&grant.access_token)
         .send()
         .await
-        .map_err(|_redacted_error| AdminError::Upstream("Provider identity unavailable".into()))?;
+        .map_err(|error| {
+            tracing::warn!(target: "connector_oauth", error = %error.without_url(), "Provider identity unavailable");
+            AdminError::Upstream("Provider identity unavailable".into())
+        })?;
     let info = super::response::body(response).await?;
     info.get("sub")
         .and_then(Value::as_str)

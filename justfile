@@ -394,6 +394,8 @@ _lint-gates-uncoordinated:
         check-discarded-results.sh
         check-fail-open.sh
         check-fail-soft.sh
+        check-swallowed-errors.sh
+        check-tracing-messages.sh
         lint-schema.sh
         lint-extensions.sh
         check-migration-numbers.sh

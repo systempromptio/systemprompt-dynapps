@@ -188,7 +188,8 @@ async fn register_client(
             }))
             .send()
             .await
-            .map_err(|_redacted_error| {
+            .map_err(|error| {
+                tracing::warn!(target: "connector_oauth", error = %error.without_url(), "OAuth registration unavailable");
                 AdminError::Unavailable("OAuth registration unavailable".into())
             })?;
         if !response.status().is_success() {

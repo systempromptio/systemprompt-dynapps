@@ -161,7 +161,11 @@ pub fn with_mode_override(mut config: RunnerConfig, value: Option<&str>) -> Runn
     if let Some(mode) = RunnerMode::parse(raw) {
         config.mode = mode;
     } else {
-        tracing::error!(value = raw, "{RUNNER_MODE_ENV} is not local|fly_machine");
+        tracing::error!(
+            variable = RUNNER_MODE_ENV,
+            value = raw,
+            "runner mode override is not local|fly_machine"
+        );
     }
     config
 }
