@@ -175,16 +175,20 @@ coverage-html:
         exit 1
     fi
     TOOLDIR="$(rustc --print sysroot)/lib/rustlib/$(rustc -vV | sed -n 's/^host: //p')/bin"
-    TBASE="${COVERAGE_TARGET_DIR:-$ROOT/coverage-report/target}"
-    BINS=$(for t in "$TBASE-root" "$TBASE-tests" "$TBASE-bridge"; do \
-        find "$t/debug/deps" -maxdepth 1 -executable -type f ! -name '*.d' ! -name '*.so' -printf '%T@ %p\n' 2>/dev/null; \
-    done | sort -rn | awk '{ base=$2; sub(".*/", "", base); sub(/-[0-9a-f]+$/, "", base); if (!seen[base]++) print $2 }')
-    OBJ_ARGS=""
-    for b in $BINS; do OBJ_ARGS="$OBJ_ARGS --object $b"; done
+    # The object set scripts/coverage.sh reported over, so the HTML tree and
+    # the report always describe the same binaries.
+    if [ ! -s "$ROOT/coverage-report/objects.txt" ]; then
+        echo "coverage-report/objects.txt is missing; run 'just coverage' first" >&2
+        exit 1
+    fi
+    OBJ_ARGS=()
+    while IFS= read -r b; do
+        if [ -f "$b" ]; then OBJ_ARGS+=(--object "$b"); fi
+    done < "$ROOT/coverage-report/objects.txt"
     mkdir -p "$ROOT/coverage-report/html"
     "$TOOLDIR/llvm-cov" show \
         --instr-profile="$ROOT/coverage-report/tests.profdata" \
-        $OBJ_ARGS \
+        "${OBJ_ARGS[@]}" \
         --ignore-filename-regex="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|{{ci_repo}}/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)" \
         --format=html \
         --output-dir="$ROOT/coverage-report/html"

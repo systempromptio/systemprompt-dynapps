@@ -29,6 +29,7 @@
 #   report.txt     human-readable llvm-cov report
 #   lcov.info      lcov export for external tooling
 #   tests.profdata merged profile (input to `just coverage-html`)
+#   objects.txt    the deduplicated objects reported over (same)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -221,6 +222,7 @@ if [ "$BIN_COUNT" -eq 0 ]; then
     exit 1
 fi
 echo "==> Reporting over $BIN_COUNT globally deduplicated test objects"
+printf '%s\n' "$BINS" | sed '/^$/d' > "$ROOT/coverage-report/objects.txt"
 OBJ_ARGS=()
 for b in $BINS; do
     if [ -f "$b" ]; then OBJ_ARGS+=(--object "$b"); fi
