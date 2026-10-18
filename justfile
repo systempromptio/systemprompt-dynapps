@@ -1220,6 +1220,7 @@ deploy *FLAGS:
         fi
     done
     {{just_executable()}} core-guard
+    python3 scripts/check-deploy-sources.py .systemprompt/profiles/{{DEPLOY_PROFILE}}/profile.yaml
     {{just_executable()}} deploy-check
     {{just_executable()}} build-all
     exec {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
