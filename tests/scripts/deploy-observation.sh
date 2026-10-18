@@ -39,3 +39,28 @@ for case_name in healthy readiness_delayed unchanged timestamp_only digest_only 
     if [ "$status" -ne "$expected" ]; then echo "$case_name: expected $expected, got $status" >&2; exit 1; fi
     echo "$case_name: PASS"
 done
+
+api='{"id":"api","state":"started","updated_at":"t1","image_ref":{"digest":"sha256:api"},"config":{"metadata":null,"services":[{"internal_port":8080}]}}'
+worker() { printf '{"id":"w","state":"%s","updated_at":"t2","image_ref":{"digest":"sha256:old"},"config":{"metadata":{"farm_runner":"pool"},"init":{"exec":["/app/bin/systemprompt-farm-worker"]}}}' "$1"; }
+unknown='{"id":"x","state":"started","updated_at":"t3","image_ref":{"digest":"sha256:x"},"config":{"metadata":null}}'
+spoofed='{"id":"s","state":"stopped","updated_at":"t4","image_ref":{"digest":"sha256:s"},"config":{"metadata":{"farm_runner":"pool"},"services":[{"internal_port":8080}]}}'
+selection_case() (
+    source scripts/deploy-observation.sh
+    api_machine_state <<<"$1"
+)
+for entry in \
+    "api_only|0|[$api]" \
+    "api_stopped_worker|0|[$api,$(worker stopped)]" \
+    "api_running_worker|0|[$api,$(worker started)]" \
+    "two_api|1|[$api,$api]" \
+    "no_api|1|[$(worker stopped)]" \
+    "unknown_machine|1|[$api,$unknown]" \
+    "pool_tag_with_services|1|[$api,$spoofed]"; do
+    case_name="${entry%%|*}"; rest="${entry#*|}"; expected="${rest%%|*}"; json="${rest#*|}"
+    status=0
+    out="$(selection_case "$json" 2>/dev/null)" || status=$?
+    [ "$status" -eq 0 ] || status=1
+    if [ "$status" -ne "$expected" ]; then echo "$case_name: expected $expected, got $status" >&2; exit 1; fi
+    if [ "$expected" -eq 0 ] && [ "$out" != "sha256:api t1" ]; then echo "$case_name: selected '$out'" >&2; exit 1; fi
+    echo "$case_name: PASS"
+done

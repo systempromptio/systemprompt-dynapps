@@ -20,6 +20,17 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.70.1 — 2026-10-18
+
+### Fixed
+
+- **`just deploy-release` no longer aborts when the agent farm's runner pool holds a machine.**
+  `scripts/deploy-observation.sh` required exactly one machine in the Fly app, so the 0.70.0
+  deploy stopped before `cloud deploy` because a stopped `farm_runner` pool machine sat beside
+  the API. It now selects the API machine (no `farm_runner` metadata, has services) and
+  accepts farm runners (`metadata.farm_runner: pool`, the worker entrypoint, no services); zero
+  or two API machines, or any machine of neither shape, still fail the deploy.
+
 ## 0.70.0 — 2026-10-18
 
 ### Added
