@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
-# Reject archaeology, caller-reference, and paraphrase comments.
+# Reject archaeology, dated-narrative, caller-reference, and paraphrase comments.
 # Exemption: annotate the line above with `// doc-ok: <reason>`.
+#
+# Archaeology and dates apply to tests/** too: a test comment that narrates
+# what broke on which day is a diary entry, and it goes stale exactly as fast
+# as a production one. A date (YYYY-MM-DD) in a comment is history; git holds
+# it. State the invariant the test pins instead.
 set -uo pipefail
 
 SEARCH_DIRS=(extensions bridge/src src)
+HISTORY_DIRS=("${SEARCH_DIRS[@]}" tests)
 
 if ! command -v rg >/dev/null 2>&1; then
     echo "check-comments: ripgrep (rg) is required" >&2
@@ -43,12 +49,19 @@ report() {
     fail=1
 }
 
-ARCHAEOLOGY=$(rg -n --no-heading --color=never -g '*.rs' -g '!**/tests/**' \
+ARCHAEOLOGY=$(rg -n --no-heading --color=never -g '*.rs' \
     '^\s*(///|//)[^!].*(\(was |historical|previously|no longer|used to be|formerly|renamed)' \
-    "${SEARCH_DIRS[@]}" 2>/dev/null | grep -v 'doc-ok:' || true)
+    "${HISTORY_DIRS[@]}" 2>/dev/null | grep -v 'doc-ok:' || true)
 report "comment narrates how the code used to look." \
     "State current behaviour only — history lives in git." \
     "$ARCHAEOLOGY"
+
+DATED=$(rg -n --no-heading --color=never -g '*.rs' \
+    '^\s*//.*\b20\d\d-\d\d-\d\d\b' \
+    "${HISTORY_DIRS[@]}" 2>/dev/null | strip_errors_sections || true)
+report "comment carries a date — a diary entry, not a constraint." \
+    "State what holds now; the day it changed lives in git." \
+    "$DATED"
 
 CALLER_REF=$(rg -n --no-heading --color=never -g '*.rs' -g '!**/tests/**' \
     '^\s*///.*(Used by |Consumed by |Called by |Read by )' \
@@ -75,4 +88,4 @@ if [ "$fail" -ne 0 ]; then
     exit 1
 fi
 
-echo "check-comments: OK — no archaeology, caller-reference, or paraphrase comments."
+echo "check-comments: OK — no archaeology, dates, caller-reference, or paraphrase comments."
