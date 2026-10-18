@@ -61,7 +61,19 @@ pub struct FakeOidcIdp {
 }
 
 impl FakeOidcIdp {
+    // Returns only once the IdP can answer every endpoint within the identity
+    // crate's 10s HTTP timeout: the listener is bound (connections queue in its
+    // backlog before the accept loop runs) and both signing keys exist. Left to
+    // the token and JWKS handlers, a first RSA-2048 keygen overruns that
+    // timeout under an instrumented build and the sign-in is refused as
+    // `unavailable`.
     pub async fn start(tenant_id: &str) -> Self {
+        tokio::task::spawn_blocking(|| {
+            TestIdpKeys::get();
+            TestIdpKeys::other();
+        })
+        .await
+        .expect("generate the fake IdP signing keys");
         let (listener, base_url) = bind().await;
         let inner = Arc::new(Inner {
             issuer: format!("{base_url}/{tenant_id}/v2.0"),
@@ -118,13 +130,7 @@ impl FakeOidcIdp {
 
     // A single-use code the token endpoint redeems for `spec`'s ID token,
     // provided the caller presents a verifier hashing to `code_challenge`.
-    // The keys the token and JWKS endpoints serve are generated here, on the
-    // test's side: left to those handlers, a first RSA-2048 keygen runs inside the
-    // identity crate's 10s HTTP timeout, which an instrumented build overruns
-    // and the sign-in is refused as `unavailable`.
     pub fn issue_code(&self, spec: IdTokenSpec, code_challenge: &str) -> String {
-        TestIdpKeys::get();
-        signing_keys(&spec);
         let code = format!("code-{}", uuid::Uuid::new_v4().simple());
         self.inner
             .codes
