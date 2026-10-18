@@ -70,7 +70,10 @@ pub use llms_txt::LlmsTxtGenerationJob;
 pub use prerender::SiteContentPrerenderJob;
 pub use publish::PublishPipelineJob;
 pub use quota_month_window::QuotaMonthWindowJob;
-pub use retention::{RetentionDailyReportJob, RetentionExportMonthlyJob, RetentionExportWeeklyJob};
+pub use retention::{
+    MonthlyParams, RetentionDailyReportJob, RetentionExportMonthlyJob, RetentionExportWeeklyJob,
+    WeeklyParams,
+};
 pub use robots::RobotsTxtGenerationJob;
 pub use scope_defaults::ScopeDefaultsJob;
 pub use secret_migration::SecretMigrationJob;

@@ -27,16 +27,18 @@ pub(crate) fn build(
         .map_err(|e| tracing::error!(error = %e, "Failed to initialize admin template engine"))
         .ok()?
         .with_branding(branding);
+    let admin = admin::admin_ssr_router(
+        &db.db,
+        Arc::clone(&db.read),
+        engine.clone(),
+        sso_deps,
+        Arc::clone(&db.managed),
+    )
+    .layer(Extension(Arc::clone(&db.farm)))
+    .layer(Extension(Arc::clone(&db.files)));
     Some(SsrRouters {
-        bridge_auth: admin::bridge_auth_ssr_router(Arc::clone(&db.read), engine.clone()),
-        admin: admin::admin_ssr_router(
-            &db.db,
-            Arc::clone(&db.read),
-            engine,
-            sso_deps,
-            Arc::clone(&db.managed),
-        )
-        .layer(Extension(Arc::clone(&db.farm))),
+        bridge_auth: admin::bridge_auth_ssr_router(Arc::clone(&db.read), engine),
+        admin,
     })
 }
 

@@ -145,7 +145,7 @@ lost when the pod is replaced:
 | path | content | consequence of loss |
 |---|---|---|
 | `/app/storage/data` | gateway accounting journal, scratch | receipts not yet flushed to Postgres are lost with the pod |
-| `/app/storage/exports` | generated exports | a user re-runs the export |
+| `/app/storage/exports` | generated ad-hoc exports | a user re-runs the export; retention archives live in the `storage:` backend (`exports/` in the bucket), not here |
 | `/app/storage/files` | image-shipped templates, refreshed at boot | none, the entrypoint restores them |
 | `/app/web` | rendered public site | none, `publish_pipeline` renders it at boot |
 | `/app/services-cache`, `/app/logs`, `/app/.systemprompt/sessions` | caches, logs, CLI sessions | none |

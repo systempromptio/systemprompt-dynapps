@@ -8,7 +8,8 @@
 //! its windows and last run are shown on `/admin/configuration`.
 //!
 //! The download route checks every path segment against the exact shapes the
-//! jobs write before any filesystem read, so it cannot leave the exports dir.
+//! jobs write before any read, then fetches the object through core's file
+//! storage, so any replica serves an archive another replica wrote.
 
 mod view;
 
@@ -19,13 +20,15 @@ use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::ServicesBootstrap;
 
 use self::view::{ArchivePeriodView, LifecycleFindingView, MeasureView, build_view};
 use crate::repositories::lifecycle::{
     find_latest_health_report, list_latest_retention_runs, list_retention_archives,
 };
+use systemprompt::traits::{FileStorage, StoredFileId};
+use systemprompt_web_admin_core::archive_objects::archive_object;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::ssr::retention::{RetentionView, retention_view};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
@@ -104,6 +107,7 @@ pub(crate) async fn lifecycle_page(
 
 pub(crate) async fn lifecycle_archive_download(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(storage): Extension<Arc<dyn FileStorage>>,
     Path((tier, period, file)): Path<(String, String, String)>,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
@@ -112,21 +116,9 @@ pub(crate) async fn lifecycle_archive_download(
     if !view::valid_tier(&tier) || !view::valid_period(&period) || !view::valid_file(&file) {
         return Err(AdminError::NotFound("No such archive".to_owned()).into());
     }
-    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
-    let paths = AppPaths::from_profile(
-        &profile.paths,
-        profile.path_resolution(),
-        systemprompt::loader::ServicesRootBootstrap::get().map(|root| root.path.as_path()),
-    )
-    .map_err(AdminError::internal)?;
-    let path = paths
-        .storage()
-        .exports()
-        .join(&tier)
-        .join(&period)
-        .join(&file);
-    let bytes = tokio::fs::read(&path).await.map_err(|error| {
-        tracing::warn!(path = %path.display(), %error, "lifecycle archive unreadable");
+    let id = StoredFileId::new(archive_object(&tier, &period, &file));
+    let read = storage.open(&id, None).await.map_err(|error| {
+        tracing::warn!(object = %id, %error, "lifecycle archive unreadable");
         AdminError::NotFound("No such archive".to_owned())
     })?;
     let content_type = if std::path::Path::new(&file)
@@ -145,7 +137,7 @@ pub(crate) async fn lifecycle_archive_download(
                 format!("attachment; filename=\"{tier}-{period}-{file}\""),
             ),
         ],
-        bytes,
+        axum::body::Body::from_stream(read.body),
     )
         .into_response())
 }

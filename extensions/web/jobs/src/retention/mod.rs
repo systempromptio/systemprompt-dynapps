@@ -6,7 +6,8 @@
 //! These jobs are the other half of a retention policy: the daily job
 //! records size and age per managed table into `retention_runs` so growth is
 //! a series rather than a guess; the weekly job archives the raw request
-//! tables for the previous ISO week to `storage/exports/weekly/`; the monthly
+//! tables for the previous ISO week to `exports/weekly/` in core's file
+//! storage; the monthly
 //! job archives the rollups that are kept indefinitely, runs the health
 //! check and vacuums the managed tables. Every archive is one gzipped JSON
 //! Lines file per table, streamed from `row_to_json`, so it is complete and
@@ -25,8 +26,8 @@ mod health;
 mod ledger;
 
 pub use daily_report::RetentionDailyReportJob;
-pub use export_monthly::RetentionExportMonthlyJob;
-pub use export_weekly::RetentionExportWeeklyJob;
+pub use export_monthly::{MonthlyParams, RetentionExportMonthlyJob};
+pub use export_weekly::{RetentionExportWeeklyJob, WeeklyParams};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ManagedTable {

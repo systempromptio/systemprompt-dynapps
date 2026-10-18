@@ -207,7 +207,7 @@ With this profile's `paths`:
 |---|---|---|
 | `system.logs` | `/app/logs` | per node, may be ephemeral |
 | `storage.files` | `/app/storage/files` | per node, or shared; see below |
-| `storage.exports` | `/app/storage/exports` | per node |
+| `storage.exports` | `/app/storage/exports` | per node; the weekly and monthly retention archives are not kept here but in the `storage:` backend under `exports/` |
 | `storage.data` | `/app/storage/data` (scratch under `data/scratch`) | per node, already `app_storage_data` |
 | `web.dist` | `/app/web/dist` | per node, already under `app_web` (admin and all roles) |
 | `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (admin and all roles) |

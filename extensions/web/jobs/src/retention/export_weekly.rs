@@ -1,12 +1,14 @@
 //! The weekly archive: the raw request tables for the previous ISO week,
-//! one gzipped JSON Lines file per table under
-//! `storage/exports/weekly/<yyyy>-W<ww>/` plus a manifest.
+//! one gzipped JSON Lines file per table under `exports/weekly/<yyyy>-W<ww>/`
+//! in core's file storage, plus a manifest.
 //!
 //! Raw rows expire between 7 and 180 days after they are written, so this is
-//! the only copy of a request older than its window. A week whose manifest
-//! already exists is skipped; `weeks_back` (default 1) reaches further back
-//! for a backfill, and `keep_weeks` (default 26) bounds the directory —
-//! but a week is only pruned once the monthly archive covering it exists.
+//! the only copy of a request older than its window, and it is stored where
+//! every replica can read it rather than on the pod that ran the job. A week
+//! the ledger already records is skipped; `weeks_back` (default 1) reaches
+//! further back for a backfill, and `keep_weeks` (default 26) bounds the
+//! archive — but a week is only pruned once the monthly archive covering it
+//! exists.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -15,10 +17,11 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
 use sqlx::PgPool;
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
-use systemprompt::traits::{Job, JobContext, JobResult};
+use systemprompt::system::AppContext;
+use systemprompt::traits::{FileStorage, Job, JobContext, JobResult};
 
 use super::RAW_TABLES;
-use super::archive::{ArchiveTarget, Window, archive_tables, prune_periods};
+use super::archive::{ArchiveTarget, Window, adopt_local_archives, archive_tables, prune_periods};
 use super::ledger::archive_exists;
 use crate::error::JobError;
 
@@ -29,7 +32,7 @@ const DEFAULT_KEEP_WEEKS: i64 = 26;
 pub struct RetentionExportWeeklyJob;
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct WeeklyParams {
+pub struct WeeklyParams {
     pub weeks_back: i64,
     pub keep_weeks: i64,
 }
@@ -48,13 +51,15 @@ pub(crate) fn iso_week(day: NaiveDate) -> (Window, String) {
 }
 
 impl RetentionExportWeeklyJob {
-    pub(crate) async fn execute_with_pool(
+    pub async fn execute_with_storage(
         pool: &PgPool,
+        storage: &dyn FileStorage,
         exports_root: &Path,
         params: WeeklyParams,
         now: DateTime<Utc>,
     ) -> Result<JobResult, JobError> {
         let started = std::time::Instant::now();
+        adopt_local_archives(pool, storage, exports_root, TIER).await?;
         let mut written: u64 = 0;
         let mut skipped: u64 = 0;
         for back in 1..=params.weeks_back.max(1) {
@@ -65,7 +70,7 @@ impl RetentionExportWeeklyJob {
             }
             let target = ArchiveTarget {
                 pool,
-                exports_root,
+                storage,
                 tier: TIER,
                 period: &period,
                 window,
@@ -80,7 +85,7 @@ impl RetentionExportWeeklyJob {
             );
             written += 1;
         }
-        let pruned = Self::prune(pool, exports_root, params.keep_weeks, now).await?;
+        let pruned = Self::prune(pool, storage, params.keep_weeks, now).await?;
         let duration_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
         Ok(JobResult::success()
             .with_stats(written, 0)
@@ -92,7 +97,7 @@ impl RetentionExportWeeklyJob {
 
     async fn prune(
         pool: &PgPool,
-        exports_root: &Path,
+        storage: &dyn FileStorage,
         keep_weeks: i64,
         now: DateTime<Utc>,
     ) -> Result<u64, JobError> {
@@ -102,7 +107,7 @@ impl RetentionExportWeeklyJob {
         if !archive_exists(pool, "monthly", &month).await? {
             return Ok(0);
         }
-        prune_periods(exports_root, TIER, &keep_from)
+        prune_periods(pool, storage, TIER, &keep_from).await
     }
 }
 
@@ -115,7 +120,7 @@ impl Job for RetentionExportWeeklyJob {
         vec![crate::registry::JOB_TAG]
     }
     fn description(&self) -> &'static str {
-        "Archives the previous ISO week of raw request, session and governance rows to storage/exports/weekly"
+        "Archives the previous ISO week of raw request, session and governance rows to exports/weekly in file storage"
     }
     fn schedule(&self) -> &'static str {
         "0 0 2 * * 0"
@@ -132,8 +137,10 @@ impl Job for RetentionExportWeeklyJob {
                 .get_parameter_parsed::<i64>("keep_weeks")?
                 .unwrap_or(DEFAULT_KEEP_WEEKS),
         };
-        Ok(Self::execute_with_pool(
+        let app = ctx.get::<Arc<AppContext>>()?;
+        Ok(Self::execute_with_storage(
             &db.write_pool(),
+            app.file_storage().as_ref(),
             paths.storage().exports(),
             params,
             Utc::now(),
