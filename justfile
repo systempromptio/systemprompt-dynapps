@@ -413,6 +413,7 @@ _lint-gates-uncoordinated:
         check-field-copy-from.sh
         check-repository-naming.sh
         check-plane-ownership.sh
+        check-ledger-reads.sh
         check-admin-template-links.sh
         check-admin-template-assets.sh
         # admin-css-classes + frontend-standards now run as cargo tests in
