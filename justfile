@@ -407,6 +407,7 @@ _lint-gates-uncoordinated:
         check-test-value.sh
         lint-silent-skips.sh
         lint-raw-ids.sh
+        lint-env-vars.sh
         check-glob-reexports.sh
         check-comments.sh
         check-yaml-comments.sh
