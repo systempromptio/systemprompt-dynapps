@@ -406,6 +406,8 @@ _lint-gates-uncoordinated:
         check-http-errors.sh
         check-test-value.sh
         lint-silent-skips.sh
+        lint-inline-tests.sh
+        lint-test-seams.sh
         lint-raw-ids.sh
         lint-env-vars.sh
         check-glob-reexports.sh
