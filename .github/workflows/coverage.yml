@@ -50,11 +50,12 @@ permissions:
 
 jobs:
   build:
-    # The root phase builds instrumented lib-test binaries that run no tests
-    # but whose objects carry the root crates' coverage maps into the report.
-    # It shares nothing with the tests/ phase's build (that phase compiles the
-    # same dependency graph under its own feature set), so it runs on its own
-    # runner beside tests/ + bridge instead of ahead of them.
+    # One leg per scripts/coverage.sh build phase, each on its own runner. The
+    # three workspaces compile the shared dependency graph under different
+    # feature sets and share no build output, so running them side by side
+    # costs nothing and bounds the run by the slowest leg. The root leg builds
+    # instrumented lib-test binaries that run no tests but whose objects carry
+    # the root crates' coverage maps into the report.
     name: Coverage build (${{ matrix.part }})
     runs-on: ubuntu-latest
     strategy:
@@ -63,11 +64,13 @@ jobs:
         include:
           - part: root
             phases: root
-          - part: tests-bridge
-            phases: tests bridge
+          - part: tests
+            phases: tests
+          - part: bridge
+            phases: bridge
     # Nothing instrumented is cached (see the rust-cache step), so every run
     # is a cold build.
-    timeout-minutes: 150
+    timeout-minutes: 80
     env:
       CARGO_INCREMENTAL: "0"
       # Why: instrumenting every crate inflates each object, and linking them
@@ -128,22 +131,22 @@ jobs:
       # one is titled by scripts/coverage-check.sh). The step timeout is the
       # backstop, and the job's leaves room for the pack and upload below.
       - name: Instrumented build and tests
-        timeout-minutes: 132
+        timeout-minutes: 65
         env:
           COVERAGE_PHASES: ${{ matrix.phases }}
         run: |
           set +e
-          timeout --signal=TERM --kill-after=60 125m just coverage
+          timeout --signal=TERM --kill-after=60 60m just coverage
           status=$?
           if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
-            echo "::error title=Coverage build timed out::the ${{ matrix.part }} half did not finish in 125 min; this is a runner-time problem, not a coverage drop"
+            echo "::error title=Coverage build timed out::the ${{ matrix.part }} leg did not finish in 60 min; this is a runner-time problem, not a coverage drop"
           fi
           exit "$status"
       # The instrumented executables and the raw profiles are the report's
       # whole input. tar keeps the exec bit, which the report's object scan
       # selects on and upload-artifact would drop.
-      # Why the condition: a half with a red test still built every object,
-      # and the report job wants them for its partial number. The root half
+      # Why the condition: a leg with a red test still built every object,
+      # and the report job wants them for its partial number. The root leg
       # runs no tests, so it packs objects and no profiles; /mnt itself is
       # root-owned, so the pack goes in the directory the disk step handed to
       # the runner user.
@@ -182,7 +185,7 @@ jobs:
   coverage:
     name: Coverage (floor + ratchet)
     needs: build
-    # Why always(): a build half that failed (a red test, or a workspace that
+    # Why always(): a build leg that failed (a red test, or a workspace that
     # did not compile) still uploads what it built, and a partial number is
     # still wanted; the last step keeps the job red in that case.
     if: always() && !cancelled()
@@ -214,10 +217,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p coverage-report/profraw
-          # A half that failed before packing uploads nothing; report over
+          # A leg that failed before packing uploads nothing; report over
           # what arrived, and the last step keeps the job red.
-          shopt -s nullglob
-          for a in /mnt/coverage-in/*.tar.zst; do zstd -dc "$a" | tar -xPf -; done
+          missing=""
+          for part in root tests bridge; do
+            if [ -f "/mnt/coverage-in/coverage-$part.tar.zst" ]; then
+              zstd -dc "/mnt/coverage-in/coverage-$part.tar.zst" | tar -xPf -
+            else
+              echo "::error title=Coverage leg missing::no coverage-$part archive arrived"
+              missing="$missing $part"
+            fi
+          done
+          echo "COVERAGE_MISSING_LEGS=${missing# }" >> "$GITHUB_ENV"
           find coverage-report/profraw -name '*.profraw' | wc -l
       # `tee` so the totals survive into the summary below; `pipefail` keeps
       # the job red when the ratchet trips.
@@ -252,7 +263,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Fail on a partial build
-        if: needs.build.result != 'success'
+        if: always() && (needs.build.result != 'success' || env.COVERAGE_MISSING_LEGS != '')
         run: |
-          echo "::error title=Coverage build incomplete::a coverage build half did not finish cleanly (${{ needs.build.result }}); the number above is partial"
+          echo "::error title=Coverage build incomplete::build result ${{ needs.build.result }}, missing legs: ${COVERAGE_MISSING_LEGS:-none}; the number above is partial"
           exit 1

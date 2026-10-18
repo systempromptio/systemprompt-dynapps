@@ -51,8 +51,8 @@ PROFDIR="$ROOT/coverage-report/profraw"
 TBASE="${COVERAGE_TARGET_DIR:-$ROOT/coverage-report/target}"
 
 # COVERAGE_PHASES picks a subset of root, tests, bridge and report, so CI can
-# build the root workspace on one runner while another builds and runs the
-# rest, and a third reports over both. Any build phase starts a fresh profile;
+# build each workspace on its own runner and report over all of them on
+# another. Any build phase starts a fresh profile;
 # a report-only run reads the profraw and objects it was handed.
 PHASES=" ${COVERAGE_PHASES:-root tests bridge report} "
 has_phase() { [[ "$PHASES" == *" $1 "* ]]; }
