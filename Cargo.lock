@@ -6325,7 +6325,6 @@ dependencies = [
  "systemprompt-security",
  "systemprompt-web-admin-core",
  "systemprompt-web-shared",
- "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -6447,9 +6446,7 @@ version = "0.70.2"
 dependencies = [
  "async-trait",
  "axum",
- "chrono",
  "inventory",
- "reqwest",
  "serde",
  "serde_json",
  "systemprompt",
