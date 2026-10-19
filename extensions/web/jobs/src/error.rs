@@ -1,7 +1,7 @@
 //! Error type shared by every job in this crate.
 
 use systemprompt::generator::PublishError;
-use systemprompt::traits::ProviderError;
+use systemprompt::traits::{FileStorageError, ProviderError};
 use systemprompt_web_admin_core::crypto::secret_crypto::SecretCryptoError;
 use systemprompt_web_shared::error::{InfraError, MarketplaceError};
 use thiserror::Error;
@@ -55,6 +55,13 @@ pub enum JobError {
 
     #[error("Identifier error: {0}")]
     Identifier(#[from] systemprompt::identifiers::error::IdValidationError),
+
+    #[error("store {object}")]
+    Store {
+        object: String,
+        #[source]
+        source: FileStorageError,
+    },
 
     #[error("{0}")]
     Other(String),

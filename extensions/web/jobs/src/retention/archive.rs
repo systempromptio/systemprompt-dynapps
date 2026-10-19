@@ -121,7 +121,10 @@ async fn store(storage: &dyn FileStorage, object: &str, body: &[u8]) -> Result<(
     storage
         .store(Path::new(object), body)
         .await
-        .map_err(|error| JobError::other(format!("store {object}: {error}")))?;
+        .map_err(|source| JobError::Store {
+            object: object.to_owned(),
+            source,
+        })?;
     Ok(())
 }
 
