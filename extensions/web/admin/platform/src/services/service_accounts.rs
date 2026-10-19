@@ -105,6 +105,11 @@ impl ServiceAccounts {
             })
             .await
             .map_err(AdminError::internal)?;
+        if !ensured.created {
+            return Err(AdminError::Conflict(
+                "An account with that email already exists".to_owned(),
+            ));
+        }
         Ok(ensured.user.id)
     }
 
