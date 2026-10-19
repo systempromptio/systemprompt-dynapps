@@ -266,7 +266,7 @@ scheduler:
     - name: audit_chain_seal
       extension: web
       owner: admin
-      schedule: "*/10 * * * * *"
+      schedule: "*/30 * * * * *"
       enabled: true
 
     # Audit hash chain (NFR-5.6): re-hashes the last two days of the
@@ -338,6 +338,7 @@ scheduler:
     - name: trace_facts_rollup
       extension: core
       owner: admin
+      schedule: "*/30 * * * * *"
       enabled: true
 
     - name: ai_request_tool_flag_rollup

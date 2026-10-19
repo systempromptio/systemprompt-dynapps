@@ -143,6 +143,9 @@ CREATE OR REPLACE FUNCTION refresh_conversation_facts(context_ids TEXT[])
 RETURNS BIGINT LANGUAGE plpgsql AS $$
 DECLARE written BIGINT; stamp TIMESTAMPTZ := clock_timestamp();
 BEGIN
+    IF cardinality(context_ids) = 0 THEN
+        RETURN 0;
+    END IF;
     WITH requests AS MATERIALIZED (
         SELECT r.*, ar.wire_protocol, ar.cache_read_tokens, ar.cache_creation_tokens,
                ar.reasoning_tokens, ar.is_streaming
