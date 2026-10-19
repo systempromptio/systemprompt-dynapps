@@ -260,7 +260,7 @@ scheduler:
       enabled: true
 
     # Audit hash chain sealer (NFR-5.6): links new ai_requests and
-    # ai_safety_findings rows into the chain every 10 s, one replica at a time
+    # ai_safety_findings rows into the chain every 30 s, one replica at a time
     # (advisory lock). The gateway insert path does not lock the chain head;
     # the seal lags by at most one interval. Schema 51_audit_integrity.sql.
     - name: audit_chain_seal
@@ -328,9 +328,9 @@ scheduler:
       owner: admin
       enabled: true
 
-    # Core projection drainers, on each job's built-in schedule (no
-    # `schedule:` override): every 10 s for trace_facts_rollup, once a minute
-    # at a staggered second for the rest. Each drains a queue its source
+    # Core projection drainers: trace_facts_rollup every 30 s (overridden
+    # above), the rest on their built-in schedule, once a minute at a
+    # staggered second. Each drains a queue its source
     # table's triggers fill into the stored facts a list view reads, so an
     # empty queue is a cheap no-op. backfill_rollups is the same shape: it
     # drains the hours migrations queued for the hourly AI, tool and
