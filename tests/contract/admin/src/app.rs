@@ -118,9 +118,12 @@ impl App {
         let ssr = admin::admin_ssr_router(
             &database,
             Arc::clone(pool),
-            engine.clone(),
-            sso_deps,
-            managed,
+            admin::AdminSsrDeps {
+                engine: engine.clone(),
+                sso_deps,
+                managed,
+                files: Arc::clone(&farm_state.artefacts),
+            },
         )
         .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>))
         .layer(axum::Extension(Arc::clone(&farm_state)));

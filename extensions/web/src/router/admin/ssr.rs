@@ -20,6 +20,7 @@ use tower_http::normalize_path::NormalizePathLayer;
 use super::{login, marketplace_context, middleware, redirects};
 use systemprompt::database::DbPool;
 use systemprompt::prelude::PgPool;
+use systemprompt::traits::FileStorage;
 use systemprompt::users::UserRepository;
 use systemprompt_web_admin_analytics::routes::{
     activity_ssr, analysis_ssr, export_ssr, observability_ssr, overview,
@@ -33,13 +34,26 @@ use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as
 use systemprompt_web_admin_platform::routes::{platform_ssr, ssr_bridge};
 use systemprompt_web_admin_platform::service_accounts::ServiceAccounts;
 
-pub fn admin_ssr_router(
-    db: &DbPool,
-    pool: Arc<PgPool>,
-    engine: AdminTemplateEngine,
-    sso_deps: SsoDeps,
-    managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
-) -> Router {
+pub struct AdminSsrDeps {
+    pub engine: AdminTemplateEngine,
+    pub sso_deps: SsoDeps,
+    pub managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
+    pub files: Arc<dyn FileStorage>,
+}
+
+impl std::fmt::Debug for AdminSsrDeps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AdminSsrDeps").finish_non_exhaustive()
+    }
+}
+
+pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> Router {
+    let AdminSsrDeps {
+        engine,
+        sso_deps,
+        managed,
+        files,
+    } = deps;
     let inner = overview::routes()
         .merge(people_routes())
         .merge(ai_activity_routes())
@@ -54,6 +68,7 @@ pub fn admin_ssr_router(
         .layer(Extension(engine.clone()))
         .layer(Extension(ServiceAccounts::new(UserRepository::new(db))))
         .layer(Extension(managed))
+        .layer(Extension(files))
         .layer(Extension(sso_deps.clone()))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),

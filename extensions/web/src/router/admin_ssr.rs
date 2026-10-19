@@ -30,12 +30,14 @@ pub(crate) fn build(
     let admin = admin::admin_ssr_router(
         &db.db,
         Arc::clone(&db.read),
-        engine.clone(),
-        sso_deps,
-        Arc::clone(&db.managed),
+        admin::AdminSsrDeps {
+            engine: engine.clone(),
+            sso_deps,
+            managed: Arc::clone(&db.managed),
+            files: Arc::clone(&db.files),
+        },
     )
-    .layer(Extension(Arc::clone(&db.farm)))
-    .layer(Extension(Arc::clone(&db.files)));
+    .layer(Extension(Arc::clone(&db.farm)));
     Some(SsrRouters {
         bridge_auth: admin::bridge_auth_ssr_router(Arc::clone(&db.read), engine),
         admin,
