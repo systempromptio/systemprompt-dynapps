@@ -18,3 +18,6 @@ mod personal_key_badge;
 
 #[cfg(test)]
 mod support;
+
+#[cfg(test)]
+mod opencode_endpoint;
