@@ -29,6 +29,7 @@ use systemprompt::manifest::services::{
 };
 
 use systemprompt::identifiers::SecretName;
+use systemprompt::models::providers::ApiSurface;
 
 use crate::support::repo_root;
 
@@ -329,6 +330,27 @@ fn opencode_go_is_served_only_by_the_members_own_key() {
         assert!(
             p.models.iter().all(|m| m.id.as_str().starts_with("go-")),
             "{name} serves only namespaced go-* ids"
+        );
+    }
+}
+
+// Why: a `backend` surface is never advertised, so deepseek-* and go-* were
+// callable but listed in no client; `openai` lists them to OpenCode only.
+#[test]
+fn deepseek_and_opencode_go_are_listed_to_opencode_but_not_to_claude_hosts() {
+    let registry = registry();
+    let openai = registry.advertised_model_ids(&[ApiSurface::OpenAi]);
+    let anthropic = registry.advertised_model_ids(&[ApiSurface::Anthropic]);
+    for id in [
+        "deepseek-flash",
+        "deepseek-v4-pro",
+        "go-kimi-k3",
+        "go-minimax-m3",
+    ] {
+        assert!(openai.iter().any(|m| m == id), "{id} must reach OpenCode");
+        assert!(
+            !anthropic.iter().any(|m| m == id),
+            "{id} must stay out of the Claude hosts"
         );
     }
 }

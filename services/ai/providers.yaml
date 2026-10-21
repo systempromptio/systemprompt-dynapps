@@ -107,11 +107,16 @@ providers:
   # rates (as republished by benchlm.ai/deepseek/api-pricing); off-peak is half.
   # Peak overstates cost, which keeps the Claude comparison conservative.
   # DeepSeek bills no cache write, so a write costs the cache-miss rate.
+  #
+  # Why: `surface: openai` advertises these ids to OpenCode (which takes every
+  # surface) and keeps them out of Claude Desktop and Claude Code, which accept
+  # only the anthropic surface. A `backend` surface is never advertised, which
+  # left deepseek-* callable but invisible in every client.
   display_name: DeepSeek
   description: >-
     DeepSeek models on DeepSeek's own API (Anthropic-compatible endpoint), authenticated with the deepseek key. Served only when a deepseek-* id is requested.
   wire: anthropic
-  surface: backend
+  surface: openai
   endpoint: https://api.deepseek.com/anthropic/v1
   api_key_secret: deepseek
   governance:
@@ -174,12 +179,14 @@ providers:
   # Ids are namespaced `go-<upstream>` so they never clash with our own
   # deepseek-* route. This entry is the Chat Completions endpoint; the
   # Anthropic-Messages family is opencode-go-anthropic below. Responses- and
-  # Google-wire Go models are left out of v1.
+  # Google-wire Go models are left out of v1. Both Go entries take
+  # `surface: openai` for the same reason as deepseek: OpenCode lists them,
+  # the Claude hosts do not.
   display_name: OpenCode Go
   description: >-
     OpenCode Go models (GLM, Kimi, DeepSeek, MiMo) on the Chat Completions endpoint, authenticated with the member's own Go subscription key.
   wire: openai-chat
-  surface: backend
+  surface: openai
   endpoint: https://opencode.ai/inference/go/openai/v1
   credential: user
   user_agent: "systemprompt-gateway (opencode-go; dynapps)"
@@ -327,7 +334,7 @@ providers:
   description: >-
     OpenCode Go models (MiniMax, Qwen) on the Anthropic Messages endpoint, authenticated with the member's own Go subscription key.
   wire: anthropic
-  surface: backend
+  surface: openai
   endpoint: https://opencode.ai/inference/go/anthropic/v1
   accepted_betas: []
   credential: user
