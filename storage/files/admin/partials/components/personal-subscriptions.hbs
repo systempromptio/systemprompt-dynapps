@@ -1,0 +1,27 @@
+{{!-- Personal subscriptions: the member's own provider keys (OpenCode Go). Rows are rendered by /js/pages/admin-subscriptions.js from the relay at /admin/api/profile/provider-credentials; shared by /admin/profile and /admin/connectors. --}}
+<section class="sp-p-profile__subscriptions" aria-label="Personal subscriptions" data-subscriptions>
+    {{> components/section title="Personal subscriptions" note="Your own model subscriptions, such as OpenCode Go. The gateway sends those models' requests with your key: governance and audit still apply, and usage bills to your subscription. One key per person; never add a shared or borrowed key."}}
+    <div class="sp-card">
+        <div class="sp-card__body">
+            <p class="sp-u-text-sm sp-u-text-secondary" data-subscriptions-status role="status" aria-live="polite">Loading your subscriptions…</p>
+            <ul class="sp-p-profile__subscription-list" data-subscriptions-list></ul>
+            <noscript><p class="sp-u-text-sm">Managing subscriptions needs JavaScript; the bridge's Settings page does the same.</p></noscript>
+            <p class="sp-u-text-xs sp-u-text-tertiary"><a href="/documentation/opencode-go-subscription">Bring your own OpenCode Go subscription</a></p>
+        </div>
+    </div>
+    <template data-subscription-row>
+        <li class="sp-p-profile__subscription">
+            <div class="sp-p-profile__subscription-head">
+                <span class="sp-u-text-semibold" data-field="name"></span>
+                <span class="sp-badge" data-field="state"></span>
+                <span class="sp-u-text-xs sp-u-text-tertiary" data-field="meta"></span>
+            </div>
+            <form class="sp-p-profile__subscription-form" data-action="save">
+                <input type="password" name="api_key" autocomplete="off" required placeholder="Paste your API key" aria-label="API key">
+                <input type="text" name="label" maxlength="64" placeholder="Label (optional)" aria-label="Label">
+                <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Save and test</button>
+                <button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-action="remove">Remove</button>
+            </form>
+        </li>
+    </template>
+</section>

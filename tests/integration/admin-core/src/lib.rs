@@ -87,6 +87,8 @@ mod history_unified;
 #[cfg(test)]
 mod mcp_servers_yaml;
 #[cfg(test)]
+mod personal_provider_keys;
+#[cfg(test)]
 mod req_026_audit_completeness;
 #[cfg(test)]
 mod req_044_access_matrix;
@@ -147,6 +149,8 @@ mod groups_marketplaces;
 mod groups_members;
 #[cfg(test)]
 mod groups_usage;
+#[cfg(test)]
+mod member_subscriptions;
 #[cfg(test)]
 mod projects_crud;
 #[cfg(test)]

@@ -15,6 +15,7 @@ pub mod dev_login;
 pub mod groups;
 pub mod people_usage;
 pub mod projects;
+pub mod provider_credentials;
 pub mod roles;
 pub mod sync_planes;
 pub mod users;
