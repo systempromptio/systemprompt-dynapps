@@ -14,7 +14,7 @@ use systemprompt::gateway::protocol::inbound::anthropic_messages::AnthropicMessa
 use systemprompt::gateway::{GatewayAudit, GatewayRepositories, GatewayRequestContext};
 use systemprompt::identifiers::{AiRequestId, AiToolCallId, ContextId, SessionId, TraceId, UserId};
 use systemprompt::wire::canonical::{CanonicalResponse, CanonicalUsage};
-use systemprompt_security::policy::types::AccessScope;
+use systemprompt::governance::policy::types::AccessScope;
 
 async fn profile() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("profile directory");

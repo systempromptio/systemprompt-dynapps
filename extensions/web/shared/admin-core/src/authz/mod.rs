@@ -44,7 +44,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzHookContext, NullAuditSink, SharedSubjectAttributeProvider, SubjectAttributes,
     SubjectDimension, dimensions_of, discover_subject_providers, gather_subject_attributes,
 };

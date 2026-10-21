@@ -11,7 +11,7 @@
 
 use serde::Serialize;
 use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     ParentChainIndex, RuleType, SubjectAttributes, SubjectDimension,
 };
 

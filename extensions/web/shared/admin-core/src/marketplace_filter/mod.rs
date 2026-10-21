@@ -23,7 +23,7 @@ use systemprompt::marketplace::{
     KeepSetsSubject, MarketplaceCandidate, MarketplaceFilter, MarketplaceFilterError, keep_sets,
     register_marketplace_filter,
 };
-use systemprompt_security::authz::AccessControlRepository;
+use systemprompt::governance::authz::AccessControlRepository;
 
 use crate::authz::{dimensions, subject_attributes_for};
 use crate::connections::Connection;

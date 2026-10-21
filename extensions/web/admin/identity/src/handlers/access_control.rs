@@ -9,7 +9,7 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt::security::authz::{EntityKind, RegisteredEntities};
+use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 
 use systemprompt_web_admin_core::activity::{ActivityEntity, NewActivity};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};

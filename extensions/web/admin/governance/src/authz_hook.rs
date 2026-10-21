@@ -12,7 +12,7 @@
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzDecision, AuthzDecisionHook, AuthzRequest, SharedAuthzHook,
 };
 
@@ -35,7 +35,7 @@ impl AuthzDecisionHook for InstallationAuthzHook {
     }
 }
 
-systemprompt_security::register_authz_hook!(|ctx| {
+systemprompt::governance::register_authz_hook!(|ctx| {
     let hook: SharedAuthzHook = Arc::new(InstallationAuthzHook::new(Arc::clone(&ctx.pool)));
     hook
 });

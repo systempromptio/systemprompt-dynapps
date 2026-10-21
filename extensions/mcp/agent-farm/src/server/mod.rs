@@ -22,7 +22,7 @@ use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
 };
-use systemprompt::security::authz::SharedAuthzHook;
+use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt_mcp_shared::auth::authenticate_tool_request;
 use systemprompt_mcp_shared::record_mcp_access;

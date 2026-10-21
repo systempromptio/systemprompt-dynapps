@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzError, SharedSubjectAttributeProvider, SubjectAttributeProvider, SubjectDimension,
 };
 

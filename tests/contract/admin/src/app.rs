@@ -133,8 +133,11 @@ impl App {
         // extension router; hooks, secrets and share sit outside the route
         // modules the contract table is derived from.
         let governance = Arc::new(
-            systemprompt_security::policy::GovernanceEngine::from_config(
-                &systemprompt_security::policy::GovernanceConfig::defaults(),
+            systemprompt::governance::policy::GovernanceEngine::from_config(
+                &systemprompt::governance::policy::GovernanceConfig::defaults(),
+                Some(systemprompt::governance::policy::RateWindowRepository::new(
+                    PgPool::clone(pool),
+                )),
             )
             .expect("build the default governance chain"),
         );

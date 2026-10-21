@@ -4,7 +4,7 @@ use super::super::types::{GovernanceDecision, GovernanceResponse, HookSpecificOu
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use systemprompt_security::authz::Decision;
+use systemprompt::governance::authz::Decision;
 
 // Why: Claude Code reads a hook's error status as "hook unavailable" and lets
 // the call through, so every verdict — failures included — is a 200 envelope.

@@ -13,7 +13,7 @@
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{Actor, ContextId};
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AccessRule, AuthzRequest, Decision, DecisionTag, EntityRow, GovernanceDecisionRecord,
     insert_governance_decision,
 };

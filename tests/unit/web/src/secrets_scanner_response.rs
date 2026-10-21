@@ -3,12 +3,12 @@
 // reading only that variant lets it out; these tests pin the widened surface.
 
 use systemprompt::gateway::SafetyScanner;
+use systemprompt::governance::policy::{GovernanceConfig, GovernanceEngine};
 use systemprompt::identifiers::ModelId;
 use systemprompt::wire::canonical::{
     CanonicalContent, CanonicalMessage, CanonicalRequest, CanonicalResponse, Role,
 };
 use systemprompt::wire::inspect::{SurfaceBudget, string_leaves};
-use systemprompt_security::policy::{GovernanceConfig, GovernanceEngine};
 use systemprompt_web_admin_governance::gateway_safety::SecretsScanner;
 
 const TOKEN: &str = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -18,7 +18,8 @@ fn configured_scanner() -> SecretsScanner {
     let config =
         GovernanceConfig::parse(include_str!("../../../../services/governance/config.yaml"))
             .unwrap();
-    let engine = GovernanceEngine::from_config(&config).unwrap();
+    let engine =
+        GovernanceEngine::from_config(&config, crate::support::uncharged_rate_windows()).unwrap();
     SecretsScanner::with_scanner(engine.secret_scanner().unwrap().clone())
 }
 

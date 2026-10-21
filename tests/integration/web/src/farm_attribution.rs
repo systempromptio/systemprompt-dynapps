@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use systemprompt_security::authz::SubjectAttributeProvider;
+use systemprompt::governance::authz::SubjectAttributeProvider;
 use systemprompt_web_admin_farm::attribution::FarmAttributeProvider;
 use systemprompt_web_admin_farm::services::runs::cancel;
 

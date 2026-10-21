@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AccessControlRepository, BulkKeepQuery, ChainSources, EntityKind, ParentChainIndex, allowed_ids,
 };
 use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};

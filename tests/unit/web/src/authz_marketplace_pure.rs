@@ -12,7 +12,7 @@ use systemprompt::marketplace::{EntryKeepSets, MarketplaceCandidate, Marketplace
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
 };
-use systemprompt_security::authz::{EntityKind, EntityRef};
+use systemprompt::governance::authz::{EntityKind, EntityRef};
 use systemprompt_web_admin_identity::authz::group::{group_dimension, group_rule_type};
 use systemprompt_web_admin_identity::authz::project::{project_dimension, project_rule_type};
 

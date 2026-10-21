@@ -4,7 +4,7 @@
 //! manage-role test the expiry sweep revokes on.
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use systemprompt_security::authz::{Access, RegisteredEntities};
+use systemprompt::governance::authz::{Access, RegisteredEntities};
 use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredKey, DeclaredSet, build_declared_set,
 };

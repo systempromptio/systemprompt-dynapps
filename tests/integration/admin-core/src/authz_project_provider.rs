@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use systemprompt_security::authz::SubjectAttributeProvider;
+use systemprompt::governance::authz::SubjectAttributeProvider;
 use systemprompt_web_admin_identity::authz::project::{
     ProjectAttributeProvider, project_rule_type,
 };

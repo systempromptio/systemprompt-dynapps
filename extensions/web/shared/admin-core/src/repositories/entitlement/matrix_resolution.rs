@@ -4,7 +4,7 @@ use super::matrix_source::{allow_source, deny_source};
 use crate::types::access_control::{AccessControlRule, AccessDecision};
 use std::str::FromStr;
 use systemprompt::identifiers::{RuleId, UserId};
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     Access, AccessRule, Decision, EntityKind, SubjectAttributes, SubjectDimension,
 };
 fn as_access_rule(row: &AccessControlRule) -> AccessRule {
@@ -33,7 +33,7 @@ pub(crate) struct MatrixCell<'a> {
 
 pub(super) fn resolve_effective_with(
     cell: &MatrixCell<'_>,
-    chains: &systemprompt_security::authz::ParentChainIndex,
+    chains: &systemprompt::governance::authz::ParentChainIndex,
 ) -> (String, MatrixSource) {
     let Ok(kind) = EntityKind::from_str(cell.entity_type) else {
         return (
@@ -60,7 +60,7 @@ pub(super) fn resolve_effective_with(
     let decision = chains.resolve(
         kind,
         cell.entity_id,
-        systemprompt_security::authz::ResolveBase {
+        systemprompt::governance::authz::ResolveBase {
             rules: &rules,
             user_id: uid,
             user_roles: cell.subject_roles,

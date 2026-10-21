@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
@@ -68,7 +68,7 @@ impl SubjectAttributeProvider for GroupAttributeProvider {
     }
 }
 
-systemprompt_security::register_subject_attribute_provider!(|ctx| {
+systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
         systemprompt_web_admin_core::authz::cached::cached_provider(GroupAttributeProvider::new(
             Arc::clone(&ctx.pool),

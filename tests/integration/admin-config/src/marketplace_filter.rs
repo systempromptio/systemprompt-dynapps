@@ -17,7 +17,7 @@ use systemprompt::marketplace::{
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
 };
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
 // Why: the filter reads connection snapshots through an `inventory`
@@ -119,7 +119,7 @@ impl Harness {
                 rule_value: role,
                 access,
                 justification: None,
-                source: systemprompt_security::authz::DASHBOARD_SOURCE,
+                source: systemprompt::governance::authz::DASHBOARD_SOURCE,
             })
             .await
             .expect("upsert rule");
@@ -462,7 +462,7 @@ async fn a_group_rule_admits_only_members_of_that_group() {
             rule_value: &group,
             access: Access::Allow,
             justification: None,
-            source: systemprompt_security::authz::DASHBOARD_SOURCE,
+            source: systemprompt::governance::authz::DASHBOARD_SOURCE,
         })
         .await
         .expect("upsert group rule");

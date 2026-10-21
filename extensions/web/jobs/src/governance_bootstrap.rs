@@ -34,7 +34,7 @@
 use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
-use systemprompt::security::authz::{EntityKind, RegisteredEntities};
+use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 
 use crate::error::JobError;
 use systemprompt_web_admin_core::repositories::access_rules::declared_load::{
@@ -143,7 +143,7 @@ pub struct GovernanceStatus {
 pub fn check_governance_config(
     services_path: &std::path::Path,
 ) -> Result<GovernanceStatus, JobError> {
-    use systemprompt::security::policy::GovernanceConfig;
+    use systemprompt::governance::policy::GovernanceConfig;
 
     let path = services_path.join("governance/config.yaml");
     let config = GovernanceConfig::load(&path)

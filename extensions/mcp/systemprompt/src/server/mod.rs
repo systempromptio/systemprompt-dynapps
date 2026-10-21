@@ -29,7 +29,7 @@ use systemprompt::mcp::{
     build_resource_template_list_result, build_tool_list_result, parse_artifact_resource_uri,
     read_artifact_resource, read_artifact_viewer_resource,
 };
-use systemprompt::security::authz::SharedAuthzHook;
+use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt_mcp_shared::auth::authenticate_tool_request;
 use systemprompt_mcp_shared::record_mcp_access;

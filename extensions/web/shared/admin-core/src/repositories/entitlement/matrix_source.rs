@@ -6,7 +6,7 @@
 //! reading the matrix.
 
 use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{DenyReason, MatchedBy};
+use systemprompt::governance::authz::{DenyReason, MatchedBy};
 
 use super::matrix::MatrixSource;
 

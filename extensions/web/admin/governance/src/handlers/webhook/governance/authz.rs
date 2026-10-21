@@ -11,7 +11,7 @@ use std::sync::Arc;
 use axum::Json;
 use axum::extract::State;
 use sqlx::PgPool;
-use systemprompt_security::authz::{AuthzDecision, AuthzRequest};
+use systemprompt::governance::authz::{AuthzDecision, AuthzRequest};
 
 // Why: core's hook caller reads a non-200 status as "hook unavailable" and
 // lets the call through, so every answer is 200, a failure a deny body.

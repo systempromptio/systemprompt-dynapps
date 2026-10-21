@@ -29,7 +29,7 @@ use systemprompt::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
 use std::sync::LazyLock;
 
-use systemprompt_security::policy::{GovernanceConfig, GovernedInput, SecretScanner};
+use systemprompt::governance::policy::{GovernanceConfig, GovernedInput, SecretScanner};
 
 static CONFIGURED_SCANNER: LazyLock<Option<SecretScanner>> = LazyLock::new(|| {
     let profile = systemprompt::config::ProfileBootstrap::get()

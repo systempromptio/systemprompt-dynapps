@@ -6,7 +6,7 @@
 //! nothing, while every other kind is addressed by a name an operator chose.
 
 use chrono::Utc;
-use systemprompt_security::authz::DASHBOARD_SOURCE;
+use systemprompt::governance::authz::DASHBOARD_SOURCE;
 
 use super::bands::{band_label, band_rank, chips, resolution};
 use super::entities::SYNC_URL;

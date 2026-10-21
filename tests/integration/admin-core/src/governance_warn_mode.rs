@@ -18,15 +18,15 @@
 use std::path::PathBuf;
 
 use serde_json::json;
-use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
-use systemprompt_security::authz::list_governance_warnings;
-use systemprompt_security::authz::types::DecisionTag;
-use systemprompt_security::policy::types::AccessScope;
-use systemprompt_security::policy::{
+use systemprompt::governance::authz::list_governance_warnings;
+use systemprompt::governance::authz::types::DecisionTag;
+use systemprompt::governance::policy::types::AccessScope;
+use systemprompt::governance::policy::{
     AgentScope, AuditOrigin, AuditTarget, ChainEntryResult, DecisionAudit, Evaluation,
     GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput, PolicyContext,
     PolicyMode, PrincipalSnapshot, RateCounts, record_decision,
 };
+use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
@@ -43,8 +43,23 @@ fn shipped_config() -> GovernanceConfig {
     GovernanceConfig::parse(&yaml).expect("the shipped governance config parses")
 }
 
+// Why: core refuses a chain whose `rate_limit` window it cannot count. The
+// chain-only gates here evaluate with stated `RateCounts` and never charge, so
+// a pool that never connects satisfies the check without a database.
+fn uncharged_rate_windows() -> Option<systemprompt::governance::policy::RateWindowRepository> {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .idle_timeout(None)
+        .max_lifetime(None)
+        .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+        .expect("a lazy pool never connects");
+    Some(systemprompt::governance::policy::RateWindowRepository::new(
+        pool,
+    ))
+}
+
 fn shipped_engine() -> GovernanceEngine {
-    GovernanceEngine::from_config(&shipped_config()).expect("shipped governance config is valid")
+    GovernanceEngine::from_config(&shipped_config(), uncharged_rate_windows())
+        .expect("shipped governance config is valid")
 }
 
 // 32 random bytes as unpadded base64: no vendor prefix, decodes to nothing
@@ -95,8 +110,7 @@ impl<'a> Call<'a> {
     // Why: core charges rate_limit's window in Postgres before evaluation and
     // hands the chain the call's position; a test of the chain alone states it.
     fn evaluate_as_call(&self, engine: &GovernanceEngine, position: u64) -> Evaluation {
-        let mut rate_counts = RateCounts::empty();
-        rate_counts.record(PolicyId::new("rate_limit"), position);
+        let rate_counts = RateCounts::charged([(PolicyId::new("rate_limit"), position)]);
         engine.evaluate(&PolicyContext {
             target: self.target.clone(),
             agent_scope: AgentScope::User {

@@ -26,7 +26,7 @@ use std::sync::{Arc, LazyLock};
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AccessControlRepository, AccessRule, AuthzDecision, AuthzRequest, ChainSources, Decision,
     DenyReason, EntityKind, EntityRow, ParentChainIndex, ResolveBase, SubjectAttributes,
 };
@@ -75,7 +75,7 @@ pub async fn entity_grant(
         return Ok(grant);
     }
     let repo = AccessControlRepository::from_pool(Arc::clone(pool));
-    let to_sqlx = |e: systemprompt_security::authz::AuthzError| {
+    let to_sqlx = |e: systemprompt::governance::authz::AuthzError| {
         sqlx::Error::Protocol(format!("{kind:?} {id}: {e}"))
     };
     let rules = repo

@@ -18,7 +18,7 @@
 use std::path::Path;
 
 use systemprompt::loader::ConfigLoader;
-use systemprompt_security::authz::{EntityKind, RegisteredEntities};
+use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::declared::{DeclaredInputs, DeclaredSet, build_declared_set};

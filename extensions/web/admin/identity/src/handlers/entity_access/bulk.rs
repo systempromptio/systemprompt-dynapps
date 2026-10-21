@@ -11,7 +11,7 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
-use systemprompt_security::authz::{Access, AccessRule, EntityRef};
+use systemprompt::governance::authz::{Access, AccessRule, EntityRef};
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 

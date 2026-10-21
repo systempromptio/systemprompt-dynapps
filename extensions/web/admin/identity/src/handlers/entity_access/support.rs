@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 use systemprompt::identifiers::RoleId;
-use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind, RuleType};
+use systemprompt::governance::authz::{Access, AccessControlRepository, EntityKind, RuleType};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
 use crate::repositories;

@@ -7,11 +7,11 @@
 //! run is untouched.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{PolicyId, SessionId};
-use systemprompt_security::authz::{Decision, DenyReason};
-use systemprompt_security::policy::{
+use systemprompt::governance::authz::{Decision, DenyReason};
+use systemprompt::governance::policy::{
     ChainEntryOutcome, ChainEntryResult, Evaluation, GovernedTarget,
 };
+use systemprompt::identifiers::{PolicyId, SessionId};
 use systemprompt_web_admin_core::util::tool_allowlist::{
     FARM_TOOL_ALLOWLIST_POLICY, MCP_TOOL_PREFIX, undeclared_mcp_tool,
 };

@@ -10,7 +10,7 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::{PgExecutor, PgPool};
-use systemprompt_security::authz::Access;
+use systemprompt::governance::authz::Access;
 
 use super::drift::{BandRuleRow, EntityDefaultRow};
 use crate::types::access_control::AccessDecision;

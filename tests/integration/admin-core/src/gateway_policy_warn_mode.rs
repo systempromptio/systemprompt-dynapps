@@ -24,7 +24,7 @@ use systemprompt::gateway::{
 };
 use systemprompt::identifiers::UserId;
 use systemprompt::models::attribution::RequestAttribution;
-use systemprompt::security::authz::{AuthzHookContext, NullAuditSink, SubjectProviderSet};
+use systemprompt::governance::authz::{AuthzHookContext, NullAuditSink, SubjectProviderSet};
 
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;

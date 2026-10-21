@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use systemprompt_security::authz::SubjectAttributeProvider;
+use systemprompt::governance::authz::SubjectAttributeProvider;
 use systemprompt_web_admin_core::repositories::principal::group_membership::list_group_ids_for_user;
 use systemprompt_web_admin_core::repositories::scope::expiry::revoke_expired_memberships;
 use systemprompt_web_admin_identity::authz::group::GroupAttributeProvider;
