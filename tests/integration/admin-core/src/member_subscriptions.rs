@@ -18,7 +18,7 @@ async fn list_provider_credential_holders_returns_metadata_per_member_and_provid
          VALUES ($1, 'opencode-go', 'sealed-secret-ciphertext', 'nonce-hex', 'laptop', now())",
     )
     .bind(user.as_str())
-    .execute(&db.pool)
+    .execute(&*db.pool)
     .await
     .expect("seed a credential");
 

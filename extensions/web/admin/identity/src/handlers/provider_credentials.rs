@@ -73,7 +73,7 @@ async fn relay(
         StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let content_type = upstream
         .headers()
-        .get(reqwest::header::CONTENT_TYPE)
+        .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
         .unwrap_or("application/json")
         .to_owned();
