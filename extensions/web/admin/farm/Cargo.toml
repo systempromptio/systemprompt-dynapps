@@ -9,14 +9,14 @@ homepage.workspace = true
 publish = false
 
 [package.metadata.cargo-machete]
-# Declared for the sync and eval phases that land on this scaffold.
-ignored = ["walkdir", "tempfile", "uuid", "tracing"]
+# Why: register_subject_attribute_provider! expands to ::inventory paths,
+# which machete cannot see.
+ignored = ["inventory"]
 
 [dependencies]
 # Foundation
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
-systemprompt-security = { workspace = true }
 inventory = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
 
@@ -43,6 +43,7 @@ thiserror = { workspace = true }
 
 # Fly Machines API and the worker wire format
 reqwest = { workspace = true }
+futures-util = { workspace = true }
 base64 = { workspace = true }
 sha2 = { workspace = true }
 
@@ -57,7 +58,6 @@ hex = { workspace = true }
 
 # Source capture and run workspaces
 walkdir = { workspace = true }
-tempfile = { workspace = true }
 
 [lints]
 workspace = true

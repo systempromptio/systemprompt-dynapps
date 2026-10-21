@@ -16,7 +16,7 @@ use systemprompt::database::DbPool;
 use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult};
 use systemprompt_web_admin_farm::services::scheduled::{ScheduledLaunch, launch_scheduled};
-use systemprompt_web_admin_farm::state::build_farm_state_with_ai;
+use systemprompt_web_admin_farm::state::{FarmHost, build_farm_state_with_ai};
 use systemprompt_web_admin_farm::types::{FarmAgentId, FarmId};
 
 use crate::error::JobError;
@@ -44,11 +44,17 @@ impl FarmScheduledRunJob {
         };
         let db = ctx.get::<DbPool>()?;
         let paths = ctx.get::<Arc<AppPaths>>().ok().map(Arc::clone);
-        let ai = ctx
-            .get::<Arc<AppContext>>()
-            .ok()
-            .and_then(|app| app.ai_service_arc());
-        let state = build_farm_state_with_ai(db.write_pool(), paths.as_deref(), ai);
+        let app = ctx.get::<Arc<AppContext>>()?;
+        let host = FarmHost {
+            artefacts: Arc::clone(app.file_storage()),
+            instance: app.config().instance_id.clone(),
+        };
+        let state = build_farm_state_with_ai(
+            db.write_pool(),
+            paths.as_deref(),
+            app.ai_service_arc(),
+            host,
+        );
         let launcher = scheduled.launcher.clone();
         let Some(run) = launch_scheduled(&state, scheduled)
             .await

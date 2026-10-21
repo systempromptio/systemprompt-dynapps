@@ -118,9 +118,12 @@ impl App {
         let ssr = admin::admin_ssr_router(
             &database,
             Arc::clone(pool),
-            engine.clone(),
-            sso_deps,
-            managed,
+            admin::AdminSsrDeps {
+                engine: engine.clone(),
+                sso_deps,
+                managed,
+                files: Arc::clone(&farm_state.artefacts),
+            },
         )
         .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>))
         .layer(axum::Extension(Arc::clone(&farm_state)));
@@ -130,8 +133,11 @@ impl App {
         // extension router; hooks, secrets and share sit outside the route
         // modules the contract table is derived from.
         let governance = Arc::new(
-            systemprompt_security::policy::GovernanceEngine::from_config(
-                &systemprompt_security::policy::GovernanceConfig::defaults(),
+            systemprompt::governance::policy::GovernanceEngine::from_config(
+                &systemprompt::governance::policy::GovernanceConfig::defaults(),
+                Some(systemprompt::governance::policy::RateWindowRepository::new(
+                    PgPool::clone(pool),
+                )),
             )
             .expect("build the default governance chain"),
         );

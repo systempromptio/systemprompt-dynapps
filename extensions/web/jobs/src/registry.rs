@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use systemprompt::traits::{Job, JobContext, JobResult, ProviderError};
+use systemprompt::traits::{Job, JobContext, JobResult, JobScope, ProviderError};
 
 pub const JOB_TAG: &str = "web-extension";
 
@@ -52,5 +52,13 @@ impl Job for StaticJob {
 
     fn schedulable(&self) -> bool {
         self.0.schedulable()
+    }
+
+    fn configured(&self) -> bool {
+        self.0.configured()
+    }
+
+    fn scope(&self) -> JobScope {
+        self.0.scope()
     }
 }

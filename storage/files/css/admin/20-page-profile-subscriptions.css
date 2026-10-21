@@ -1,0 +1,39 @@
+@layer components {
+
+/* Personal subscriptions: one row per user-credential provider, its state
+   and facts on top, the add/remove controls underneath on one wrapping line. */
+.sp-p-profile__subscriptions { margin-block: 0 var(--sp-space-4); }
+
+.sp-p-profile__subscription-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sp-p-profile__subscription {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+}
+
+.sp-p-profile__subscription-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-3);
+}
+
+.sp-p-profile__subscription-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin-block-start: var(--sp-space-2);
+}
+
+.sp-p-profile__subscription-form input { flex: 1 1 12rem; min-width: 0; }
+
+}

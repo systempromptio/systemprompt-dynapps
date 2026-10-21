@@ -14,7 +14,6 @@ systemprompt-web-shared = { workspace = true }
 systemprompt-mcp-shared = { workspace = true }
 # Audit: uses ai, identifiers, models, oauth, security — requires `full`.
 systemprompt = { workspace = true, features = ["full"] }
-systemprompt-security = { workspace = true }
 
 # Database
 sqlx = { workspace = true }

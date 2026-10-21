@@ -1,0 +1,39 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle="Members who added their own model subscription key, such as OpenCode Go. Requests on these keys are governed and audited like any other and bill to the member's subscription. Keys are never shown; only the member can add or remove one."}}
+        {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/opencode-go-subscription">How members add a key</a>
+        {{/inline}}
+    {{/components/page-header}}
+    <section aria-label="Member subscription keys">
+        {{> components/section title="Keys on file" count=count note="One row per member and provider. Verified is when the provider last accepted the key; last used is the most recent request it served."}}
+        {{#if rows}}
+        {{#> components/table caption="Personal subscription keys by member and provider"}}
+            <thead><tr>
+                <th scope="col">Member</th>
+                <th scope="col">Provider</th>
+                <th scope="col">Label</th>
+                <th scope="col" class="sp-table__cell--date">Added</th>
+                <th scope="col" class="sp-table__cell--date">Verified</th>
+                <th scope="col" class="sp-table__cell--date">Last used</th>
+            </tr></thead>
+            <tbody>
+            {{#each rows}}
+            <tr>
+                <td><a href="{{this.user_url}}" class="sp-u-link-strong">{{this.who}}</a></td>
+                <td class="sp-table__cell--mono">{{this.provider}}</td>
+                <td>{{this.label}}</td>
+                <td class="sp-table__cell--date" title="{{this.created_at}}">{{this.created}}</td>
+                <td class="sp-table__cell--date">{{this.verified}}</td>
+                <td class="sp-table__cell--date">{{this.last_used}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+        {{else}}
+        {{> components/empty-state heading="No member has added a key" message="Members add their own subscription key on their profile or in the bridge's Settings."}}
+        {{/if}}
+    </section>
+    {{/inline}}
+{{/layout}}

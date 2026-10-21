@@ -5,10 +5,10 @@
 use std::sync::Arc;
 
 use systemprompt::database::Database;
+use systemprompt::governance::authz::{AccessControlRepository, EntityKind};
 use systemprompt::identifiers::UserId;
 use systemprompt::marketplace::{MarketplaceCandidate, MarketplaceFilter};
 use systemprompt::models::bridge::manifest::ManagedMcpServer;
-use systemprompt_security::authz::{AccessControlRepository, EntityKind};
 use systemprompt_web_admin_core::authz::connector::connector_rule_type;
 use systemprompt_web_admin_core::authz::subject_attributes_for;
 use systemprompt_web_admin_core::connections::Connection;

@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT set_config('statement_timeout', $1, true) AS \"timeout!\", set_config('work_mem', $2, true) AS \"work_mem!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "timeout!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "work_mem!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "b4a402d97f2348874f5bca9b06dfd0c753fc07c01e651bcac482a88ae42cda2f"
+}

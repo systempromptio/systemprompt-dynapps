@@ -3,10 +3,10 @@
 //! decision the whole subject gets.
 
 use chrono::Utc;
-use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     ParentChainIndex, RuleType, SubjectAttributes, SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::repositories::entitlement::MatrixSubject;
 use systemprompt_web_admin_core::repositories::entitlement::explain::{
     BandExplanation, ExplainInput, Explanation, explain,

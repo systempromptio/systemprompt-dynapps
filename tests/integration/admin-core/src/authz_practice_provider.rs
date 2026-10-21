@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt_security::authz::SubjectAttributeProvider;
+use systemprompt::governance::authz::SubjectAttributeProvider;
 use systemprompt_web_admin_core::repositories::scope::defaults::set_scope_defaults;
 use systemprompt_web_admin_identity::authz::practice::{
     PracticeAttributeProvider, practice_rule_type,

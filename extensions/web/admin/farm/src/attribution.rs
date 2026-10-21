@@ -13,11 +13,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 use crate::repositories::runs;
 
@@ -68,7 +68,7 @@ impl SubjectAttributeProvider for FarmAttributeProvider {
     }
 }
 
-systemprompt_security::register_subject_attribute_provider!(|ctx| {
+systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
         Arc::new(FarmAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider

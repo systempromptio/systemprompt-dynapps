@@ -11,8 +11,8 @@ use std::sync::Arc;
 use rmcp::ServerHandler;
 use sqlx::PgPool;
 use systemprompt::database::Database;
+use systemprompt::governance::authz::{DenyAllHook, SharedAuthzHook};
 use systemprompt::identifiers::McpServerId;
-use systemprompt::security::authz::{DenyAllHook, SharedAuthzHook};
 use systemprompt_mcp_agent::{SystempromptServer, tools};
 
 use crate::tempdb::TempDb;

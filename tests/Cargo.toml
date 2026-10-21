@@ -170,9 +170,9 @@ systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.70.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.70.0" }
-systemprompt-api = { version = "0.70.0" }
+systemprompt = { version = "0.71.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.71.0" }
+systemprompt-api = { version = "0.71.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -181,6 +181,8 @@ axum = "0.8"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 tower = { version = "0.5", features = ["util"] }
+# Plain-HTTP client for suites that drive a local mock upstream.
+reqwest = { version = "0.13", default-features = false }
 
 # Template-rendering and error plumbing the migrated admin/front-end gates use.
 handlebars = "6"
@@ -220,7 +222,6 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# COMMENTED for release: builds against the sibling core checkout (bridge/CORE_REF names its SHA).
 # [patch.crates-io]
 # systemprompt = { path = "../../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../../systemprompt-core/crates/shared/models" }
@@ -257,6 +258,10 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # systemprompt-wire = { path = "../../systemprompt-core/crates/shared/wire" }
 # systemprompt-manifest = { path = "../../systemprompt-core/crates/shared/manifest" }
 # systemprompt-gateway = { path = "../../systemprompt-core/crates/app/gateway" }
+# systemprompt-agent-runs = { path = "../../systemprompt-core/crates/app/agent-runs" }
+# systemprompt-governance = { path = "../../systemprompt-core/crates/infra/governance" }
+# systemprompt-oauth-issuance = { path = "../../systemprompt-core/crates/app/oauth-issuance" }
+# systemprompt-storage = { path = "../../systemprompt-core/crates/infra/storage" }
 
 # Optimise everything that is not a test crate.
 #

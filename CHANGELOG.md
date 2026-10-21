@@ -20,6 +20,66 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.71.0 — 2026-10-21
+
+### Breaking
+
+- **Built on systemprompt-core 0.71.0.** Every core pin (`Cargo.toml`, `tests/Cargo.toml`,
+  `tests/unit/bridge/Cargo.toml`) moves to 0.71.0. Authz and policy are imported from
+  `systemprompt::governance` (moved out of `systemprompt-security`, which the server no longer
+  depends on), and the webhook handler charges rate windows through
+  `GovernanceEngine::charge_and_evaluate`. Core 0.71.0 removes `GET /api/v1/core/oauth/callback`
+  and makes the identity-keyed global rate window fail closed (`503` with `Retry-After`); see the
+  core changelog for the full list.
+- **Monthly quota windows are calendar months.** A monthly window is core's `calendar: month`,
+  which resets at 00:00 UTC on the first. The `quota_month_window` job is deleted; migration 023
+  rewrites every stored 31-day or 32..62-day window to `calendar: month` and carries the current
+  month's usage into the calendar bucket.
+
+### Added
+
+- **Members bring their own subscription keys.** `opencode-go` (Chat Completions) and
+  `opencode-go-anthropic` (Anthropic Messages) are `credential: user` providers with namespaced
+  `go-*` model ids. A Personal subscriptions card on `/admin/profile` and `/connectors` stores,
+  tests and removes a member's key in-process through core's personal-key store, and names the
+  reason and the fix for each refusal. Admins see who holds a key per provider on
+  `/admin/member-subscriptions` (metadata only; the sealed key never leaves the repository).
+- **Member-key spend is reported apart from platform spend.** Requests with
+  `billing_source = 'user_key'` are excluded from platform totals on the KPI strip and the
+  requests page and shown on a "Member subscriptions (est.)" tile; the Cost tab reads the hourly
+  usage rollup and splits each provider into its platform share and a "(member key)" line.
+- **Content ingestion is versioned by release.** Ingestion runs under its own advisory lock and
+  records the ingesting release in `content_ingestion_stamp` (migration 022); an older release
+  refuses, so a previous-image pod cannot ingest its older tree over newer content. Ingestion
+  (`blog_content_ingestion`, cluster scope) and the render (`site_render`, node scope) are separate
+  jobs, and `site_render` is the boot job, so every replica renders its own `web/dist`.
+- **Load test:** `--body claude-code`, scenario `s11-claude-code`, a ~15-minute smoke suite
+  (`just loadtest-kind-smoke`) and `compare.py --budgets` relative budgets.
+
+### Changed
+
+- **Gateway nodes skip the admin bootstrap and the site render;** the entrypoint reads
+  `server.role` from the profile.
+- **Scheduler load:** an idle conversation rollup returns at once, `audit_chain_seal` and
+  `trace_facts_rollup` run every 30 s instead of 10 s, and `conversation_rollup` runs in one
+  transaction with a local `statement_timeout` and `work_mem`.
+
+### Fixed
+
+- **Agent farm:** each eval run records its driving replica (migration 021), so a booting
+  replica resumes only eval runs whose driver is gone; a cancel served by any replica stops the
+  run, and case workspace files go through core's file storage.
+- **Retention:** raw evidence expires in batches of 5,000 within a 15-minute budget (migration
+  020), and weekly and monthly archives live in file storage under `exports/<tier>/<period>/`,
+  so any replica serves an archive another wrote.
+- **Secrets:** `secrets_refresh` is node-scoped, so every replica reloads external secrets.
+- **Governance:** the response secret scanner and the gateway-routes plane read the composed
+  services root when a pinned bundle owns `ai/`.
+- **Catalog:** `deepseek-*` and `go-*` are advertised on the openai surface, to OpenCode only.
+- **Platform:** a service account create whose email another create claimed first is refused.
+- **Supply chain:** `rustls-webpki` 0.103.16 and `webpki-roots`/`webpki-root-certs` 1.0.10 in
+  every lockfile (RUSTSEC-2026-0381, -0382, -0383).
+
 ## 0.70.2 — 2026-10-18
 
 ### Changed

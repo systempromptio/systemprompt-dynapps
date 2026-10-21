@@ -11,11 +11,11 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 use crate::connections::Connection;
 use crate::connections::source::get_connections;
@@ -69,7 +69,7 @@ impl SubjectAttributeProvider for ConnectorAttributeProvider {
     }
 }
 
-systemprompt_security::register_subject_attribute_provider!(|ctx| {
+systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider = crate::authz::cached::cached_provider(
         ConnectorAttributeProvider::new(Arc::clone(&ctx.pool)),
     );

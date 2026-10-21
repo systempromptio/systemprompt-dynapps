@@ -3,7 +3,7 @@
 //! that puts a person's attribution key first.
 
 
-use systemprompt_security::authz::{ROLE_PRECEDENCE, RuleType};
+use systemprompt::governance::authz::{ROLE_PRECEDENCE, RuleType};
 use systemprompt_web_admin_core::authz::organization::{
     ORGANIZATION_DEFAULT, organization_dimension, organization_rule_type,
 };

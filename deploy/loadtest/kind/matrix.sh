@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Run the scenario matrix in scenarios.json into one report directory.
 #   matrix.sh [name-filter-regex]       e.g. matrix.sh 's1|s5'
+# LOADTEST_SUITE picks the list: `scenarios` (default, the full matrix) or
+# `smoke` (the ~15-minute pre-release subset).
 # Ramps stop at the first step whose report has stop=true and record the last
 # passing step as the ceiling in <out>/ceilings.json. Each run is 2 minutes.
 set -euo pipefail
@@ -14,10 +16,11 @@ OUT="${LOADTEST_OUT:-$ROOT/reports/loadtest/kind/$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$OUT"
 echo "matrix -> $OUT"
 
+SUITE="${LOADTEST_SUITE:-scenarios}"
 entries="$(python3 -c '
 import json, sys
-for s in json.load(open(sys.argv[1]))["scenarios"]:
-    print(json.dumps(s))' "$HERE/scenarios.json")"
+for s in json.load(open(sys.argv[1]))[sys.argv[2]]:
+    print(json.dumps(s))' "$HERE/scenarios.json" "$SUITE")"
 
 while IFS= read -r e <&3; do
     name="$(echo "$e" | jq -r .name)"

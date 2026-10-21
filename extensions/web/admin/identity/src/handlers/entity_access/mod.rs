@@ -1,7 +1,7 @@
 //! Generic entity-access HTTP handlers backing the unified `/admin/access`
 //! matrix and per-entity inline panels (gateway routes, MCP servers, …).
 //!
-//! Wraps [`systemprompt_security::authz::AccessControlRepository`] with the
+//! Wraps [`systemprompt::governance::authz::AccessControlRepository`] with the
 //! same endpoint shape the gateway-specific handlers use, but parameterized on
 //! `entity_type`. Allowed values mirror the Postgres CHECK constraint on
 //! `access_control_rules.entity_type`.
@@ -22,8 +22,8 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
+use systemprompt::governance::authz::{DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams};
 use systemprompt::identifiers::RuleId;
-use systemprompt_security::authz::{DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams};
 
 use systemprompt_web_admin_core::activity::RuleChange;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};

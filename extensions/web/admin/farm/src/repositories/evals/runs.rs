@@ -3,7 +3,7 @@
 //! the run it scores when given one, else its farm's.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{InstanceId, UserId};
 
 use crate::repositories::rows::EvalRunRow;
 use crate::types::{
@@ -51,6 +51,30 @@ pub async fn find_eval_run(
         id.as_str()
     )
     .fetch_optional(pool)
+    .await
+}
+
+pub async fn claim_eval_run_driver(
+    pool: &PgPool,
+    id: &EvalRunId,
+    instance: &InstanceId,
+) -> Result<bool, sqlx::Error> {
+    let done = sqlx::query_file!(
+        "src/repositories/evals/claim_eval_run_driver.sql",
+        id.as_str(),
+        instance.as_str()
+    )
+    .execute(pool)
+    .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+pub async fn is_eval_run_cancelled(pool: &PgPool, id: &EvalRunId) -> Result<bool, sqlx::Error> {
+    sqlx::query_file_scalar!(
+        "src/repositories/evals/is_eval_run_cancelled.sql",
+        id.as_str()
+    )
+    .fetch_one(pool)
     .await
 }
 

@@ -14,6 +14,7 @@ use systemprompt::database::{Database, DbPool};
 use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::prelude::PgPool;
+use systemprompt::traits::FileStorage;
 use systemprompt::users::{SessionRepository, UserService};
 
 pub(crate) struct DbHandles {
@@ -22,6 +23,7 @@ pub(crate) struct DbHandles {
     pub write: Arc<PgPool>,
     pub db: DbPool,
     pub farm: Arc<FarmState>,
+    pub files: Arc<dyn FileStorage>,
 }
 
 impl DbHandles {
@@ -40,7 +42,13 @@ impl DbHandles {
             scratch_root(),
         ));
         let paths = app_paths();
-        let farm = super::farm_public::build_state(Arc::clone(&write), paths.as_ref());
+        let files = ctx.file_storage();
+        let farm = super::farm_public::build_state(
+            Arc::clone(&write),
+            paths.as_ref(),
+            Arc::clone(&files),
+            ctx.instance_id(),
+        );
         super::farm_public::start(&farm, paths.as_ref());
         Some(Self {
             managed,
@@ -48,6 +56,7 @@ impl DbHandles {
             write,
             db,
             farm,
+            files,
         })
     }
 }

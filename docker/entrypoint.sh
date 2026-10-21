@@ -184,18 +184,24 @@ else
     echo "database.migrate_on_boot is false: skipping migrations (run the one-shot migrate step first)."
 fi
 
-echo "Ensuring bootstrap admin user..."
-/app/bin/systemprompt admin bootstrap
+# server.role from the profile: gateway nodes serve neither the console nor the
+# public site, so they skip the admin bootstrap and go straight to serving.
+# web/dist is rendered by the scheduler's bootstrap site_render on every node
+# that runs the scheduler, before the server reports ready, so a gateway
+# scale-out neither re-ingests content nor renders a site it never serves.
+server_role() {
+    awk '/^server:/ { in_server = 1; next }
+         /^[^ #]/ { in_server = 0 }
+         in_server && /^  role:/ { sub(/^  role:[[:space:]]*/, ""); sub(/[[:space:]]*(#.*)?$/, ""); gsub(/["\047]/, ""); print; exit }' "$PROFILE_FILE"
+}
+ROLE="$(server_role)"
+ROLE="${ROLE:-all}"
 
-# web/dist is node-local and not shipped in the image. The scheduler's
-# bootstrap run of publish_pipeline takes a database-wide advisory lock, so in
-# a multi-node deployment only one node renders its site at boot and the rest
-# serve 404 until a later tick lands on them. The manual runner takes no lock:
-# render here, on every node, before the server accepts traffic. A failure is
-# logged rather than fatal so a content problem never takes the gateway down.
-echo "Publishing web assets for this node..."
-if ! /app/bin/systemprompt infra jobs run publish_pipeline; then
-    echo "WARN: publish_pipeline failed; the public site may 404 on this node until the next scheduled run." >&2
+if [ "$ROLE" = "gateway" ]; then
+    echo "server.role is gateway: skipping admin bootstrap."
+else
+    echo "Ensuring bootstrap admin user..."
+    /app/bin/systemprompt admin bootstrap
 fi
 
 echo "Starting services..."

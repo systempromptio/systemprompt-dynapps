@@ -21,7 +21,6 @@ use sqlx::PgPool;
 
 use self::view::{GatewayPoliciesPageData, InForce, new_policy_view, policy_view};
 use crate::repositories::gateway_policies::form::parse_policy_form;
-use crate::repositories::gateway_policies::month_window_db::refresh_month_windows;
 use crate::repositories::gateway_policies::rows::{
     PolicyWrite, delete_policy, list_policies, upsert_policy,
 };
@@ -139,7 +138,6 @@ pub(crate) async fn gateway_policies_page(
         can_write: page.user.is_admin,
         policies,
         new_policy: new_policy_view(),
-        month_sentinel: GatewayPoliciesPageData::month_sentinel(),
         quotas_url: "/admin/governance/quotas",
         docs_url: "/documentation/enterprise-cost-management",
     };
@@ -182,6 +180,7 @@ pub(crate) async fn save_gateway_policy(
     let stored = list_policies(&pool).await.map_err(AdminError::Database)?;
     if let Some(row) = stored.iter().find(|row| row.name == parsed.name) {
         carry_unedited_safety(&mut parsed.spec.safety, &row.spec.safety);
+        parsed.spec.rate_windows.clone_from(&row.spec.rate_windows);
     }
     upsert_policy(
         &pool,
@@ -193,7 +192,6 @@ pub(crate) async fn save_gateway_policy(
         },
     )
     .await?;
-    refresh_month_windows(&pool, chrono::Utc::now()).await?;
     activity::record(
         &pool,
         NewActivity::gateway_policy_saved(&page.user.user_id, &parsed.name, false),

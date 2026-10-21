@@ -16,6 +16,7 @@ use rmcp::model::{
 };
 use sqlx::PgPool;
 use systemprompt::database::Database;
+use systemprompt::governance::authz::{DenyAllHook, SharedAuthzHook};
 use systemprompt::identifiers::{
     Actor, AgentName, ArtifactId, ContextId, McpServerId, SessionId, TraceId, UserId,
 };
@@ -23,7 +24,6 @@ use systemprompt::mcp::{ArtifactIngest, artifact_resource_uri};
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
 use systemprompt::models::execution::context::RequestContext;
 use systemprompt::models::mcp::ExecutionSource;
-use systemprompt::security::authz::{DenyAllHook, SharedAuthzHook};
 use systemprompt::traits::InjectContextHeaders;
 use systemprompt_mcp_agent::SystempromptServer;
 use tower::ServiceExt as _;

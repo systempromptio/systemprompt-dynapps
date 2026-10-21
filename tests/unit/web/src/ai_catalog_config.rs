@@ -5,9 +5,10 @@
 //! pricing written beside it.
 //!
 //! Claude is served from Anthropic's own API under the bare `claude-*` ids,
-//! listed to every client. By customer requirement the only other upstream is
-//! `DeepSeek`, kept for a cost comparison against Claude and reachable only by
-//! an explicit `deepseek-*` id.
+//! listed to every client. By customer requirement the only other platform-key
+//! upstream is `DeepSeek`, kept for a cost comparison against Claude and
+//! reachable only by an explicit `deepseek-*` id. `OpenCode` Go is served only
+//! by each member's own key (`credential: user`) under `go-*` ids.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -26,6 +27,9 @@
 use systemprompt::manifest::services::{
     GatewayConfigSpec, ProviderEntry, ProviderModel, ProviderRegistry,
 };
+
+use systemprompt::identifiers::SecretName;
+use systemprompt::models::providers::ApiSurface;
 
 use crate::support::repo_root;
 
@@ -207,9 +211,9 @@ fn every_route_goes_to_a_live_provider() {
         assert!(
             matches!(
                 route.provider.as_str(),
-                "anthropic" | "deepseek" | "e2e-mock"
+                "anthropic" | "deepseek" | "opencode-go" | "opencode-go-anthropic" | "e2e-mock"
             ),
-            "route {:?} reaches {}: only Anthropic and DeepSeek are live",
+            "route {:?} reaches {}: only Anthropic, DeepSeek and OpenCode Go are live",
             route.name,
             route.provider.as_str()
         );
@@ -225,20 +229,33 @@ fn anthropic_and_deepseek_are_the_only_live_providers() {
         .iter()
         .map(|p| p.name.as_str().to_owned())
         .collect();
-    assert_eq!(names, ["anthropic", "deepseek", "e2e-mock"]);
+    assert_eq!(
+        names,
+        [
+            "anthropic",
+            "deepseek",
+            "opencode-go",
+            "opencode-go-anthropic",
+            "e2e-mock"
+        ]
+    );
 }
 
 #[test]
 fn every_provider_reads_a_secret_the_installation_holds() {
-    for p in &registry().providers {
+    for p in registry()
+        .providers
+        .iter()
+        .filter(|p| !p.is_user_credential())
+    {
         let expected = if p.name.as_str() == "deepseek" {
             "deepseek"
         } else {
             "anthropic"
         };
         assert_eq!(
-            p.api_key_secret.as_str(),
-            expected,
+            p.platform_secret().map(SecretName::as_str),
+            Some(expected),
             "{} reads a secret this installation does not hold",
             p.name.as_str()
         );
@@ -294,6 +311,46 @@ fn the_open_models_are_unrouted() {
         assert!(
             !gateway().routes.iter().any(|r| r.matches(pattern)),
             "{pattern} has no provider left to route to"
+        );
+    }
+}
+
+// Why: OpenCode Go is a member's personal subscription; a deployment secret
+// serving it would bill one member's plan for everyone's requests.
+#[test]
+fn opencode_go_is_served_only_by_the_members_own_key() {
+    for name in ["opencode-go", "opencode-go-anthropic"] {
+        let p = provider(name);
+        assert!(p.is_user_credential(), "{name} must be credential: user");
+        assert!(
+            p.api_key_secret.is_none(),
+            "{name} must name no platform secret"
+        );
+        assert_eq!(p.forward_headers, ["x-opencode-session"], "{name}");
+        assert!(
+            p.models.iter().all(|m| m.id.as_str().starts_with("go-")),
+            "{name} serves only namespaced go-* ids"
+        );
+    }
+}
+
+// Why: a `backend` surface is never advertised, so deepseek-* and go-* were
+// callable but listed in no client; `openai` lists them to OpenCode only.
+#[test]
+fn deepseek_and_opencode_go_are_listed_to_opencode_but_not_to_claude_hosts() {
+    let registry = registry();
+    let openai = registry.advertised_model_ids(&[ApiSurface::OpenAi]);
+    let anthropic = registry.advertised_model_ids(&[ApiSurface::Anthropic]);
+    for id in [
+        "deepseek-flash",
+        "deepseek-v4-pro",
+        "go-kimi-k3",
+        "go-minimax-m3",
+    ] {
+        assert!(openai.iter().any(|m| m == id), "{id} must reach OpenCode");
+        assert!(
+            !anthropic.iter().any(|m| m == id),
+            "{id} must stay out of the Claude hosts"
         );
     }
 }

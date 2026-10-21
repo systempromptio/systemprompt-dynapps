@@ -2,11 +2,11 @@
 //! `services/ai/gateway.yaml`, in file order.
 //!
 //! Read from the baked services tree — the file the editor writes and core
-//! boots from — and hashed on the parsed routes so a comment or whitespace
-//! edit is not a drift. Every field core's `GatewayRoute` carries is part of
-//! the hash, the fallback pair included.
-
-use std::path::Path;
+//! boots from — or, when a pinned services bundle owns `ai/`, from the
+//! composed root the dispatcher reads (and then never written); hashed on the
+//! parsed routes so a comment or whitespace edit is not a drift. Every field
+//! core's `GatewayRoute` carries is part of the hash, the fallback pair
+//! included.
 
 use serde_yaml::Value;
 use sha2::{Digest, Sha256};
@@ -108,28 +108,23 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
     Ok(DeclaredRoutes { routes })
 }
 
-pub fn load_declared_routes(services_path: &Path) -> AdminResult<DeclaredRoutes> {
-    let path = services_path.join(GATEWAY_FILE);
-    let yaml = std::fs::read_to_string(&path)
-        .map_err(|e| AdminError::invalid("gateway.yaml could not be read", e))?;
-    parse_declared_routes(&yaml)
-        .map_err(|e| AdminError::invalid("gateway.yaml could not be parsed", e))
-}
-
 // Why: not core's composed services root — that is a content-addressed overlay
 // the next refresh replaces, and this is the one file the console writes back.
-pub fn baked_services_path() -> AdminResult<std::path::PathBuf> {
-    Ok(std::path::PathBuf::from(
-        &systemprompt::config::ProfileBootstrap::get()?
-            .paths
-            .services,
-    ))
+// When a pinned bundle owns `ai/` the composed copy is what the dispatcher
+// reads, so the plane reads that one and the console does not write at all.
+pub fn gateway_file_path() -> AdminResult<std::path::PathBuf> {
+    systemprompt_web_admin_core::request::get_gateway_file_path()
 }
 
-pub fn gateway_file_path() -> AdminResult<std::path::PathBuf> {
-    Ok(baked_services_path()?.join(GATEWAY_FILE))
+#[must_use]
+pub fn bundle_owner() -> Option<String> {
+    systemprompt_web_admin_core::repositories::sync::sources::dir_owner("ai")
 }
 
 pub fn declared_routes_now() -> AdminResult<DeclaredRoutes> {
-    load_declared_routes(&baked_services_path()?)
+    let file = gateway_file_path()?;
+    let yaml = std::fs::read_to_string(&file)
+        .map_err(|e| AdminError::invalid("gateway.yaml could not be read", e))?;
+    parse_declared_routes(&yaml)
+        .map_err(|e| AdminError::invalid("gateway.yaml could not be parsed", e))
 }

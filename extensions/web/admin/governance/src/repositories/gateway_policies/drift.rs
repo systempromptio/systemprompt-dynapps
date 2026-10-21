@@ -15,7 +15,6 @@ use serde::Serialize;
 use systemprompt::gateway::{GatewayPolicyEntry, GatewayPolicySpec};
 
 use super::declared::DeclaredPolicies;
-use super::month_window::normalise_spec;
 use super::rows::PolicyRow;
 
 #[derive(Debug, Clone, Serialize)]
@@ -76,7 +75,7 @@ pub fn summarise_policy(entry_enabled: bool, priority: i32, spec: &GatewayPolicy
 }
 
 fn changed_fields(declared: &GatewayPolicyEntry, row: &PolicyRow) -> Vec<String> {
-    let db = normalise_spec(&row.spec);
+    let db = &row.spec;
     let d = &declared.spec;
     [
         ("enabled", declared.enabled != row.enabled),
@@ -85,6 +84,10 @@ fn changed_fields(declared: &GatewayPolicyEntry, row: &PolicyRow) -> Vec<String>
         (
             "quota_windows",
             comparison_key(&d.quota_windows) != comparison_key(&db.quota_windows),
+        ),
+        (
+            "rate_windows",
+            comparison_key(&d.rate_windows) != comparison_key(&db.rate_windows),
         ),
         ("safety.mode", d.safety.mode != db.safety.mode),
         ("safety.scanners", d.safety.scanners != db.safety.scanners),
@@ -122,7 +125,7 @@ fn changed_policy(entry: &GatewayPolicyEntry, row: &PolicyRow) -> Option<Changed
         name: entry.name.clone(),
         fields,
         in_code: summarise_policy(entry.enabled, entry.priority, &entry.spec),
-        in_db: summarise_policy(row.enabled, row.priority, &normalise_spec(&row.spec)),
+        in_db: summarise_policy(row.enabled, row.priority, &row.spec),
     })
 }
 

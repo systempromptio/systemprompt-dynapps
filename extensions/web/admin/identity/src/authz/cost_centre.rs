@@ -12,11 +12,11 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 const COST_CENTRE_RULE_TYPE: RuleType = RuleType::extension_static("cost_centre");
 
@@ -62,7 +62,7 @@ impl SubjectAttributeProvider for CostCentreAttributeProvider {
     }
 }
 
-systemprompt_security::register_subject_attribute_provider!(|ctx| {
+systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
         systemprompt_web_admin_core::authz::cached::cached_provider(
             CostCentreAttributeProvider::new(Arc::clone(&ctx.pool)),

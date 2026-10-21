@@ -10,7 +10,7 @@ use axum::http::header::CACHE_CONTROL;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt_security::authz::EntityKind;
+use systemprompt::governance::authz::EntityKind;
 use systemprompt_web_admin_core::authz::catalog::CatalogAccess;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;

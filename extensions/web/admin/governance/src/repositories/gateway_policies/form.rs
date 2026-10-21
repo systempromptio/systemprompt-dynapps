@@ -14,7 +14,7 @@ use systemprompt::gateway::{
 };
 
 pub use super::form_error::FormError;
-use super::month_window::MONTH_WINDOW_SECONDS;
+use systemprompt::gateway::CalendarPeriod;
 
 pub const MAX_WINDOWS: usize = 8;
 
@@ -117,16 +117,17 @@ fn optional_dollars_as_microdollars(
         .transpose()
 }
 
-fn window_seconds(raw: &str, index: usize) -> Result<i32, FormError> {
+fn window_length(raw: &str, index: usize) -> Result<(i32, Option<CalendarPeriod>), FormError> {
     match raw {
-        "hour" => Ok(3_600),
-        "day" => Ok(86_400),
-        "week" => Ok(604_800),
-        "month" => Ok(MONTH_WINDOW_SECONDS),
+        "hour" => Ok((3_600, None)),
+        "day" => Ok((86_400, None)),
+        "week" => Ok((604_800, None)),
+        "month" => Ok((0, Some(CalendarPeriod::Month))),
         s => s
             .parse::<i32>()
             .ok()
             .filter(|n| *n > 0)
+            .map(|n| (n, None))
             .ok_or(FormError::NoLength { index: index + 1 }),
     }
 }
@@ -153,14 +154,15 @@ fn parse_window(
     }
     let raw = selected_window_value(fields, &key("window"))
         .ok_or(FormError::NoLength { index: index + 1 })?;
+    let (window_seconds, calendar) = window_length(&raw, index)?;
     let window = QuotaWindow {
-        window_seconds: window_seconds(&raw, index)?,
+        window_seconds,
+        calendar,
         subject: subject.to_owned(),
         max_requests: optional_i64(fields, &key("max_requests"))?,
         max_input_tokens: optional_i64(fields, &key("max_input_tokens"))?,
         max_output_tokens: optional_i64(fields, &key("max_output_tokens"))?,
         max_cost_microdollars: optional_dollars_as_microdollars(fields, &key("max_cost"))?,
-        calendar: None,
     };
     if window.max_requests.is_none()
         && window.max_input_tokens.is_none()
@@ -244,6 +246,7 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
             QuotaMode::Enforce
         },
         quota_windows,
+        rate_windows: Vec::new(),
         safety: SafetyConfig {
             mode: if parse_mode(first(fields, "safety_mode"), "safety_mode")? {
                 SafetyMode::Warn
@@ -257,7 +260,6 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
             history: parse_history(first(fields, "history"))?,
             ..SafetyConfig::default()
         },
-        rate_windows: Vec::new(),
     };
     let parsed = ParsedPolicy {
         name: name.to_owned(),

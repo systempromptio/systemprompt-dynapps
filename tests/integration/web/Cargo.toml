@@ -25,7 +25,6 @@ systemprompt-mcp-agent = { workspace = true }
 # The farm lifecycle suite launches, cancels and finishes runs over a real schema.
 systemprompt-web-admin-farm = { workspace = true }
 # The farm attribution suite reads the `farm` dimension through its provider trait.
-systemprompt-security = { workspace = true }
 
 chrono = { workspace = true }
 serde_json = { workspace = true }
@@ -33,6 +32,7 @@ tokio = { workspace = true }
 sqlx = { workspace = true }
 uuid = { workspace = true }
 tempfile = { workspace = true }
+sha2 = { workspace = true }
 # `ServerHandler::get_info` is a trait method — asserting either MCP server's
 # advertised surface needs the trait in scope.
 rmcp = { workspace = true, features = ["client", "transport-async-rw"] }

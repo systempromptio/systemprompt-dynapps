@@ -7,7 +7,7 @@
 
 [package]
 name = "dynapps-bridge"
-version = "0.70.2"
+version = "0.71.0"
 edition = "2024"
 authors = ["Dynapps <ed@systemprompt.io>"]
 description = "Dynapps desktop bridge — branded build of the systemprompt bridge."

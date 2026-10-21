@@ -16,14 +16,14 @@ use axum::http::HeaderMap;
 use axum::http::request::Parts;
 use axum::{Extension, Json};
 use sqlx::PgPool;
+use systemprompt::governance::authz::Decision;
+use systemprompt::governance::policy::types::AccessScope;
+use systemprompt::governance::policy::{
+    AgentScope, AuditOrigin, AuditTarget, DecisionAudit, GovernanceEngine, GovernedInput,
+    GovernedTarget, PolicyRequest, PrincipalSnapshot, record_decision,
+};
 use systemprompt::identifiers::{CallId, ClientId, PluginId, SessionId, UserId};
 use systemprompt::oauth::SessionCreationService;
-use systemprompt_security::authz::Decision;
-use systemprompt_security::policy::types::AccessScope;
-use systemprompt_security::policy::{
-    AgentScope, AuditOrigin, AuditTarget, DecisionAudit, GovernanceEngine, GovernedInput,
-    GovernedTarget, PolicyContext, PrincipalSnapshot, RateChargeSubject, record_decision,
-};
 
 use systemprompt_web_admin_core::repositories::ingestion::usage as ingestion;
 use systemprompt_web_admin_core::types::webhook::{GovernQuery, HookEventPayload};
@@ -94,26 +94,20 @@ async fn evaluate_and_record(
     governed: Governed<'_>,
 ) -> Result<Decision, &'static str> {
     let call_id = CallId::generate();
-    let rate_counts = engine
-        .charge_rate_windows(RateChargeSubject {
-            session: governed.session_id,
-            user: &governed.user_id,
-            call: &call_id,
+    let mut evaluation = engine
+        .charge_and_evaluate(PolicyRequest {
+            target: governed.target.clone(),
+            agent_scope: AgentScope::User {
+                user_id: governed.user_id.clone(),
+            },
+            access_scope: governed.access_scope,
+            roles: governed.roles,
+            session_id: governed.session_id,
+            user_id: &governed.user_id,
+            input: governed.input,
+            call_id: &call_id,
         })
         .await;
-    let mut evaluation = engine.evaluate(&PolicyContext {
-        target: governed.target.clone(),
-        agent_scope: AgentScope::User {
-            user_id: governed.user_id.clone(),
-        },
-        access_scope: governed.access_scope,
-        roles: governed.roles,
-        session_id: governed.session_id,
-        user_id: &governed.user_id,
-        input: governed.input,
-        call_id: &call_id,
-        rate_counts: &rate_counts,
-    });
     if let Some(detail) = governed.allowlist_violation {
         farm_allowlist::enforce(&mut evaluation, detail);
     }

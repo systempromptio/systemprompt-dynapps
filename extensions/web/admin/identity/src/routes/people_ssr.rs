@@ -1,6 +1,7 @@
 //! People page routes.
 //!
 //! The users roster and detail, groups, projects and their reports, roles,
+//! who holds a personal-subscription key,
 //! and the access-control matrix. The composition root merges the devices
 //! page between the last two, where it has always sat.
 
@@ -32,6 +33,10 @@ pub fn directory_routes() -> Router<Arc<PgPool>> {
             get(handlers::ssr::project_report_page),
         )
         .route("/roles", get(handlers::ssr::roles_page))
+        .route(
+            "/member-subscriptions",
+            get(handlers::ssr::member_subscriptions_page),
+        )
 }
 
 pub fn access_control_routes() -> Router<Arc<PgPool>> {

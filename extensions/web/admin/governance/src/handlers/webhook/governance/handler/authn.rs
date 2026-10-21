@@ -4,10 +4,10 @@
 //! failures to a denied [`Decision`] plus a recorded auth-denial audit row.
 
 use axum::http::HeaderMap;
+use systemprompt::governance::authz::{Decision, DenyReason};
 use systemprompt::identifiers::{ClientId, SessionId, UserId};
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::OauthError;
-use systemprompt_security::authz::{Decision, DenyReason};
 
 use crate::handlers::webhook::helpers::{extract_bearer_token, get_jwt_issuer};
 

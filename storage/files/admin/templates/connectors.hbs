@@ -77,10 +77,12 @@
     {{else}}
     {{> components/empty-state heading="No connectors on this gateway" message="Connectors appear here once an administrator enables an MCP server that needs your authorization."}}
     {{/if}}
+    {{> components/personal-subscriptions}}
     <noscript><p class="sp-p-connectors__message sp-notice sp-notice--warn">Enable JavaScript to connect, test or disconnect a provider.</p></noscript>
     </div>
     {{/inline}}
     {{#*inline "scripts"}}
     <script src="/js/pages/connectors.js?v={{css_version}}" type="module"></script>
+    <script src="/js/pages/admin-subscriptions.js?v={{css_version}}" type="module"></script>
     {{/inline}}
 {{/layout}}

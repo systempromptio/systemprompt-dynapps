@@ -17,9 +17,10 @@
 //! thing standing between a model that echoes a credential and the client.
 //!
 //! The catalog is compiled once from the same `secret_scan` block the chain
-//! reads, never through a second governance engine: an inventory-built scanner
-//! cannot reach the injected one, and a second engine's rate limiter would
-//! double every budget.
+//! reads, in the active services root (a pinned bundle's `governance/` when
+//! one owns it, else the baked tree), never through a second governance engine:
+//! an inventory-built scanner cannot reach the injected one, and a second
+//! engine's rate limiter would double every budget.
 
 use systemprompt::gateway::{
     Finding, SafetyScanner, ScannerSettings, Severity, register_safety_scanner,
@@ -28,13 +29,16 @@ use systemprompt::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
 use std::sync::LazyLock;
 
-use systemprompt_security::policy::{GovernanceConfig, GovernedInput, SecretScanner};
+use systemprompt::governance::policy::{GovernanceConfig, GovernedInput, SecretScanner};
 
 static CONFIGURED_SCANNER: LazyLock<Option<SecretScanner>> = LazyLock::new(|| {
     let profile = systemprompt::config::ProfileBootstrap::get()
         .inspect_err(|error| tracing::error!(%error, "response secret scanner: no profile"))
         .ok()?;
-    let path = std::path::Path::new(&profile.paths.services).join("governance/config.yaml");
+    let path = systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
+        &profile.paths.services,
+    )
+    .join("governance/config.yaml");
     let config = GovernanceConfig::load(&path)
         .inspect_err(
             |error| tracing::error!(%error, "response secret scanner configuration rejected"),

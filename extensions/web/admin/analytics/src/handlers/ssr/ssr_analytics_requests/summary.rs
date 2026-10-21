@@ -147,6 +147,12 @@ pub(super) fn kpi_view(k: &RequestKpis, query: &RequestsQuery) -> RequestKpiView
             "all attributed".to_owned()
         },
         cost_display: format_cost(k.cost_microdollars),
+        has_user_key: k.user_key_requests > 0,
+        user_key_cost_display: format_cost(k.user_key_cost_microdollars),
+        user_key_sub: format!(
+            "{} requests on members' keys",
+            group_digits(k.user_key_requests)
+        ),
         tokens_sub: format!(
             "{} in / {} out",
             compact_int(k.input_tokens),

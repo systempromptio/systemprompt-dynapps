@@ -14,7 +14,6 @@ systemprompt-web-shared = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
 # Audit: uses identifiers, loader, models, oauth, security — requires `full`.
 systemprompt = { workspace = true, features = ["full"] }
-systemprompt-security = { workspace = true }
 
 # Database
 sqlx = { workspace = true }

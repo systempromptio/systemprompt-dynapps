@@ -24,7 +24,6 @@ systemprompt-web-site = { workspace = true }
 systemprompt-web-jobs = { workspace = true }
 systemprompt-kit-export = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
-systemprompt-security = { workspace = true }
 axum = { workspace = true }
 handlebars = { workspace = true }
 anyhow = { workspace = true }

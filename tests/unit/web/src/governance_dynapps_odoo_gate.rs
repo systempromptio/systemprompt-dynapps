@@ -8,25 +8,26 @@
 //! would-be refusal is recorded as `Warn`; restoring `mode: enforce` turns
 //! these back to `Deny`.
 
-use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
-use systemprompt_security::authz::types::{Decision, DecisionTag};
-use systemprompt_security::policy::types::AccessScope;
-use systemprompt_security::policy::{
+use systemprompt::governance::authz::types::{Decision, DecisionTag};
+use systemprompt::governance::policy::types::AccessScope;
+use systemprompt::governance::policy::{
     AgentScope, GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
     PolicyContext, RateCounts,
 };
+use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
 
 fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
     let cfg = GovernanceConfig::parse(include_str!("../../../../services/governance/config.yaml"))
         .unwrap();
-    let engine = GovernanceEngine::from_config(&cfg).unwrap();
+    let engine =
+        GovernanceEngine::from_config(&cfg, Some(crate::support::uncharged_rate_windows()))
+            .unwrap();
     let roles: Vec<String> = roles.iter().map(|r| (*r).to_owned()).collect();
     let user = UserId::new("odoo-farm-user");
     let session = SessionId::generate();
     let call = CallId::generate();
     let input = GovernedInput::tool_arguments(McpToolInput::new(serde_json::json!({})));
-    let mut rate_counts = RateCounts::empty();
-    rate_counts.record(PolicyId::new("rate_limit"), 1);
+    let rate_counts = RateCounts::charged([(PolicyId::new("rate_limit"), 1)]);
     engine
         .evaluate(&PolicyContext {
             target: GovernedTarget::Tool {

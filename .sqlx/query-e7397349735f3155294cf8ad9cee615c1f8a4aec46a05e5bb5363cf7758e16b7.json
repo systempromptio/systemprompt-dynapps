@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n    COALESCE(SUM(COALESCE(ar.cost_microdollars, 0)), 0)::bigint AS \"user_key_cost_microdollars!\",\n    COUNT(*)::bigint AS \"user_key_requests!\"\nFROM ai_requests ar\nLEFT JOIN user_scope_defaults sd ON sd.user_id = ar.user_id\nWHERE ar.created_at >= $1 AND ar.created_at < $2\n  AND ar.billing_source = 'user_key'\n  AND ($8::TEXT[] IS NULL OR ar.user_id = ANY($8))\n  AND ($3::text IS NULL OR ar.user_id = $3)\n  AND ($4::text IS NULL\n       OR ($4 = 'unrouted' AND ar.model IS NULL)\n       OR ar.model = $4)\n  AND ($5::text IS NULL\n       OR ($5 = 'unrouted' AND ar.provider IS NULL)\n       OR ar.provider = $5)\n  AND ($6::text IS NULL OR ar.status = $6)\n  AND ($9::text IS NULL OR sd.primary_group_id = $9)\n  AND ($10::text IS NULL OR sd.primary_project_id = $10)\n  AND ($7::text IS NULL\n       OR ar.user_id ILIKE $7\n       OR ar.model ILIKE $7\n       OR ar.provider ILIKE $7\n       OR COALESCE(ar.error_message, '') ILIKE $7\n       OR COALESCE(ar.trace_id, '') ILIKE $7)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_key_cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_key_requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "TextArray",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "e7397349735f3155294cf8ad9cee615c1f8a4aec46a05e5bb5363cf7758e16b7"
+}

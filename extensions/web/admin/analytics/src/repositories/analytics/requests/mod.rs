@@ -2,8 +2,9 @@
 //!
 //! [`list_requests_paged`] (in `paged`) pages `ai_requests` with optional
 //! filters and per-row governance / tool-call counts; [`get_request_kpis`]
-//! (in `kpis`) totals the same predicate for the tiles above the table; the
-//! per-model / per-provider / per-status rollups behind the breakdown tabs
+//! (in `kpis`) totals the same predicate for the tiles above the table and
+//! [`find_request_billing_split`] (in `billing`) the member-key share of it;
+//! the per-model / per-provider / per-status rollups behind the breakdown tabs
 //! live in `breakdown`, the per-request safety findings and tool calls the
 //! detail page shows live in `detail`, and the stored tool schemas it compares
 //! live in `schemas`.
@@ -20,11 +21,13 @@ use systemprompt_web_shared::{GroupId, ProjectId};
 
 use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
+mod billing;
 mod breakdown;
 mod facets;
 mod kpis;
 mod paged;
 
+pub use billing::{BillingSplit, find_request_billing_split};
 pub use breakdown::{
     BreakdownRow, list_requests_by_model, list_requests_by_provider, list_requests_by_status,
 };

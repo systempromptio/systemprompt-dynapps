@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 
 use sqlx::PgPool;
-use systemprompt_security::authz::{EntityKind, RegisteredEntities};
+use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 use systemprompt_web_admin_core::repositories::access_rules::declared::DeclaredSet;
 use systemprompt_web_admin_core::repositories::access_rules::declared_load::build_declared_from_doc;
 use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;

@@ -80,7 +80,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --trusted-proxies 10.10.0.0/16,10.20.0.0/16,10.30.0.0/16 \
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --image ghcr.io/systempromptio/systemprompt-dynapps:0.70.2     # validates the result in the image
+  --image ghcr.io/systempromptio/systemprompt-dynapps:0.71.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -129,7 +129,7 @@ On every node, with `/etc/dynapps/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.70.2 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
+export SYSTEMPROMPT_TAG=0.71.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml run --rm app migrate   # node 1 only, once
@@ -152,7 +152,7 @@ balancer, so capacity never drops to zero. Run the checklist on each node
 once it is `healthy`, passing the node's `server.role`:
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.70.2 --role all
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.71.0 --role all
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its
@@ -207,7 +207,7 @@ With this profile's `paths`:
 |---|---|---|
 | `system.logs` | `/app/logs` | per node, may be ephemeral |
 | `storage.files` | `/app/storage/files` | per node, or shared; see below |
-| `storage.exports` | `/app/storage/exports` | per node |
+| `storage.exports` | `/app/storage/exports` | per node; the weekly and monthly retention archives are not kept here but in the `storage:` backend under `exports/` |
 | `storage.data` | `/app/storage/data` (scratch under `data/scratch`) | per node, already `app_storage_data` |
 | `web.dist` | `/app/web/dist` | per node, already under `app_web` (admin and all roles) |
 | `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (admin and all roles) |

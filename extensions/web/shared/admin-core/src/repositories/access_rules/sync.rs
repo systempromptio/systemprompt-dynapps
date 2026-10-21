@@ -19,7 +19,7 @@
 //! filter.
 
 use sqlx::{PgPool, Postgres, Transaction};
-use systemprompt_security::authz::YAML_SOURCE;
+use systemprompt::governance::authz::YAML_SOURCE;
 
 use super::declared::{DeclaredEntity, DeclaredRule, DeclaredSet};
 use super::drift::{DriftReport, compute_drift};

@@ -3,6 +3,7 @@
 //! path-qualify; nothing is re-exported from the crate root.
 
 pub mod activity;
+pub mod archive_objects;
 pub mod assets;
 pub mod auth;
 pub mod authz;

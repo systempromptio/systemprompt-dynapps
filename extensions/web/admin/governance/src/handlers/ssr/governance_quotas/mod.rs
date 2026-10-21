@@ -14,9 +14,9 @@ use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::gateway_policies::month_window::{is_month_window, window_label};
 use crate::repositories::gateway_policies::rows::{effective_spec, list_policies};
 use crate::repositories::gateway_policies::usage::{get_window_usage, headroom};
+use crate::repositories::gateway_policies::windows::{is_calendar_month, window_label};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::ssr::format::relative_time;
 use systemprompt_web_admin_core::ssr::page::Page;
@@ -126,8 +126,8 @@ pub(crate) async fn governance_quotas_page(
             .collect();
         windows.push(WindowCard {
             subject_kind: window.subject.clone(),
-            label: window_label(window.window_seconds, today),
-            is_month: is_month_window(window.window_seconds),
+            label: window_label(window, today),
+            is_month: is_calendar_month(window),
             window_start: usage.window_start.to_rfc3339(),
             window_end: usage.window_end.to_rfc3339(),
             max_requests: window.max_requests,

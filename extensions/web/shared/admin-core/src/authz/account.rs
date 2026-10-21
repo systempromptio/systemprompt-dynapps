@@ -4,8 +4,8 @@
 //! that gate by a role; an inactive account holds none.
 
 use sqlx::PgPool;
+use systemprompt::governance::policy::types::AccessScope;
 use systemprompt::identifiers::UserId;
-use systemprompt_security::policy::types::AccessScope;
 
 pub async fn account_scope(pool: &PgPool, user_id: &UserId) -> Result<AccessScope, sqlx::Error> {
     Ok(account_scope_and_roles(pool, user_id).await?.0)

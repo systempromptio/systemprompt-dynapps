@@ -34,7 +34,7 @@ use systemprompt::prelude::PgPool;
 
 pub(crate) use middleware::{SessionInputs, resolve_session, resolve_user_context};
 pub(crate) use pat::PatRejection;
-pub use ssr::{admin_ssr_router, bridge_auth_ssr_router};
+pub use ssr::{AdminSsrDeps, admin_ssr_router, bridge_auth_ssr_router};
 pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
 pub use systemprompt_web_admin_governance::routes::secrets::secrets_router;
 

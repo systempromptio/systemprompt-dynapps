@@ -26,7 +26,6 @@ fn all_jobs_registered() {
         "llms_txt_generation",
         "plugin_usage_retention",
         "publish_pipeline",
-        "quota_month_window",
         "retention_daily_report",
         "retention_export_monthly",
         "retention_export_weekly",
@@ -35,6 +34,7 @@ fn all_jobs_registered() {
         "secrets_refresh",
         "scope_defaults_recompute",
         "site_content_prerender",
+        "site_render",
         "sitemap_generation",
         "usage_anomaly",
         "usage_daily_rollup",
@@ -52,4 +52,27 @@ fn stateless_provider_registries_are_complete() {
     assert_eq!(registry::content_data_providers().len(), 1);
     // org_url and release_version (site/src/extenders).
     assert_eq!(registry::template_data_extenders().len(), 2);
+}
+
+#[test]
+fn jobs_with_node_local_effects_are_node_scoped() {
+    use systemprompt::traits::JobScope;
+    let scope = |name: &str| {
+        extension_jobs()
+            .into_iter()
+            .find(|j| j.name() == name)
+            .unwrap_or_else(|| panic!("{name} registered"))
+            .scope()
+    };
+    assert_eq!(scope("site_render"), JobScope::Node, "web.dist is per node");
+    assert_eq!(
+        scope("secrets_refresh"),
+        JobScope::Node,
+        "secrets are per process"
+    );
+    assert_eq!(
+        scope("blog_content_ingestion"),
+        JobScope::Cluster,
+        "ingestion writes the database once per tick"
+    );
 }

@@ -53,10 +53,8 @@ tower-http = { workspace = true }
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-reqwest = { workspace = true }
 
 # Utilities
-chrono = { workspace = true }
 tracing = { workspace = true }
 urlencoding = { workspace = true }
 

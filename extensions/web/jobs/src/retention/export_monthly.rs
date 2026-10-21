@@ -2,8 +2,8 @@
 //!
 //! The rollups (`admin_usage_daily_rollups`, `plugin_usage_daily`,
 //! `conversation_facts`, …) are the instance's durable record and are never
-//! expired, so their monthly archive under
-//! `storage/exports/monthly/<yyyy>-<mm>/` is the off-database copy of
+//! expired, so their monthly archive under `exports/monthly/<yyyy>-<mm>/` in
+//! core's file storage is the off-database copy of
 //! everything the console can still show. After the archive the managed tables
 //! are vacuumed, one plain statement per table on a pool connection, because
 //! `VACUUM` cannot run inside a transaction. The health check runs after the
@@ -17,9 +17,10 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
 use sqlx::PgPool;
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
-use systemprompt::traits::{Job, JobContext, JobResult};
+use systemprompt::system::AppContext;
+use systemprompt::traits::{FileStorage, Job, JobContext, JobResult};
 
-use super::archive::{ArchiveTarget, Window, archive_tables, prune_periods};
+use super::archive::{ArchiveTarget, Window, adopt_local_archives, archive_tables, prune_periods};
 use super::ledger::{archive_exists, record_health_report};
 use super::{ROLLUP_TABLES, all_managed, health};
 use crate::error::JobError;
@@ -31,7 +32,7 @@ const KEEP_EVERY_MONTH: u32 = 0;
 pub struct RetentionExportMonthlyJob;
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct MonthlyParams {
+pub struct MonthlyParams {
     pub months_back: u32,
     pub keep_months: u32,
 }
@@ -64,15 +65,17 @@ pub(crate) fn month_window(day: NaiveDate, months_back: u32) -> (Window, String)
 }
 
 impl RetentionExportMonthlyJob {
-    pub(crate) async fn execute_with_pool(
+    pub async fn execute_with_storage(
         pool: &PgPool,
+        storage: &dyn FileStorage,
         exports_root: &Path,
         params: MonthlyParams,
         now: DateTime<Utc>,
     ) -> Result<JobResult, JobError> {
         let started = std::time::Instant::now();
-        let written = write_missing_archives(pool, exports_root, params, now).await?;
-        let pruned = prune_old_archives(exports_root, params, now)?;
+        adopt_local_archives(pool, storage, exports_root, TIER).await?;
+        let written = write_missing_archives(pool, storage, params, now).await?;
+        let pruned = prune_old_archives(pool, storage, params, now).await?;
         let vacuumed = vacuum_managed(pool).await?;
         let counts = check_health(pool).await?;
         let duration_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
@@ -88,7 +91,7 @@ impl RetentionExportMonthlyJob {
 
 async fn write_missing_archives(
     pool: &PgPool,
-    exports_root: &Path,
+    storage: &dyn FileStorage,
     params: MonthlyParams,
     now: DateTime<Utc>,
 ) -> Result<u64, JobError> {
@@ -100,7 +103,7 @@ async fn write_missing_archives(
         }
         let target = ArchiveTarget {
             pool,
-            exports_root,
+            storage,
             tier: TIER,
             period: &period,
             window,
@@ -116,8 +119,9 @@ async fn write_missing_archives(
     Ok(written)
 }
 
-fn prune_old_archives(
-    exports_root: &Path,
+async fn prune_old_archives(
+    pool: &PgPool,
+    storage: &dyn FileStorage,
     params: MonthlyParams,
     now: DateTime<Utc>,
 ) -> Result<u64, JobError> {
@@ -125,7 +129,7 @@ fn prune_old_archives(
         return Ok(0);
     }
     let (_, keep_from) = month_window(now.date_naive(), params.keep_months);
-    prune_periods(exports_root, TIER, &keep_from)
+    prune_periods(pool, storage, TIER, &keep_from).await
 }
 
 async fn check_health(pool: &PgPool) -> Result<(i32, i32, i32), JobError> {
@@ -166,7 +170,7 @@ impl Job for RetentionExportMonthlyJob {
         vec![crate::registry::JOB_TAG]
     }
     fn description(&self) -> &'static str {
-        "Archives last month's rollups to storage/exports/monthly, runs the database health check and vacuums managed tables"
+        "Archives last month's rollups to exports/monthly in file storage, runs the database health check and vacuums managed tables"
     }
     fn schedule(&self) -> &'static str {
         "0 30 2 1 * *"
@@ -181,8 +185,10 @@ impl Job for RetentionExportMonthlyJob {
             months_back: ctx.get_parameter_parsed::<u32>("months_back")?.unwrap_or(1),
             keep_months: ctx.get_parameter_parsed::<u32>("keep_months")?.unwrap_or(0),
         };
-        Ok(Self::execute_with_pool(
+        let app = ctx.get::<Arc<AppContext>>()?;
+        Ok(Self::execute_with_storage(
             &db.write_pool(),
+            app.file_storage().as_ref(),
             paths.storage().exports(),
             params,
             Utc::now(),

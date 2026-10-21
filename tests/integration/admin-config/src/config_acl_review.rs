@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use sqlx::PgPool;
-use systemprompt_security::authz::RegisteredEntities;
+use systemprompt::governance::authz::RegisteredEntities;
 use systemprompt_web_admin_core::repositories::access_rules::declared::DeclaredSet;
 use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
 use systemprompt_web_admin_core::repositories::access_rules::drift::compute_drift;

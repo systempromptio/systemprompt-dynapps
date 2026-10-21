@@ -20,6 +20,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::task::JoinHandle;
 
+use super::forge::{self, HeaderSpec};
 use super::keys::TestIdpKeys;
 pub use crate::fake_http::RecordedRequest;
 use crate::fake_http::{RequestLog, bind, record, snapshot, spawn};
@@ -40,8 +41,11 @@ pub struct IdTokenSpec {
     pub iat: Option<DateTime<Utc>>,
     pub exp: Option<DateTime<Utc>>,
     pub jti: Option<String>,
+    // Defaults to `iat`.
+    pub nbf: Option<DateTime<Utc>>,
     pub sign_with_other_key: bool,
     pub wrong_issuer: bool,
+    pub header: HeaderSpec,
 }
 
 #[derive(Debug)]
@@ -181,7 +185,7 @@ fn mint(issuer: &str, spec: &IdTokenSpec) -> String {
     let mut claims = json!({
         "iss": iss, "sub": spec.sub, "oid": spec.oid, "aud": spec.aud, "tid": spec.tid,
         "nonce": spec.nonce, "name": spec.name, "ver": "2.0",
-        "iat": iat.timestamp(), "nbf": iat.timestamp(), "exp": exp.timestamp(),
+        "iat": iat.timestamp(), "nbf": spec.nbf.unwrap_or(iat).timestamp(), "exp": exp.timestamp(),
     });
     let obj = claims.as_object_mut().expect("claims object");
     if let Some(email) = &spec.email {
@@ -206,9 +210,7 @@ fn mint(issuer: &str, spec: &IdTokenSpec) -> String {
     } else if !spec.groups.is_empty() {
         obj.insert("groups".into(), json!(spec.groups));
     }
-    let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
-    header.kid = Some(keys.kid.clone());
-    jsonwebtoken::encode(&header, &claims, &keys.encoding_key()).expect("sign ID token")
+    forge::sign(&spec.header, keys, &claims)
 }
 
 fn log(inner: &Inner, method: &str, path: &str, query: Option<String>, body: String) {

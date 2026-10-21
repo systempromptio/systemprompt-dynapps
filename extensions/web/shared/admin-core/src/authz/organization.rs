@@ -10,11 +10,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 const ORGANIZATION_RULE_TYPE: RuleType = RuleType::extension_static("organization");
 
@@ -50,7 +50,7 @@ impl SubjectAttributeProvider for OrganizationAttributeProvider {
     }
 }
 
-systemprompt_security::register_subject_attribute_provider!(|_ctx| {
+systemprompt::governance::register_subject_attribute_provider!(|_ctx| {
     let provider: SharedSubjectAttributeProvider = Arc::new(OrganizationAttributeProvider);
     provider
 });

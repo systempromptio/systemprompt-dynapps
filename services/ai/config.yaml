@@ -14,6 +14,15 @@ ai:
       enabled: true
       google_search_enabled: false
       default_model: deepseek-flash
+    # OpenCode Go, served only with a member's own key (credential: user).
+    opencode-go:
+      enabled: true
+      google_search_enabled: false
+      default_model: go-deepseek-v4-pro
+    opencode-go-anthropic:
+      enabled: true
+      google_search_enabled: false
+      default_model: go-minimax-m3
   mcp:
     auto_discover: true
     connect_timeout_ms: 5000

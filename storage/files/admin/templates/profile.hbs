@@ -78,6 +78,8 @@
     </section>
 
 
+    {{> components/personal-subscriptions}}
+
     <form id="settings-form" class="sp-p-profile__settings" aria-label="Settings">
         {{#> components/section title="Settings" note="Username and email come from the directory that signed you in. Display name, avatar and timezone are yours."}}
             {{#*inline "section_actions"}}<button type="submit" form="settings-form" class="sp-btn sp-btn--sm sp-btn--primary" id="save-settings-btn">Save settings</button>{{/inline}}
@@ -215,5 +217,6 @@
     {{/inline}}
     {{#*inline "scripts"}}
     <script src="/js/pages/admin-settings.js?v={{css_version}}" type="module"></script>
+    <script src="/js/pages/admin-subscriptions.js?v={{css_version}}" type="module"></script>
     {{/inline}}
 {{/layout}}

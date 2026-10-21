@@ -1,12 +1,16 @@
 //! Cost and consumption for the Cost tab, in two audiences.
 //!
 //! The internal half reads provider cost — what inference cost us at the
-//! supplier — by day, by provider, and by model. The customer half reads
-//! `admin_usage_daily_rollups`, which carries the `group_id` and `project_id`
-//! a person held when the row was rolled up, and selects no cost column
-//! anywhere: the export is sent outside the platform team, so "no supplier
-//! figure leaks" is a property of the SQL rather than a discipline the
-//! template has to keep.
+//! supplier — by day, by provider, and by model. The by-day and by-provider
+//! reads come from `report_ai_usage_hourly` (the window widened to whole UTC
+//! hours at its start) and split each provider into its platform share and
+//! the share billed to members' own subscription keys, labelled
+//! `(member key)` so that estimate is never read as platform spend. The
+//! customer half reads `admin_usage_daily_rollups`, which carries the
+//! `group_id` and `project_id` a person held when the row was rolled up, and
+//! selects no cost column anywhere: the export is sent outside the platform
+//! team, so "no supplier figure leaks" is a property of the SQL rather than a
+//! discipline the template has to keep.
 //!
 //! Rollups keep historical attribution rather than today's membership, which
 //! is why a container's cost history does not move when someone changes team.
@@ -32,17 +36,32 @@ pub async fn list_provider_cost_by_day(
 ) -> Result<Vec<CostDayRow>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"
+        WITH totals AS (
+            SELECT
+                (r.bucket AT TIME ZONE 'UTC')::DATE AS day,
+                COALESCE(NULLIF(r.provider, ''), 'unrouted') AS provider,
+                COALESCE(SUM(r.request_count), 0)::BIGINT AS requests,
+                COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost,
+                COALESCE(SUM(r.user_key_request_count), 0)::BIGINT AS key_requests,
+                COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS key_cost
+            FROM report_ai_usage_hourly r
+            WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2
+              AND NOT r.synthetic
+              AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
+              AND ($4::TEXT IS NULL OR r.user_id = $4)
+            GROUP BY 1, 2
+        )
         SELECT
-            (r.created_at AT TIME ZONE 'UTC')::DATE AS "day!",
-            COALESCE(r.provider, 'unrouted') AS "provider!",
-            COUNT(*)::BIGINT AS "requests!",
-            COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost!"
-        FROM ai_requests r
-        WHERE r.created_at >= $1 AND r.created_at < $2
-          AND NOT r.synthetic
-          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
-          AND ($4::TEXT IS NULL OR r.user_id = $4)
-        GROUP BY 1, 2
+            t.day AS "day!",
+            split.provider AS "provider!",
+            split.requests AS "requests!",
+            split.cost AS "cost!"
+        FROM totals t
+        CROSS JOIN LATERAL (VALUES
+            (t.provider, t.requests - t.key_requests, t.cost - t.key_cost),
+            (t.provider || ' (member key)', t.key_requests, t.key_cost)
+        ) AS split(provider, requests, cost)
+        WHERE split.requests > 0
         ORDER BY 1, 2
         LIMIT 2000
         "#,
@@ -83,19 +102,35 @@ pub async fn list_provider_costs(
 ) -> Result<Vec<SupplierCostRow>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"
+        WITH totals AS (
+            SELECT
+                COALESCE(NULLIF(r.provider, ''), 'unrouted') AS provider,
+                COALESCE(SUM(r.request_count), 0)::BIGINT AS requests,
+                COALESCE(SUM(r.tokens), 0)::BIGINT AS tokens,
+                COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost,
+                COALESCE(SUM(r.user_key_request_count), 0)::BIGINT AS key_requests,
+                COALESCE(SUM(r.user_key_tokens), 0)::BIGINT AS key_tokens,
+                COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS key_cost
+            FROM report_ai_usage_hourly r
+            WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2
+              AND NOT r.synthetic
+              AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
+              AND ($4::TEXT IS NULL OR r.user_id = $4)
+            GROUP BY 1
+        )
         SELECT
-            COALESCE(r.provider, 'unrouted') AS "label!",
-            COUNT(*)::BIGINT AS "requests!",
-            COALESCE(SUM(COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)), 0)::BIGINT
-                AS "tokens!",
-            COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost!"
-        FROM ai_requests r
-        WHERE r.created_at >= $1 AND r.created_at < $2
-          AND NOT r.synthetic
-          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
-          AND ($4::TEXT IS NULL OR r.user_id = $4)
-        GROUP BY 1
-        ORDER BY SUM(r.cost_microdollars) DESC NULLS LAST
+            split.label AS "label!",
+            split.requests AS "requests!",
+            split.tokens AS "tokens!",
+            split.cost AS "cost!"
+        FROM totals t
+        CROSS JOIN LATERAL (VALUES
+            (t.provider, t.requests - t.key_requests, t.tokens - t.key_tokens,
+             t.cost - t.key_cost),
+            (t.provider || ' (member key)', t.key_requests, t.key_tokens, t.key_cost)
+        ) AS split(label, requests, tokens, cost)
+        WHERE split.requests > 0
+        ORDER BY split.cost DESC
         LIMIT 50
         "#,
         range.from,

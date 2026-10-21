@@ -3,11 +3,13 @@
 //! The orchestrator and case triggers judge from a spawned task; a
 //! restart drops that task and leaves the eval run `running` forever.
 //!
-//! At boot every eval run still `queued` or `running` is planned case by
-//! case with [`plan_resume`]: a case with a farm run is settled (judged now
-//! if the run is terminal, else watched until it is), a case never launched
-//! is launched, and an eval run older than [`MAX_EVAL_AGE`] is abandoned —
-//! its open cases errored with the reason and the eval run marked failed.
+//! At boot every eval run still `queued` or `running` whose driving replica
+//! has stopped heartbeating (or that names none) is claimed for this replica
+//! and planned case by case with [`plan_resume`]: a case with a farm run is
+//! settled (judged now if the run is terminal, else watched until it is), a
+//! case never launched is launched, and an eval run older than [`MAX_EVAL_AGE`]
+//! is abandoned — its open cases errored with the reason and the eval run
+//! marked failed.
 
 use std::sync::Arc;
 
@@ -90,7 +92,25 @@ pub async fn resume_eval_runs(state: &Arc<FarmState>) -> usize {
             return 0;
         },
     };
-    let open: Vec<EvalRunRow> = select_interrupted(&rows).into_iter().cloned().collect();
+    let mut open: Vec<EvalRunRow> = Vec::new();
+    for eval_run in select_interrupted(&rows) {
+        match evals::claim_eval_run_driver(&state.pool, &eval_run.id, &state.instance).await {
+            Ok(true) => open.push(eval_run.clone()),
+            Ok(false) => {
+                tracing::debug!(
+                    eval_run = eval_run.id.as_str(),
+                    "eval run driven by a live replica; not resumed"
+                );
+            },
+            Err(e) => {
+                tracing::error!(
+                    error = %e,
+                    eval_run = eval_run.id.as_str(),
+                    "eval run driver not claimed"
+                );
+            },
+        }
+    }
     let count = open.len();
     for eval_run in open {
         let state = Arc::clone(state);

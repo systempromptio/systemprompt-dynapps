@@ -1689,6 +1689,7 @@
       "additionalProperties": false
     },
     "PlaneAuthority": {
+      "description": "The authority a profile names for one plane under\n`config_planes.authority`.",
       "type": "string",
       "enum": [
         "file",

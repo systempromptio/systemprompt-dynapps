@@ -86,6 +86,8 @@ mod downstream_credential_configs;
 #[cfg(test)]
 mod dynapps_portal_connectors;
 #[cfg(test)]
+mod entrypoint_role;
+#[cfg(test)]
 mod export_registry;
 #[cfg(test)]
 mod format_display;
@@ -106,8 +108,6 @@ mod conversation_sort;
 mod gateway_policies_drift;
 #[cfg(test)]
 mod gateway_policies_form;
-#[cfg(test)]
-mod gateway_policies_month_window;
 #[cfg(test)]
 mod gateway_policies_unedited;
 #[cfg(test)]
@@ -441,3 +441,5 @@ mod farm_tool_allowlist;
 mod farm_tool_policy;
 #[cfg(test)]
 mod farm_tool_tally;
+#[cfg(test)]
+mod personal_upstream_headers;

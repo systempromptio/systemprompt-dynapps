@@ -2,7 +2,8 @@
 //! `retention_health_reports`) and the catalog reads that feed them.
 
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
+use systemprompt_web_admin_core::archive_objects::ARCHIVE_PREFIX;
 
 use super::ManagedTable;
 use super::health::HealthReport;
@@ -102,7 +103,7 @@ pub(crate) struct ArchiveRecord<'a> {
 }
 
 pub(crate) async fn record_archive(
-    pool: &PgPool,
+    conn: &mut PgConnection,
     record: &ArchiveRecord<'_>,
 ) -> Result<(), JobError> {
     sqlx::query(
@@ -124,7 +125,7 @@ pub(crate) async fn record_archive(
     .bind(record.sha256)
     .bind(record.window_from)
     .bind(record.window_to)
-    .execute(pool)
+    .execute(conn)
     .await?;
     Ok(())
 }
@@ -142,6 +143,84 @@ pub(crate) async fn archive_exists(
     .fetch_one(pool)
     .await?;
     Ok(n > 0)
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LedgerEntry {
+    pub tier: String,
+    pub period: String,
+    pub table: String,
+    pub relative_path: String,
+}
+
+type EntryRow = (String, String, String, String);
+
+fn entry((tier, period, table, relative_path): EntryRow) -> LedgerEntry {
+    LedgerEntry {
+        tier,
+        period,
+        table,
+        relative_path,
+    }
+}
+
+pub(crate) async fn period_entries(
+    pool: &PgPool,
+    tier: &str,
+    before: &str,
+) -> Result<Vec<LedgerEntry>, JobError> {
+    let rows: Vec<EntryRow> = sqlx::query_as(
+        "SELECT tier, period, table_name, relative_path FROM retention_archives
+         WHERE tier = $1 AND period < $2
+         ORDER BY period, table_name",
+    )
+    .bind(tier)
+    .bind(before)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.into_iter().map(entry).collect())
+}
+
+pub(crate) async fn legacy_entries(
+    pool: &PgPool,
+    tier: &str,
+) -> Result<Vec<LedgerEntry>, JobError> {
+    let rows: Vec<EntryRow> = sqlx::query_as(
+        "SELECT tier, period, table_name, relative_path FROM retention_archives
+         WHERE tier = $1 AND relative_path NOT LIKE $2 || '/%'
+         ORDER BY period, table_name",
+    )
+    .bind(tier)
+    .bind(ARCHIVE_PREFIX)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.into_iter().map(entry).collect())
+}
+
+pub(crate) async fn relocate_entry(
+    conn: &mut PgConnection,
+    entry: &LedgerEntry,
+) -> Result<(), JobError> {
+    sqlx::query(
+        "UPDATE retention_archives SET relative_path = $4 || '/' || relative_path
+         WHERE tier = $1 AND period = $2 AND table_name = $3 AND relative_path NOT LIKE $4 || '/%'",
+    )
+    .bind(&entry.tier)
+    .bind(&entry.period)
+    .bind(&entry.table)
+    .bind(ARCHIVE_PREFIX)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+pub(crate) async fn delete_period(pool: &PgPool, tier: &str, period: &str) -> Result<(), JobError> {
+    sqlx::query("DELETE FROM retention_archives WHERE tier = $1 AND period = $2")
+        .bind(tier)
+        .bind(period)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 pub(crate) async fn record_health_report(

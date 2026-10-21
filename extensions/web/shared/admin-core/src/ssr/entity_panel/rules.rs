@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 
-use systemprompt_security::authz::{DASHBOARD_SOURCE, YAML_SOURCE};
+use systemprompt::governance::authz::{DASHBOARD_SOURCE, YAML_SOURCE};
 
 use super::view::{BandRulesView, PanelRuleView};
 use crate::repositories::access_rules::rules::LedgerRuleRow;

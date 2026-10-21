@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_eval_runs\nSET status = $2,\n    started_at = CASE WHEN $2 = 'running' THEN COALESCE(started_at, NOW()) ELSE started_at END\nWHERE id = $1 AND status IN ('queued', 'running')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b4b468e95fb7f891010f3c1ef6215f82d3b70a305ae5248886b78bb629c1e9c1"
+}

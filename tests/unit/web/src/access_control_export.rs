@@ -1,6 +1,6 @@
 //! Database → `rules.yaml`: the export is the loader's inverse.
 
-use systemprompt_security::authz::Access;
+use systemprompt::governance::authz::Access;
 use systemprompt_web_admin_core::repositories::access_rules::drift::{
     BandRuleRow, EntityDefaultRow,
 };

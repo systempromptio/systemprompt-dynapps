@@ -9,6 +9,11 @@
 //! hash and fetch time come from the bundle cache's `state.json`, what it
 //! owns from its cached `bundle.json`, and its provenance from the active
 //! services root core installed at boot. Nothing here fetches.
+//!
+//! [`dir_owner`] names the pinned source whose active bundle owns a services
+//! directory (`ai`, `governance`, …): a file there is served from the
+//! composed root, so the baked copy the console edits is not what the runtime
+//! reads.
 
 use std::path::Path;
 
@@ -232,6 +237,26 @@ fn owns_view(manifest: &ServicesBundleManifest) -> OwnsView {
         plugins: plugins.clone(),
         skills: skills.clone(),
     }
+}
+
+#[must_use]
+pub fn dir_owner(dir: &str) -> Option<String> {
+    let profile = ProfileBootstrap::get().ok()?;
+    let cache = BundleCache::new(cache_root(profile));
+    let state = cache.read_state();
+    profile.services.sources.iter().find_map(|source| {
+        let active = state.sources.get(&source.name)?;
+        let signed = cache
+            .read_manifest(&source.name, &active.content_hash)
+            .ok()?;
+        signed
+            .manifest
+            .owns
+            .dirs
+            .iter()
+            .any(|owned| owned == dir)
+            .then(|| source.name.clone())
+    })
 }
 
 fn marketplaces_declaring_access() -> Vec<String> {

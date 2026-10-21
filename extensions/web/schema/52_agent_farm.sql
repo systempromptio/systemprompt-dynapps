@@ -186,7 +186,8 @@ CREATE TABLE IF NOT EXISTS agent_farm_eval_runs (
     client_id TEXT REFERENCES clients(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     triggered_via TEXT NOT NULL DEFAULT 'console'
-        CHECK (triggered_via IN ('dashboard', 'api', 'eval', 'mcp', 'console', 'demo', 'scheduler'))
+        CHECK (triggered_via IN ('dashboard', 'api', 'eval', 'mcp', 'console', 'demo', 'scheduler')),
+    driver_instance_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_farm_eval_runs_suite ON agent_farm_eval_runs(suite_id, created_at DESC);

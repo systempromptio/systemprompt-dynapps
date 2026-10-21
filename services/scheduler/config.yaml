@@ -80,15 +80,26 @@ scheduler:
       schedule: "0 15 * * * *"
       enabled: true
 
-    # Web extension jobs (publishing pipeline). Hourly: the bootstrap entry
-    # publishes at boot and content edits go through `just publish` or
-    # `systemprompt infra jobs run publish_pipeline`; every run regenerates
-    # the whole site unconditionally, so a tighter cadence only repeats
-    # identical output.
+    # Web extension jobs (publishing pipeline). The composite publish_pipeline
+    # runs by hand (`just publish`, `systemprompt infra jobs run
+    # publish_pipeline`); it is not on the cron or at boot, because its two
+    # halves have different scopes. Hourly, content ingestion writes the database once
+    # (cluster scope) and five minutes later site_render rebuilds web.dist on
+    # every replica (node scope), so no replica keeps serving a stale site.
     - name: publish_pipeline
       extension: web
       owner: admin
+      enabled: false
+
+    - name: blog_content_ingestion
+      extension: web
+      owner: admin
       schedule: "0 0 * * * *"
+      enabled: true
+
+    - name: site_render
+      extension: web
+      owner: admin
       enabled: true
 
     # Standalone core jobs, running on each job's built-in default schedule
@@ -207,7 +218,8 @@ scheduler:
       enabled: true
 
     # Expires raw evidence older than 90 days — hook events, gateway
-    # requests and what hangs off them — in one transaction (web extension).
+    # requests and what hangs off them — in batches of 5,000 rows per table,
+    # one short transaction each, within a 15-minute budget (web extension).
     # conversation_facts and conversation_skill_facts are kept.
     - name: plugin_usage_retention
       extension: web
@@ -260,13 +272,13 @@ scheduler:
       enabled: true
 
     # Audit hash chain sealer (NFR-5.6): links new ai_requests and
-    # ai_safety_findings rows into the chain every 10 s, one replica at a time
+    # ai_safety_findings rows into the chain every 30 s, one replica at a time
     # (advisory lock). The gateway insert path does not lock the chain head;
     # the seal lags by at most one interval. Schema 51_audit_integrity.sql.
     - name: audit_chain_seal
       extension: web
       owner: admin
-      schedule: "*/10 * * * * *"
+      schedule: "*/30 * * * * *"
       enabled: true
 
     # Audit hash chain (NFR-5.6): re-hashes the last two days of the
@@ -277,16 +289,6 @@ scheduler:
       extension: web
       owner: admin
       schedule: "0 45 4 * * *"
-      enabled: true
-
-    # Calendar-month quota windows (web extension, interim until core has
-    # calendar windows). Five minutes past UTC midnight: rewrites every
-    # monthly window in ai_gateway_policies to run out at month end and
-    # carries yesterday's bucket into today's. Idempotent for the day, so
-    # `systemprompt infra jobs run quota_month_window` is always safe.
-    - name: quota_month_window
-      extension: web
-      owner: admin
       enabled: true
 
     # The conversation judge (web extension): the one AI label on top of the
@@ -328,9 +330,9 @@ scheduler:
       owner: admin
       enabled: true
 
-    # Core projection drainers, on each job's built-in schedule (no
-    # `schedule:` override): every 10 s for trace_facts_rollup, once a minute
-    # at a staggered second for the rest. Each drains a queue its source
+    # Core projection drainers: trace_facts_rollup every 30 s (overridden
+    # above), the rest on their built-in schedule, once a minute at a
+    # staggered second. Each drains a queue its source
     # table's triggers fill into the stored facts a list view reads, so an
     # empty queue is a cheap no-op. backfill_rollups is the same shape: it
     # drains the hours migrations queued for the hourly AI, tool and
@@ -338,6 +340,7 @@ scheduler:
     - name: trace_facts_rollup
       extension: core
       owner: admin
+      schedule: "*/30 * * * * *"
       enabled: true
 
     - name: ai_request_tool_flag_rollup
@@ -375,15 +378,10 @@ scheduler:
       owner: admin
       enabled: true
 
-    # publish_pipeline sub-steps. The composite above runs each of these every
-    # hour in dependency order; scheduling them independently would
-    # double-run them, so they are disabled here (an explicit entry also
-    # records the decision and silences the boot warning).
-    - name: blog_content_ingestion
-      extension: web
-      owner: admin
-      enabled: false
-
+    # Render sub-steps. site_render runs each of these in dependency order;
+    # scheduling them independently would double-run them, so they are
+    # disabled here (an explicit entry also records the decision and silences
+    # the boot warning).
     - name: bundle_admin_css
       extension: web
       owner: admin
@@ -436,7 +434,8 @@ scheduler:
     - managed_inventory_refresh
     - database_cleanup
     - cleanup_inactive_sessions
-    # Publish web assets before the cron loop: web/dist is generated, not
-    # shipped in the image, so without this the site 404s until the first
-    # publish_pipeline tick.
-    - publish_pipeline
+    # Render this node's web/dist before the server is ready. site_render is
+    # node-scoped, so every replica that runs the scheduler renders its own
+    # copy here, once; it ingests first when no release (or an older one) has
+    # ingested, so a fresh replica never serves an empty site.
+    - site_render

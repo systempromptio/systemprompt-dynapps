@@ -2,9 +2,15 @@
 //! the surface that triggered it) and a pending result per case, then hands
 //! the cases to a background task that runs them one at a time and closes
 //! the eval run with its tallies.
+//!
+//! Cancellation lives in the eval run's row, not in the process that drives
+//! it: cancelling marks the row `cancelled` from whichever replica took the
+//! request, the driver reads the row before each case and stops, and closing
+//! the run records its tallies without overwriting the `cancelled` status.
+//! The row also names the replica driving it, so a booting replica resumes
+//! only eval runs whose driver has stopped heartbeating.
 
-use std::collections::HashSet;
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::Arc;
 
 use systemprompt::identifiers::UserId;
 
@@ -22,22 +28,6 @@ use crate::types::{
     EvalResultId, EvalResultStatus, EvalRunId, EvalRunStatus, EvalSuiteId, FarmId, FarmRunId,
     TriggeredVia,
 };
-
-static CANCELLED: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
-
-pub(super) fn is_cancelled(id: &EvalRunId) -> bool {
-    CANCELLED.lock().is_ok_and(|set| set.contains(id.as_str()))
-}
-
-pub(super) fn set_cancelled(id: &EvalRunId, on: bool) {
-    if let Ok(mut set) = CANCELLED.lock() {
-        if on {
-            set.insert(id.as_str().to_owned());
-        } else {
-            set.remove(id.as_str());
-        }
-    }
-}
 
 #[derive(Debug, Default)]
 pub(super) struct Tally {
@@ -144,7 +134,6 @@ pub async fn start_eval_run(
         if let Err(err) = drive(&state, judge, &scope, planned).await {
             fail_eval_run(&state.pool, &id, &err).await;
         }
-        set_cancelled(&id, false);
     });
     Ok(row)
 }
@@ -162,10 +151,11 @@ async fn drive(
         eval_run_id,
     } = *scope;
     let pool = &state.pool;
+    evals::claim_eval_run_driver(pool, eval_run_id, &state.instance).await?;
     evals::update_eval_run_status(pool, eval_run_id, EvalRunStatus::Running).await?;
     let mut tally = Tally::default();
     for (case, result_id) in &planned {
-        if is_cancelled(eval_run_id) {
+        if evals::is_eval_run_cancelled(pool, eval_run_id).await? {
             break;
         }
         let job = CaseJob {
@@ -217,15 +207,10 @@ pub(super) async fn close_eval_run(
     eval_run_id: &EvalRunId,
     tally: &Tally,
 ) -> FarmResult<()> {
-    let status = if is_cancelled(eval_run_id) {
-        EvalRunStatus::Cancelled
-    } else {
-        EvalRunStatus::Completed
-    };
     evals::update_eval_run_finished(
         pool,
         eval_run_id,
-        status,
+        EvalRunStatus::Completed,
         tally.mean_score(),
         tally.cost_microdollars,
     )
@@ -241,7 +226,6 @@ pub(super) async fn fail_eval_run(pool: &PgPool, id: &EvalRunId, err: &FarmError
 }
 
 pub async fn cancel_eval_run(state: &FarmState, eval_run_id: &EvalRunId) -> FarmResult<()> {
-    set_cancelled(eval_run_id, true);
     evals::update_eval_run_status(&state.pool, eval_run_id, EvalRunStatus::Cancelled).await?;
     let Some(eval_run) = evals::find_eval_run(&state.pool, eval_run_id).await? else {
         return Ok(());

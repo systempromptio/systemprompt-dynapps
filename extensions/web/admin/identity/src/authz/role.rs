@@ -14,11 +14,11 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::identifiers::UserId;
-use systemprompt_security::authz::{
+use systemprompt::governance::authz::{
     AuthzError, ROLE_PRECEDENCE, RuleType, SharedSubjectAttributeProvider,
     SubjectAttributeProvider, SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 use crate::repositories::users::roles::{list_directory_roles, list_manual_roles};
 
@@ -67,7 +67,7 @@ impl SubjectAttributeProvider for RoleAttributeProvider {
     }
 }
 
-systemprompt_security::register_subject_attribute_provider!(|ctx| {
+systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
         systemprompt_web_admin_core::authz::cached::cached_provider(RoleAttributeProvider::new(
             Arc::clone(&ctx.pool),

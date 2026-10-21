@@ -124,12 +124,7 @@ A window can also key on `api_key` or on any scope dimension, in which case it c
 
 **Only the three windows above are declared.** A monthly window per project, group or role, or a window keyed on `cost_centre` or `practice`, is supported but not configured.
 
-Periods are an hour, a day, a week, any number of seconds, or a **calendar month**. Core's windows are fixed-length and aligned to the Unix epoch, so the calendar month is an interim provided by the admin extension:
-
-- The window is declared as `window_seconds: 2678400` (31 days).
-- The daily `quota_month_window` job rewrites the live row so it ends at the month's end.
-- The same job carries yesterday's usage bucket into today's, so the bucket holds month-to-date usage and the first of the month starts from zero.
-- The one gap is the first minute after UTC midnight, while core's policy cache is stale.
+Periods are an hour, a day, a week, any number of seconds (`window_seconds`), or a UTC calendar period: `calendar: day`, `calendar: week` (from Monday) or `calendar: month`. A calendar window resets on the calendar boundary, so a monthly ceiling covers exactly the current month and the first of the month starts from zero.
 
 ### Per-key limits
 

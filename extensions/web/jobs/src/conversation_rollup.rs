@@ -7,6 +7,13 @@
 //! 45_). Consecutive ticks cover disjoint windows, so a conversation is
 //! rebuilt once per change rather than once per overlapping tick, and a
 //! missed tick is caught up by the next. `-p all=true` rebuilds every row.
+//!
+//! The refresh writes, so it runs on the primary beside the gateway's hot
+//! path. Each run is one transaction with a local `statement_timeout` (under
+//! the one-minute tick, or fifteen minutes for `all`) and an explicit
+//! `work_mem`, so a refresh that runs away is cancelled and rolled back —
+//! watermark included, so the next tick retries the same window — instead of
+//! competing with live traffic for minutes.
 
 use sqlx::PgPool;
 use systemprompt::database::DbPool;
@@ -14,21 +21,41 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
 
+const TICK_TIMEOUT: &str = "50s";
+
+const FULL_REBUILD_TIMEOUT: &str = "15min";
+
+const REFRESH_WORK_MEM: &str = "64MB";
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ConversationRollupJob;
 
 impl ConversationRollupJob {
     pub async fn execute_with_pool(pool: &PgPool, all: bool) -> Result<JobResult, JobError> {
         let start = std::time::Instant::now();
+        let timeout = if all {
+            FULL_REBUILD_TIMEOUT
+        } else {
+            TICK_TIMEOUT
+        };
+        let mut tx = pool.begin().await?;
+        sqlx::query!(
+            r#"SELECT set_config('statement_timeout', $1, true) AS "timeout!", set_config('work_mem', $2, true) AS "work_mem!""#,
+            timeout,
+            REFRESH_WORK_MEM
+        )
+        .fetch_one(&mut *tx)
+        .await?;
         let written = if all {
             sqlx::query_scalar!(r#"SELECT refresh_conversation_facts(NULL) AS "written!""#)
-                .fetch_one(pool)
+                .fetch_one(&mut *tx)
                 .await?
         } else {
             sqlx::query_scalar!(r#"SELECT refresh_conversation_facts_pending() AS "written!""#)
-                .fetch_one(pool)
+                .fetch_one(&mut *tx)
                 .await?
         };
+        tx.commit().await?;
         let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
         let written = u64::try_from(written).unwrap_or(0);
         tracing::debug!(

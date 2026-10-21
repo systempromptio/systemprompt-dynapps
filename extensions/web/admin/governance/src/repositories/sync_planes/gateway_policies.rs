@@ -4,9 +4,7 @@
 //! *Overwrite from code* upserts every declared policy and deletes every
 //! undeclared row; *Insert only* adds the declared policies the table lacks.
 //! Boot runs the overwrite once, on an empty table, and otherwise only
-//! compares. Both finish by running the month-window
-//! rewrite, so a calendar-month window declared with its sentinel is live
-//! on today's value before the response returns. The console editor at
+//! compares. The console editor at
 //! `/admin/gateway/policies` is the other writer; what it changes shows
 //! here as drift until it is exported or overwritten.
 
@@ -18,7 +16,6 @@ use crate::repositories::gateway_policies::declared::{
 };
 use crate::repositories::gateway_policies::drift::{PolicyDrift, compute_policy_drift};
 use crate::repositories::gateway_policies::export::render_policies_export;
-use crate::repositories::gateway_policies::month_window_db::refresh_month_windows;
 use crate::repositories::gateway_policies::rows::{
     PolicyWrite, count_policies, delete_policy, list_policies, upsert_policy,
 };
@@ -240,7 +237,6 @@ impl SyncPlane for GatewayPoliciesPlane {
                 }
             }
         }
-        refresh_month_windows(pool, chrono::Utc::now()).await?;
         record_applied(
             pool,
             &Applied {

@@ -22,6 +22,10 @@ pub struct SiteKpis {
     pub total_requests: i64,
     pub error_count: i64,
     pub total_cost_microdollars: i64,
+    // Why: a member's own subscription key pays these upstream; the figure is
+    // a list-price estimate and is never part of platform spend.
+    pub user_key_cost_microdollars: i64,
+    pub user_key_requests: i64,
     pub total_tokens: i64,
     // Why: providers bill reasoning inside `output_tokens` (and so inside
     // `tokens_used`); report it as a share, never add it.
@@ -60,6 +64,8 @@ pub async fn get_site_kpis(
         total_requests: row.total,
         error_count: row.errors,
         total_cost_microdollars: row.cost,
+        user_key_cost_microdollars: row.user_key_cost,
+        user_key_requests: row.user_key_requests,
         total_tokens: row.tokens,
         reasoning_tokens: row.reasoning_tokens,
         output_tokens: row.output_tokens,

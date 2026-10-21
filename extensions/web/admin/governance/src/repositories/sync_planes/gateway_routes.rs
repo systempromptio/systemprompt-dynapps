@@ -16,7 +16,7 @@ use sqlx::PgPool;
 
 use super::gateway_routes_drift::rows;
 use crate::repositories::gateway_routes::declared::{
-    DeclaredRoutes, GATEWAY_FILE, declared_routes_now, gateway_file_path,
+    DeclaredRoutes, GATEWAY_FILE, bundle_owner, declared_routes_now, gateway_file_path,
 };
 use crate::repositories::gateway_routes::drift::compute_route_drift;
 use crate::repositories::gateway_routes::render::{regenerate_gateway_file, render_routes_export};
@@ -180,7 +180,7 @@ impl SyncPlane for GatewayRoutesPlane {
         let declared = declared_routes_now()?;
         let outcome = write_declared(pool, &declared, mode).await?;
         let user_initiated = matches!(actor, Actor::User(_));
-        if user_initiated {
+        if user_initiated && bundle_owner().is_none() {
             regenerate_gateway_file(pool, &gateway_file_path()?).await?;
         }
         record_applied(
