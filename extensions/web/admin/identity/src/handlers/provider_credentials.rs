@@ -1,112 +1,153 @@
-//! The caller's own personal-subscription keys, relayed to core.
+//! The caller's own personal-subscription keys, served in-process.
 //!
-//! Core owns the per-person provider-credential store and serves it at
-//! `/v1/me/provider-credentials`, which authenticates by bearer token. The
-//! console's session lives in an `HttpOnly` cookie the page script cannot
-//! read, so these handlers forward the caller's own session token as the
-//! bearer and pass core's status and body back unchanged. Nothing here names
-//! a user: core reads the account from the token, so there is no parameter
-//! that could point at somebody else's key.
+//! Core owns the per-person provider-credential store; these handlers call
+//! its repository and key check directly with the session's `user_id`, so the
+//! console needs no reachable `/v1` and no bearer token. Nothing here takes a
+//! user from the request: there is no parameter that could point at somebody
+//! else's key. The answers are shaped like core's `/v1/me/provider-credentials`
+//! so the profile card and the bridge read the same rows.
 
-use std::time::Duration;
+use std::sync::Arc;
 
-use axum::body::Bytes;
-use axum::extract::Path;
-use axum::http::{HeaderMap, Method, StatusCode, header};
+use axum::Json;
+use axum::extract::rejection::JsonRejection;
+use axum::extract::{Extension, Path};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use systemprompt::manifest::Config;
-use systemprompt_web_admin_core::auth::session::extract_token_from_headers;
+use serde::Deserialize;
+use serde_json::json;
+use systemprompt::ai::repository::{UserProviderCredentialMeta, UserProviderCredentialRepository};
+use systemprompt::ai::{PersonalKeyError, personal_providers, store_personal_key};
+use systemprompt::database::DbPool;
+use systemprompt::loader::ServicesBootstrap;
+use systemprompt::manifest::services::{ProviderEntry, ProviderRegistry};
+use systemprompt::models::bridge::profile::ProviderCredentialStatus;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
-const CORE_PATH: &str = "/v1/me/provider-credentials";
-const RELAY_TIMEOUT: Duration = Duration::from_secs(30);
+#[derive(Debug, Deserialize)]
+pub(crate) struct SetKeyRequest {
+    api_key: String,
+    #[serde(default)]
+    label: Option<String>,
+}
 
-fn provider_segment(provider: &str) -> AdminResult<&str> {
-    let shaped = !provider.is_empty()
-        && provider.len() <= 64
-        && provider
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'));
-    if shaped {
-        Ok(provider)
-    } else {
-        Err(AdminError::BadRequest(format!(
-            "{provider:?} is not a provider name."
-        )))
+fn status_row(
+    entry: &ProviderEntry,
+    meta: Option<&UserProviderCredentialMeta>,
+) -> ProviderCredentialStatus {
+    ProviderCredentialStatus {
+        provider: entry.name.as_str().to_owned(),
+        display_name: entry.display_name.clone(),
+        configured: meta.is_some(),
+        label: meta.and_then(|m| m.label.clone()),
+        created_at: meta.map(|m| m.created_at),
+        verified_at: meta.and_then(|m| m.verified_at),
+        last_used_at: meta.and_then(|m| m.last_used_at),
     }
 }
 
-async fn relay(
-    headers: &HeaderMap,
-    method: Method,
-    suffix: &str,
-    body: Option<Bytes>,
+fn refusal(status: StatusCode, code: &str, message: &str) -> Response {
+    (
+        status,
+        Json(json!({ "code": code, "error": code, "message": message })),
+    )
+        .into_response()
+}
+
+fn registry() -> AdminResult<ProviderRegistry> {
+    let services = ServicesBootstrap::get().map_err(|e| AdminError::Internal(Box::new(e)))?;
+    Ok(services.providers.clone())
+}
+
+fn personal_provider(registry: &ProviderRegistry, name: &str) -> Option<ProviderEntry> {
+    personal_providers(registry)
+        .into_iter()
+        .find(|entry| entry.name.as_str() == name)
+}
+
+pub(crate) async fn list_own_provider_credentials(
+    Extension(user_ctx): Extension<UserContext>,
+    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
 ) -> AdminResult<Response> {
-    let token = extract_token_from_headers(headers)?;
-    let base = Config::get()?
-        .api_internal_url
-        .trim_end_matches('/')
-        .to_owned();
-    let client = reqwest::Client::builder()
-        .timeout(RELAY_TIMEOUT)
-        .build()
-        .map_err(|e| AdminError::UpstreamFailure {
-            context: "provider-credential relay client",
-            source: Box::new(e),
-        })?;
-    let mut request = client
-        .request(method, format!("{base}{CORE_PATH}{suffix}"))
-        .bearer_auth(token);
-    if let Some(body) = body {
-        request = request
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(body);
-    }
-    let upstream = request
-        .send()
+    let stored = keys
+        .list_metadata(&user_ctx.user_id)
         .await
-        .map_err(|e| AdminError::UpstreamFailure {
-            context: "provider-credential store",
-            source: Box::new(e),
-        })?;
-    let status =
-        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
-    let content_type = upstream
-        .headers()
-        .get(header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/json")
-        .to_owned();
-    let bytes = upstream
-        .bytes()
-        .await
-        .map_err(|e| AdminError::UpstreamFailure {
-            context: "provider-credential store",
-            source: Box::new(e),
-        })?;
-    if status == StatusCode::NO_CONTENT {
-        return Ok(status.into_response());
-    }
-    Ok((status, [(header::CONTENT_TYPE, content_type)], bytes).into_response())
-}
-
-pub(crate) async fn list_own_provider_credentials(headers: HeaderMap) -> AdminResult<Response> {
-    relay(&headers, Method::GET, "", None).await
+        .map_err(|e| AdminError::Internal(Box::new(e)))?;
+    let rows: Vec<ProviderCredentialStatus> = personal_providers(&registry()?)
+        .iter()
+        .map(|entry| {
+            let meta = stored.iter().find(|m| m.provider == entry.name.as_str());
+            status_row(entry, meta)
+        })
+        .collect();
+    Ok(Json(rows).into_response())
 }
 
 pub(crate) async fn put_own_provider_credential(
-    headers: HeaderMap,
+    Extension(user_ctx): Extension<UserContext>,
+    Extension(db): Extension<DbPool>,
     Path(provider): Path<String>,
-    body: Bytes,
+    body: Result<Json<SetKeyRequest>, JsonRejection>,
 ) -> AdminResult<Response> {
-    let suffix = format!("/{}", provider_segment(&provider)?);
-    relay(&headers, Method::PUT, &suffix, Some(body)).await
+    let Json(request) = body.map_err(|e| AdminError::BadRequest(e.body_text()))?;
+    let registry = registry()?;
+    let Some(entry) = personal_provider(&registry, &provider) else {
+        return Ok(refusal(
+            StatusCode::NOT_FOUND,
+            "not_personal_provider",
+            &format!("{provider} does not take a personal key."),
+        ));
+    };
+    let label = request
+        .label
+        .as_deref()
+        .map(str::trim)
+        .filter(|l| !l.is_empty());
+    let stored = store_personal_key(
+        &db,
+        &registry,
+        &user_ctx.user_id,
+        entry.name.as_str(),
+        request.api_key.trim(),
+        label,
+    )
+    .await;
+    match stored {
+        Ok(meta) => Ok(Json(status_row(&entry, Some(&meta))).into_response()),
+        Err(PersonalKeyError::NotPersonalProvider(name)) => Ok(refusal(
+            StatusCode::NOT_FOUND,
+            "not_personal_provider",
+            &format!("{name} does not take a personal key."),
+        )),
+        Err(PersonalKeyError::Rejected(name)) => Ok(refusal(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "personal_key_rejected",
+            &format!("{name} refused this key."),
+        )),
+        Err(PersonalKeyError::Unverified { provider, status }) => Ok(refusal(
+            StatusCode::BAD_REQUEST,
+            "personal_key_unverified",
+            &format!("{provider} could not verify the key ({status})."),
+        )),
+        Err(other) => Err(AdminError::Internal(Box::new(other))),
+    }
 }
 
 pub(crate) async fn delete_own_provider_credential(
-    headers: HeaderMap,
+    Extension(user_ctx): Extension<UserContext>,
+    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
     Path(provider): Path<String>,
 ) -> AdminResult<Response> {
-    let suffix = format!("/{}", provider_segment(&provider)?);
-    relay(&headers, Method::DELETE, &suffix, None).await
+    if personal_provider(&registry()?, &provider).is_none() {
+        return Ok(refusal(
+            StatusCode::NOT_FOUND,
+            "not_personal_provider",
+            &format!("{provider} does not take a personal key."),
+        ));
+    }
+    keys.delete_key(&user_ctx.user_id, &provider)
+        .await
+        .map_err(|e| AdminError::Internal(Box::new(e)))?;
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
