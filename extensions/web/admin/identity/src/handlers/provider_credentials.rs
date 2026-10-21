@@ -17,8 +17,7 @@ use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::json;
 use systemprompt::ai::repository::{UserProviderCredentialMeta, UserProviderCredentialRepository};
-use systemprompt::ai::{PersonalKeyError, personal_providers, store_personal_key};
-use systemprompt::database::DbPool;
+use systemprompt::ai::{PersonalKeyError, PersonalKeyRequest, personal_providers, store_personal_key};
 use systemprompt::loader::ServicesBootstrap;
 use systemprompt::manifest::services::{ProviderEntry, ProviderRegistry};
 use systemprompt::models::bridge::profile::ProviderCredentialStatus;
@@ -86,7 +85,7 @@ pub(crate) async fn list_own_provider_credentials(
 
 pub(crate) async fn put_own_provider_credential(
     Extension(user_ctx): Extension<UserContext>,
-    Extension(db): Extension<DbPool>,
+    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
     Path(provider): Path<String>,
     body: Result<Json<SetKeyRequest>, JsonRejection>,
 ) -> AdminResult<Response> {
@@ -105,12 +104,14 @@ pub(crate) async fn put_own_provider_credential(
         .map(str::trim)
         .filter(|l| !l.is_empty());
     let stored = store_personal_key(
-        &db,
+        &keys,
         &registry,
-        &user_ctx.user_id,
-        entry.name.as_str(),
-        request.api_key.trim(),
-        label,
+        PersonalKeyRequest {
+            user_id: &user_ctx.user_id,
+            provider: entry.name.as_str(),
+            key: request.api_key.trim(),
+            label,
+        },
     )
     .await;
     match stored {

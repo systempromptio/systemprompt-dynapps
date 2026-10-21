@@ -78,9 +78,9 @@ fn personal_provider(endpoint: &str) -> ProviderEntry {
     .expect("provider entry")
 }
 
-fn owner(pool: &DbPool, user: &UserId) -> KeyOwner {
+fn owner(keys: &UserProviderCredentialRepository, user: &UserId) -> KeyOwner {
     KeyOwner {
-        db: Arc::clone(pool),
+        credentials: keys.clone(),
         user_id: user.clone(),
     }
 }
@@ -115,8 +115,9 @@ async fn personal_key_is_required_used_and_never_shared() {
     let bob = insert_user(&db.pool, &unique("bob"), &unclaimed_email("bob")).await;
     let (endpoint, seen) = upstream().await;
     let entry = personal_provider(&endpoint);
+    let keys = UserProviderCredentialRepository::new(&pool);
 
-    let refused = resolve(&entry, &owner(&pool, &alice))
+    let refused = resolve(&entry, &owner(&keys, &alice))
         .await
         .expect_err("no key stored yet");
     let DispatchError::PreAudit(error) = refused else {
@@ -129,15 +130,16 @@ async fn personal_key_is_required_used_and_never_shared() {
             .contains("personal key required for provider opencode-go")
     );
 
-    let keys = UserProviderCredentialRepository::new(&pool);
-    keys.set_key(&alice, PROVIDER, "go-key-alice", Some("laptop"))
+    let sealed =
+        systemprompt::security::at_rest::seal("go-key-alice").expect("seal alice's key");
+    keys.set_key(&alice, PROVIDER, &sealed, Some("laptop"))
         .await
         .expect("store alice's key");
     let listed = keys.list_metadata(&alice).await.expect("list");
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].label.as_deref(), Some("laptop"));
 
-    let (call, billing) = resolve(&entry, &owner(&pool, &alice))
+    let (call, billing) = resolve(&entry, &owner(&keys, &alice))
         .await
         .expect("alice is served from her key");
     assert_eq!(billing, BillingSource::UserKey);
@@ -148,7 +150,7 @@ async fn personal_key_is_required_used_and_never_shared() {
     assert_eq!(headers["user-agent"], USER_AGENT);
     assert!(headers.get("anthropic-beta").is_none());
 
-    let bob_refused = resolve(&entry, &owner(&pool, &bob)).await;
+    let bob_refused = resolve(&entry, &owner(&keys, &bob)).await;
     assert!(
         matches!(bob_refused, Err(DispatchError::PreAudit(ref e)) if e.status().as_u16() == 403),
         "alice's key must never serve bob"
@@ -161,7 +163,7 @@ async fn personal_key_is_required_used_and_never_shared() {
     );
 
     assert!(keys.delete_key(&alice, PROVIDER).await.expect("delete"));
-    assert!(resolve(&entry, &owner(&pool, &alice)).await.is_err());
+    assert!(resolve(&entry, &owner(&keys, &alice)).await.is_err());
 }
 
 #[tokio::test]

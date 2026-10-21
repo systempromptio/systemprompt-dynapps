@@ -7,6 +7,7 @@
 //! the call exactly so, and that a platform provider never sees the header.
 
 use systemprompt::ai::UpstreamTarget;
+use systemprompt::identifiers::UserId;
 use systemprompt::manifest::services::ProviderEntry;
 use systemprompt::wire::WireProtocol;
 
@@ -45,7 +46,7 @@ fn value<'a>(headers: &'a [(String, String)], name: &str) -> Option<&'a str> {
 #[tokio::test]
 async fn personal_chat_provider_gets_session_user_agent_and_bearer_key() {
     let entry = personal_chat();
-    let call = UpstreamTarget::resolve_personal(&entry, "go-key-a", "user-a")
+    let call = UpstreamTarget::resolve_personal(&entry, "go-key-a", &UserId::new("user-a"))
         .expect("personal target")
         .call()
         .await
@@ -66,7 +67,7 @@ async fn anthropic_wire_personal_provider_drops_every_beta() {
          user_agent: \"{OPENCODE_UA}\"\nforward_headers: [x-opencode-session]\n\
          accepted_betas: []\n"
     ));
-    let call = UpstreamTarget::resolve_personal(&entry, "go-key-a", "user-a")
+    let call = UpstreamTarget::resolve_personal(&entry, "go-key-a", &UserId::new("user-a"))
         .expect("personal target")
         .call()
         .await
