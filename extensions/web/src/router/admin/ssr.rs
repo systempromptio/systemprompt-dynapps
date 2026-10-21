@@ -68,14 +68,11 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
         .layer(Extension(engine.clone()))
         .layer(Extension(ServiceAccounts::new(UserRepository::new(db))))
         .layer(Extension(managed))
-<<<<<<< HEAD
         .layer(Extension(files))
-=======
         .layer(Extension(Arc::clone(db)))
         .layer(Extension(Arc::new(
             systemprompt::ai::repository::UserProviderCredentialRepository::new(db),
         )))
->>>>>>> 1acb8bbaf (fix(byok): serve the profile key card in-process instead of relaying to /v1)
         .layer(Extension(sso_deps.clone()))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),
