@@ -69,6 +69,7 @@ fn doctor_checks_routing_helper_and_conflicting_policy_separately() {
 }
 
 fn sandbox(f: impl FnOnce(&Path)) {
+    crate::support::install_tls();
     let dir = tempfile::tempdir().unwrap();
     let home = dir.path().join("home");
     let config = dir.path().join("config");

@@ -58,4 +58,4 @@ test-group = "db-contract"
 
 [[profile.coverage.overrides]]
 filter = "package(schema-upgrade-tests)"
-test-group = "db-schema-upgrade"
+test-group = "db-integration"

@@ -21,3 +21,7 @@ base64.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 temp-env = "0.3"
+wiremock.workspace = true
+reqwest = { workspace = true }
+rustls = { workspace = true }
+systemprompt-identifiers = { version = "0.71.0" }
