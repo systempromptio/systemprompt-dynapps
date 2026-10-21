@@ -5,7 +5,8 @@
 //! turn, because Claude Code declares its whole catalogue on every request.
 //! The contract resolves real requests against the real files: every
 //! `claude-*` request, whatever tools it declares, lands on `anthropic`,
-//! `DeepSeek` answers only an explicit `deepseek-*` id, and no route may match
+//! `DeepSeek` answers only an explicit `deepseek-*` id, every `go-*` id lands
+//! on the `OpenCode` Go provider for its wire format, and no route may match
 //! on a client tool name.
 
 use systemprompt::identifiers::ModelId;
@@ -129,6 +130,31 @@ fn only_an_explicit_deepseek_id_reaches_deepseek() {
         provider_for(&request("claude-sonnet-5", catalogue)),
         "anthropic",
         "a Claude turn never falls through to DeepSeek"
+    );
+}
+
+#[test]
+fn every_go_id_lands_on_the_opencode_go_provider_for_its_wire() {
+    for (model, provider) in [
+        ("go-minimax-m3", "opencode-go-anthropic"),
+        ("go-qwen3.8-max", "opencode-go-anthropic"),
+        ("go-qwen3.8-flash", "opencode-go-anthropic"),
+        ("go-glm-5.3", "opencode-go"),
+        ("go-kimi-k3", "opencode-go"),
+        ("go-deepseek-v4-pro", "opencode-go"),
+        ("go-deepseek-v4.1-flash", "opencode-go"),
+        ("go-mimo-v2.6-pro", "opencode-go"),
+    ] {
+        assert_eq!(
+            provider_for(&request(model, Vec::new())),
+            provider,
+            "{model}"
+        );
+    }
+    assert_eq!(
+        provider_for(&request("deepseek-v4-pro", Vec::new())),
+        "deepseek",
+        "the bare deepseek-* id stays on the platform key"
     );
 }
 

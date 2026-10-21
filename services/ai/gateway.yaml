@@ -20,6 +20,28 @@ gateway:
       Every deepseek-* request goes to DeepSeek's own API (Anthropic-compatible endpoint), with no failover.
     model_pattern: deepseek-*
     provider: deepseek
+  # OpenCode Go, by each member's own subscription key. Go splits its models
+  # across two wire formats, so the Anthropic-Messages families (MiniMax,
+  # Qwen) are matched first and every other go-* id falls to Chat Completions.
+  # First match wins: these two must stay above the go-* catch-all.
+  - id: opencode-go-minimax-route
+    name: OpenCode Go MiniMax (member key)
+    description: >-
+      go-minimax-* requests go to OpenCode Go's Anthropic Messages endpoint with the member's own Go key, with no failover.
+    model_pattern: go-minimax-*
+    provider: opencode-go-anthropic
+  - id: opencode-go-qwen-route
+    name: OpenCode Go Qwen (member key)
+    description: >-
+      go-qwen* requests go to OpenCode Go's Anthropic Messages endpoint with the member's own Go key, with no failover.
+    model_pattern: go-qwen*
+    provider: opencode-go-anthropic
+  - id: opencode-go-route
+    name: OpenCode Go (member key)
+    description: >-
+      Every other go-* request goes to OpenCode Go's Chat Completions endpoint with the member's own Go key, with no failover.
+    model_pattern: go-*
+    provider: opencode-go
   - id: e2e-mock-route
     name: E2E mock
     description: >-

@@ -10,6 +10,7 @@ pub(crate) mod entity_access;
 pub(crate) mod gateway_access;
 pub(crate) mod groups;
 pub(crate) mod projects;
+pub(crate) mod provider_credentials;
 pub(crate) mod roles;
 pub(crate) mod scope_defaults;
 pub(crate) mod self_service;

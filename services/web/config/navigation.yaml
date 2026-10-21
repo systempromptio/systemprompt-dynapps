@@ -76,6 +76,8 @@ docs_sidebar:
         href: "/documentation/connect-cowork"
       - label: "Connect OpenCode"
         href: "/documentation/connect-opencode"
+      - label: "Bring Your Own OpenCode Go"
+        href: "/documentation/opencode-go-subscription"
       - label: "Install the Desktop Bridge"
         href: "/documentation/bridge-install"
       - label: "Install on macOS"
