@@ -13,6 +13,12 @@
     list-style: none;
 }
 
+.sp-p-profile__subscription {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+}
+
 .sp-p-profile__subscription-head {
     display: flex;
     flex-wrap: wrap;
