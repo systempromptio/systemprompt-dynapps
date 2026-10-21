@@ -5,12 +5,12 @@
 //! reads come from `report_ai_usage_hourly` (the window widened to whole UTC
 //! hours at its start) and split each provider into its platform share and
 //! the share billed to members' own subscription keys, labelled
-//! `(member key)` so that estimate is never read as platform spend. The customer half reads
-//! `admin_usage_daily_rollups`, which carries the `group_id` and `project_id`
-//! a person held when the row was rolled up, and selects no cost column
-//! anywhere: the export is sent outside the platform team, so "no supplier
-//! figure leaks" is a property of the SQL rather than a discipline the
-//! template has to keep.
+//! `(member key)` so that estimate is never read as platform spend. The
+//! customer half reads `admin_usage_daily_rollups`, which carries the
+//! `group_id` and `project_id` a person held when the row was rolled up, and
+//! selects no cost column anywhere: the export is sent outside the platform
+//! team, so "no supplier figure leaks" is a property of the SQL rather than a
+//! discipline the template has to keep.
 //!
 //! Rollups keep historical attribution rather than today's membership, which
 //! is why a container's cost history does not move when someone changes team.

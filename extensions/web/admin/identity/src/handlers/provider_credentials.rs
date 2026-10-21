@@ -17,7 +17,9 @@ use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::json;
 use systemprompt::ai::repository::{UserProviderCredentialMeta, UserProviderCredentialRepository};
-use systemprompt::ai::{PersonalKeyError, PersonalKeyRequest, personal_providers, store_personal_key};
+use systemprompt::ai::{
+    PersonalKeyError, PersonalKeyRequest, personal_providers, store_personal_key,
+};
 use systemprompt::loader::ServicesBootstrap;
 use systemprompt::manifest::services::{ProviderEntry, ProviderRegistry};
 use systemprompt::models::bridge::profile::ProviderCredentialStatus;

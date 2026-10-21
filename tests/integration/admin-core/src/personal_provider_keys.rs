@@ -130,8 +130,7 @@ async fn personal_key_is_required_used_and_never_shared() {
             .contains("personal key required for provider opencode-go")
     );
 
-    let sealed =
-        systemprompt::security::at_rest::seal("go-key-alice").expect("seal alice's key");
+    let sealed = systemprompt::security::at_rest::seal("go-key-alice").expect("seal alice's key");
     keys.set_key(&alice, PROVIDER, &sealed, Some("laptop"))
         .await
         .expect("store alice's key");
