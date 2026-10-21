@@ -17,7 +17,6 @@ ignored = ["inventory"]
 # Foundation
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
-systemprompt-security = { workspace = true }
 inventory = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
 
