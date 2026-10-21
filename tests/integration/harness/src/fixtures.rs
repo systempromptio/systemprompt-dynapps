@@ -57,6 +57,22 @@ fn dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/harness")
 }
 
+// Request bodies recorded from the real CLIs (`just smoke-harness-local` with
+// CAPTURE_DIR, sanitised by scripts/harness-sanitise-capture.py).
+pub(crate) fn captured() -> Vec<Fixture> {
+    let mut names: Vec<String> = std::fs::read_dir(dir().join("captured"))
+        .expect("captured fixtures dir")
+        .filter_map(Result::ok)
+        .filter_map(|e| e.file_name().into_string().ok())
+        .filter_map(|n| {
+            n.strip_suffix(".json")
+                .map(|stem| format!("captured/{stem}"))
+        })
+        .collect();
+    names.sort();
+    names.iter().map(|n| load(n)).collect()
+}
+
 pub(crate) fn load(name: &str) -> Fixture {
     let path = dir().join(format!("{name}.json"));
     let raw =

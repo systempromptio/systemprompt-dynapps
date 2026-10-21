@@ -99,6 +99,54 @@ fn route(provider: &ProviderEntry) -> GatewayRoute {
     }
 }
 
+// The same one-line reply as `upstream_reply`, framed as the wire streams it.
+pub(crate) fn upstream_stream(wire: WireProtocol) -> String {
+    let frame = |event: Option<&str>, data: Value| {
+        let name = event.map_or_else(String::new, |name| format!("event: {name}\n"));
+        format!("{name}data: {data}\n\n")
+    };
+    match wire {
+        WireProtocol::Anthropic => [
+            frame(Some("message_start"), json!({ "type": "message_start", "message": {
+                "id": "msg_harness", "type": "message", "role": "assistant", "model": "m",
+                "content": [], "stop_reason": null, "usage": { "input_tokens": 3, "output_tokens": 1 } } })),
+            frame(Some("content_block_start"), json!({ "type": "content_block_start", "index": 0,
+                "content_block": { "type": "text", "text": "" } })),
+            frame(Some("content_block_delta"), json!({ "type": "content_block_delta", "index": 0,
+                "delta": { "type": "text_delta", "text": REPLY_TEXT } })),
+            frame(Some("content_block_stop"), json!({ "type": "content_block_stop", "index": 0 })),
+            frame(Some("message_delta"), json!({ "type": "message_delta",
+                "delta": { "stop_reason": "end_turn", "stop_sequence": null }, "usage": { "output_tokens": 2 } })),
+            frame(Some("message_stop"), json!({ "type": "message_stop" })),
+        ]
+        .concat(),
+        WireProtocol::OpenAiChat => [
+            frame(None, json!({ "id": "c", "object": "chat.completion.chunk", "created": 0, "model": "m",
+                "choices": [{ "index": 0, "delta": { "role": "assistant", "content": REPLY_TEXT }, "finish_reason": null }] })),
+            frame(None, json!({ "id": "c", "object": "chat.completion.chunk", "created": 0, "model": "m",
+                "choices": [{ "index": 0, "delta": {}, "finish_reason": "stop" }],
+                "usage": { "prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5 } })),
+            "data: [DONE]\n\n".to_owned(),
+        ]
+        .concat(),
+        WireProtocol::OpenAiResponses => {
+            let done = upstream_reply(wire);
+            let item = done["output"][0].clone();
+            [
+                frame(Some("response.created"), json!({ "type": "response.created", "response": {
+                    "id": "resp_harness", "object": "response", "model": "m", "status": "in_progress", "output": [] } })),
+                frame(Some("response.output_item.added"), json!({ "type": "response.output_item.added", "output_index": 0, "item": item })),
+                frame(Some("response.output_text.delta"), json!({ "type": "response.output_text.delta",
+                    "item_id": "msg_1", "output_index": 0, "content_index": 0, "delta": REPLY_TEXT })),
+                frame(Some("response.output_item.done"), json!({ "type": "response.output_item.done", "output_index": 0, "item": item })),
+                frame(Some("response.completed"), json!({ "type": "response.completed", "response": done })),
+            ]
+            .concat()
+        },
+        WireProtocol::Gemini => frame(None, upstream_reply(wire)),
+    }
+}
+
 // Sends `fixture` to `provider`'s first model, as the gateway would.
 pub(crate) async fn dispatch(
     fixture: &Fixture,
@@ -174,7 +222,11 @@ pub(crate) async fn dispatch_model(
     provider: &ProviderEntry,
     model_id: &str,
 ) -> Result<Captured, String> {
-    let reply = Reply::json(&upstream_reply(provider.wire));
+    let reply = if fixture.body["stream"] == Value::Bool(true) {
+        Reply::sse(&upstream_stream(provider.wire))
+    } else {
+        Reply::json(&upstream_reply(provider.wire))
+    };
     dispatch_reply(fixture, provider, model_id, &reply).await
 }
 

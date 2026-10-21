@@ -64,6 +64,15 @@ fn anthropic(body: &Value) -> Check {
         let role = message["role"]
             .as_str()
             .ok_or_else(|| format!("messages.{i}: no role"))?;
+        // Claude Code sends harness context as mid-history `system` messages,
+        // which the Messages API accepts between turns; they may never split a
+        // tool_use from its results.
+        if role == "system" {
+            if !pending.is_empty() {
+                return Err(format!("messages.{i}: system message before tool results"));
+            }
+            continue;
+        }
         if role == previous {
             return Err(format!("messages.{i}: two consecutive {role} turns"));
         }
