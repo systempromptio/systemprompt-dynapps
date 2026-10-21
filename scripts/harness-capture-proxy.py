@@ -4,7 +4,7 @@
 Sits between a real coding client and the local gateway, forwards every
 request unchanged (streaming the reply back as it arrives), and writes each
 inference request body plus its non-credential headers to CAPTURE_DIR as one
-JSON file. Those captures become the sanitised fixtures in
+JSON file, and the gateway's reply beside it as <name>.reply. Those captures become the sanitised fixtures in
 tests/fixtures/harness/.
 
     harness-capture-proxy.py <listen-port> <upstream-base-url> <capture-dir> <client>
@@ -35,6 +35,7 @@ class Proxy(http.server.BaseHTTPRequestHandler):
         length = int(self.headers.get("content-length") or 0)
         body = self.rfile.read(length) if length else None
         path = self.path.split("?")[0]
+        reply_file = None
         if body and path.endswith(INFERENCE):
             with lock:
                 counter["n"] += 1
@@ -46,6 +47,7 @@ class Proxy(http.server.BaseHTTPRequestHandler):
                 parsed = None
             with open(os.path.join(CAPTURE_DIR, f"{CLIENT}-{n:03d}.json"), "w") as f:
                 json.dump({"client": CLIENT, "path": path, "headers": headers, "body": parsed}, f, indent=1)
+            reply_file = open(os.path.join(CAPTURE_DIR, f"{CLIENT}-{n:03d}.reply"), "wb")
         req = urllib.request.Request(UPSTREAM + self.path, data=body, method=self.command)
         for k, v in self.headers.items():
             if k.lower() not in HOP:
@@ -64,9 +66,13 @@ class Proxy(http.server.BaseHTTPRequestHandler):
             chunk = resp.read1(65536) if hasattr(resp, "read1") else resp.read(65536)
             if not chunk:
                 break
+            if reply_file:
+                reply_file.write(chunk)
             self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk))
             self.wfile.flush()
         self.wfile.write(b"0\r\n\r\n")
+        if reply_file:
+            reply_file.close()
 
     do_GET = do_POST = do_PUT = do_DELETE = do_PATCH = _forward
 
