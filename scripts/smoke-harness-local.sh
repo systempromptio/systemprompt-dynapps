@@ -16,6 +16,8 @@
 #   CLIENTS      default "claude opencode codex"
 #   CREDENTIAL   bridge (default: through a real dynapps-bridge proxy, BRIDGE_BIN),
 #                jwt (bridge JWT straight at the gateway) or pat (raw PAT + session)
+#   OPENCODE_HOME   where current opencode is npm-installed (default ~/.cache/dynapps-smoke/opencode)
+#   OPENCODE_LEGACY 1 = the old ~/.opencode build with its provider package pinned
 #   CAPTURE_DIR  when set, each client goes through scripts/harness-capture-proxy.py
 #                and every inference request body lands there as JSON
 #
@@ -35,7 +37,27 @@ clients="${CLIENTS:-claude opencode codex}"
 credential="${CREDENTIAL:-bridge}"
 bridge_bin="${BRIDGE_BIN:-bridge/target/release/dynapps-bridge}"
 cli="${SYSTEMPROMPT_CLI:-target/debug/systemprompt}"
-opencode_bin="${OPENCODE_BIN:-$HOME/.opencode/bin/opencode}"
+# OpenCode: the current release by default, kept in OPENCODE_HOME and
+# installed there with npm on first use (never the user's own ~/.opencode).
+# OPENCODE_LEGACY=1 runs the old ~/.opencode build instead, with its provider
+# package pinned (see seed_opencode_cache); OPENCODE_BIN overrides either.
+opencode_home="${OPENCODE_HOME:-$HOME/.cache/dynapps-smoke/opencode}"
+if [ "${OPENCODE_LEGACY:-0}" = 1 ]; then
+    opencode_bin="${OPENCODE_BIN:-$HOME/.opencode/bin/opencode}"
+    opencode_pin="$opencode_pin"
+else
+    opencode_bin="${OPENCODE_BIN:-$opencode_home/node_modules/.bin/opencode}"
+    opencode_pin="${OPENCODE_PROVIDER_PIN-}"
+fi
+case " ${CLIENTS:-claude opencode codex} " in *" opencode "*)
+    if [ ! -x "$opencode_bin" ] && [ -z "${OPENCODE_BIN:-}" ] && [ "${OPENCODE_LEGACY:-0}" != 1 ]; then
+        command -v npm > /dev/null || { echo "npm is needed to install current opencode into $opencode_home (or set OPENCODE_BIN)" >&2; exit 1; }
+        npm install --silent --prefix "$opencode_home" opencode-ai@latest > /dev/null 2>&1 \
+            || { echo "could not install opencode-ai@latest into $opencode_home" >&2; exit 1; }
+    fi
+    [ -x "$opencode_bin" ] || { echo "opencode not found at $opencode_bin (set OPENCODE_BIN or OPENCODE_LEGACY=1)" >&2; exit 1; }
+    ;;
+esac
 codex_bin="${CODEX_BIN:-$HOME/.local/bin/codex}"
 claude_bin="${CLAUDE_BIN:-$HOME/.local/bin/claude}"
 step_timeout="${STEP_TIMEOUT:-180}"
@@ -180,10 +202,11 @@ for k, v in json.load(open(sys.argv[1]))["headers"].items(): print(f"{k}: {v}")'
 # nested objects, so every finished step dies in opencode's cost maths with
 # "[DecimalError] Invalid argument: [object Object]" whatever the gateway
 # sends. Seed the cache with the last v5-compatible major and mark it as the
-# `latest` opencode asked for so it is not replaced. OPENCODE_PROVIDER_PIN=""
+# `latest` opencode asked for so it is not replaced. Only the legacy lane
+# pins (OPENCODE_LEGACY=1); OPENCODE_PROVIDER_PIN overrides, "" disables.
 # turns this off for opencode builds on a newer SDK.
 seed_opencode_cache() {
-    local cache="$1/.cache/opencode" pin="${OPENCODE_PROVIDER_PIN-1}"
+    local cache="$1/.cache/opencode" pin="$opencode_pin"
     [ -n "$pin" ] || return 0
     # Any opencode start first stamps its cache version, wiping a cache it did
     # not stamp, so let it do that before seeding.
