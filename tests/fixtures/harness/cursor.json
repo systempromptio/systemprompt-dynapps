@@ -1,0 +1,24 @@
+{
+  "client": "cursor-continue",
+  "inbound": "openai.chat",
+  "headers": {
+    "user-agent": "OpenAI/JS 4.104.0"
+  },
+  "body": {
+    "model": "claude-sonnet-4-5",
+    "stream": false,
+    "temperature": 0.2,
+    "tools": [
+      {"type": "function", "function": {"name": "edit_file", "description": "Edit a file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "patch": {"type": "string"}}, "required": ["path", "patch"]}}}
+    ],
+    "messages": [
+      {"role": "system", "content": "You are a helpful coding assistant inside the editor."},
+      {"role": "user", "content": [{"type": "text", "text": "Rename foo to bar in main.rs"}]},
+      {"role": "assistant", "content": null, "tool_calls": [
+        {"id": "call_e1", "type": "function", "function": {"name": "edit_file", "arguments": "{\"path\":\"main.rs\",\"patch\":\"s/foo/bar/\"}"}}
+      ]},
+      {"role": "tool", "tool_call_id": "call_e1", "content": "applied"},
+      {"role": "user", "content": [{"type": "text", "text": "Thanks. Anything else to change?"}]}
+    ]
+  }
+}

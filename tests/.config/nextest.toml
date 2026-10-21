@@ -24,6 +24,15 @@ test-group = "db-integration"
 filter = "package(admin-contract-tests)"
 test-group = "db-contract"
 
+# Each schema-upgrade rung restores a whole release schema in one transaction,
+# holding a lock per relation. Beside another DB suite's transactions that
+# exhausts Postgres's shared lock table ("out of shared memory"; the default
+# max_locks_per_transaction is 64, and CI's service container cannot take -c
+# flags), so the rungs share the db-integration lane and run alone.
+[[profile.default.overrides]]
+filter = "package(schema-upgrade-tests)"
+test-group = "db-integration"
+
 [profile.default]
 slow-timeout = { period = "60s", terminate-after = 2 }
 failure-output = "immediate-final"
@@ -46,3 +55,7 @@ test-group = "db-integration"
 [[profile.coverage.overrides]]
 filter = "package(admin-contract-tests)"
 test-group = "db-contract"
+
+[[profile.coverage.overrides]]
+filter = "package(schema-upgrade-tests)"
+test-group = "db-schema-upgrade"

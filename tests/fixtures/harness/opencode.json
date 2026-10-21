@@ -1,0 +1,33 @@
+{
+  "client": "opencode",
+  "inbound": "openai.chat",
+  "headers": {
+    "user-agent": "opencode/1.0.150 ai-sdk/provider-utils/3.0.0",
+    "x-opencode-session": "ses_fixture0000000000000001"
+  },
+  "body": {
+    "model": "claude-haiku-4-5",
+    "stream": false,
+    "max_tokens": 8192,
+    "tools": [
+      {"type": "function", "function": {"name": "read", "description": "Read a file", "parameters": {"type": "object", "properties": {"filePath": {"type": "string"}}, "required": ["filePath"]}}},
+      {"type": "function", "function": {"name": "glob", "description": "Find files", "parameters": {"type": "object", "properties": {"pattern": {"type": "string"}}, "required": ["pattern"]}}}
+    ],
+    "messages": [
+      {"role": "system", "content": "You are opencode, an interactive CLI coding agent."},
+      {"role": "user", "content": "Look at the README and the Cargo manifest."},
+      {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "call_a1", "type": "function", "function": {"name": "read", "arguments": "{\"filePath\":\"README.md\"}"}},
+        {"id": "call_a2", "type": "function", "function": {"name": "read", "arguments": "{\"filePath\":\"Cargo.toml\"}"}}
+      ]},
+      {"role": "tool", "tool_call_id": "call_a1", "content": "# Sample"},
+      {"role": "tool", "tool_call_id": "call_a2", "content": "[package]\nname = \"sample\""},
+      {"role": "assistant", "content": "It is a Rust crate called sample."},
+      {"role": "user", "content": "Now find every test file."},
+      {"role": "assistant", "content": null, "tool_calls": [
+        {"id": "call_b1", "type": "function", "function": {"name": "glob", "arguments": "{\"pattern\":\"**/*_test.rs\"}"}}
+      ]},
+      {"role": "tool", "tool_call_id": "call_b1", "content": "tests/a_test.rs"}
+    ]
+  }
+}
