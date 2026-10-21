@@ -36,7 +36,10 @@ impl Sessions {
 #[test]
 fn an_abbreviated_or_full_org_dir_names_the_tenant() {
     assert!(dir_names_org("e43527c1", TENANT));
-    assert!(dir_names_org("E43527C1-CBB5-4944-B351-4E20E9A4BBC4", TENANT));
+    assert!(dir_names_org(
+        "E43527C1-CBB5-4944-B351-4E20E9A4BBC4",
+        TENANT
+    ));
     assert!(dir_names_org("e43527c1cbb5", TENANT));
     assert!(!dir_names_org("00000000", TENANT));
     assert!(!dir_names_org("e435", TENANT), "too short to name an org");
@@ -88,11 +91,10 @@ fn an_ambiguous_set_carries_every_usable_candidate_for_the_picker() {
 
 #[test]
 fn the_ambiguous_verdict_asks_the_person_to_choose() {
-    use systemprompt_bridge::integration::agent_health::{
-        HostHealthInputs, HostModelViewRef, PendingStep, verdict,
-    };
-    use systemprompt_bridge::integration::agent_health::AgentSurface;
     use systemprompt_bridge::integration::ProxyHealth;
+    use systemprompt_bridge::integration::agent_health::{
+        AgentSurface, HostHealthInputs, HostModelViewRef, PendingStep, verdict,
+    };
 
     let proxy = ProxyHealth::default();
     let base = verdict(&HostHealthInputs {
