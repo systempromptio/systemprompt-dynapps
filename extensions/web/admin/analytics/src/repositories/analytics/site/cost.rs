@@ -21,8 +21,6 @@ use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::SiteScope;
 
-const MEMBER_KEY_SUFFIX: &str = " (member key)";
-
 #[derive(Debug, Clone)]
 pub struct CostDayRow {
     pub day: chrono::NaiveDate,
@@ -38,21 +36,32 @@ pub async fn list_provider_cost_by_day(
 ) -> Result<Vec<CostDayRow>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"
+        WITH totals AS (
+            SELECT
+                (r.bucket AT TIME ZONE 'UTC')::DATE AS day,
+                COALESCE(NULLIF(r.provider, ''), 'unrouted') AS provider,
+                COALESCE(SUM(r.request_count), 0)::BIGINT AS requests,
+                COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost,
+                COALESCE(SUM(r.user_key_request_count), 0)::BIGINT AS key_requests,
+                COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS key_cost
+            FROM report_ai_usage_hourly r
+            WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2
+              AND NOT r.synthetic
+              AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
+              AND ($4::TEXT IS NULL OR r.user_id = $4)
+            GROUP BY 1, 2
+        )
         SELECT
-            (r.bucket AT TIME ZONE 'UTC')::DATE AS "day!",
-            NULLIF(r.provider, '') AS provider,
-            COALESCE(SUM(r.request_count - r.user_key_request_count), 0)::BIGINT
-                AS "platform_requests!",
-            COALESCE(SUM(r.cost_microdollars - r.user_key_cost_microdollars), 0)::BIGINT
-                AS "platform_cost!",
-            COALESCE(SUM(r.user_key_request_count), 0)::BIGINT AS "key_requests!",
-            COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS "key_cost!"
-        FROM report_ai_usage_hourly r
-        WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2
-          AND NOT r.synthetic
-          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
-          AND ($4::TEXT IS NULL OR r.user_id = $4)
-        GROUP BY 1, 2
+            t.day AS "day!",
+            split.provider AS "provider!",
+            split.requests AS "requests!",
+            split.cost AS "cost!"
+        FROM totals t
+        CROSS JOIN LATERAL (VALUES
+            (t.provider, t.requests - t.key_requests, t.cost - t.key_cost),
+            (t.provider || ' (member key)', t.key_requests, t.key_cost)
+        ) AS split(provider, requests, cost)
+        WHERE split.requests > 0
         ORDER BY 1, 2
         LIMIT 2000
         "#,
@@ -66,25 +75,12 @@ pub async fn list_provider_cost_by_day(
 
     Ok(rows
         .into_iter()
-        .flat_map(|r| {
-            let provider = r.provider.unwrap_or_else(|| "unrouted".to_owned());
-            [
-                CostDayRow {
-                    day: r.day,
-                    provider: provider.clone(),
-                    requests: r.platform_requests,
-                    cost_microdollars: r.platform_cost,
-                },
-                CostDayRow {
-                    day: r.day,
-                    provider: format!("{provider}{MEMBER_KEY_SUFFIX}"),
-                    requests: r.key_requests,
-                    cost_microdollars: r.key_cost,
-                },
-            ]
+        .map(|r| CostDayRow {
+            day: r.day,
+            provider: r.provider,
+            requests: r.requests,
+            cost_microdollars: r.cost,
         })
-        .filter(|row| row.requests > 0)
-        .take(2000)
         .collect())
 }
 
