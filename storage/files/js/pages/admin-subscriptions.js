@@ -1,10 +1,29 @@
-import { BASE, rawFetch } from '../services/api.js';
+import { BASE, rawFetch, rawResponse } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 import { showConfirmDialog } from '../services/confirm.js';
 
 const ENDPOINT = `${BASE}/api/profile/provider-credentials`;
 
 const providerUrl = (provider) => `${ENDPOINT}/${encodeURIComponent(provider)}`;
+
+const REFUSALS = {
+  personal_key_rejected: 'The provider refused this key. Copy a fresh key from your subscription console and paste it again.',
+  personal_key_unverified: 'The provider could not be reached to check the key. Wait a moment and select Save and test again.',
+  not_personal_provider: 'This provider no longer takes a personal key here. Reload the page to see the current list.',
+};
+
+const refusalText = async (resp) => {
+  const text = await resp.text();
+  let body = {};
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = { message: text };
+  }
+  const code = [body.code, body.error, body.error_code].find((c) => typeof c === 'string' && c in REFUSALS);
+  if (code) return REFUSALS[code];
+  return body.message || body.error || `The key could not be saved (HTTP ${resp.status}).`;
+};
 
 const when = (iso) => (iso ? new Date(iso).toLocaleString() : 'never');
 
@@ -23,24 +42,28 @@ const fillRow = (row, entry) => {
   row.querySelector('[data-action="remove"]').hidden = !entry.configured;
 };
 
-const saveKey = async (root, entry, form) => {
+const saveKey = async (root, row, entry, form) => {
   const button = form.querySelector('button[type="submit"]');
   const data = new FormData(form);
   const label = String(data.get('label') || '').trim();
   button.disabled = true;
-  try {
-    // The store tests the key against the provider before keeping it, so a
-    // successful save is also a passing test; a refused key answers 422.
-    await rawFetch(providerUrl(entry.provider), {
-      method: 'PUT',
-      body: JSON.stringify({ api_key: String(data.get('api_key') || '').trim(), ...(label ? { label } : {}) }),
-    });
-    showToast(`${entry.display_name || entry.provider} key saved and verified`, 'success');
-    form.reset();
-    await load(root);
-  } catch {
-    button.disabled = false;
+  const reason = row.querySelector('[data-field="reason"]');
+  reason.hidden = true;
+  // The store tests the key against the provider before keeping it, so a
+  // successful save is also a passing test; each refusal names its own fix.
+  const resp = await rawResponse(providerUrl(entry.provider), {
+    method: 'PUT',
+    body: JSON.stringify({ api_key: String(data.get('api_key') || '').trim(), ...(label ? { label } : {}) }),
+  }).catch(() => null);
+  button.disabled = false;
+  if (!resp || !resp.ok) {
+    reason.textContent = resp ? await refusalText(resp) : 'The console could not reach the gateway. Check your connection and try again.';
+    reason.hidden = false;
+    return;
   }
+  showToast(`${entry.display_name || entry.provider} key saved and verified`, 'success');
+  form.reset();
+  await load(root);
 };
 
 const removeKey = (root, entry) => {
@@ -62,7 +85,7 @@ const renderRow = (root, template, entry) => {
   const form = row.querySelector('[data-action="save"]');
   form.addEventListener('submit', (ev) => {
     ev.preventDefault();
-    saveKey(root, entry, form);
+    saveKey(root, row, entry, form);
   });
   row.querySelector('[data-action="remove"]').addEventListener('click', () => removeKey(root, entry));
   return row;
