@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH totals AS (\n            SELECT\n                COALESCE(NULLIF(r.provider, ''), 'unrouted') AS provider,\n                COALESCE(SUM(r.request_count), 0)::BIGINT AS requests,\n                COALESCE(SUM(r.tokens), 0)::BIGINT AS tokens,\n                COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost,\n                COALESCE(SUM(r.user_key_request_count), 0)::BIGINT AS key_requests,\n                COALESCE(SUM(r.user_key_tokens), 0)::BIGINT AS key_tokens,\n                COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS key_cost\n            FROM report_ai_usage_hourly r\n            WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2\n              AND NOT r.synthetic\n              AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))\n              AND ($4::TEXT IS NULL OR r.user_id = $4)\n            GROUP BY 1\n        )\n        SELECT\n            split.label AS \"label!\",\n            split.requests AS \"requests!\",\n            split.tokens AS \"tokens!\",\n            split.cost AS \"cost!\"\n        FROM totals t\n        CROSS JOIN LATERAL (VALUES\n            (t.provider, t.requests - t.key_requests, t.tokens - t.key_tokens,\n             t.cost - t.key_cost),\n            (t.provider || ' (member key)', t.key_requests, t.key_tokens, t.key_cost)\n        ) AS split(label, requests, tokens, cost)\n        WHERE split.requests > 0\n        ORDER BY split.cost DESC\n        LIMIT 50\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "label!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "cost!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "TextArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "26d8489064fd1dd219d515fb792e447716795d74e90254168e1a70b3b26e9b1b"
+}

@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH totals AS (\n            SELECT\n                (r.bucket AT TIME ZONE 'UTC')::DATE AS day,\n                COALESCE(NULLIF(r.provider, ''), 'unrouted') AS provider,\n                COALESCE(SUM(r.request_count), 0)::BIGINT AS requests,\n                COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost,\n                COALESCE(SUM(r.user_key_request_count), 0)::BIGINT AS key_requests,\n                COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS key_cost\n            FROM report_ai_usage_hourly r\n            WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2\n              AND NOT r.synthetic\n              AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))\n              AND ($4::TEXT IS NULL OR r.user_id = $4)\n            GROUP BY 1, 2\n        )\n        SELECT\n            t.day AS \"day!\",\n            split.provider AS \"provider!\",\n            split.requests AS \"requests!\",\n            split.cost AS \"cost!\"\n        FROM totals t\n        CROSS JOIN LATERAL (VALUES\n            (t.provider, t.requests - t.key_requests, t.cost - t.key_cost),\n            (t.provider || ' (member key)', t.key_requests, t.key_cost)\n        ) AS split(provider, requests, cost)\n        WHERE split.requests > 0\n        ORDER BY 1, 2\n        LIMIT 2000\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "day!",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "provider!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "cost!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "TextArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "901653324977e83bef7699bec39392f1b7ce250fe57e3e34d1fa70d83d24b0ab"
+}
