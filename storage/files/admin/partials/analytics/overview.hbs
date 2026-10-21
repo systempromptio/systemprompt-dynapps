@@ -11,6 +11,11 @@
         {{> components/kpi label="Total spend" value=kpis.cost_display tone="ok"
             note=kpis.cost_per_request_display delta=kpis.cost_delta.display
             delta_dir=kpis.cost_delta.tone}}
+        {{#if kpis.has_user_key}}
+        {{> components/kpi label="Member subscriptions (est.)" value=kpis.user_key_cost_display
+            note=kpis.user_key_sub
+            hint="Estimated list-price value of requests billed to members' own subscription keys; excluded from total spend"}}
+        {{/if}}
         {{> components/kpi label="Weekly active users" value=kpis.weekly_active_users tone="accent"
             note=kpis.requests_per_user_day_display delta=kpis.wau_delta.display
             delta_dir=kpis.wau_delta.tone}}

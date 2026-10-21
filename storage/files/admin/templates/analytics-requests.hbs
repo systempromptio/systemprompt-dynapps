@@ -38,7 +38,12 @@
           note=kpis.attribution_sub
           hint="Calls matching the current filters and window"}}
       {{> components/kpi label="Cost" value=kpis.cost_display note=kpis.tokens_sub
-          hint="Billed cost across the filtered calls"}}
+          hint="Platform-billed cost across the filtered calls; excludes members' own subscription keys"}}
+      {{#if kpis.has_user_key}}
+      {{> components/kpi label="Member subscriptions (est.)" value=kpis.user_key_cost_display
+          note=kpis.user_key_sub
+          hint="Estimated list-price value of calls billed to members' own subscription keys; not platform spend"}}
+      {{/if}}
       {{> components/kpi label="Error rate" value=kpis.error_rate_display
           note=kpis.failed_sub tone="err"
           hint="Share of filtered calls that failed after dispatch"}}

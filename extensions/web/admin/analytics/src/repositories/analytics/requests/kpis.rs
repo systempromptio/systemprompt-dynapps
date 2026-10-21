@@ -19,6 +19,10 @@ pub struct RequestKpis {
     pub failed: i64,
     pub rejected: i64,
     pub cost_microdollars: i64,
+    // Why: filled by `billing::find_request_billing_split`, which reads
+    // `ai_requests` alone; `cost_microdollars` is platform spend once it has.
+    pub user_key_cost_microdollars: i64,
+    pub user_key_requests: i64,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub p50_latency_ms: f64,
@@ -62,6 +66,8 @@ pub async fn get_request_kpis(
         failed: row.failed,
         rejected: row.rejected,
         cost_microdollars: row.cost_microdollars,
+        user_key_cost_microdollars: 0,
+        user_key_requests: 0,
         input_tokens: row.input_tokens,
         output_tokens: row.output_tokens,
         p50_latency_ms: row.p50_latency_ms,

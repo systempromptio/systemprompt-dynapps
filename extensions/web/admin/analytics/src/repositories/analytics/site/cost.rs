@@ -1,7 +1,9 @@
 //! Cost and consumption for the Cost tab, in two audiences.
 //!
 //! The internal half reads provider cost — what inference cost us at the
-//! supplier — by day, by provider, and by model. The customer half reads
+//! supplier — by day, by provider, and by model. A request billed to a
+//! member's own subscription key is labelled `(member key)` so its estimate
+//! is never read as platform spend. The customer half reads
 //! `admin_usage_daily_rollups`, which carries the `group_id` and `project_id`
 //! a person held when the row was rolled up, and selects no cost column
 //! anywhere: the export is sent outside the platform team, so "no supplier
@@ -34,7 +36,9 @@ pub async fn list_provider_cost_by_day(
         r#"
         SELECT
             (r.created_at AT TIME ZONE 'UTC')::DATE AS "day!",
-            COALESCE(r.provider, 'unrouted') AS "provider!",
+            COALESCE(r.provider, 'unrouted')
+                || CASE WHEN r.billing_source = 'user_key' THEN ' (member key)' ELSE '' END
+                AS "provider!",
             COUNT(*)::BIGINT AS "requests!",
             COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost!"
         FROM ai_requests r
@@ -84,7 +88,9 @@ pub async fn list_provider_costs(
     let rows = sqlx::query!(
         r#"
         SELECT
-            COALESCE(r.provider, 'unrouted') AS "label!",
+            COALESCE(r.provider, 'unrouted')
+                || CASE WHEN r.billing_source = 'user_key' THEN ' (member key)' ELSE '' END
+                AS "label!",
             COUNT(*)::BIGINT AS "requests!",
             COALESCE(SUM(COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)), 0)::BIGINT
                 AS "tokens!",

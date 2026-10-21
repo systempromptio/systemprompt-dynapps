@@ -5,8 +5,16 @@ SELECT
         AND r.status NOT IN ('completed', 'success', 'pending', 'streaming'))::BIGINT
         AS "errors!",
     COALESCE(SUM(r.cost_microdollars)
-        FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
+        FILTER (WHERE r.created_at >= $1 AND r.created_at < $2
+            AND r.billing_source <> 'user_key'), 0)::BIGINT
         AS "cost!",
+    COALESCE(SUM(r.cost_microdollars)
+        FILTER (WHERE r.created_at >= $1 AND r.created_at < $2
+            AND r.billing_source = 'user_key'), 0)::BIGINT
+        AS "user_key_cost!",
+    COUNT(*) FILTER (WHERE r.created_at >= $1 AND r.created_at < $2
+        AND r.billing_source = 'user_key')::BIGINT
+        AS "user_key_requests!",
     COALESCE(SUM(r.tokens_used)
         FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
         AS "tokens!",
@@ -28,7 +36,8 @@ SELECT
         AND r.status NOT IN ('completed', 'success', 'pending', 'streaming'))::BIGINT
         AS "prev_errors!",
     COALESCE(SUM(r.cost_microdollars)
-        FILTER (WHERE r.created_at >= $5 AND r.created_at < $1), 0)::BIGINT
+        FILTER (WHERE r.created_at >= $5 AND r.created_at < $1
+            AND r.billing_source <> 'user_key'), 0)::BIGINT
         AS "prev_cost!",
     COALESCE(SUM(r.tokens_used)
         FILTER (WHERE r.created_at >= $5 AND r.created_at < $1), 0)::BIGINT

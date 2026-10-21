@@ -55,8 +55,9 @@ pub(super) fn kpi_strip(
     series: Option<&[UsageBucket]>,
 ) -> KpiStripView {
     let days = window_days(range);
-    let cost_per_request = if kpis.total_requests > 0 {
-        kpis.total_cost_microdollars / kpis.total_requests
+    let platform_requests = kpis.total_requests - kpis.user_key_requests;
+    let cost_per_request = if platform_requests > 0 {
+        kpis.total_cost_microdollars / platform_requests
     } else {
         0
     };
@@ -75,6 +76,9 @@ pub(super) fn kpi_strip(
         error_display: format!("{} errors ({error_rate:.1}%)", kpis.error_count),
         cost_display: format_cost(kpis.total_cost_microdollars),
         cost_per_request_display: format_cost(cost_per_request),
+        has_user_key: kpis.user_key_requests > 0,
+        user_key_cost_display: format_cost(kpis.user_key_cost_microdollars),
+        user_key_sub: format!("{} requests on members' keys", kpis.user_key_requests),
         weekly_active_users: kpis.weekly_active_users,
         active_users: kpis.active_users,
         requests_per_user_day_display: format!("{per_user_day:.1}"),

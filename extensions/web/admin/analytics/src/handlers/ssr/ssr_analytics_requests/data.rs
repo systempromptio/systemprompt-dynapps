@@ -16,8 +16,8 @@ use crate::repositories::analytics::request_stats::{
 };
 use crate::repositories::analytics::requests::{
     BreakdownRow, FacetValue, RequestFilter, RequestKpis, RequestPage, RequestRow, RequestSortSpec,
-    get_request_kpis, list_request_facets, list_requests_by_model, list_requests_by_provider,
-    list_requests_by_status, list_requests_paged,
+    find_request_billing_split, get_request_kpis, list_request_facets, list_requests_by_model,
+    list_requests_by_provider, list_requests_by_status, list_requests_paged,
 };
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::util::time_range::{
@@ -113,17 +113,23 @@ async fn load_every_tab(
     page: RequestPage,
     faults: &mut Faults,
 ) -> RequestsData {
-    let (paged, stats_res, kpis_res, facets_res) = tokio::join!(
+    let (paged, stats_res, kpis_res, facets_res, billing_res) = tokio::join!(
         list_requests_paged(pool, filter, range, page),
         get_request_stats(pool, range, &filter.scope),
         get_request_kpis(pool, filter, range),
         list_request_facets(pool, range, &filter.scope),
+        find_request_billing_split(pool, filter, range),
     );
 
     let rows_unavailable = paged.is_err();
     let (rows, total_count) = faults.take("request rows", paged);
     let stats = faults.take("request stats", stats_res);
-    let kpis = faults.take("request kpis", kpis_res);
+    let mut kpis = faults.take("request kpis", kpis_res);
+    if let Some(split) = faults.take("request billing split", billing_res) {
+        kpis.cost_microdollars -= split.user_key_cost_microdollars;
+        kpis.user_key_cost_microdollars = split.user_key_cost_microdollars;
+        kpis.user_key_requests = split.user_key_requests;
+    }
     let facets = faults.take("request facets", facets_res);
 
     RequestsData {
