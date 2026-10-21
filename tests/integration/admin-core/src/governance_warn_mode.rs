@@ -46,7 +46,7 @@ fn shipped_config() -> GovernanceConfig {
 // Why: core refuses a chain whose `rate_limit` window it cannot count. The
 // chain-only gates here evaluate with stated `RateCounts` and never charge, so
 // a pool that never connects satisfies the check without a database.
-fn uncharged_rate_windows() -> Option<systemprompt::governance::policy::RateWindowRepository> {
+fn uncharged_rate_windows() -> systemprompt::governance::policy::RateWindowRepository {
     let pool = sqlx::postgres::PgPoolOptions::new()
         .idle_timeout(None)
         .max_lifetime(None)
@@ -58,7 +58,7 @@ fn uncharged_rate_windows() -> Option<systemprompt::governance::policy::RateWind
 }
 
 fn shipped_engine() -> GovernanceEngine {
-    GovernanceEngine::from_config(&shipped_config(), uncharged_rate_windows())
+    GovernanceEngine::from_config(&shipped_config(), Some(uncharged_rate_windows()))
         .expect("shipped governance config is valid")
 }
 

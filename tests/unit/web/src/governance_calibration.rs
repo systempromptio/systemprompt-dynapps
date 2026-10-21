@@ -20,7 +20,7 @@ fn engine(mode: &str) -> GovernanceEngine {
             "governance:\n  mode: {mode}\n  policies:\n    - id: secret_scan\n      patterns:\n        - id: github-token-classic\n          name: GitHub Token (classic)\n          regex: '\\bghp_[A-Za-z0-9]{{36,}}'\n"
         ))
         .unwrap(),
-        crate::support::uncharged_rate_windows(),
+        Some(crate::support::uncharged_rate_windows()),
     )
     .unwrap()
 }
@@ -76,7 +76,7 @@ fn aws_shaped_text_and_structured_values_have_no_confirmed_finding() {
             "governance:\n  policies:\n    - id: secret_scan\n      mode: warn\n      entropy:\n        enabled: false\n",
         )
         .unwrap(),
-        crate::support::uncharged_rate_windows(),
+        Some(crate::support::uncharged_rate_windows()),
     )
     .unwrap();
     let scanner = engine.secret_scanner().expect("empty scanner exists");
@@ -218,7 +218,8 @@ fn installation_omits_aws_and_keeps_warn_mode() {
         assert_eq!(policy.mode.to_string(), "warn", "{}", policy.id.as_str());
     }
     let engine =
-        GovernanceEngine::from_config(&cfg, crate::support::uncharged_rate_windows()).unwrap();
+        GovernanceEngine::from_config(&cfg, Some(crate::support::uncharged_rate_windows()))
+            .unwrap();
     assert!(!engine.enforces_prompt_secrets());
     let secret_scan = cfg
         .policies

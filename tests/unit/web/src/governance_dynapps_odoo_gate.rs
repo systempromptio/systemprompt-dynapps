@@ -20,7 +20,8 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
     let cfg = GovernanceConfig::parse(include_str!("../../../../services/governance/config.yaml"))
         .unwrap();
     let engine =
-        GovernanceEngine::from_config(&cfg, crate::support::uncharged_rate_windows()).unwrap();
+        GovernanceEngine::from_config(&cfg, Some(crate::support::uncharged_rate_windows()))
+            .unwrap();
     let roles: Vec<String> = roles.iter().map(|r| (*r).to_owned()).collect();
     let user = UserId::new("odoo-farm-user");
     let session = SessionId::generate();

@@ -19,7 +19,8 @@ fn configured_scanner() -> SecretsScanner {
         GovernanceConfig::parse(include_str!("../../../../services/governance/config.yaml"))
             .unwrap();
     let engine =
-        GovernanceEngine::from_config(&config, crate::support::uncharged_rate_windows()).unwrap();
+        GovernanceEngine::from_config(&config, Some(crate::support::uncharged_rate_windows()))
+            .unwrap();
     SecretsScanner::with_scanner(engine.secret_scanner().unwrap().clone())
 }
 

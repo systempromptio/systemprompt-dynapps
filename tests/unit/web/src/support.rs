@@ -43,11 +43,11 @@ pub(crate) fn walk(dir: &Path, ext: &str, out: &mut Vec<PathBuf>) {
 // Why: core refuses a chain whose `rate_limit` window it cannot count. The
 // chain-only gates here evaluate with stated `RateCounts` and never charge, so
 // a pool that never connects satisfies the check without a database.
-pub(crate) fn uncharged_rate_windows() -> Option<RateWindowRepository> {
+pub(crate) fn uncharged_rate_windows() -> RateWindowRepository {
     let pool = sqlx::postgres::PgPoolOptions::new()
         .idle_timeout(None)
         .max_lifetime(None)
         .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
         .expect("a lazy pool never connects");
-    Some(RateWindowRepository::new(pool))
+    RateWindowRepository::new(pool)
 }
