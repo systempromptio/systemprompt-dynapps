@@ -25,11 +25,11 @@ use std::borrow::Cow;
 use std::sync::{Arc, LazyLock};
 
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{
     AccessControlRepository, AccessRule, AuthzDecision, AuthzRequest, ChainSources, Decision,
     DenyReason, EntityKind, EntityRow, ParentChainIndex, ResolveBase, SubjectAttributes,
 };
+use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::authz::{database_key, dimensions, subject_attributes_for};
 use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
 use systemprompt_web_admin_core::ttl_cache::{AUTHZ_TTL, TtlCache};

@@ -13,11 +13,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 use crate::repositories::runs;
 

@@ -22,8 +22,8 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
-use systemprompt::identifiers::RuleId;
 use systemprompt::governance::authz::{DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams};
+use systemprompt::identifiers::RuleId;
 
 use systemprompt_web_admin_core::activity::RuleChange;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};

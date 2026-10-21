@@ -3,10 +3,10 @@ use super::matrix::MatrixSource;
 use super::matrix_source::{allow_source, deny_source};
 use crate::types::access_control::{AccessControlRule, AccessDecision};
 use std::str::FromStr;
-use systemprompt::identifiers::{RuleId, UserId};
 use systemprompt::governance::authz::{
     Access, AccessRule, Decision, EntityKind, SubjectAttributes, SubjectDimension,
 };
+use systemprompt::identifiers::{RuleId, UserId};
 fn as_access_rule(row: &AccessControlRule) -> AccessRule {
     AccessRule {
         id: RuleId::new(row.id.clone()),

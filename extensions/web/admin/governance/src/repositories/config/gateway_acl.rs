@@ -2,9 +2,9 @@
 //! `systemprompt::governance::authz` core crate.
 //!
 //! Types and the resolver are re-exported directly from
-//! `systemprompt::governance::authz` so handler call sites compile unchanged. The
-//! repository functions below preserve the historical `(pool, route_id, ...)`
-//! signatures while delegating
+//! `systemprompt::governance::authz` so handler call sites compile unchanged.
+//! The repository functions below preserve the historical `(pool, route_id,
+//! ...)` signatures while delegating
 //! to [`systemprompt::governance::authz::AccessControlRepository`] with
 //! `entity_type = "gateway_route"`. Use the core repository directly for any
 //! new entity types (`mcp_server`, etc.).

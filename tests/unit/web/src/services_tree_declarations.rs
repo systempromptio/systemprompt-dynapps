@@ -12,9 +12,9 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
+use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 use systemprompt::loader::ConfigLoader;
 use systemprompt::manifest::services::ServicesConfig;
-use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredSet, build_declared_set,
 };

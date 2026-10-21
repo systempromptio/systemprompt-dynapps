@@ -17,12 +17,12 @@ use rmcp::service::{MaybeSendFuture, RequestContext, RoleServer};
 use rmcp::{ErrorData as McpError, ServerHandler};
 use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
+use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
 };
-use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt_mcp_shared::auth::authenticate_tool_request;
 use systemprompt_mcp_shared::record_mcp_access;

@@ -8,8 +8,8 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
+use systemprompt::identifiers::UserId;
 
 use systemprompt_web_admin_core::activity::{ActivityEntity, NewActivity};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};

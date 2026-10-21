@@ -12,11 +12,11 @@
 //! decisions in one stream.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{Actor, ContextId};
 use systemprompt::governance::authz::{
     AccessRule, AuthzRequest, Decision, DecisionTag, EntityRow, GovernanceDecisionRecord,
     insert_governance_decision,
 };
+use systemprompt::identifiers::{Actor, ContextId};
 
 pub(crate) const POLICY_NAME: &str = "authz";
 

@@ -12,9 +12,9 @@ use systemprompt::gateway::protocol::canonical::CanonicalRequest;
 use systemprompt::gateway::protocol::inbound::InboundAdapter;
 use systemprompt::gateway::protocol::inbound::anthropic_messages::AnthropicMessagesInbound;
 use systemprompt::gateway::{GatewayAudit, GatewayRepositories, GatewayRequestContext};
+use systemprompt::governance::policy::types::AccessScope;
 use systemprompt::identifiers::{AiRequestId, AiToolCallId, ContextId, SessionId, TraceId, UserId};
 use systemprompt::wire::canonical::{CanonicalResponse, CanonicalUsage};
-use systemprompt::governance::policy::types::AccessScope;
 
 async fn profile() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("profile directory");

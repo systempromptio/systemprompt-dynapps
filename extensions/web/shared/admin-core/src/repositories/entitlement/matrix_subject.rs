@@ -13,8 +13,8 @@
 //! is not a legal prefix for either.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{RuleType, SubjectAttributes};
+use systemprompt::identifiers::UserId;
 
 use super::matrix::{
     MatrixSection, SectionInput, resolution_inputs, resolve_sections_for, sections_with,

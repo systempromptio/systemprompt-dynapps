@@ -10,11 +10,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 const ORGANIZATION_RULE_TYPE: RuleType = RuleType::extension_static("organization");
 

@@ -10,10 +10,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{
     AuthzError, SharedSubjectAttributeProvider, SubjectAttributeProvider, SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 use crate::ttl_cache::{AUTHZ_TTL, TtlCache};
 

@@ -9,6 +9,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use systemprompt::database::Database;
+use systemprompt::governance::authz::{
+    Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
+};
 use systemprompt::identifiers::{LibraryArtifactId, MarketplaceId, PluginId, UserId};
 use systemprompt::manifest::services::MarketplaceAccess;
 use systemprompt::marketplace::{
@@ -16,9 +19,6 @@ use systemprompt::marketplace::{
 };
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
-};
-use systemprompt::governance::authz::{
-    Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
 // Why: the filter reads connection snapshots through an `inventory`
 // registration submitted by the platform admin crate, which must be linked.

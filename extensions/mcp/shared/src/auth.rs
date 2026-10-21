@@ -8,10 +8,10 @@
 use rmcp::ErrorData as McpError;
 use rmcp::service::{RequestContext, RoleServer};
 use systemprompt::database::DbPool;
+use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::middleware::enforce_rbac_from_registry;
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
-use systemprompt::governance::authz::SharedAuthzHook;
 
 use crate::{record_mcp_access, record_mcp_access_rejected};
 

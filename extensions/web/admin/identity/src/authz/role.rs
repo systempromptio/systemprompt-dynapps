@@ -14,11 +14,11 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{
     AuthzError, ROLE_PRECEDENCE, RuleType, SharedSubjectAttributeProvider,
     SubjectAttributeProvider, SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 
 use crate::repositories::users::roles::{list_directory_roles, list_manual_roles};
 

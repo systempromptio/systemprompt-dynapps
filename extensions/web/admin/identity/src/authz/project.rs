@@ -3,11 +3,11 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{
     AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
     SubjectDimension,
 };
+use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::ProjectId;
 
 use systemprompt_web_admin_core::authz::primary::lead_with_primary;

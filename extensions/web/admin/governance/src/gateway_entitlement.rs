@@ -18,9 +18,9 @@ use sqlx::PgPool;
 use systemprompt::extension::{
     GatewayDenyReason, GatewayGuardRequest, GatewayRequestGuard, register_gateway_guard,
 };
-use systemprompt::identifiers::{RouteId, UserId};
 use systemprompt::governance::authz::resolver::{ResolveInput, resolve};
 use systemprompt::governance::authz::{Decision, EntityKind, EntityRef};
+use systemprompt::identifiers::{RouteId, UserId};
 
 use crate::authz_eval;
 
