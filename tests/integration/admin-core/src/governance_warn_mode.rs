@@ -52,9 +52,7 @@ fn uncharged_rate_windows() -> systemprompt::governance::policy::RateWindowRepos
         .max_lifetime(None)
         .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
         .expect("a lazy pool never connects");
-    Some(systemprompt::governance::policy::RateWindowRepository::new(
-        pool,
-    ))
+    systemprompt::governance::policy::RateWindowRepository::new(pool)
 }
 
 fn shipped_engine() -> GovernanceEngine {
