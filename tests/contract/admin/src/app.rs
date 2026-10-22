@@ -86,7 +86,7 @@ impl App {
         let admin_dir = globals::repo_root().join("storage/files/admin");
         // Handlebars strict mode: templates read `branding.*`, so an engine
         // without branding 500s on every page the server renders fine.
-        let branding = systemprompt_web_extension::branding_config();
+        let branding = systemprompt_web_site::config_loader::SiteConfig::load().branding;
         let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir)
             .expect("build the admin template engine from storage/files/admin")
             .with_branding(branding);

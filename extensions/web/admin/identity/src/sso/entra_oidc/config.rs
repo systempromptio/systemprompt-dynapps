@@ -1,22 +1,38 @@
 //! Configuration of the Microsoft Entra ID `OpenID Connect` relying party
 //! (`services/web/config/entra-oidc.yaml`).
 //!
-//! The aggregator loads the file at boot and hands it to [`install_config`]
-//! before the SSO driver discovers providers; [`super::factory`] reads it back
-//! from the `OnceLock`. The absolute `redirect_uri` is never authored in YAML:
+//! [`super::factory`] loads the file from the active services root when
+//! core's SSO driver discovers providers, so the config is owned by the
+//! provider it builds. The absolute `redirect_uri` is never authored in YAML:
 //! the loader derives it from the profile's `api_external_url`, so one
-//! committed file is correct on every deployment host.
+//! committed file is correct on every deployment host. A missing file is a
+//! disabled provider, never an error.
 
-use std::sync::{Arc, OnceLock};
+use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use systemprompt::sso::SsoIdentityPolicy;
 
 pub const ID: &str = "entra-oidc";
+pub const CONFIG_FILE: &str = "web/config/entra-oidc.yaml";
 
 const ENTRA_AUTHORITY: &str = "https://login.microsoftonline.com";
 
-static CONFIG: OnceLock<Arc<EntraOidcConfig>> = OnceLock::new();
+#[derive(Debug, thiserror::Error)]
+pub enum EntraOidcConfigError {
+    #[error("{path}: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("{path}: {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: serde_yaml::Error,
+    },
+}
 
 fn default_client_secret_secret() -> String {
     "entra_oidc_client_secret".to_owned()
@@ -42,7 +58,7 @@ fn default_jwks_allowed_hosts() -> Vec<String> {
     vec!["login.microsoftonline.com".to_owned()]
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EntraOidcConfig {
     #[serde(default)]
@@ -110,6 +126,44 @@ impl EntraOidcConfig {
             .unwrap_or_else(|| format!("{}/.well-known/openid-configuration", self.issuer()))
     }
 
+    pub fn load(
+        services_root: &Path,
+        api_external_url: &str,
+    ) -> Result<Self, EntraOidcConfigError> {
+        let path = services_root.join(CONFIG_FILE);
+        let text = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),
+            Err(source) => return Err(EntraOidcConfigError::Read { path, source }),
+        };
+        let mut config: Self =
+            serde_yaml::from_str(&text).map_err(|source| EntraOidcConfigError::Parse {
+                path: path.clone(),
+                source,
+            })?;
+        config.derive_redirect_uri(api_external_url);
+        tracing::info!(
+            enabled = config.enabled,
+            usable = config.is_usable(),
+            "Loaded Entra OIDC config"
+        );
+        Ok(config)
+    }
+
+    // Why: Microsoft Entra ID answers `AADSTS50011` when the redirect URI is
+    // not one registered on the App Registration, so it derives from this
+    // host's own `api_external_url`.
+    fn derive_redirect_uri(&mut self, api_external_url: &str) {
+        if self.redirect_uri.is_some() {
+            return;
+        }
+        let base = api_external_url.trim_end_matches('/');
+        if base.is_empty() {
+            return;
+        }
+        self.redirect_uri = Some(format!("{base}{}", self.redirect_path));
+    }
+
     #[must_use]
     pub fn is_usable(&self) -> bool {
         self.enabled
@@ -120,16 +174,4 @@ impl EntraOidcConfig {
                 .as_deref()
                 .is_some_and(|uri| !uri.is_empty())
     }
-}
-
-// Why: core's SSO driver discovers providers once, so the first install wins
-// and a later one is only warned about.
-pub fn install_config(cfg: Arc<EntraOidcConfig>) {
-    if CONFIG.set(cfg).is_err() {
-        tracing::warn!("Entra OIDC config installed twice; keeping the first");
-    }
-}
-
-pub(super) fn installed_config() -> Option<Arc<EntraOidcConfig>> {
-    CONFIG.get().cloned()
 }

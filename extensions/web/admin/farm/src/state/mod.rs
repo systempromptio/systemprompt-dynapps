@@ -12,6 +12,8 @@ mod paths;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::services::runner::fly::registry::RemoteRuns;
+
 use sqlx::PgPool;
 use systemprompt::ai::AiService;
 use systemprompt::config::AppPaths;
@@ -49,6 +51,7 @@ pub struct FarmState {
     pub judge: JudgeSource,
     pub artefacts: Arc<dyn FileStorage>,
     pub instance: InstanceId,
+    pub runs: Arc<RemoteRuns>,
 }
 
 impl std::fmt::Debug for FarmState {
@@ -62,13 +65,16 @@ impl std::fmt::Debug for FarmState {
     }
 }
 
-/// What the composition root that builds a [`FarmState`] hands it from the
-/// runtime: core's file storage (eval files) and this replica's identity
-/// (recorded on the eval runs it drives).
+/// What the composition root hands a [`FarmState`] from the runtime.
+///
+/// Core's file storage (eval files), this replica's identity (recorded on
+/// the eval runs it drives) and the in-flight remote run registry every
+/// `FarmState` in the process shares.
 #[derive(Clone)]
 pub struct FarmHost {
     pub artefacts: Arc<dyn FileStorage>,
     pub instance: InstanceId,
+    pub runs: Arc<RemoteRuns>,
 }
 
 impl std::fmt::Debug for FarmHost {
@@ -97,6 +103,7 @@ pub fn build_farm_state(
         judge: JudgeSource::default(),
         artefacts,
         instance: InstanceId::new("local"),
+        runs: Arc::new(RemoteRuns::default()),
     })
 }
 
@@ -129,6 +136,7 @@ pub fn build_farm_state_with_ai(
         judge,
         artefacts: host.artefacts,
         instance: host.instance,
+        runs: host.runs,
     })
 }
 

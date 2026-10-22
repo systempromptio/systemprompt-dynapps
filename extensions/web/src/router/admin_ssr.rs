@@ -6,11 +6,10 @@ use std::sync::Arc;
 use axum::{Extension, Router};
 
 use systemprompt::config::{AppPaths, ProfileBootstrap};
-
-use super::pools::DbHandles;
-use systemprompt_web_site::config_loader;
+use systemprompt_web_site::navigation::BrandingConfig;
 
 use super::admin;
+use super::pools::DbHandles;
 
 pub(crate) struct SsrRouters {
     pub admin: Router,
@@ -20,9 +19,9 @@ pub(crate) struct SsrRouters {
 pub(crate) fn build(
     db: &DbHandles,
     sso_deps: systemprompt_web_admin_identity::SsoDeps,
+    branding: Option<BrandingConfig>,
 ) -> Option<SsrRouters> {
     let admin_dir = admin_template_dir()?;
-    let branding = config_loader::branding_config();
     let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir)
         .map_err(|e| tracing::error!(error = %e, "Failed to initialize admin template engine"))
         .ok()?

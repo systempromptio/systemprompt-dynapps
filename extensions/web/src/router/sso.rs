@@ -1,8 +1,6 @@
-//! Core's SSO driver for this installation: install the Entra ID OIDC config
-//! into the identity crate's provider slot, then discover.
-//!
-//! Order matters — discovery calls each provider's factory once, so a config
-//! installed afterwards is never seen.
+//! Core's SSO driver for this installation. Discovery calls each registered
+//! provider's factory once; the Entra ID factory loads its own
+//! `services/web/config/entra-oidc.yaml` from the active services root.
 
 use std::sync::Arc;
 
@@ -10,15 +8,10 @@ use systemprompt::manifest::Config;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::sso::SsoDriver;
 use systemprompt_web_admin_identity::SsoDeps;
-use systemprompt_web_admin_identity::sso::entra_oidc;
 
 use super::pools::DbHandles;
-use crate::extension::WebExtension;
 
 pub(super) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> SsoDeps {
-    if let Some(cfg) = WebExtension::entra_oidc_config() {
-        entra_oidc::install_config(cfg);
-    }
     let driver = match Config::get() {
         Ok(config) => Some(SsoDriver::discover(
             &db.db,

@@ -26,6 +26,7 @@ use systemprompt_web_admin_farm::routes::worker::agent_farm_worker_routes;
 use systemprompt_web_admin_farm::services::farm_sync::boot::sync_missing_checkouts;
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
+use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::services::runner::report::backfill_missing_reports;
 use systemprompt_web_admin_farm::state::{FarmHost, FarmState, build_farm_state_from_app};
 use tokio_util::sync::CancellationToken;
@@ -47,8 +48,8 @@ pub fn farm_public_router(read_pool: Arc<PgPool>, state: Arc<FarmState>) -> Rout
         ))
 }
 
-pub(crate) fn farm_worker_router() -> Router {
-    agent_farm_worker_routes()
+pub(crate) fn farm_worker_router(runs: Arc<RemoteRuns>) -> Router {
+    agent_farm_worker_routes(runs)
 }
 
 async fn farm_context_middleware(
@@ -89,7 +90,9 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
     });
 }
 
-pub(crate) struct FarmRunner;
+pub(crate) struct FarmRunner {
+    pub(crate) runs: Arc<RemoteRuns>,
+}
 
 #[async_trait::async_trait]
 impl RunnerService for FarmRunner {
@@ -118,6 +121,7 @@ impl RunnerService for FarmRunner {
             paths.as_deref(),
             Arc::clone(app.file_storage()),
             app.config().instance_id.clone(),
+            Arc::clone(&self.runs),
         );
         FarmRunnerService::new(state).run(ctx, shutdown).await;
     }
@@ -128,6 +132,7 @@ pub fn build_state(
     app_paths: Option<&AppPaths>,
     artefacts: Arc<dyn FileStorage>,
     instance: InstanceId,
+    runs: Arc<RemoteRuns>,
 ) -> Arc<FarmState> {
     build_farm_state_from_app(
         pool,
@@ -135,6 +140,7 @@ pub fn build_state(
         FarmHost {
             artefacts,
             instance,
+            runs,
         },
     )
 }

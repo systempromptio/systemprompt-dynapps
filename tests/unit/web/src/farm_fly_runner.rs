@@ -23,7 +23,7 @@ use systemprompt_web_admin_farm::services::runner::fly::protocol::{
     Bundle, BundleFile, WorkerCredentials, WorkerResult, WorkerSpec, collect_bundle,
     rebase_request, worker_url, write_bundle,
 };
-use systemprompt_web_admin_farm::services::runner::fly::registry::{authorise, register};
+use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::services::runner::fly::remote::request_for_worker;
 use systemprompt_web_admin_farm::services::runner::observer::unexecuted_outcome;
 use systemprompt_web_admin_farm::types::{AgentRunStatus, ErrorClass};
@@ -234,17 +234,23 @@ async fn worker_token_opens_only_its_run_while_registered() {
         .expect("lazy pool");
     let repo = AgentRunRepository::from_pool(std::sync::Arc::new(pool));
     let sink = DbEventSink::new(repo, AgentRunId::new("fly-reg-run"));
-    let mut registration = register(
+    let runs = std::sync::Arc::new(RemoteRuns::default());
+    let mut registration = runs.register(
         spec("fly-reg-run"),
         PathBuf::from(SERVER_ROOT),
         sink,
         "tok-a",
     );
-    assert!(authorise("fly-reg-run", "tok-a").is_some());
-    assert!(authorise("fly-reg-run", "tok-b").is_none());
-    assert!(authorise("other-run", "tok-a").is_none());
+    assert!(runs.authorise("fly-reg-run", "tok-a").is_some());
+    assert!(runs.authorise("fly-reg-run", "tok-b").is_none());
+    assert!(runs.authorise("other-run", "tok-a").is_none());
+    let other = RemoteRuns::default();
+    assert!(
+        other.authorise("fly-reg-run", "tok-a").is_none(),
+        "a registry is owned, not process-wide"
+    );
 
-    let run = authorise("fly-reg-run", "tok-a").expect("admitted");
+    let run = runs.authorise("fly-reg-run", "tok-a").expect("admitted");
     assert!(!run.cancel_requested());
     run.request_cancel();
     assert!(run.cancel_requested());
@@ -257,5 +263,5 @@ async fn worker_token_opens_only_its_run_while_registered() {
     assert_eq!((&mut registration.result).await.expect("delivered"), result);
 
     drop(registration);
-    assert!(authorise("fly-reg-run", "tok-a").is_none());
+    assert!(runs.authorise("fly-reg-run", "tok-a").is_none());
 }

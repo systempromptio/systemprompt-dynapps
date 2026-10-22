@@ -5,12 +5,15 @@ use std::path::PathBuf;
 use systemprompt::database::DbPool;
 use systemprompt::marketplace::managed::ManagedRepository;
 
+use crate::repositories::security_policy::SecurityPolicy;
+
 #[derive(Debug, Clone)]
 pub struct ManagedState {
     pub owner: systemprompt::identifiers::UserId,
     pub repository: ManagedRepository,
     pub otlp_export: systemprompt::scheduler::OtlpExportStateRepository,
     pub scratch_root: Option<PathBuf>,
+    pub security: SecurityPolicy,
 }
 
 impl ManagedState {
@@ -25,6 +28,7 @@ impl ManagedState {
             scratch_root,
             otlp_export: systemprompt::scheduler::OtlpExportStateRepository::new(pool),
             repository: ManagedRepository::new(db),
+            security: SecurityPolicy::load_or_default(),
         }
     }
 }

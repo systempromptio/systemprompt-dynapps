@@ -202,26 +202,24 @@ fn a_valid_source_survives_alongside_a_broken_one_being_rejected() {
 
 // A `./`-prefixed path is the one form that is resolved against the profile's
 // `services/` directory rather than the config file's own directory. No
-// profile is bootstrapped in a test process, so this exercises the documented
-// fallback: the literal `./services` relative to the working directory. The
-// source is disabled so the assertion is about the resolved path alone and
-// does not depend on that directory existing.
+// profile is bootstrapped in a test process, and there is no working-directory
+// fallback, so the source is refused with the profile's absence as the cause —
+// even when it is disabled, since the path could not be resolved at all.
 #[test]
-fn a_dot_slash_services_path_resolves_against_the_profile_services_dir() {
+fn a_dot_slash_services_path_needs_the_profile_services_dir() {
     let temp = tempfile::tempdir().expect("tempdir");
     let mut src = source("guides", "./services/content/guides");
     src.enabled = false;
 
-    let config = validate(vec![src], temp.path()).expect("a disabled source always validates");
-
-    let resolved = config.all_sources()[0].path();
+    let errors = validate(vec![src], temp.path()).expect_err("no profile, no services dir");
+    let rendered = errors.to_string();
     assert!(
-        resolved.ends_with("content/guides"),
-        "the `./services/` prefix is stripped and rejoined onto the services dir: {resolved:?}"
+        rendered.contains("content_sources[0].path"),
+        "the refused field is named: {rendered}"
     );
     assert!(
-        !resolved.starts_with(temp.path()),
-        "a `./` path is not resolved against the config file's directory: {resolved:?}"
+        rendered.contains("profile paths unavailable"),
+        "the cause is the missing profile, not a silent fallback: {rendered}"
     );
 }
 

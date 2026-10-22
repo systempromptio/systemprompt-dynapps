@@ -9,10 +9,11 @@
 //! deny-overrides resolver, audit what this hook adds, and return a
 //! synchronous verdict.
 //!
-//! Rules and entity, parent chains and roles are cached for 30 s
-//! ([`systemprompt_web_admin_core::ttl_cache`]); subject attributes are
-//! cached by their providers. An access-control sync apply or a console rule
-//! edit drops every entry on the replica that made it.
+//! Rules and entity, parent chains and roles are cached for 30 s in the
+//! database's [`systemprompt_web_admin_core::authz::AuthzCaches`]; subject
+//! attributes are cached by their providers on the same generation. An
+//! access-control sync apply or a console rule edit drops every entry on the
+//! replica that made it.
 //!
 //! Subject attributes and roles are looked up rather than read off the
 //! request, so a group change or a revocation binds within one cache window,
@@ -22,30 +23,20 @@
 mod audit;
 
 use std::borrow::Cow;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use sqlx::PgPool;
 use systemprompt::governance::authz::{
-    AccessControlRepository, AccessRule, AuthzDecision, AuthzRequest, ChainSources, Decision,
-    DenyReason, EntityKind, EntityRow, ParentChainIndex, ResolveBase, SubjectAttributes,
+    AccessControlRepository, AuthzDecision, AuthzRequest, ChainSources, Decision, DenyReason,
+    EntityKind, ParentChainIndex, ResolveBase, SubjectAttributes,
 };
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin_core::authz::{database_key, dimensions, subject_attributes_for};
+use systemprompt_web_admin_core::authz::{caches, dimensions, subject_attributes_for};
 use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
-use systemprompt_web_admin_core::ttl_cache::{AUTHZ_TTL, TtlCache};
 
 pub(crate) use audit::POLICY_NAME;
 
-pub type EntityGrant = (Option<EntityRow>, Vec<AccessRule>);
-
-static ENTITY_GRANTS: LazyLock<TtlCache<(String, String, String), EntityGrant>> =
-    LazyLock::new(|| TtlCache::new(AUTHZ_TTL));
-
-static USER_ROLES: LazyLock<TtlCache<(String, UserId), Vec<String>>> =
-    LazyLock::new(|| TtlCache::new(AUTHZ_TTL));
-
-static PARENT_CHAINS: LazyLock<TtlCache<String, ParentChainIndex>> =
-    LazyLock::new(|| TtlCache::new(AUTHZ_TTL));
+pub use systemprompt_web_admin_core::authz::EntityGrant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Unavailable;
@@ -66,12 +57,12 @@ pub fn unavailable_reason() -> DenyReason {
 
 pub async fn entity_grant(
     pool: &Arc<PgPool>,
-    database: &str,
     kind: EntityKind,
     id: &str,
 ) -> Result<EntityGrant, sqlx::Error> {
-    let key = (database.to_owned(), kind.as_str().to_owned(), id.to_owned());
-    if let Some(grant) = ENTITY_GRANTS.get(&key) {
+    let cache = &caches(pool).entity_grants;
+    let key = (kind.as_str().to_owned(), id.to_owned());
+    if let Some(grant) = cache.get(&key) {
         return Ok(grant);
     }
     let repo = AccessControlRepository::from_pool(Arc::clone(pool));
@@ -84,32 +75,26 @@ pub async fn entity_grant(
         .map_err(to_sqlx)?;
     let entity = repo.get_entity(kind, id).await.map_err(to_sqlx)?;
     let grant = (entity, rules);
-    ENTITY_GRANTS.insert(key, grant.clone());
+    cache.insert(key, grant.clone());
     Ok(grant)
 }
 
-pub async fn active_roles(
-    pool: &PgPool,
-    database: &str,
-    user_id: &UserId,
-) -> Result<Vec<String>, sqlx::Error> {
-    let key = (database.to_owned(), user_id.clone());
-    if let Some(roles) = USER_ROLES.get(&key) {
+pub async fn active_roles(pool: &PgPool, user_id: &UserId) -> Result<Vec<String>, sqlx::Error> {
+    let cache = &caches(pool).user_roles;
+    if let Some(roles) = cache.get(user_id) {
         return Ok(roles);
     }
     let identity = find_identity_envelope(pool, user_id)
         .await?
         .filter(|identity| identity.status == "active")
         .ok_or(sqlx::Error::RowNotFound)?;
-    USER_ROLES.insert(key, identity.roles.clone());
+    cache.insert(user_id.clone(), identity.roles.clone());
     Ok(identity.roles)
 }
 
-async fn parent_chains(
-    pool: &Arc<PgPool>,
-    database: &str,
-) -> Result<ParentChainIndex, Unavailable> {
-    if let Some(chains) = PARENT_CHAINS.get(&database.to_owned()) {
+async fn parent_chains(pool: &Arc<PgPool>) -> Result<ParentChainIndex, Unavailable> {
+    let cache = &caches(pool).parent_chains;
+    if let Some(chains) = cache.get(&()) {
         return Ok(chains);
     }
     let services = systemprompt::loader::ServicesBootstrap::get().map_err(|error| {
@@ -123,32 +108,29 @@ async fn parent_chains(
             tracing::error!(%error, "authorization_unavailable: parent policies");
             Unavailable
         })?;
-    PARENT_CHAINS.insert(database.to_owned(), chains.clone());
+    cache.insert((), chains.clone());
     Ok(chains)
 }
 
 async fn read_subject(pool: &Arc<PgPool>, req: &AuthzRequest) -> Result<Subject, Unavailable> {
-    let database = database_key(pool);
     let id = req.entity.id_str();
-    let grant = entity_grant(pool, &database, req.entity.kind(), id)
+    let grant = entity_grant(pool, req.entity.kind(), id)
         .await
         .map_err(|error| {
             tracing::error!(%error, %id, "authorization_unavailable: entity rules");
             Unavailable
         })?;
-    let chains = parent_chains(pool, &database).await?;
+    let chains = parent_chains(pool).await?;
     let attributes = subject_attributes_for(pool, &req.user_id)
         .await
         .map_err(|error| {
             tracing::error!(%error, user_id = %req.user_id, trace_id = %req.trace_id, "authorization_unavailable: attributes");
             Unavailable
         })?;
-    let roles = active_roles(pool, &database, &req.user_id)
-        .await
-        .map_err(|error| {
-            tracing::warn!(%error, user_id = %req.user_id, "authorization_unavailable: identity");
-            Unavailable
-        })?;
+    let roles = active_roles(pool, &req.user_id).await.map_err(|error| {
+        tracing::warn!(%error, user_id = %req.user_id, "authorization_unavailable: identity");
+        Unavailable
+    })?;
     Ok(Subject {
         grant,
         chains,

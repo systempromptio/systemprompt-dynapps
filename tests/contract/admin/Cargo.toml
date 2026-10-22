@@ -16,6 +16,7 @@ systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-admin-farm = { workspace = true }
 systemprompt-web-extension = { workspace = true }
 systemprompt-web-shared = { workspace = true }
+systemprompt-web-site = { workspace = true }
 systemprompt-security = { workspace = true }
 
 axum = { workspace = true }

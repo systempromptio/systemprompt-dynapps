@@ -15,6 +15,7 @@ use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
 use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult};
+use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::services::scheduled::{ScheduledLaunch, launch_scheduled};
 use systemprompt_web_admin_farm::state::{FarmHost, build_farm_state_with_ai};
 use systemprompt_web_admin_farm::types::{FarmAgentId, FarmId};
@@ -23,6 +24,12 @@ use crate::error::JobError;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FarmScheduledRunJob;
+
+// Why: this job only queues the run on core's `agent_runs`; the runner service
+// that claims it owns the shared remote-run registry.
+fn queue_only_runs() -> Arc<RemoteRuns> {
+    Arc::new(RemoteRuns::default())
+}
 
 fn required(ctx: &JobContext, key: &str) -> Result<String, JobError> {
     ctx.get_parameter_parsed::<String>(key)?
@@ -48,6 +55,7 @@ impl FarmScheduledRunJob {
         let host = FarmHost {
             artefacts: Arc::clone(app.file_storage()),
             instance: app.config().instance_id.clone(),
+            runs: queue_only_runs(),
         };
         let state = build_farm_state_with_ai(
             db.write_pool(),
@@ -56,10 +64,7 @@ impl FarmScheduledRunJob {
             host,
         );
         let launcher = scheduled.launcher.clone();
-        let Some(run) = launch_scheduled(&state, scheduled)
-            .await
-            .map_err(|error| JobError::other(error.to_string()))?
-        else {
+        let Some(run) = launch_scheduled(&state, scheduled).await? else {
             tracing::info!(launcher = %launcher, "Scheduled farm run skipped: launcher is not an active person here");
             return Ok(JobResult::success().with_stats(0, 0).with_message(format!(
                 "skipped: launcher {launcher} is not an active person"

@@ -32,7 +32,17 @@ pub(super) fn validate_content_source(
         return None;
     }
 
-    let resolved_path = resolve_content_source_path(&src.path, base_path);
+    let resolved_path = match resolve_content_source_path(&src.path, base_path) {
+        Ok(path) => path,
+        Err(source) => {
+            errors.push_with_source(
+                format!("{field_prefix}.path"),
+                "profile paths unavailable for a services-relative content source",
+                source,
+            );
+            return None;
+        },
+    };
 
     if src.enabled {
         let source_id = &src.source_id;
@@ -66,46 +76,47 @@ pub(super) fn validate_content_source(
         override_existing: src.override_existing,
     })
 }
-pub(super) fn resolve_blog_config_path() -> PathBuf {
-    ProfileBootstrap::get()
-        .map_err(|e| e.to_string())
-        .and_then(|profile| {
-            AppPaths::from_profile(
-                &profile.paths,
-                profile.path_resolution(),
-                ServicesRootBootstrap::get().map(|root| root.path.as_path()),
-            )
-            .map_err(|e| e.to_string())
-        })
-        .map_or_else(
-            |_| PathBuf::from("./services/config/blog.yaml"),
-            |paths| paths.system().services().join("config/blog.yaml"),
-        )
+#[derive(Debug, thiserror::Error)]
+pub enum ProfilePathsError {
+    #[error("profile unavailable: {0}")]
+    Profile(#[source] systemprompt::config::ProfileBootstrapError),
+    #[error("application paths unavailable: {0}")]
+    Paths(#[source] systemprompt::config::PathError),
 }
-pub(super) fn resolve_content_source_path(path: &str, base_path: &Path) -> PathBuf {
+
+fn services_dir() -> Result<PathBuf, ProfilePathsError> {
+    let profile = ProfileBootstrap::get().map_err(ProfilePathsError::Profile)?;
+    let paths = AppPaths::from_profile(
+        &profile.paths,
+        profile.path_resolution(),
+        ServicesRootBootstrap::get().map(|root| root.path.as_path()),
+    )
+    .map_err(ProfilePathsError::Paths)?;
+    Ok(paths.system().services().to_path_buf())
+}
+
+pub(super) fn resolve_blog_config_path() -> Result<PathBuf, ExtensionConfigErrors> {
+    services_dir()
+        .map(|services| services.join("config/blog.yaml"))
+        .map_err(|source| {
+            let mut errors = ExtensionConfigErrors::new("blog");
+            errors.push_with_source("_paths", "profile paths unavailable", source);
+            errors
+        })
+}
+
+pub(super) fn resolve_content_source_path(
+    path: &str,
+    base_path: &Path,
+) -> Result<PathBuf, ProfilePathsError> {
     if Path::new(path).is_absolute() {
-        PathBuf::from(path)
-    } else if path.starts_with("./") {
-        let services_dir = ProfileBootstrap::get()
-            .map_err(|e| e.to_string())
-            .and_then(|profile| {
-                AppPaths::from_profile(
-                    &profile.paths,
-                    profile.path_resolution(),
-                    ServicesRootBootstrap::get().map(|root| root.path.as_path()),
-                )
-                .map_err(|e| e.to_string())
-            })
-            .map_or_else(
-                |e| {
-                    tracing::warn!(error = %e, "Failed to get app paths, using fallback services dir");
-                    PathBuf::from("./services")
-                },
-                |p| p.system().services().to_path_buf(),
-            );
-        let clean_path = path.strip_prefix("./services/").unwrap_or(path);
-        services_dir.join(clean_path)
+        Ok(PathBuf::from(path))
+    } else if let Some(services_relative) = path.strip_prefix("./") {
+        let clean_path = services_relative
+            .strip_prefix("services/")
+            .unwrap_or(services_relative);
+        Ok(services_dir()?.join(clean_path))
     } else {
-        base_path.join(path)
+        Ok(base_path.join(path))
     }
 }

@@ -71,18 +71,13 @@ async fn resolve_route(
     pool: &PgPool,
     route_id: &RouteId,
     user_id: &UserId,
-) -> Result<Decision, sqlx::Error> {
-    let database = systemprompt_web_admin_core::authz::database_key(pool);
+) -> Result<Decision, systemprompt_web_admin_core::authz::AuthzReadError> {
     let shared = Arc::new(pool.clone());
-    let (entity, rules) = authz_eval::entity_grant(
-        &shared,
-        &database,
-        EntityKind::GatewayRoute,
-        route_id.as_str(),
-    )
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route grant lookup failed"))?;
-    let user_roles = authz_eval::active_roles(pool, &database, user_id).await?;
+    let (entity, rules) =
+        authz_eval::entity_grant(&shared, EntityKind::GatewayRoute, route_id.as_str())
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route grant lookup failed"))?;
+    let user_roles = authz_eval::active_roles(pool, user_id).await?;
     let attributes =
         systemprompt_web_admin_core::authz::subject_attributes_for(pool, user_id).await?;
 

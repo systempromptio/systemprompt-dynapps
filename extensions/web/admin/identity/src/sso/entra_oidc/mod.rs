@@ -33,7 +33,7 @@ pub use authorize::{
     AuthorizeRequest, authorization_response_issuer_matches, build_authorize_url, pkce_challenge,
 };
 pub use claims::IdTokenClaims;
-pub use config::{EntraOidcConfig, ID, install_config};
+pub use config::{CONFIG_FILE, EntraOidcConfig, EntraOidcConfigError, ID};
 pub use discovery::OidcDiscovery;
 pub use token::ClientSecretSource;
 pub use verify::{identity_from_claims, resolve_issuer_template};
@@ -83,8 +83,17 @@ impl EntraOidcProvider {
 
 // Why: core calls this hook once at discovery; only the client secret's
 // presence is checked, its value is re-read at every code redemption.
-pub fn factory(_ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
-    let cfg = config::installed_config()?;
+pub fn factory(ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
+    let profile = systemprompt::config::ProfileBootstrap::get()
+        .inspect_err(|error| tracing::warn!(%error, "Entra OIDC: no profile; provider off"))
+        .ok()?;
+    let services_root = systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
+        &profile.paths.services,
+    );
+    let cfg = EntraOidcConfig::load(&services_root, &ctx.config.api_external_url)
+        .inspect_err(|error| tracing::error!(%error, "Entra OIDC config rejected; provider off"))
+        .ok()
+        .map(Arc::new)?;
     if !cfg.is_usable() {
         if cfg.enabled {
             tracing::warn!(

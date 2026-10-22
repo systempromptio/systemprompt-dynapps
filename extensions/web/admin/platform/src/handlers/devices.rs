@@ -14,6 +14,7 @@ use systemprompt::identifiers::UserId;
 use crate::repositories;
 use crate::services::device_service;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::state::ManagedState;
 use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Deserialize)]
@@ -25,11 +26,18 @@ pub(crate) struct IssueApiKeyRequest {
 
 pub(crate) async fn issue_pat(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<IssueApiKeyRequest>,
 ) -> AdminResult<Response> {
-    let issued =
-        device_service::issue_pat(&pool, &user_ctx.user_id, &body.name, body.expires_at).await?;
+    let issued = device_service::issue_pat(
+        &pool,
+        managed.security,
+        &user_ctx.user_id,
+        &body.name,
+        body.expires_at,
+    )
+    .await?;
     Ok(Json(issued).into_response())
 }
 
@@ -55,6 +63,7 @@ pub(crate) struct EnrollDeviceRequest {
 
 pub(crate) async fn enroll_device(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<EnrollDeviceRequest>,
 ) -> AdminResult<Response> {
@@ -65,6 +74,7 @@ pub(crate) async fn enroll_device(
     let hostname = body.hostname.unwrap_or_default();
     let enrolled = device_service::enroll_device(
         &pool,
+        managed.security,
         &target,
         device_service::EnrollDeviceInput {
             name: &body.name,

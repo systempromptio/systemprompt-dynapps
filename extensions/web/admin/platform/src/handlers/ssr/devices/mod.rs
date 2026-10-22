@@ -27,15 +27,12 @@ use crate::repositories::devices::pats::CredentialQuery;
 use crate::repositories::devices::sessions::SessionQuery;
 use crate::repositories::devices::stats::FleetStats;
 use crate::repositories::devices::{sessions, stats};
-use crate::repositories::security_policy::SecurityPolicy;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::table::FilterChipView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 mod columns;
 mod context;
@@ -154,12 +151,16 @@ impl Listing {
 }
 
 pub(crate) async fn devices_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: systemprompt_web_admin_core::ssr::page::Page,
+    Extension(managed): Extension<Arc<systemprompt_web_admin_core::state::ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<DevicesQuery>,
 ) -> AdminHtmlResult<Response> {
+    let systemprompt_web_admin_core::ssr::page::Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
@@ -211,7 +212,7 @@ pub(crate) async fn devices_page(
         pagination: view::build_pagination(&query, window),
         can_manage: listing.can_manage,
         has_row_actions: listing.can_manage && matches!(tab, DeviceTab::Pats | DeviceTab::Certs),
-        max_pat_lifetime_days: SecurityPolicy::get().max_pat_lifetime_days,
+        max_pat_lifetime_days: managed.security.max_pat_lifetime_days,
     };
 
     Ok(

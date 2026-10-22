@@ -29,11 +29,17 @@
 //! caches the result, so every resolve call site reads the same provider list
 //! and ladder through [`subject_attributes_for`] and [`dimensions`].
 //! [`account`], [`catalog`] and [`primary`] are the helpers those call sites
-//! share. Every database-backed provider registers through [`cached`], so a
-//! user's values are read once per 30 s rather than once per request.
+//! share. The registry wraps every discovered provider in [`cached`] and owns
+//! that database's [`AuthzCaches`], so a user's values are read once per 30 s
+//! rather than once per request and one `invalidate_all` drops every entry.
+//!
+//! Core's hook, guard and provider factories hand this crate only a pool, so
+//! the per-database registry is the one process-wide slot they can all reach;
+//! it is keyed by database and built once per key.
 
 pub mod account;
 pub mod cached;
+pub mod caches;
 pub mod catalog;
 pub mod connector;
 pub mod organization;
@@ -49,9 +55,25 @@ use systemprompt::governance::authz::{
 };
 use systemprompt::identifiers::UserId;
 
+pub use caches::{AuthzCaches, EntityGrant};
+
+/// Why an authorization read could not be answered from this database.
+#[derive(Debug, thiserror::Error)]
+pub enum AuthzReadError {
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
+    #[error("services configuration unavailable: {0}")]
+    Services(#[from] systemprompt::loader::ConfigLoadError),
+    #[error("subject attributes unavailable: {0}")]
+    Subjects(#[from] systemprompt::governance::authz::AuthzError),
+    #[error("subject lookup task failed: {0}")]
+    Join(#[from] tokio::task::JoinError),
+}
+
 struct Registry {
     providers: Vec<SharedSubjectAttributeProvider>,
     dimensions: Vec<SubjectDimension>,
+    caches: AuthzCaches,
 }
 
 static REGISTRIES: OnceLock<Mutex<HashMap<String, &'static Registry>>> = OnceLock::new();
@@ -76,13 +98,19 @@ fn registry(pool: &PgPool) -> &'static Registry {
     if let Some(existing) = guard.get(&key) {
         return existing;
     }
-    let providers = discover_subject_providers(&AuthzHookContext {
-        pool: Arc::new(pool.clone()),
-        sink: Arc::new(NullAuditSink),
-    });
+    let caches = AuthzCaches::new();
+    let providers: Vec<SharedSubjectAttributeProvider> =
+        discover_subject_providers(&AuthzHookContext {
+            pool: Arc::new(pool.clone()),
+            sink: Arc::new(NullAuditSink),
+        })
+        .into_iter()
+        .map(|provider| cached::cached_provider(provider, caches.generation()))
+        .collect();
     let built: &'static Registry = Box::leak(Box::new(Registry {
         dimensions: dimensions_of(&providers),
         providers,
+        caches,
     }));
     guard.insert(key, built);
     built
@@ -92,11 +120,13 @@ pub fn dimensions(pool: &PgPool) -> &'static [SubjectDimension] {
     &registry(pool).dimensions
 }
 
+pub fn caches(pool: &PgPool) -> &'static AuthzCaches {
+    &registry(pool).caches
+}
+
 pub async fn subject_attributes_for(
     pool: &PgPool,
     user_id: &UserId,
-) -> Result<SubjectAttributes, sqlx::Error> {
-    gather_subject_attributes(&registry(pool).providers, user_id)
-        .await
-        .map_err(|e| sqlx::Error::Protocol(e.to_string()))
+) -> Result<SubjectAttributes, AuthzReadError> {
+    Ok(gather_subject_attributes(&registry(pool).providers, user_id).await?)
 }

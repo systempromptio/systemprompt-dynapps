@@ -16,10 +16,11 @@
 //! no such overlap: the governance chain is request-only, so this is the sole
 //! thing standing between a model that echoes a credential and the client.
 //!
-//! The catalog is compiled once from the same `secret_scan` block the chain
-//! reads, in the active services root (a pinned bundle's `governance/` when
-//! one owns it, else the baked tree), never through a second governance engine:
-//! an inventory-built scanner cannot reach the injected one, and a second
+//! The catalog is compiled once, when core's scanner registry runs this
+//! crate's factory, from the same `secret_scan` block the chain reads, in the
+//! active services root (a pinned bundle's `governance/` when one owns it,
+//! else the baked tree), never through a second governance engine: an
+//! inventory-built scanner cannot reach the injected one, and a second
 //! engine's rate limiter would double every budget.
 
 use systemprompt::gateway::{
@@ -27,11 +28,35 @@ use systemprompt::gateway::{
 };
 use systemprompt::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
-use std::sync::LazyLock;
-
 use systemprompt::governance::policy::{GovernanceConfig, GovernedInput, SecretScanner};
 
-static CONFIGURED_SCANNER: LazyLock<Option<SecretScanner>> = LazyLock::new(|| {
+#[derive(Debug, Clone, Default)]
+pub struct SecretsScanner {
+    scanner: Option<SecretScanner>,
+}
+
+impl SecretsScanner {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { scanner: None }
+    }
+
+    #[must_use]
+    pub const fn with_scanner(scanner: SecretScanner) -> Self {
+        Self {
+            scanner: Some(scanner),
+        }
+    }
+
+    #[must_use]
+    pub fn from_services_root() -> Self {
+        Self {
+            scanner: configured_scanner(),
+        }
+    }
+}
+
+fn configured_scanner() -> Option<SecretScanner> {
     let profile = systemprompt::config::ProfileBootstrap::get()
         .inspect_err(|error| tracing::error!(%error, "response secret scanner: no profile"))
         .ok()?;
@@ -51,25 +76,6 @@ static CONFIGURED_SCANNER: LazyLock<Option<SecretScanner>> = LazyLock::new(|| {
     SecretScanner::from_policy_yaml(&policy.params)
         .inspect_err(|error| tracing::error!(%error, "response secret scanner patterns rejected"))
         .ok()
-});
-
-#[derive(Debug, Clone, Default)]
-pub struct SecretsScanner {
-    scanner: Option<SecretScanner>,
-}
-
-impl SecretsScanner {
-    #[must_use]
-    pub const fn new() -> Self {
-        Self { scanner: None }
-    }
-
-    #[must_use]
-    pub const fn with_scanner(scanner: SecretScanner) -> Self {
-        Self {
-            scanner: Some(scanner),
-        }
-    }
 }
 
 #[async_trait::async_trait]
@@ -99,10 +105,9 @@ impl SafetyScanner for SecretsScanner {
 
 impl SecretsScanner {
     fn scan(&self, text: &str) -> Vec<Finding> {
-        let configured = self.scanner.as_ref();
-        let scanner = configured.or_else(|| CONFIGURED_SCANNER.as_ref());
         let input = GovernedInput::prompt_text(text.to_owned());
-        scanner
+        self.scanner
+            .as_ref()
             .and_then(|scanner| scanner.detect(&input))
             .map_or_else(Vec::new, |hit| {
                 let observation = hit.observation;
@@ -129,7 +134,7 @@ impl SecretsScanner {
 }
 
 register_safety_scanner!(
-    |_: &ScannerSettings| SecretsScanner::new(),
+    |_: &ScannerSettings| SecretsScanner::from_services_root(),
     name = "secrets"
 );
 
