@@ -1,21 +1,33 @@
-//! AES-GCM primitives and master key loading for secret storage.
+//! ChaCha20-Poly1305 primitives and master key loading for secret storage.
+//!
+//! The master key is the `encryption_master_key` secret and nothing else:
+//! core's `SecretsBootstrap` is the one source, and the key is decoded by the
+//! same `decode_master_key` core uses for its own at-rest sealing, so an
+//! operator sees one error shape whichever side refuses the material.
 
 use chacha20poly1305::aead::rand_core::RngCore;
 use chacha20poly1305::aead::{Aead, KeyInit, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, Nonce};
+use systemprompt::config::{SecretsBootstrap, SecretsBootstrapError, decode_master_key};
+
+const MASTER_KEY_SECRET: &str = "encryption_master_key";
 
 #[derive(Debug, thiserror::Error)]
 pub enum SecretCryptoError {
     #[error("Encryption failed: {0}")]
-    EncryptionFailed(String),
+    EncryptionFailed(#[source] chacha20poly1305::Error),
     #[error("Decryption failed: {0}")]
-    DecryptionFailed(String),
-    #[error("Master key not configured")]
+    DecryptionFailed(#[source] chacha20poly1305::Error),
+    #[error("Secrets unavailable: {0}")]
+    SecretsUnavailable(#[source] SecretsBootstrapError),
+    #[error("Master key not configured: add `encryption_master_key` to the secrets file")]
     MasterKeyMissing,
-    #[error("Invalid key material")]
-    InvalidKeyMaterial,
+    #[error("Invalid key material: {0}")]
+    InvalidKeyMaterial(#[source] SecretsBootstrapError),
+    #[error("Stored key material has the wrong length: expected {expected} bytes, found {actual}")]
+    StoredKeyLength { expected: usize, actual: usize },
     #[error("Database error: {0}")]
-    Database(String),
+    Database(#[from] sqlx::Error),
 }
 
 #[must_use]
@@ -41,7 +53,7 @@ pub fn encrypt(
     let nonce = Nonce::from_slice(nonce);
     cipher
         .encrypt(nonce, plaintext)
-        .map_err(|e| SecretCryptoError::EncryptionFailed(e.to_string()))
+        .map_err(SecretCryptoError::EncryptionFailed)
 }
 
 pub fn decrypt(
@@ -53,28 +65,25 @@ pub fn decrypt(
     let nonce = Nonce::from_slice(nonce);
     cipher
         .decrypt(nonce, ciphertext)
-        .map_err(|e| SecretCryptoError::DecryptionFailed(e.to_string()))
+        .map_err(SecretCryptoError::DecryptionFailed)
 }
 
 pub fn load_master_key() -> Result<[u8; 32], SecretCryptoError> {
-    let hex_key = std::env::var("ENCRYPTION_MASTER_KEY")
-        .ok()
-        .or_else(|| {
-            systemprompt::config::SecretsBootstrap::get()
-                .ok()
-                .and_then(|s| s.get("encryption_master_key").cloned())
-        })
+    let secrets = SecretsBootstrap::get().map_err(SecretCryptoError::SecretsUnavailable)?;
+    master_key_from_secret(secrets.get(MASTER_KEY_SECRET).map(String::as_str))
+}
+
+pub fn master_key_from_secret(encoded: Option<&str>) -> Result<[u8; 32], SecretCryptoError> {
+    let encoded = encoded
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
         .ok_or(SecretCryptoError::MasterKeyMissing)?;
+    decode_master_key(encoded).map_err(SecretCryptoError::InvalidKeyMaterial)
+}
 
-    let bytes = hex::decode(hex_key.trim()).map_err(|e| {
-        tracing::warn!(error = %e, "Master key is not valid hex");
-        SecretCryptoError::InvalidKeyMaterial
-    })?;
-
-    let key: [u8; 32] = bytes.try_into().map_err(|v: Vec<u8>| {
-        tracing::warn!(len = v.len(), "Master key hex did not decode to 32 bytes");
-        SecretCryptoError::InvalidKeyMaterial
-    })?;
-
-    Ok(key)
+pub fn fixed_key_material<const N: usize>(bytes: Vec<u8>) -> Result<[u8; N], SecretCryptoError> {
+    <[u8; N]>::try_from(bytes).map_err(|bytes| SecretCryptoError::StoredKeyLength {
+        expected: N,
+        actual: bytes.len(),
+    })
 }
