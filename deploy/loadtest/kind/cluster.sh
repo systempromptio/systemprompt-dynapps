@@ -20,7 +20,8 @@ VALUES="$CHART/values-kind.yaml"
 EXTRA_VALUES=()
 [ -z "${LOADTEST_VALUES:-}" ] || EXTRA_VALUES=(-f "$CHART/$LOADTEST_VALUES")
 IMAGE_REPO=ghcr.io/systempromptio/systemprompt-dynapps
-IMAGE_TAG="${LOADTEST_IMAGE_TAG:-0.65.0}"
+# Default to the workspace version so the load test exercises the image this tree releases.
+IMAGE_TAG="${LOADTEST_IMAGE_TAG:-$(sed -n 's/^version = "\([0-9.]*\)".*/\1/p' "$ROOT/Cargo.toml" | head -1)}"
 MOCK_IMAGE=dynapps-loadtest/mock-inference:local
 CORE="${CORE_DIR:-$ROOT/../systemprompt-core}"
 SECRETS="$HERE/.profile/secrets.json"

@@ -48,6 +48,8 @@ Conventions (strict — hold every entry to them):
 - **Claude Code is pinned in both images.** `Dockerfile` installs the native client with
   `bash -s "${CLAUDE_CODE_VERSION}"` and `deploy/clean-client/Dockerfile` installs
   `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}`; both default to 2.1.296.
+- **`deploy/loadtest/kind/cluster.sh` defaults the image tag to the workspace version** read from
+  `Cargo.toml` (`LOADTEST_IMAGE_TAG` still overrides it).
 
 ## 0.72.0 — 2026-10-22
 
