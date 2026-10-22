@@ -15,7 +15,7 @@ sqlx-audit-caches         install:check-sqlx-cache.sh
 lint-discarded-results    install:check-discarded-results.sh
 lint-fail-open            install:check-fail-open.sh
 lint-swallowed-errors     install:check-swallowed-errors.sh
-lint-stringly-errors      wrapper
+lint-stringly-errors      install:lint-stringly-errors.sh
 lint-tracing-messages     install:check-tracing-messages.sh
 lint-async-trait          wrapper
 lint-owned-tasks          wrapper
