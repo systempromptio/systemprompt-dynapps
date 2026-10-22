@@ -9,6 +9,8 @@ workspace = true
 
 [dependencies]
 systemprompt-bridge = { path = "../../../../systemprompt-core/bin/bridge" }
+bridge-models = { package = "systemprompt-models", path = "../../../../systemprompt-core/crates/shared/models" }
+bridge-identifiers = { package = "systemprompt-identifiers", path = "../../../../systemprompt-core/crates/shared/identifiers" }
 systemprompt-wire = { version = "0.72.0" }
 systemprompt-gateway = { version = "0.72.0" }
 systemprompt-manifest = { version = "0.72.0" }
@@ -24,4 +26,3 @@ temp-env = "0.3"
 wiremock.workspace = true
 reqwest = { workspace = true }
 rustls = { workspace = true }
-systemprompt-identifiers = { version = "0.72.0" }
