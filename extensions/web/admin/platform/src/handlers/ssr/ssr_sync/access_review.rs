@@ -43,12 +43,10 @@ fn rows(list: Vec<ReviewedEntity>) -> Vec<ReviewRowView> {
         .collect()
 }
 
-async fn split(pool: &PgPool) -> Result<ReviewSplit, String> {
-    let declared = declared_now().await.map_err(|e| e.to_string())?;
-    let drift = drift_now(pool, &declared)
-        .await
-        .map_err(|e| e.to_string())?;
-    reviews_for(pool, &drift).await.map_err(|e| e.to_string())
+async fn split(pool: &PgPool) -> AdminResult<ReviewSplit> {
+    let declared = declared_now().await?;
+    let drift = drift_now(pool, &declared).await?;
+    Ok(reviews_for(pool, &drift).await?)
 }
 
 pub(super) async fn access_review(pool: &PgPool) -> AdminResult<AccessReviewView> {
@@ -65,7 +63,7 @@ pub(super) async fn access_review(pool: &PgPool) -> AdminResult<AccessReviewView
             view.kept_count = split.kept.len();
             view.kept = rows(split.kept);
         },
-        Err(e) => view.unreadable = Some(e),
+        Err(e) => view.unreadable = Some(e.to_string()),
     }
     Ok(view)
 }

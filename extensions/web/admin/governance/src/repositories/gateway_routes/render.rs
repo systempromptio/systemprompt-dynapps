@@ -33,22 +33,35 @@ fn leading_comment_header(yaml: &str) -> String {
         })
 }
 
-pub fn render_routes_export(file_yaml: &str, rows: &[RouteRow]) -> Result<String, String> {
-    let mut doc: Value = serde_yaml::from_str(file_yaml).map_err(|e| e.to_string())?;
+#[derive(Debug, thiserror::Error)]
+pub enum RenderRoutesError {
+    #[error("gateway.yaml does not parse: {0}")]
+    Yaml(#[from] serde_yaml::Error),
+    #[error("gateway YAML root is not a mapping")]
+    RootNotMapping,
+    #[error("gateway block is not a mapping")]
+    GatewayNotMapping,
+}
+
+pub fn render_routes_export(
+    file_yaml: &str,
+    rows: &[RouteRow],
+) -> Result<String, RenderRoutesError> {
+    let mut doc: Value = serde_yaml::from_str(file_yaml)?;
     let root = doc
         .as_mapping_mut()
-        .ok_or_else(|| "gateway YAML root is not a mapping".to_owned())?;
+        .ok_or(RenderRoutesError::RootNotMapping)?;
     let gateway = root
         .entry(Value::from("gateway"))
         .or_insert_with(|| Value::Mapping(serde_yaml::Mapping::new()));
     let gateway = gateway
         .as_mapping_mut()
-        .ok_or_else(|| "gateway block is not a mapping".to_owned())?;
+        .ok_or(RenderRoutesError::GatewayNotMapping)?;
     gateway.insert(
         Value::from("routes"),
         Value::Sequence(rows.iter().map(|r| route_to_yaml(&r.route)).collect()),
     );
-    let body = serde_yaml::to_string(&doc).map_err(|e| e.to_string())?;
+    let body = serde_yaml::to_string(&doc)?;
     Ok(format!("{}{body}", leading_comment_header(file_yaml)))
 }
 

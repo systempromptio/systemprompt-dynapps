@@ -78,8 +78,18 @@ impl DeclaredRoutes {
     }
 }
 
-pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
-    let doc: Value = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
+#[derive(Debug, thiserror::Error)]
+pub enum DeclaredRoutesError {
+    #[error("gateway.yaml does not parse: {0}")]
+    Yaml(#[from] serde_yaml::Error),
+    #[error("gateway.routes[{index}] lacks model_pattern or provider")]
+    IncompleteRoute { index: usize },
+    #[error("gateway.routes[{index}] repeats id `{id}`")]
+    DuplicateRoute { index: usize, id: String },
+}
+
+pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, DeclaredRoutesError> {
+    let doc: Value = serde_yaml::from_str(yaml)?;
     let Some(seq) = doc
         .get("gateway")
         .and_then(|g| g.get("routes"))
@@ -90,9 +100,7 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
     let mut routes = Vec::with_capacity(seq.len());
     for (i, entry) in seq.iter().enumerate() {
         let Some(route) = route_from_yaml(entry) else {
-            return Err(format!(
-                "gateway.routes[{i}] lacks model_pattern or provider"
-            ));
+            return Err(DeclaredRoutesError::IncompleteRoute { index: i });
         };
         let explicit_id = entry
             .as_mapping()
@@ -101,7 +109,10 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
             .iter()
             .any(|d: &DeclaredRoute| d.route.id == route.id)
         {
-            return Err(format!("gateway.routes[{i}] repeats id `{}`", route.id));
+            return Err(DeclaredRoutesError::DuplicateRoute {
+                index: i,
+                id: route.id,
+            });
         }
         routes.push(DeclaredRoute { route, explicit_id });
     }

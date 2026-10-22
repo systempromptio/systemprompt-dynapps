@@ -197,7 +197,7 @@ async fn gather_subjects(
             set.spawn(async move { user_subject(&pool, &user_id, roles).await });
         }
         while let Some(joined) = set.join_next().await {
-            let subject = joined.map_err(|e| sqlx::Error::Protocol(e.to_string()))??;
+            let subject = joined??;
             subjects.push(subject);
         }
     }

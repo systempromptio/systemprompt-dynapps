@@ -165,17 +165,39 @@ impl EntityRef {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum EntityRefParseError {
+    #[error("entity '{entity}' must be written as <kind>/<id>")]
+    MissingSlash { entity: String },
+    #[error("entity '{entity}' names no id")]
+    MissingId { entity: String },
+    #[error("entity '{entity}': {source}")]
+    UnknownKind {
+        entity: String,
+        #[source]
+        source: systemprompt::governance::authz::AuthzError,
+    },
+}
+
 impl FromStr for EntityRef {
-    type Err = String;
+    type Err = EntityRefParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (kind, id) = s
             .split_once('/')
-            .ok_or_else(|| format!("entity '{s}' must be written as <kind>/<id>"))?;
+            .ok_or_else(|| EntityRefParseError::MissingSlash {
+                entity: s.to_owned(),
+            })?;
         if id.trim().is_empty() {
-            return Err(format!("entity '{s}' names no id"));
+            return Err(EntityRefParseError::MissingId {
+                entity: s.to_owned(),
+            });
         }
-        let kind = EntityKind::from_str(kind).map_err(|e| e.to_string())?;
+        let kind =
+            EntityKind::from_str(kind).map_err(|source| EntityRefParseError::UnknownKind {
+                entity: s.to_owned(),
+                source,
+            })?;
         Ok(Self {
             kind,
             id: id.to_owned(),

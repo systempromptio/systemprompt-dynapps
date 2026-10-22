@@ -51,8 +51,9 @@ pub(crate) async fn probe_session_connection(
         return Ok(report.finish());
     }
     let started = Instant::now();
-    let upstream =
-        |error: systemprompt::mcp::McpDomainError| AdminError::Upstream(error.to_string());
+    let upstream = |error: systemprompt::mcp::McpDomainError| {
+        AdminError::upstream("mcp connection probe", error)
+    };
     let probe: AdminResult<McpConnectionResult> =
         match (server.server_type, server.port, server.endpoint.as_deref()) {
             (McpServerType::Internal, Some(port), _) => validate_connection_with_auth(
@@ -93,7 +94,7 @@ fn record_reachability(
                 .clone()
                 .unwrap_or_else(|| "Server did not answer".to_owned()),
         )),
-        Err(error) => Err(AdminError::Upstream(error.to_string())),
+        Err(error) => Err(AdminError::upstream("mcp initialize", error.to_string())),
     };
     report.record("initialize", started, &reachable);
     if let (Ok(()), Ok(result)) = (reachable.map(|_| ()), probe) {

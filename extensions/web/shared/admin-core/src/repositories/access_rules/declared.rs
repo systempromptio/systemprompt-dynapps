@@ -130,9 +130,9 @@ impl DeclaredSet {
 #[derive(Debug)]
 pub enum DeclaredError {
     UnknownMarketplace(String),
-    UnregisteredEntity(String),
+    UnregisteredEntity(systemprompt::governance::authz::AuthzError),
     EmptyGlob(String),
-    Invalid(String),
+    Invalid(super::rules_yaml_types::EntityRefParseError),
 }
 
 impl fmt::Display for DeclaredError {
@@ -148,12 +148,21 @@ impl fmt::Display for DeclaredError {
                  for the glob to expand over — the gateway has no dispatchable routes, or the \
                  services tree did not compose"
             ),
-            Self::UnregisteredEntity(msg) | Self::Invalid(msg) => f.write_str(msg),
+            Self::UnregisteredEntity(source) => write!(f, "{source}"),
+            Self::Invalid(source) => write!(f, "{source}"),
         }
     }
 }
 
-impl std::error::Error for DeclaredError {}
+impl std::error::Error for DeclaredError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Invalid(source) => Some(source),
+            Self::UnregisteredEntity(source) => Some(source),
+            Self::UnknownMarketplace(_) | Self::EmptyGlob(_) => None,
+        }
+    }
+}
 
 /// Catalogs the projection consults.
 ///
@@ -231,7 +240,7 @@ fn expand_ids(
     inputs
         .registered
         .require(entity.kind, &entity.id)
-        .map_err(|e| DeclaredError::UnregisteredEntity(e.to_string()))?;
+        .map_err(DeclaredError::UnregisteredEntity)?;
     Ok(vec![entity.id.clone()])
 }
 

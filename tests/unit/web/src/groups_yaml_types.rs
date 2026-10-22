@@ -35,7 +35,7 @@ fn a_well_formed_document_validates() {
         "groups:\n  - {id: europe-devs, name: Europe developers, ad_groups: \
          [Systemprompt-Commerce]}\nprojects:\n  - {id: core, name: Core}\n",
     );
-    assert_eq!(doc.validate(), Ok(()));
+    assert!(doc.validate().is_ok());
     assert_eq!(doc.groups[0].ad_groups, vec!["Systemprompt-Commerce"]);
     assert!(
         doc.projects[0].ad_groups.is_empty(),
@@ -45,14 +45,15 @@ fn a_well_formed_document_validates() {
 
 #[test]
 fn an_empty_document_is_legitimate() {
-    assert_eq!(GroupsDoc::default().validate(), Ok(()));
+    assert!(GroupsDoc::default().validate().is_ok());
 }
 
 #[test]
 fn a_malformed_id_is_named_in_the_error() {
     let err = doc("groups:\n  - {id: Commerce, name: Commerce}\n")
         .validate()
-        .expect_err("uppercase id is refused");
+        .expect_err("uppercase id is refused")
+        .to_string();
     assert!(err.contains("Commerce"), "{err}");
     assert!(err.contains("groups"), "{err}");
 }
@@ -61,7 +62,8 @@ fn a_malformed_id_is_named_in_the_error() {
 fn a_duplicate_id_is_refused_rather_than_letting_the_later_one_win() {
     let err = doc("projects:\n  - {id: core, name: Core}\n  - {id: core, name: Core platform}\n")
         .validate()
-        .expect_err("duplicate id is refused");
+        .expect_err("duplicate id is refused")
+        .to_string();
     assert!(err.contains("declared twice"), "{err}");
 }
 
@@ -69,7 +71,8 @@ fn a_duplicate_id_is_refused_rather_than_letting_the_later_one_win() {
 fn a_group_must_carry_a_name() {
     let err = doc("groups:\n  - {id: core, name: '  '}\n")
         .validate()
-        .expect_err("a blank name is refused");
+        .expect_err("a blank name is refused")
+        .to_string();
     assert!(err.contains("name"), "{err}");
 }
 

@@ -165,11 +165,19 @@ pub fn render_groups_export(sets: &[MemberSetRow], mappings: &[MappingRow]) -> S
     format!("{EXPORT_HEADER}{body}")
 }
 
-pub fn parse_groups_doc(yaml: &str) -> Result<GroupsDoc, String> {
+#[derive(Debug, thiserror::Error)]
+pub enum GroupsParseError {
+    #[error("groups.yaml does not parse: {0}")]
+    Yaml(#[from] serde_yaml::Error),
+    #[error(transparent)]
+    Invalid(#[from] crate::repositories::config::groups_yaml_types::GroupsDocError),
+}
+
+pub fn parse_groups_doc(yaml: &str) -> Result<GroupsDoc, GroupsParseError> {
     if yaml.trim().is_empty() {
         return Ok(GroupsDoc::default());
     }
-    let doc: GroupsDoc = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
+    let doc: GroupsDoc = serde_yaml::from_str(yaml)?;
     doc.validate()?;
     Ok(doc)
 }

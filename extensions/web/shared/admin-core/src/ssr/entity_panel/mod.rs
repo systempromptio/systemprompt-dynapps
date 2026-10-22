@@ -23,6 +23,7 @@ use sqlx::PgPool;
 pub use view::EntityAccessView;
 use view::{OptionView, SubjectOptions};
 
+use crate::error::AdminResult;
 use crate::repositories::access_rules::rules::{list_entity_defaults, list_ledger_rules};
 use crate::repositories::scope::containers::{list_group_summaries, list_project_summaries};
 use crate::repositories::sync::access_control::{declared_now, drift_now};
@@ -98,12 +99,10 @@ fn subject_names(options: &SubjectOptions) -> HashMap<(String, String), String> 
     names
 }
 
-async fn review_for(pool: &PgPool, key: &str) -> Result<Option<ReviewedEntity>, String> {
-    let declared = declared_now().await.map_err(|e| e.to_string())?;
-    let drift = drift_now(pool, &declared)
-        .await
-        .map_err(|e| e.to_string())?;
-    let split = reviews_for(pool, &drift).await.map_err(|e| e.to_string())?;
+async fn review_for(pool: &PgPool, key: &str) -> AdminResult<Option<ReviewedEntity>> {
+    let declared = declared_now().await?;
+    let drift = drift_now(pool, &declared).await?;
+    let split = reviews_for(pool, &drift).await?;
     Ok(split
         .pending
         .into_iter()
@@ -131,7 +130,7 @@ pub async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> EntityA
     reaches.extend(reach::ruled_reach(&rows));
     let (review, drift_unreadable) = match review_for(pool, &key).await {
         Ok(review) => (review, None),
-        Err(e) => (None, Some(e)),
+        Err(e) => (None, Some(e.to_string())),
     };
     let why = match req.why.map(str::trim).filter(|w| !w.is_empty()) {
         Some(q) => Some(why::why(pool, q, entity, &mut faults).await),

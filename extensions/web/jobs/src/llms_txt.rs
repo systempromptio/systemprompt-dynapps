@@ -171,8 +171,7 @@ async fn write_documentation_section(
         && source.enabled
     {
         let source_id = SourceId::new(&source.source_id);
-        let locale =
-            LocaleCode::try_new("en").map_err(|error| JobError::config(error.to_string()))?;
+        let locale = LocaleCode::try_new("en")?;
         if let Ok(docs) = repo.list_by_source(&source_id, &locale).await {
             let prefixes = [
                 ("services", "Services"),

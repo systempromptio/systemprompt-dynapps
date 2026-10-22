@@ -77,8 +77,10 @@ pub(crate) async fn handle_hook_track(
     let (payload, warnings) = HookEventPayload::from_value(raw);
     payload
         .validate_ingestion()
-        .map_err(AdminError::BadRequest)?;
-    payload.delivery_id().map_err(AdminError::BadRequest)?;
+        .map_err(|e| AdminError::invalid("hook payload", e))?;
+    payload
+        .delivery_id()
+        .map_err(|e| AdminError::invalid("hook payload", e))?;
     log_payload_warnings(&payload, &warnings);
 
     let device = auth::authenticated_device(&managed, &headers, &user_id).await?;
@@ -183,8 +185,8 @@ async fn insert_hook_event(
     let session_id = SessionId::new(payload.session_id());
     let description = description::generate_description(payload);
     let prompt_preview = helpers::generate_prompt_preview(payload);
-    let dedup_key =
-        dedup::compute_dedup_key(user_id, &session_id, payload).map_err(AdminError::BadRequest)?;
+    let dedup_key = dedup::compute_dedup_key(user_id, &session_id, payload)
+        .map_err(|e| AdminError::invalid("hook payload", e))?;
     let content_bytes = helpers::compute_content_bytes(payload);
     let mut sanitized_metadata = helpers::sanitize_metadata(&payload.raw);
     let mut content = payload.raw.clone();

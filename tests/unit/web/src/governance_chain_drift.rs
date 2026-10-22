@@ -45,6 +45,7 @@ fn parse_refuses_what_core_refuses() {
     assert!(
         parse_declared_chain(&bad_mode)
             .expect_err("refused")
+            .to_string()
             .contains("warnn")
     );
     assert!(
