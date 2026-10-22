@@ -51,3 +51,95 @@ pub(crate) fn uncharged_rate_windows() -> RateWindowRepository {
         .expect("a lazy pool never connects");
     RateWindowRepository::new(pool)
 }
+
+// A throwaway git repository holding one gate script and the fixture files a
+// test writes, so shell gates that walk `git ls-files` see exactly that tree.
+pub(crate) struct GateFixture {
+    dir: tempfile::TempDir,
+    script: String,
+}
+
+impl GateFixture {
+    pub(crate) fn new(script: &str) -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let scripts = dir.path().join("scripts");
+        std::fs::create_dir_all(&scripts).expect("scripts dir");
+        std::fs::copy(
+            repo_root().join("scripts").join(script),
+            scripts.join(script),
+        )
+        .expect("copy gate script");
+        let fixture = Self {
+            dir,
+            script: script.to_owned(),
+        };
+        fixture.git(&["init", "-q"]);
+        fixture.git(&["config", "user.email", "gate@test"]);
+        fixture.git(&["config", "user.name", "gate"]);
+        fixture
+    }
+
+    pub(crate) fn root(&self) -> &Path {
+        self.dir.path()
+    }
+
+    pub(crate) fn write(&self, rel: &str, content: &str) -> &Self {
+        let path = self.dir.path().join(rel);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("fixture dir");
+        }
+        std::fs::write(path, content).expect("fixture file");
+        self
+    }
+
+    pub(crate) fn copy_from_repo(&self, rel: &str) -> &Self {
+        let content = std::fs::read_to_string(repo_root().join(rel))
+            .unwrap_or_else(|e| panic!("read {rel}: {e}"));
+        self.write(rel, &content)
+    }
+
+    fn git(&self, args: &[&str]) {
+        let out = std::process::Command::new("git")
+            .args(args)
+            .current_dir(self.dir.path())
+            .output()
+            .expect("run git");
+        assert!(
+            out.status.success(),
+            "git {args:?}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+
+    pub(crate) fn run(&self, env: &[(&str, &str)]) -> GateOutcome {
+        self.git(&["add", "-A"]);
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg(self.dir.path().join("scripts").join(&self.script))
+            .current_dir(self.dir.path());
+        for (key, value) in env {
+            cmd.env(key, value);
+        }
+        let out = cmd.output().expect("run gate");
+        GateOutcome {
+            code: out.status.code(),
+            stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
+        }
+    }
+}
+
+pub(crate) struct GateOutcome {
+    pub(crate) code: Option<i32>,
+    pub(crate) stdout: String,
+    pub(crate) stderr: String,
+}
+
+impl GateOutcome {
+    pub(crate) fn passed(&self) -> bool {
+        self.code == Some(0)
+    }
+
+    pub(crate) fn text(&self) -> String {
+        format!("{}{}", self.stdout, self.stderr)
+    }
+}

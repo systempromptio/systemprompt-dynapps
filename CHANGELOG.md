@@ -20,6 +20,37 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **Core gates run here through the pinned core checkout.** `scripts/lint-async-trait.sh`,
+  `scripts/lint-owned-tasks.sh` and `scripts/lint-stringly-errors.sh` exec the same-named
+  script in `../systemprompt-core` at `bridge/CORE_REF` over `extensions`, `src` and
+  `bridge/src` (`scripts/core-gate.sh`); while the pinned core's script does not take roots the
+  wrapper prints `skip:` and passes, so the rule becomes live on the core bump that adds them.
+  `scripts/check-gate-parity.sh` fails when a gate in core's `scripts/check-gates.txt` has
+  neither a wrapper nor a line in `scripts/core-gate-map.txt`, so a new core gate is a decision,
+  not a silent gap.
+- **`scripts/lint-authoritative-reads.sh`.** Identity handlers that revoke sessions, roles or
+  accounts must be mounted over `write_pool`, and every other caller of a revocation or login-code
+  repository function must hold the write pool, so a lagging replica can never answer a
+  revocation check.
+- **`scripts/check-claude-code-version.sh`.** Every tracked Dockerfile that installs Claude Code
+  pins it through one `ARG CLAUDE_CODE_VERSION` default, agreed across files; `@latest` and an
+  unpinned `install.sh | bash` fail the gate. All of the above run in `just lint-gates` and the
+  CI static tier.
+
+### Changed
+
+- **`scripts/check-core-ref.sh` proves the core patch is live.** With `[patch.crates-io]` active
+  no tracked `Cargo.lock` may carry `[[patch.unused]]` and the root pin must equal the sibling
+  core's workspace version; with the patch commented no `systemprompt*` crate may resolve from a
+  `path+` or `git+` source.
+- **Claude Code is pinned in both images.** `Dockerfile` installs the native client with
+  `bash -s "${CLAUDE_CODE_VERSION}"` and `deploy/clean-client/Dockerfile` installs
+  `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}`; both default to 2.1.296.
+- **`deploy/loadtest/kind/cluster.sh` defaults the image tag to the workspace version** read from
+  `Cargo.toml` (`LOADTEST_IMAGE_TAG` still overrides it).
+
 ## 0.72.1 — 2026-10-22
 
 ### Changed

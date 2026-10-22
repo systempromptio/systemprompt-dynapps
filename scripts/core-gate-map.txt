@@ -1,0 +1,51 @@
+# Every gate in ../systemprompt-core/scripts/check-gates.txt is accounted for
+# here or by a wrapper scripts/<gate>.sh. One `<core-gate>  <disposition>` per
+# line; the disposition is one of
+#   wrapper                     scripts/<core-gate>.sh execs core's script (core-gate.sh)
+#   install:<script.sh>         this repo's own script holds the rule
+#   install:justfile:<recipe>   this repo's own justfile recipe holds the rule
+#   n/a: <reason>               the rule has no subject in this repo
+# Gate: scripts/check-gate-parity.sh (in `just lint-gates`).
+check-version-strings     n/a: check-docs-version.sh pins the release version strings this repo carries
+check-lockfile-registry   install:check-core-ref.sh
+lint-field-copy-from      install:check-field-copy-from.sh
+lint-env-vars             install:lint-env-vars.sh
+lint-native-test-deps     n/a: no native bridge test matrix; bridge/ is one thin crate
+sqlx-audit-caches         install:check-sqlx-cache.sh
+lint-discarded-results    install:check-discarded-results.sh
+lint-fail-open            install:check-fail-open.sh
+lint-swallowed-errors     install:check-swallowed-errors.sh
+lint-stringly-errors      wrapper
+lint-tracing-messages     install:check-tracing-messages.sh
+lint-async-trait          wrapper
+lint-owned-tasks          wrapper
+lint-json-value           install:check-json-value.sh
+lint-table-ownership      n/a: admin analytics reads core-owned tables by design
+lint-ledger-reads         install:check-ledger-reads.sh
+lint-silent-skips         install:lint-silent-skips.sh
+lint-schema               install:lint-schema.sh
+lint-extensions           install:lint-extensions.sh
+lint-comments             install:lint-inline-comments.sh
+lint-inline-tests         install:lint-inline-tests.sh
+lint-test-seams           install:lint-test-seams.sh
+lint-test-value           install:check-test-value.sh
+lint-shared-test-ids      n/a: test ids are per-crate in tests/; no shared id registry
+lint-raw-ids              install:lint-raw-ids.sh
+lint-sqlx                 install:check-sqlx.sh
+lint-http-errors          install:check-http-errors.sh
+lint-no-untyped-admin     install:justfile:lint-no-untyped-admin
+check-headers             install:check-file-headers.sh
+lint-layers               install:lint-layers.sh
+lint-repo-construction    install:lint-repo-construction.sh
+lint-authoritative-reads  install:lint-authoritative-reads.sh
+lint-bridge-lints-sync    n/a: the bridge GUI is core's; bridge/ here holds no web tree
+lint-bridge-css-tokens    n/a: the bridge GUI is core's; bridge/ here holds no web tree
+lint-bridge-i18n          n/a: the bridge GUI is core's; bridge/ here holds no web tree
+lint-bridge-js-imports    n/a: the bridge GUI is core's; bridge/ here holds no web tree
+lint-bridge-no-window     n/a: the bridge GUI is core's; bridge/ here holds no web tree
+lint-bridge-verdicts      n/a: the bridge GUI is core's; bridge/ here holds no web tree
+lint-bridge-typed-warnings  n/a: the bridge GUI is core's; bridge/ here holds no web tree
+lint-bridge-layers        n/a: the bridge GUI is core's; bridge/src is a thin client over core's bridge crate
+lint-bridge-globals       n/a: the bridge GUI is core's; bridge/src is a thin client over core's bridge crate
+lint-bridge-file-size     n/a: check-file-size.sh covers bridge/src with the repo-wide limit
+lint-repo-hygiene         n/a: docs/ and deploy/ prose are committed by design in this repo
