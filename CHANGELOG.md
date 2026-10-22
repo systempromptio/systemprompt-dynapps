@@ -20,6 +20,14 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.72.1 — 2026-10-22
+
+### Changed
+
+- Built on systemprompt-core 0.72.1 (`bridge/CORE_REF` is `v0.72.1`). The bridge fetches its profile with the member's own bearer, retries once with a freshly minted token when the gateway rejects a stale one, and writes OpenCode MCP entries with `oauth: false` so OpenCode does not probe bridge-owned servers.
+- `services/ai/providers.yaml`: `opencode-go-anthropic` sets `credential_from: opencode-go`, so a member's single OpenCode Go key serves the Anthropic-protocol models (go-minimax, qwen) as well as the Chat Completions ones; members are no longer asked for a second key.
+- The admin Member subscriptions page tells admins where members add their key (Dynapps app → Settings → Personal subscriptions).
+
 ## 0.72.0 — 2026-10-22
 
 ### Changed

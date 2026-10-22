@@ -11,10 +11,10 @@ workspace = true
 systemprompt-bridge = { path = "../../../../systemprompt-core/bin/bridge" }
 bridge-models = { package = "systemprompt-models", path = "../../../../systemprompt-core/crates/shared/models" }
 bridge-identifiers = { package = "systemprompt-identifiers", path = "../../../../systemprompt-core/crates/shared/identifiers" }
-systemprompt-wire = { version = "0.72.0" }
-systemprompt-gateway = { version = "0.72.0" }
-systemprompt-manifest = { version = "0.72.0" }
-systemprompt-models = { version = "0.72.0" }
+systemprompt-wire = { version = "0.72.1" }
+systemprompt-gateway = { version = "0.72.1" }
+systemprompt-manifest = { version = "0.72.1" }
+systemprompt-models = { version = "0.72.1" }
 axum.workspace = true
 tokio.workspace = true
 systemprompt-api.workspace = true

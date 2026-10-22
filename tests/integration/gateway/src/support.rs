@@ -43,6 +43,7 @@ pub(crate) fn provider(
         endpoint: "https://api.example.com/v1".to_owned(),
         api_key_secret: Some(SecretName::new("test_api_key")),
         credential: systemprompt::manifest::services::ProviderCredentialSource::default(),
+        credential_from: None,
         user_agent: None,
         forward_headers: Vec::new(),
         extra_headers: HashMap::new(),
