@@ -40,6 +40,15 @@ impl From<systemprompt::governance::authz::AuthzError> for AdminError {
     }
 }
 
+impl From<crate::authz::AuthzReadError> for AdminError {
+    fn from(value: crate::authz::AuthzReadError) -> Self {
+        match value {
+            crate::authz::AuthzReadError::Database(e) => Self::Database(e),
+            other => Self::Internal(Box::new(other)),
+        }
+    }
+}
+
 impl From<systemprompt::models::errors::GlobalConfigError> for AdminError {
     fn from(value: systemprompt::models::errors::GlobalConfigError) -> Self {
         Self::Internal(Box::new(value))

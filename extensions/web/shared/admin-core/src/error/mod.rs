@@ -54,6 +54,13 @@ pub enum AdminError {
     #[error("Conflict: {0}")]
     Conflict(String),
 
+    #[error("Conflict: {context}: {source}")]
+    ConflictingState {
+        context: &'static str,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
     #[error("Too many requests: {0}")]
     RateLimited(String),
 
@@ -65,6 +72,13 @@ pub enum AdminError {
 
     #[error("Upstream error: {context}: {source}")]
     UpstreamFailure {
+        context: &'static str,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    #[error("Unprocessable request: {context}: {source}")]
+    UnprocessableInput {
         context: &'static str,
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
@@ -91,6 +105,9 @@ pub enum AdminError {
 
     #[error("Crypto error: {0}")]
     Crypto(#[from] SecretCryptoError),
+
+    #[error("Outbound destination refused: {0}")]
+    OutboundUrl(#[from] systemprompt::models::net::OutboundUrlError),
 
     #[error("Not implemented: {0}")]
     NotImplemented(String),
@@ -120,6 +137,17 @@ impl AdminError {
     }
 
     #[must_use]
+    pub fn unprocessable<E>(context: &'static str, source: E) -> Self
+    where
+        E: Into<Box<dyn std::error::Error + Send + Sync>>,
+    {
+        Self::UnprocessableInput {
+            context,
+            source: source.into(),
+        }
+    }
+
+    #[must_use]
     pub fn invalid<E>(context: &'static str, source: E) -> Self
     where
         E: Into<Box<dyn std::error::Error + Send + Sync>>,
@@ -140,14 +168,16 @@ impl AdminError {
             | Self::Invalid { .. }
             | Self::BridgeRepo(BridgeRepoError::Validation(_))
             | Self::Marketplace(MarketplaceError::BadRequest(_)) => StatusCode::BAD_REQUEST,
-            Self::Unprocessable(_) | Self::Archive(_) => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::Unprocessable(_) | Self::UnprocessableInput { .. } | Self::Archive(_) => {
+                StatusCode::UNPROCESSABLE_ENTITY
+            },
             Self::Unauthorized(_) | Self::Unauthenticated(_) => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) | Self::Refused(_) => StatusCode::FORBIDDEN,
-            Self::Conflict(_) | Self::Marketplace(MarketplaceError::Conflict(_)) => {
-                StatusCode::CONFLICT
-            },
+            Self::Conflict(_)
+            | Self::ConflictingState { .. }
+            | Self::Marketplace(MarketplaceError::Conflict(_)) => StatusCode::CONFLICT,
             Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
-            Self::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
+            Self::Unavailable(_) | Self::OutboundUrl(_) => StatusCode::SERVICE_UNAVAILABLE,
             Self::Upstream(_) | Self::UpstreamFailure { .. } => StatusCode::BAD_GATEWAY,
             Self::NotImplemented(_) => StatusCode::NOT_IMPLEMENTED,
             Self::Database(_)
@@ -175,8 +205,11 @@ impl AdminError {
                 | MarketplaceError::NotFound(msg)
                 | MarketplaceError::Conflict(msg),
             ) => msg.clone(),
-            Self::Invalid { context, source } => format!("{context}: {source}"),
+            Self::Invalid { context, source }
+            | Self::UnprocessableInput { context, source }
+            | Self::ConflictingState { context, source } => format!("{context}: {source}"),
             Self::Archive(source) => format!("archive unreadable: {source}"),
+            Self::OutboundUrl(source) => format!("outbound destination refused: {source}"),
             Self::Refused(refusal) => refusal.to_string(),
             Self::Upstream(_) | Self::UpstreamFailure { .. } => "Upstream service error".to_owned(),
             Self::Unauthenticated(_) => "Unauthorized".to_owned(),

@@ -54,6 +54,7 @@ dependencies = [
  "systemprompt-web-admin-platform",
  "systemprompt-web-extension",
  "systemprompt-web-shared",
+ "systemprompt-web-site",
  "tokio",
  "tower",
  "url",

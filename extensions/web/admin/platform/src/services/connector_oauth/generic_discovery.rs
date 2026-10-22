@@ -1,6 +1,7 @@
 //! Trusted OAuth discovery and bounded metadata parsing.
 use super::Provider;
 use serde::Deserialize;
+use systemprompt::models::net::validate_outbound_url;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use url::Url;
 #[derive(Deserialize)]
@@ -58,7 +59,7 @@ pub(super) fn trusted_endpoint(provider: &Provider, value: &str) -> AdminResult<
 
 pub fn validate_endpoint(resource: &str, origins: &[String], value: &str) -> AdminResult<Url> {
     let resource = Url::parse(resource).map_err(AdminError::internal)?;
-    let url = Url::parse(value).map_err(AdminError::internal)?;
+    let url = validate_outbound_url(value)?;
     let approved = url.origin() == resource.origin()
         || origins.iter().any(|origin| {
             Url::parse(origin).is_ok_and(|allowed| {
@@ -89,7 +90,7 @@ async fn read<T: serde::de::DeserializeOwned>(
     url: &str,
 ) -> AdminResult<T> {
     let response = http
-        .get(trusted_endpoint(provider, url)?)
+        .get(validate_outbound_url(trusted_endpoint(provider, url)?.as_str())?)
         .send()
         .await
         .map_err(|error| {

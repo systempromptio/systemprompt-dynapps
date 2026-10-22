@@ -4,6 +4,7 @@ use super::failure::{FailureKind, FlowFailure, FlowResult};
 use super::token_response::{Tokens, accepted_tokens};
 use super::transport::client;
 use chrono::Utc;
+use systemprompt::models::net::validate_outbound_url;
 use systemprompt_web_admin_core::error::AdminResult;
 
 async fn request_with_client(
@@ -27,7 +28,10 @@ async fn request_with_client(
         form.append_pair("resource", &grant.provider.endpoint());
         form.finish()
     };
-    let mut request = http.post(&grant.token_endpoint);
+    let token_endpoint = validate_outbound_url(&grant.token_endpoint).map_err(|error| {
+        FlowFailure::verification(systemprompt_web_admin_core::error::AdminError::from(error))
+    })?;
+    let mut request = http.post(token_endpoint);
     if grant.token_auth_method == "client_secret_basic" {
         let encode = |value: &str| {
             url::form_urlencoded::byte_serialize(value.as_bytes()).collect::<String>()

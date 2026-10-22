@@ -12,6 +12,7 @@ use std::time::Duration;
 use reqwest::StatusCode;
 use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use systemprompt::manifest::profile::{OtlpExportConfig, OtlpProtocol, OtlpSignal};
+use systemprompt_web_admin_core::util::outbound::validate_mesh_url;
 
 const CONTENT_TYPE_PROTOBUF: &str = "application/x-protobuf";
 const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
@@ -21,12 +22,18 @@ const BODY_PREVIEW: usize = 256;
 pub(crate) enum ProbeError {
     #[error("only OTLP/HTTP can be probed from the console; this exporter is {0}")]
     Protocol(&'static str),
-    #[error("invalid header {name}: {reason}")]
-    Header { name: String, reason: String },
+    #[error("invalid header {name}: {source}")]
+    Header {
+        name: String,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
     #[error("collector answered {status}: {body}")]
     Status { status: StatusCode, body: String },
     #[error("request failed: {0}")]
     Request(#[from] reqwest::Error),
+    #[error("collector url refused: {0}")]
+    Url(#[from] systemprompt::models::net::OutboundUrlError),
 }
 
 #[derive(Debug, Clone)]
@@ -45,11 +52,11 @@ fn build_headers(config: &OtlpExportConfig) -> Result<HeaderMap, ProbeError> {
     for (name, value) in &config.headers {
         let key = HeaderName::from_bytes(name.as_bytes()).map_err(|e| ProbeError::Header {
             name: name.clone(),
-            reason: e.to_string(),
+            source: Box::new(e),
         })?;
         let value = HeaderValue::from_str(value).map_err(|e| ProbeError::Header {
             name: name.clone(),
-            reason: e.to_string(),
+            source: Box::new(e),
         })?;
         headers.insert(key, value);
     }
@@ -61,12 +68,13 @@ pub(crate) async fn probe(config: &OtlpExportConfig) -> Result<ProbeOutcome, Pro
         return Err(ProbeError::Protocol(config.protocol.label()));
     }
     let url = config.signal_url(OtlpSignal::Traces);
+    let destination = validate_mesh_url(&url)?;
     let headers = build_headers(config)?;
     let started = std::time::Instant::now();
     let response = reqwest::Client::builder()
         .timeout(PROBE_TIMEOUT)
         .build()?
-        .post(&url)
+        .post(destination)
         .headers(headers)
         .body(Vec::new())
         .send()

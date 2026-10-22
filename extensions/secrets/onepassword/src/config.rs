@@ -102,7 +102,7 @@ impl OnePasswordConfig {
             )));
         }
         let raw: RawConfig = serde_json::from_value(serde_json::Value::Object(map.clone()))
-            .map_err(|e| invalid(e.to_string()))?;
+            .map_err(OnePasswordError::ConfigShape)?;
         Self::from_raw(raw)
     }
 
@@ -193,8 +193,11 @@ fn non_empty(field: &str, value: String) -> Result<String, OnePasswordError> {
 }
 
 fn validate_url(url: &str) -> Result<String, OnePasswordError> {
-    if !(url.starts_with("https://") || url.starts_with("http://")) {
-        return Err(invalid("connect_url must be an http:// or https:// URL"));
-    }
+    systemprompt::models::net::validate_outbound_url(url).map_err(|source| {
+        OnePasswordError::ConnectUrl {
+            url: url.to_owned(),
+            source,
+        }
+    })?;
     Ok(url.trim_end_matches('/').to_owned())
 }

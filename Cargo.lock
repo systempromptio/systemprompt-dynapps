@@ -5447,6 +5447,7 @@ dependencies = [
  "serde",
  "serde_json",
  "systemprompt",
+ "systemprompt-web-admin-core",
  "systemprompt-web-admin-farm",
  "tokio",
  "tokio-util",

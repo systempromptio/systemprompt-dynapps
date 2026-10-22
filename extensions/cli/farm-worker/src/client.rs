@@ -13,6 +13,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use systemprompt::agent_runs::{AgentRunsError, AgentRunsResult, EventSink, RunEvent};
 use systemprompt::identifiers::HostSessionId;
+use systemprompt_web_admin_core::util::outbound::validate_mesh_url;
 use systemprompt_web_admin_farm::services::runner::fly::protocol::{
     EventBatch, SessionReport, worker_url,
 };
@@ -35,6 +36,7 @@ impl WorkerClient {
             .timeout(TIMEOUT)
             .build()
             .context("worker HTTP client")?;
+        validate_mesh_url(api_base).with_context(|| format!("worker API base {api_base}"))?;
         Ok(Self {
             http,
             api_base: api_base.trim_end_matches('/').to_owned(),

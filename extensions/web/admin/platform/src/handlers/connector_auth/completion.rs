@@ -62,7 +62,7 @@ async fn complete(
     let outcome = match exchange {
         Ok(()) => {
             report.record("token", started, &Ok("Authorization exchanged".into()));
-            oauth::verify::verify_reporting(&mut grant, &oauth_client()?, &mut report)
+            oauth::verify::verify_reporting(&mut grant, &oauth::client()?, &mut report)
                 .await
                 .map_err(FlowFailure::verification)
         },
@@ -95,12 +95,4 @@ async fn complete(
         format!("/admin/identity/service-accounts/{user}")
     };
     Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&destination)).into_response())
-}
-
-fn oauth_client() -> AdminResult<reqwest::Client> {
-    reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .map_err(systemprompt_web_admin_core::error::AdminError::internal)
 }

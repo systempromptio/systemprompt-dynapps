@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use systemprompt::models::net::validate_outbound_url;
 
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
@@ -96,12 +97,17 @@ impl MachinesClient {
                 at: "machines client".to_owned(),
                 source,
             })?;
+        let base = format!(
+            "{}/v1/apps/{app}",
+            config.machines_api.trim_end_matches('/')
+        );
+        validate_outbound_url(&base).map_err(|source| FarmError::OutboundUrl {
+            url: base.clone(),
+            source,
+        })?;
         Ok(Self {
             http,
-            base: format!(
-                "{}/v1/apps/{app}",
-                config.machines_api.trim_end_matches('/')
-            ),
+            base,
             app: app.to_owned(),
             auth: auth_header(token),
         })
