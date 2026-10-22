@@ -21,7 +21,10 @@ fi
 
 allowlist=()
 
-send_pattern='(^|[^a-zA-Z0-9_])(http|client|self\.http|self\.client|builder|\.build\(\)\?)\s*\n?\s*\.\s*(get|post|put|patch|delete|head|request)\('
+# POSIX grep only (no ripgrep): the gate must behave the same on a developer
+# machine and on a CI runner. `-z` treats each file as one record so a chained
+# call split across lines still matches.
+send_pattern='(^|[^a-zA-Z0-9_])(http|client|self\.http|self\.client|builder|\.build\(\)\?)[[:space:]]*\.[[:space:]]*(get|post|put|patch|delete|head|request)\('
 guard_pattern='validate_outbound_url(_with_trust)?\(|validate_mesh_url\('
 
 existing=()
@@ -35,12 +38,12 @@ while IFS= read -r file; do
         [[ "$file" == "$allowed"* ]] && continue 2
     done
     grep -q 'reqwest' "$file" || continue
-    if ! rg -q "$guard_pattern" "$file"; then
+    if ! grep -qE "$guard_pattern" "$file"; then
         status=1
         echo "✗ $file sends an outbound request without validate_outbound_url:" >&2
-        rg -nU "$send_pattern" "$file" | sed 's/^/    /' >&2
+        grep -nE '\.[[:space:]]*(get|post|put|patch|delete|head|request)\(' "$file" | sed 's/^/    /' >&2
     fi
-done < <(rg -lU "$send_pattern" "${existing[@]}" --glob '*.rs' --glob '!**/target/**' 2>/dev/null | sort -u)
+done < <(grep -rlzE "$send_pattern" "${existing[@]}" --include='*.rs' --exclude-dir=target 2>/dev/null | sort -u)
 
 if [ "$status" -ne 0 ]; then
     echo >&2

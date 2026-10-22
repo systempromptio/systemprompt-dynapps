@@ -32,22 +32,6 @@ fn test_key() -> &'static str {
     })
 }
 
-// `load_master_key` accepts only a 32-byte hex key.
-#[expect(
-    unsafe_code,
-    reason = "set_var is unsafe in edition 2024; see the SAFETY note"
-)]
-fn set_master_key() {
-    // SAFETY: nextest gives each test its own process, so nothing else reads
-    // the environment while this runs.
-    unsafe {
-        std::env::set_var(
-            "ENCRYPTION_MASTER_KEY",
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-        );
-    }
-}
-
 fn accounts(pool: &Arc<PgPool>) -> ServiceAccounts {
     let db = Arc::new(Database::from_pools(
         Arc::clone(pool),
@@ -132,7 +116,7 @@ async fn a_person_cannot_hold_a_machine_credential() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    set_master_key();
+    let _secrets = dynapps_test_common::bootstrap_master_key().await;
     let person = insert_user(&db.pool, &unique("person"), &unclaimed_email("person")).await;
     let refused = machine_credentials::attach(
         &db.pool,
@@ -157,7 +141,7 @@ async fn the_broker_refuses_a_caller_that_is_not_a_write_back() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    set_master_key();
+    let _secrets = dynapps_test_common::bootstrap_master_key().await;
     let id = service_account(&db.pool).await;
     machine_credentials::attach(
         &db.pool,
@@ -189,7 +173,7 @@ async fn the_broker_returns_a_github_installation_token() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    set_master_key();
+    let _secrets = dynapps_test_common::bootstrap_master_key().await;
     let id = service_account(&db.pool).await;
     let (api, request) = mock_github().await;
     machine_credentials::attach(

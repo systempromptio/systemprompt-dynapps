@@ -49,22 +49,6 @@ pub(crate) fn assert_missing_database(error: systemprompt::traits::ProviderError
     assert_eq!(missing, expected);
 }
 
-// `load_master_key` accepts only a 32-byte hex key.
-#[expect(
-    unsafe_code,
-    reason = "set_var is unsafe in edition 2024; see the SAFETY note"
-)]
-fn set_master_key() {
-    // SAFETY: callers are current-thread `#[tokio::test]`s and nextest gives
-    // each test its own process, so nothing else reads the environment here.
-    unsafe {
-        std::env::set_var(
-            "ENCRYPTION_MASTER_KEY",
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-        );
-    }
-}
-
 // `Config` is a process-wide `OnceLock`: every test in this binary must
 // install the same value, or the first installer decides it for the rest.
 const BASE_URL: &str = "https://dynapps.test";
@@ -706,7 +690,7 @@ async fn secret_migration_reports_no_work_when_every_secret_is_already_encrypted
     let Some(h) = Harness::create_or_skip().await else {
         return;
     };
-    set_master_key();
+    let _secrets = dynapps_test_common::bootstrap_master_key().await;
 
     let result = SecretMigrationJob
         .execute(&h.context())
@@ -724,7 +708,7 @@ async fn secret_migration_encrypts_plaintext_rows_and_audits_each_one() {
     let Some(h) = Harness::create_or_skip().await else {
         return;
     };
-    set_master_key();
+    let _secrets = dynapps_test_common::bootstrap_master_key().await;
     h.seed_plaintext_secret("secret-1", "user-a", "API_KEY", "plaintext-value")
         .await;
     h.seed_plaintext_secret("secret-2", "user-a", "OTHER_KEY", "another-value")
@@ -765,7 +749,7 @@ async fn secret_migration_encrypts_plaintext_rows_and_audits_each_one() {
 
 #[tokio::test]
 async fn secret_migration_refuses_a_context_with_no_database() {
-    set_master_key();
+    let _secrets = dynapps_test_common::bootstrap_master_key().await;
 
     let error = SecretMigrationJob
         .execute(&Harness::empty_context())

@@ -1,7 +1,7 @@
 //! Outbound-URL admission for destinations this installation reaches on its
 //! own private network.
 //!
-//! Core's [`validate_outbound_url`] refuses plain `http` to anything but a
+//! Core's `validate_outbound_url` refuses plain `http` to anything but a
 //! loopback host and refuses every private address range. The farm API that a
 //! runner machine reports to and an in-cluster OTLP collector both sit on
 //! Fly's private network, which has no TLS and is addressed by `.internal`
