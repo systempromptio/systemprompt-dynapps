@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use axum::Json;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use systemprompt::agent_runs::EventSink;
@@ -19,7 +19,7 @@ use crate::services::runner::fly::protocol::{
     Bundle, EventBatch, HeartbeatReply, OUTPUT_DIRS, SessionReport, WorkerResult, collect_bundle,
     write_bundle,
 };
-use crate::services::runner::fly::registry::{RemoteRun, authorise};
+use crate::services::runner::fly::registry::{RemoteRun, RemoteRuns};
 
 const BUNDLE_DIRS: [&str; 2] = ["workspace", "plugin"];
 
@@ -31,9 +31,9 @@ fn bearer(headers: &HeaderMap) -> Option<&str> {
         .strip_prefix("Bearer ")
 }
 
-fn admit(headers: &HeaderMap, run_id: &str) -> AdminResult<Arc<RemoteRun>> {
+fn admit(runs: &RemoteRuns, headers: &HeaderMap, run_id: &str) -> AdminResult<Arc<RemoteRun>> {
     let run = bearer(headers)
-        .and_then(|token| authorise(run_id, token))
+        .and_then(|token| runs.authorise(run_id, token))
         .ok_or_else(|| AdminError::Unauthorized("no in-flight run for this token".to_owned()))?;
     run.touch();
     Ok(run)
@@ -46,16 +46,21 @@ fn is_output(path: &str) -> bool {
     })
 }
 
-pub(crate) async fn spec(Path(run_id): Path<String>, headers: HeaderMap) -> AdminResult<Response> {
-    let run = admit(&headers, &run_id)?;
+pub(crate) async fn spec(
+    State(runs): State<Arc<RemoteRuns>>,
+    Path(run_id): Path<String>,
+    headers: HeaderMap,
+) -> AdminResult<Response> {
+    let run = admit(&runs, &headers, &run_id)?;
     Ok(Json(run.spec.clone()).into_response())
 }
 
 pub(crate) async fn bundle(
+    State(runs): State<Arc<RemoteRuns>>,
     Path(run_id): Path<String>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let run = admit(&headers, &run_id)?;
+    let run = admit(&runs, &headers, &run_id)?;
     let root = run.root.clone();
     let bundle = tokio::task::spawn_blocking(move || collect_bundle(&root, &BUNDLE_DIRS))
         .await
@@ -64,11 +69,12 @@ pub(crate) async fn bundle(
 }
 
 pub(crate) async fn events(
+    State(runs): State<Arc<RemoteRuns>>,
     Path(run_id): Path<String>,
     headers: HeaderMap,
     Json(batch): Json<EventBatch>,
 ) -> AdminResult<Response> {
-    let run = admit(&headers, &run_id)?;
+    let run = admit(&runs, &headers, &run_id)?;
     run.sink
         .emit(batch.events)
         .await
@@ -77,11 +83,12 @@ pub(crate) async fn events(
 }
 
 pub(crate) async fn session(
+    State(runs): State<Arc<RemoteRuns>>,
     Path(run_id): Path<String>,
     headers: HeaderMap,
     Json(report): Json<SessionReport>,
 ) -> AdminResult<Response> {
-    let run = admit(&headers, &run_id)?;
+    let run = admit(&runs, &headers, &run_id)?;
     run.sink
         .session_observed(&report.session_id)
         .await
@@ -90,10 +97,11 @@ pub(crate) async fn session(
 }
 
 pub(crate) async fn heartbeat(
+    State(runs): State<Arc<RemoteRuns>>,
     Path(run_id): Path<String>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let run = admit(&headers, &run_id)?;
+    let run = admit(&runs, &headers, &run_id)?;
     let reply = HeartbeatReply {
         cancel: run.cancel_requested(),
     };
@@ -101,11 +109,12 @@ pub(crate) async fn heartbeat(
 }
 
 pub(crate) async fn outputs(
+    State(runs): State<Arc<RemoteRuns>>,
     Path(run_id): Path<String>,
     headers: HeaderMap,
     Json(bundle): Json<Bundle>,
 ) -> AdminResult<Response> {
-    let run = admit(&headers, &run_id)?;
+    let run = admit(&runs, &headers, &run_id)?;
     if let Some(stray) = bundle.files.iter().find(|f| !is_output(&f.path)) {
         return Err(AdminError::Unprocessable(format!(
             "{:?} is not under {OUTPUT_DIRS:?}",
@@ -120,11 +129,12 @@ pub(crate) async fn outputs(
 }
 
 pub(crate) async fn result(
+    State(runs): State<Arc<RemoteRuns>>,
     Path(run_id): Path<String>,
     headers: HeaderMap,
     Json(result): Json<WorkerResult>,
 ) -> AdminResult<Response> {
-    let run = admit(&headers, &run_id)?;
+    let run = admit(&runs, &headers, &run_id)?;
     if run.deliver(result) {
         Ok(StatusCode::NO_CONTENT.into_response())
     } else {

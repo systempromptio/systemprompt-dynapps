@@ -1,63 +1,63 @@
-//! The `WebExtension` value and its lazily-loaded configuration handles.
+//! The `WebExtension` value and the configuration it owns.
 //!
-//! Config loading lives in `systemprompt_web_site::config_loader`, beside
-//! the types it deserialises; this type only fronts it for the `Extension`
-//! impl in `extension_impl`.
+//! Config loading lives in `systemprompt_web_site::config_loader` and
+//! `systemprompt_web_shared::config`, beside the types they deserialise; this
+//! type loads both once when core's registry constructs the extension and
+//! hands them to the `Extension` impl in `extension_impl` and to the router.
+//! It also owns the agent farm's in-flight remote-run registry, which the
+//! runner service and the worker routes share.
 
 use std::sync::Arc;
 
-use crate::SkillsPageConfig;
 use crate::config::BlogConfigValidated;
-use crate::homepage::HomepageConfig;
-use crate::navigation::NavigationConfig;
-use systemprompt_web_site::config_loader;
+use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
+use systemprompt_web_site::config_loader::SiteConfig;
 
 use systemprompt::extension::prelude::*;
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct WebExtension;
+#[derive(Debug, Clone)]
+pub struct WebExtension {
+    pub(crate) site: Arc<SiteConfig>,
+    pub(crate) blog: Option<Arc<BlogConfigValidated>>,
+    pub(crate) farm_runs: Arc<RemoteRuns>,
+}
+
+impl Default for WebExtension {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl WebExtension {
     pub const PREFIX: &'static str = "web";
 
     #[must_use]
-    pub const fn new() -> Self {
-        Self
-    }
-
-    #[must_use]
-    pub fn blog_config() -> Option<Arc<BlogConfigValidated>> {
-        match BlogConfigValidated::cached() {
+    pub fn new() -> Self {
+        let blog = match BlogConfigValidated::load_from_profile_or_none() {
             Ok(config) => config,
-            Err(message) => {
+            Err(error) => {
                 tracing::error!(
-                    error = %message,
+                    %error,
                     "Blog config error: link generation and content APIs will run unconfigured"
                 );
                 None
             },
+        };
+        Self {
+            site: Arc::new(SiteConfig::load()),
+            blog,
+            farm_runs: Arc::new(RemoteRuns::default()),
         }
     }
 
     #[must_use]
-    pub fn navigation_config() -> Option<Arc<NavigationConfig>> {
-        config_loader::navigation_config()
+    pub fn site_config(&self) -> &SiteConfig {
+        &self.site
     }
 
     #[must_use]
-    pub fn homepage_config() -> Option<Arc<HomepageConfig>> {
-        config_loader::homepage_config()
-    }
-
-    #[must_use]
-    pub fn skills_page_config() -> Option<Arc<SkillsPageConfig>> {
-        config_loader::skills_page_config()
-    }
-
-    #[must_use]
-    pub fn entra_oidc_config()
-    -> Option<Arc<systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig>> {
-        config_loader::entra_oidc_config()
+    pub fn blog_config(&self) -> Option<Arc<BlogConfigValidated>> {
+        self.blog.clone()
     }
 }
 

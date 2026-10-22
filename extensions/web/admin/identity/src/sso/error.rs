@@ -8,6 +8,14 @@ use systemprompt::sso::SsoError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SsoProviderError {
+    #[error("outbound destination {url} refused: {source}")]
+    OutboundUrl {
+        url: String,
+        #[source]
+        source: systemprompt::models::net::OutboundUrlError,
+    },
+    #[error("JWKS uri {url} is not on an allowed host")]
+    JwksHost { url: String },
     #[error("discovery request to {url} failed: {source}")]
     Discovery {
         url: String,
@@ -24,12 +32,6 @@ pub enum SsoProviderError {
         url: String,
         #[source]
         source: reqwest::Error,
-    },
-    #[error("JWKS uri {url} unusable: {source}")]
-    JwksUri {
-        url: String,
-        #[source]
-        source: url::ParseError,
     },
     #[error("JWKS fetch from {url} failed: {source}")]
     JwksFetch {
@@ -62,11 +64,12 @@ impl From<SsoProviderError> for SsoError {
             | SsoProviderError::IdTokenHeader(_)
             | SsoProviderError::IdTokenRejected(_)
             | SsoProviderError::IdTokenClaims(_) => Self::InvalidAssertion(err.to_string()),
-            SsoProviderError::Discovery { .. }
+            SsoProviderError::OutboundUrl { .. }
+            | SsoProviderError::JwksHost { .. }
+            | SsoProviderError::Discovery { .. }
             | SsoProviderError::DiscoveryStatus { .. }
             | SsoProviderError::DiscoveryParse { .. }
             | SsoProviderError::TokenEndpoint(_)
-            | SsoProviderError::JwksUri { .. }
             | SsoProviderError::JwksFetch { .. }
             | SsoProviderError::JwksParse { .. } => Self::Unavailable(err.to_string()),
         }

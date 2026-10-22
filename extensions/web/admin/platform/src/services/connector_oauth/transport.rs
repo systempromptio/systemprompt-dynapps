@@ -4,7 +4,7 @@ use super::{Consent, Grant, Provider};
 use std::time::Duration;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-pub(super) fn client() -> AdminResult<reqwest::Client> {
+pub fn client() -> AdminResult<reqwest::Client> {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .redirect(reqwest::redirect::Policy::none())

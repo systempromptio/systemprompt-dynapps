@@ -2,14 +2,14 @@
 //!
 //! One knob today: `max_pat_lifetime_days`, the longest a personal access
 //! token may live from issuance. The bound is applied by [`bound_pat_expiry`],
-//! which is pure so the arithmetic is pinned by a unit test, and read once
-//! per process because the file is implementation configuration shipped
-//! with the image, not something the console edits. An unparseable file is
-//! logged and served as the default (the safe direction). No requested expiry
-//! means the maximum, never "forever"; more than the maximum is refused, not
-//! clamped.
+//! which is pure so the arithmetic is pinned by a unit test, and read once at
+//! the admin composition root into `ManagedState` because the file is
+//! implementation configuration shipped with the image, not something the
+//! console edits. An unparseable file is logged and served as the default (the
+//! safe direction). No requested expiry means the maximum, never "forever";
+//! more than the maximum is refused, not clamped.
 
-use std::sync::OnceLock;
+use std::path::PathBuf;
 
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
@@ -45,35 +45,50 @@ struct SecurityDoc {
     security: SecurityPolicy,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum SecurityPolicyError {
+    #[error("profile unavailable: {0}")]
+    Profile(#[source] systemprompt::config::ProfileBootstrapError),
+    #[error("{path}: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("security policy does not parse: {0}")]
+    Parse(#[source] serde_yaml::Error),
+    #[error("security.max_pat_lifetime_days must be at least 1")]
+    ZeroLifetime,
+}
+
 impl SecurityPolicy {
     #[must_use]
-    pub fn get() -> Self {
-        static POLICY: OnceLock<SecurityPolicy> = OnceLock::new();
-        *POLICY.get_or_init(|| match Self::load() {
+    pub fn load_or_default() -> Self {
+        match Self::load() {
             Ok(policy) => policy,
             Err(error) => {
                 tracing::error!(error = %error, file = SECURITY_FILE, "security policy unreadable; using defaults");
                 Self::default()
             },
-        })
+        }
     }
 
-    fn load() -> Result<Self, String> {
-        let profile = ProfileBootstrap::get().map_err(|e| e.to_string())?;
+    pub fn load() -> Result<Self, SecurityPolicyError> {
+        let profile = ProfileBootstrap::get().map_err(SecurityPolicyError::Profile)?;
         let path =
             ServicesRootBootstrap::active_root_or(&profile.paths.services).join(SECURITY_FILE);
         let text = match std::fs::read_to_string(&path) {
             Ok(text) => text,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),
-            Err(e) => return Err(format!("{}: {e}", path.display())),
+            Err(source) => return Err(SecurityPolicyError::Read { path, source }),
         };
         Self::from_yaml(&text)
     }
 
-    pub fn from_yaml(text: &str) -> Result<Self, String> {
-        let doc: SecurityDoc = serde_yaml::from_str(text).map_err(|e| e.to_string())?;
+    pub fn from_yaml(text: &str) -> Result<Self, SecurityPolicyError> {
+        let doc: SecurityDoc = serde_yaml::from_str(text).map_err(SecurityPolicyError::Parse)?;
         if doc.security.max_pat_lifetime_days == 0 {
-            return Err("security.max_pat_lifetime_days must be at least 1".to_owned());
+            return Err(SecurityPolicyError::ZeroLifetime);
         }
         Ok(doc.security)
     }
@@ -102,6 +117,8 @@ impl std::fmt::Display for PatExpiryError {
         }
     }
 }
+
+impl std::error::Error for PatExpiryError {}
 
 pub fn bound_pat_expiry(
     requested: Option<DateTime<Utc>>,

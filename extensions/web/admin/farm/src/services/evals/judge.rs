@@ -185,7 +185,7 @@ impl GatewayJudge {
             .ai
             .generate(&request)
             .await
-            .map_err(|e| FarmError::Gateway(e.to_string()))?;
+            .map_err(FarmError::Gateway)?;
         let (score, passed, rationale) = parse_verdict(&response.content, input.threshold)?;
         Ok(JudgeVerdict {
             score,

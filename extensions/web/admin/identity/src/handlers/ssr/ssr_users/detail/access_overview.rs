@@ -14,6 +14,7 @@ use systemprompt::marketplace::{AssembleRequest, ManifestService, MarketplaceCac
 use crate::repositories::users::queries;
 use systemprompt_web_admin_core::connections::Connection;
 use systemprompt_web_admin_core::connections::source::get_connections;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::marketplace_filter::TemplateMarketplaceFilter;
 use systemprompt_web_admin_core::repositories::entitlement::{MatrixRow, UserMatrix};
 
@@ -160,14 +161,10 @@ pub(super) async fn load(pool: &PgPool, user_id: &UserId) -> AccessOverview {
     view
 }
 
-async fn included_content(pool: &PgPool, user_id: &UserId) -> Result<Vec<WorkspaceView>, String> {
-    let services = ConfigLoader::load().map_err(|e| e.to_string())?;
-    let root =
-        systemprompt_web_admin_core::request::get_services_path().map_err(|e| e.to_string())?;
-    let url = Config::get()
-        .map_err(|e| e.to_string())?
-        .api_external_url
-        .clone();
+async fn included_content(pool: &PgPool, user_id: &UserId) -> AdminResult<Vec<WorkspaceView>> {
+    let services = ConfigLoader::load()?;
+    let root = systemprompt_web_admin_core::request::get_services_path()?;
+    let url = Config::get()?.api_external_url.clone();
     let filter = TemplateMarketplaceFilter::from_pool(Arc::new(pool.clone()));
     let cache = uncached_marketplace();
     let request = AssembleRequest {
@@ -179,7 +176,7 @@ async fn included_content(pool: &PgPool, user_id: &UserId) -> Result<Vec<Workspa
     };
     let candidate = ManifestService::assemble_candidate(&request, &url)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| AdminError::upstream("marketplace manifest", e))?;
     let (entries, _) = candidate.into_manifest_parts();
     let mut workspaces = Vec::new();
     for marketplace in entries.marketplaces {

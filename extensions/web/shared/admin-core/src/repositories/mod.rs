@@ -17,6 +17,7 @@ pub mod liveness;
 pub mod principal;
 pub mod scheduled_jobs;
 pub mod scope;
+pub mod security_policy;
 pub mod share_token;
 pub mod sync;
 pub mod tool_activity;

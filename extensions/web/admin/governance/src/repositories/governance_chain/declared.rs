@@ -88,15 +88,25 @@ fn params_only(mut entry: serde_yaml::Value) -> serde_yaml::Value {
     entry
 }
 
-pub fn parse_declared_chain(yaml: &str) -> Result<DeclaredChain, String> {
-    let cfg = GovernanceConfig::parse(yaml).map_err(|e| e.to_string())?;
+#[derive(Debug, thiserror::Error)]
+pub enum DeclaredChainError {
+    #[error("governance/config.yaml is invalid: {0}")]
+    Config(#[from] systemprompt::governance::policy::GovernanceConfigError),
+    #[error("governance.policies repeats id `{id}`")]
+    DuplicatePolicy { id: String },
+}
+
+pub fn parse_declared_chain(yaml: &str) -> Result<DeclaredChain, DeclaredChainError> {
+    let cfg = GovernanceConfig::parse(yaml)?;
     let mut policies = Vec::with_capacity(cfg.policies.len());
     for p in cfg.policies {
         if policies
             .iter()
             .any(|d: &DeclaredPolicy| d.id == p.id.as_str())
         {
-            return Err(format!("governance.policies repeats id `{}`", p.id));
+            return Err(DeclaredChainError::DuplicatePolicy {
+                id: p.id.to_string(),
+            });
         }
         policies.push(DeclaredPolicy {
             id: p.id.to_string(),

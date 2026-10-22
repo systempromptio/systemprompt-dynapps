@@ -90,14 +90,10 @@ impl Provider {
 }
 
 pub(crate) fn secret(name: &str) -> AdminResult<String> {
-    std::env::var(name.to_uppercase())
-        .ok()
-        .or_else(|| {
-            systemprompt::config::SecretsBootstrap::get()
-                .ok()?
-                .get(name)
-                .cloned()
-        })
+    systemprompt::config::SecretsBootstrap::get()
+        .map_err(AdminError::internal)?
+        .get(name)
         .filter(|s| !s.is_empty() && !s.starts_with("REPLACE_WITH"))
+        .cloned()
         .ok_or_else(|| AdminError::Unavailable(format!("Connector configuration missing: {name}")))
 }

@@ -12,6 +12,16 @@ pub enum OnePasswordError {
     #[error("invalid onepassword config: {0}")]
     Config(String),
 
+    #[error("invalid onepassword config: {0}")]
+    ConfigShape(#[source] serde_json::Error),
+
+    #[error("connect_url {url} refused: {source}")]
+    ConnectUrl {
+        url: String,
+        #[source]
+        source: systemprompt::models::net::OutboundUrlError,
+    },
+
     #[error("token environment variable '{env}' is unset or empty")]
     TokenMissing { env: String },
 

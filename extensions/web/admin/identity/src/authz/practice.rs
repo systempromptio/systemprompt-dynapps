@@ -64,8 +64,6 @@ impl SubjectAttributeProvider for PracticeAttributeProvider {
 
 systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
-        systemprompt_web_admin_core::authz::cached::cached_provider(
-            PracticeAttributeProvider::new(Arc::clone(&ctx.pool)),
-        );
+        Arc::new(PracticeAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });

@@ -2,10 +2,11 @@
 //!
 //! Core calls every registered provider's `values_for` on each gateway
 //! request (the entitlement guard and the quota resolver both gather
-//! subjects), and each local provider is a database read. Wrapping it at
-//! registration keeps the provider itself a plain query and makes the cache
-//! one rule for all of them: values are reused for [`AUTHZ_TTL`] and dropped
-//! by [`crate::ttl_cache::invalidate_all`].
+//! subjects), and each local provider is a database read. The per-database
+//! registry wraps every discovered provider here, so the cache is one rule for
+//! all of them: values are reused for [`AUTHZ_TTL`] and dropped together by
+//! [`crate::authz::AuthzCaches::invalidate_all`], whose [`Generation`] each
+//! wrapper shares.
 
 use std::sync::Arc;
 
@@ -15,33 +16,34 @@ use systemprompt::governance::authz::{
 };
 use systemprompt::identifiers::UserId;
 
-use crate::ttl_cache::{AUTHZ_TTL, TtlCache};
+use crate::ttl_cache::{AUTHZ_TTL, Generation, TtlCache};
 
 #[derive(Debug)]
-pub struct CachedSubjectProvider<P> {
-    inner: P,
+pub struct CachedSubjectProvider {
+    inner: SharedSubjectAttributeProvider,
     values: TtlCache<UserId, Vec<String>>,
 }
 
-impl<P> CachedSubjectProvider<P> {
+impl CachedSubjectProvider {
     #[must_use]
-    pub fn new(inner: P) -> Self {
+    pub fn new(inner: SharedSubjectAttributeProvider, generation: Arc<Generation>) -> Self {
         Self {
             inner,
-            values: TtlCache::new(AUTHZ_TTL),
+            values: TtlCache::new(AUTHZ_TTL, generation),
         }
     }
 }
 
 #[must_use]
-pub fn cached_provider<P: SubjectAttributeProvider + 'static>(
-    inner: P,
+pub fn cached_provider(
+    inner: SharedSubjectAttributeProvider,
+    generation: Arc<Generation>,
 ) -> SharedSubjectAttributeProvider {
-    Arc::new(CachedSubjectProvider::new(inner))
+    Arc::new(CachedSubjectProvider::new(inner, generation))
 }
 
 #[async_trait]
-impl<P: SubjectAttributeProvider> SubjectAttributeProvider for CachedSubjectProvider<P> {
+impl SubjectAttributeProvider for CachedSubjectProvider {
     fn dimension(&self) -> SubjectDimension {
         self.inner.dimension()
     }

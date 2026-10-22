@@ -55,7 +55,14 @@ pub enum FarmError {
     },
 
     #[error("Gateway: {0}")]
-    Gateway(String),
+    Gateway(#[source] systemprompt::ai::error::AiError),
+
+    #[error("{file} does not parse: {source}")]
+    Yaml {
+        file: &'static str,
+        #[source]
+        source: serde_yaml::Error,
+    },
 
     #[error("JSON: {at}: {source}")]
     Json {
@@ -103,6 +110,19 @@ pub enum FarmError {
         at: String,
         #[source]
         source: reqwest::Error,
+    },
+
+    #[error("agent-farms.yaml: {0}")]
+    RunAsConfig(#[from] crate::config::RunAsError),
+
+    #[error("Authorization read: {0}")]
+    Authz(#[from] systemprompt_web_admin_core::authz::AuthzReadError),
+
+    #[error("Runner: outbound destination {url} refused: {source}")]
+    OutboundUrl {
+        url: String,
+        #[source]
+        source: systemprompt::models::net::OutboundUrlError,
     },
 
     #[error("Runner bundle file {path:?}: {source}")]
@@ -154,7 +174,8 @@ impl From<FarmError> for AdminError {
             FarmError::Validation(msg) => Self::Unprocessable(msg),
             err @ (FarmError::InvalidRegex { .. }
             | FarmError::NotUtf8 { .. }
-            | FarmError::RunAs(_)) => Self::Unprocessable(err.to_string()),
+            | FarmError::RunAs(_)
+            | FarmError::RunAsConfig(_)) => Self::unprocessable("agent farm", err),
             other => Self::Internal(Box::new(other)),
         }
     }

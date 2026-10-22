@@ -12,6 +12,7 @@ use std::fmt;
 
 use serde::Deserialize;
 use systemprompt::config::SecretsBootstrap;
+use systemprompt::models::net::validate_outbound_url;
 use systemprompt::sso::SsoError;
 
 use super::super::error::SsoProviderError;
@@ -83,8 +84,14 @@ pub(super) async fn redeem_code(
         ("client_secret", req.client_secret),
         ("code_verifier", req.code_verifier),
     ]);
+    let token_endpoint = validate_outbound_url(req.token_endpoint).map_err(|source| {
+        SsoProviderError::OutboundUrl {
+            url: req.token_endpoint.to_owned(),
+            source,
+        }
+    })?;
     let response = http
-        .post(req.token_endpoint)
+        .post(token_endpoint)
         .header(
             reqwest::header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",

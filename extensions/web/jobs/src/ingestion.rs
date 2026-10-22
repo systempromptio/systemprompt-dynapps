@@ -1,9 +1,9 @@
 //! `content_ingestion` job: parses the `services/content/` markdown tree into
 //! the database.
 //!
-//! The blog config and `delete_orphans` come from this job's own context, never
-//! process-wide state: `BlogConfigValidated::cached()` pins the first caller's
-//! profile in a `OnceLock`, and an environment variable would reach every job.
+//! The blog config and `delete_orphans` come from this job's own context: the
+//! config is read from the job's `AppPaths`, and the orphan switch is a job
+//! parameter rather than an environment variable that would reach every job.
 //!
 //! Every ingestion is versioned. It runs under an advisory lock and records the
 //! release that ingested in `content_ingestion_stamp`; a release older than the

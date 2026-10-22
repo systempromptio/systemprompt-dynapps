@@ -97,12 +97,14 @@ fn parse_refuses_a_repeated_id_and_a_route_without_a_provider() {
     assert!(
         parse_declared_routes(&dup)
             .expect_err("refused")
+            .to_string()
             .contains("repeats id")
     );
     let bare = "gateway:\n  routes:\n  - model_pattern: x-*\n";
     assert!(
         parse_declared_routes(bare)
             .expect_err("refused")
+            .to_string()
             .contains("routes[0]")
     );
 }

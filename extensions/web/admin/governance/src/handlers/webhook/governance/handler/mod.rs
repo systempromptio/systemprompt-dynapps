@@ -204,7 +204,7 @@ pub(crate) async fn govern_tool_use(
         Err(verdict) => return *verdict,
     };
     if let Err(reason) = payload.validate_ingestion() {
-        return HookVerdict::new(deny_for_auth_failure(&reason), response_event);
+        return HookVerdict::new(deny_for_auth_failure(&reason.to_string()), response_event);
     }
     if let Err(error) =
         ingestion::assert_ingestion_owner(&pool, &session_id, &principal.user_id).await

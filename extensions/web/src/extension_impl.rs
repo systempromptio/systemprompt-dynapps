@@ -14,7 +14,6 @@ use crate::assets::web_assets;
 use crate::homepage::{HomepagePageDataProvider, HomepagePrerenderer};
 use crate::navigation::NavigationPageDataProvider;
 use crate::schemas::{migrations, schema_definitions};
-use systemprompt_web_site::config_loader;
 
 use crate::extension::WebExtension;
 
@@ -30,15 +29,17 @@ impl Extension for WebExtension {
     fn page_data_providers(&self) -> Vec<Arc<dyn PageDataProvider>> {
         let mut providers: Vec<Arc<dyn PageDataProvider>> = vec![];
 
-        if let Some(nav_config) = Self::navigation_config() {
-            let branding = config_loader::branding_config();
+        if let Some(nav_config) = &self.site.navigation {
             providers.push(Arc::new(
-                NavigationPageDataProvider::new(nav_config).with_branding(branding),
+                NavigationPageDataProvider::new(Arc::clone(nav_config))
+                    .with_branding(self.site.branding.clone()),
             ));
         }
 
-        if let Some(homepage_config) = Self::homepage_config() {
-            providers.push(Arc::new(HomepagePageDataProvider::new(homepage_config)));
+        if let Some(homepage_config) = &self.site.homepage {
+            providers.push(Arc::new(HomepagePageDataProvider::new(Arc::clone(
+                homepage_config,
+            ))));
         }
 
         providers.extend(crate::shared::registry::page_data_providers());
@@ -52,12 +53,12 @@ impl Extension for WebExtension {
     fn page_prerenderers(&self) -> Vec<Arc<dyn PagePrerenderer>> {
         let mut prerenderers: Vec<Arc<dyn PagePrerenderer>> = vec![];
 
-        if let Some(config) = Self::homepage_config() {
-            prerenderers.push(Arc::new(HomepagePrerenderer::new(config)));
+        if let Some(config) = &self.site.homepage {
+            prerenderers.push(Arc::new(HomepagePrerenderer::new(Arc::clone(config))));
         }
 
-        if let Some(config) = Self::skills_page_config() {
-            prerenderers.push(Arc::new(SkillsPagePrerenderer::new(config)));
+        if let Some(config) = &self.site.skills_page {
+            prerenderers.push(Arc::new(SkillsPagePrerenderer::new(Arc::clone(config))));
         }
 
         prerenderers
@@ -111,7 +112,7 @@ impl Extension for WebExtension {
     }
 
     fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
-        crate::router::build(ctx)
+        crate::router::build(ctx, self)
     }
 
     fn site_auth(&self) -> Option<SiteAuthConfig> {
@@ -128,7 +129,9 @@ impl Extension for WebExtension {
     }
 
     fn runner_services(&self) -> Vec<Arc<dyn RunnerService>> {
-        vec![Arc::new(crate::router::farm_public::FarmRunner)]
+        vec![Arc::new(crate::router::farm_public::FarmRunner {
+            runs: Arc::clone(&self.farm_runs),
+        })]
     }
 
     fn priority(&self) -> u32 {

@@ -1,21 +1,16 @@
 //! Loads the skills-page entries from the `services/skills/` tree.
 
+use std::path::Path;
 use std::sync::Arc;
 
 use crate::skills_page::{SkillEntry, SkillsPageConfig};
 
-use super::{ConfigError, load_app_paths};
+use super::ConfigError;
 
-pub(crate) fn load_skills_page_config() -> Result<Option<Arc<SkillsPageConfig>>, ConfigError> {
-    let paths = match load_app_paths() {
-        Ok(p) => p,
-        Err(e) => {
-            tracing::debug!(error = %e, "AppPaths not available for skills page config");
-            return Ok(None);
-        },
-    };
-
-    let skills_dir = paths.system().services().join("skills");
+pub(crate) fn load_skills_page_config(
+    services: &Path,
+) -> Result<Option<Arc<SkillsPageConfig>>, ConfigError> {
+    let skills_dir = services.join("skills");
 
     let Some(entries) = read_skills_dir(&skills_dir)? else {
         return Ok(None);
@@ -43,9 +38,7 @@ pub(crate) fn load_skills_page_config() -> Result<Option<Arc<SkillsPageConfig>>,
 }
 
 #[doc(hidden)]
-pub fn read_skills_dir(
-    skills_dir: &std::path::Path,
-) -> Result<Option<std::fs::ReadDir>, ConfigError> {
+pub fn read_skills_dir(skills_dir: &Path) -> Result<Option<std::fs::ReadDir>, ConfigError> {
     match std::fs::read_dir(skills_dir) {
         Ok(entries) => Ok(Some(entries)),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -55,9 +48,9 @@ pub fn read_skills_dir(
             );
             Ok(None)
         },
-        Err(e) => Err(ConfigError::Parse {
-            config_name: skills_dir.display().to_string(),
-            message: format!("Failed to read directory: {e}"),
+        Err(source) => Err(ConfigError::Read {
+            path: skills_dir.to_path_buf(),
+            source,
         }),
     }
 }

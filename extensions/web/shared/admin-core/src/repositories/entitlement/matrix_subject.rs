@@ -63,7 +63,7 @@ pub async fn user_subject(
     pool: &PgPool,
     user_id: &UserId,
     roles: Vec<String>,
-) -> Result<MatrixSubject, sqlx::Error> {
+) -> Result<MatrixSubject, crate::authz::AuthzReadError> {
     Ok(MatrixSubject {
         id: user_id.clone(),
         roles,
@@ -75,7 +75,7 @@ pub async fn resolve_subject_matrix(
     pool: &PgPool,
     subject: &MatrixSubject,
     sections: Vec<SectionInput>,
-) -> Result<Vec<MatrixSection>, sqlx::Error> {
+) -> Result<Vec<MatrixSection>, crate::authz::AuthzReadError> {
     resolve_sections_for(pool, subject, sections).await
 }
 
@@ -83,7 +83,7 @@ pub async fn resolve_subject_matrices(
     pool: &PgPool,
     subjects: &[MatrixSubject],
     sections: &[SectionInput],
-) -> Result<Vec<Vec<MatrixSection>>, sqlx::Error> {
+) -> Result<Vec<Vec<MatrixSection>>, crate::authz::AuthzReadError> {
     let inputs = resolution_inputs(pool).await?;
     let dimensions = crate::authz::dimensions(pool);
     Ok(subjects

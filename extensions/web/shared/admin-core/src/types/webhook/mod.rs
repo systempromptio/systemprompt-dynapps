@@ -6,7 +6,7 @@
 
 mod event_types;
 mod validation;
-pub use validation::validate_session_key;
+pub use validation::{HookValidationError, validate_session_key};
 
 pub use event_types::{
     ConfigChangeData, HookCommonFields, HookEvent, InstructionsLoadedData, NotificationData,

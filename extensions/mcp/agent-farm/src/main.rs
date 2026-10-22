@@ -91,6 +91,9 @@ fn build_env(ctx: &AppContext) -> Env {
                 systemprompt_web_admin_farm::state::FarmHost {
                     artefacts: Arc::clone(ctx.file_storage()),
                     instance: ctx.config().instance_id.clone(),
+                    runs: Arc::new(
+                        systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns::default(),
+                    ),
                 },
             ),
         ),

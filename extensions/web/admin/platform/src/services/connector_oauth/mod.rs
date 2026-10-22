@@ -34,7 +34,7 @@ use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::crypto::secret_crypto;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 pub(crate) use tokens::exchange_classified;
-pub use transport::{authorize, exchange, exchange_with_client, refresh_with_client};
+pub use transport::{authorize, client, exchange, exchange_with_client, refresh_with_client};
 
 /// Debug output never reveals credentials; serialization is only for the
 /// encrypted credential store, never an HTTP response.

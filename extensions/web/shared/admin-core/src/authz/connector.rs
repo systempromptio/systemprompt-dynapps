@@ -16,6 +16,7 @@ use systemprompt::governance::authz::{
     SubjectDimension,
 };
 use systemprompt::identifiers::UserId;
+use systemprompt::traits::RepositoryError;
 
 use crate::connections::Connection;
 use crate::connections::source::get_connections;
@@ -59,7 +60,7 @@ impl SubjectAttributeProvider for ConnectorAttributeProvider {
     async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
         let snapshot = get_connections(&self.pool, user_id)
             .await
-            .map_err(|e| AuthzError::Validation(e.to_string()))?;
+            .map_err(connection_read_failed)?;
         Ok(snapshot
             .connections
             .into_iter()
@@ -69,9 +70,17 @@ impl SubjectAttributeProvider for ConnectorAttributeProvider {
     }
 }
 
+// Why: core's `AuthzError` has no variant for an install-side read failure,
+// so the admin error travels as the repository cause.
+fn connection_read_failed(error: crate::error::AdminError) -> AuthzError {
+    AuthzError::Repository(RepositoryError::Decode {
+        context: "connector attribute read".to_owned(),
+        source: Box::new(error),
+    })
+}
+
 systemprompt::governance::register_subject_attribute_provider!(|ctx| {
-    let provider: SharedSubjectAttributeProvider = crate::authz::cached::cached_provider(
-        ConnectorAttributeProvider::new(Arc::clone(&ctx.pool)),
-    );
+    let provider: SharedSubjectAttributeProvider =
+        Arc::new(ConnectorAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });

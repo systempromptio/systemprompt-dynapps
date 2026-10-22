@@ -5,7 +5,7 @@
 //! never handles a partially checked config.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use serde::Deserialize;
 use systemprompt::identifiers::{CategoryId, SourceId};
@@ -14,6 +14,7 @@ use url::Url;
 pub use crate::config_errors::{ExtensionConfigError, ExtensionConfigErrors};
 
 mod config_paths;
+pub use config_paths::ProfilePathsError;
 use config_paths::{resolve_blog_config_path, validate_content_source};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -119,20 +120,13 @@ impl BlogConfigValidated {
         })
     }
 
-    pub fn load_from_env_or_none() -> Result<Option<Arc<Self>>, ExtensionConfigErrors> {
-        let config_path = resolve_blog_config_path();
+    pub fn load_from_profile_or_none() -> Result<Option<Arc<Self>>, ExtensionConfigErrors> {
+        let config_path = resolve_blog_config_path()?;
         if config_path.exists() {
             Self::load_from_file(&config_path).map(|c| Some(Arc::new(c)))
         } else {
             Ok(None)
         }
-    }
-
-    pub fn cached() -> Result<Option<Arc<Self>>, String> {
-        static CACHED: OnceLock<Result<Option<Arc<BlogConfigValidated>>, String>> = OnceLock::new();
-        CACHED
-            .get_or_init(|| Self::load_from_env_or_none().map_err(|e| e.to_string()))
-            .clone()
     }
 
     pub fn enabled_sources(&self) -> impl Iterator<Item = &ContentSourceValidated> {

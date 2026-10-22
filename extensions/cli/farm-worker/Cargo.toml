@@ -16,6 +16,7 @@ path = "src/main.rs"
 # Audit: uses agent_runs (execute, governance hooks, RunLayout) and logging — requires `full`.
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin-farm = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
 
 anyhow.workspace = true
 async-trait.workspace = true

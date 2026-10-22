@@ -13,6 +13,14 @@ use systemprompt_web_admin_core::error::AdminResult;
 
 pub const POLICIES_FILE: &str = GATEWAY_POLICIES_FILE;
 
+#[derive(Debug, thiserror::Error)]
+pub enum DeclaredPoliciesError {
+    #[error("policies.yaml does not parse: {0}")]
+    Yaml(#[from] serde_yaml::Error),
+    #[error("policies.yaml is invalid: {0}")]
+    Invalid(#[from] systemprompt::gateway::GatewayPolicyError),
+}
+
 /// What the file declares, with each monthly window folded to its sentinel
 /// so a declared hash never depends on the day it was read.
 #[derive(Debug, Clone, Default)]
@@ -44,9 +52,9 @@ impl DeclaredPolicies {
     }
 }
 
-pub fn parse_declared_policies(yaml: &str) -> Result<DeclaredPolicies, String> {
-    let cfg: GatewayPolicyConfig = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
-    cfg.validate().map_err(|e| e.to_string())?;
+pub fn parse_declared_policies(yaml: &str) -> Result<DeclaredPolicies, DeclaredPoliciesError> {
+    let cfg: GatewayPolicyConfig = serde_yaml::from_str(yaml)?;
+    cfg.validate()?;
     Ok(DeclaredPolicies {
         entries: cfg.policies.into_iter().collect(),
     })

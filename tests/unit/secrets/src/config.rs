@@ -1,6 +1,8 @@
 //! `OnePasswordConfig` parsed from the keys core leaves in
 //! `ExternalSecretsConfig::config`.
 
+use std::error::Error;
+
 use serde_json::{Map, Value, json};
 use systemprompt::config::ExternalSecretsConfig;
 use systemprompt_secrets_onepassword::config::{
@@ -145,4 +147,25 @@ fn retries_bounds() {
 fn empty_vault_and_token_env_are_refused() {
     assert!(parse(json!({"vault": " ", "item": "i"})).is_err());
     assert!(parse(json!({"vault": "v", "item": "i", "token_env": ""})).is_err());
+}
+
+#[test]
+fn a_connect_url_on_a_blocked_address_is_refused_with_its_cause() {
+    let error = parse(json!({
+        "backend": "connect",
+        "connect_url": "http://169.254.169.254/",
+        "vault": "v",
+        "item": "i"
+    }))
+    .expect_err("metadata address refused");
+    assert!(matches!(error, OnePasswordError::ConnectUrl { .. }));
+    assert!(
+        error
+            .source()
+            .is_some_and(<dyn Error>::is::<systemprompt::models::net::OutboundUrlError>)
+    );
+    assert!(
+        parse(json!({"backend": "connect", "connect_url": "http://localhost:8080", "vault": "v", "item": "i"}))
+            .is_ok()
+    );
 }

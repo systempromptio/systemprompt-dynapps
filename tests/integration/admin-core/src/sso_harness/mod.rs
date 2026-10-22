@@ -114,8 +114,20 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
 impl SsoApp {
     pub(crate) fn build(pool: &Arc<PgPool>, oidc: Option<entra_oidc::EntraOidcConfig>) -> Self {
         assert!(profile::init(), "SSO fixture profile");
-        if let Some(cfg) = oidc {
-            entra_oidc::install_config(Arc::new(cfg));
+        let config_file = profile::services_web_config_dir().join("entra-oidc.yaml");
+        match oidc {
+            Some(cfg) => std::fs::write(
+                &config_file,
+                serde_yaml::to_string(&cfg).expect("serialise the Entra OIDC fixture"),
+            )
+            .expect("write the Entra OIDC fixture"),
+            None => {
+                if let Err(error) = std::fs::remove_file(&config_file)
+                    && error.kind() != std::io::ErrorKind::NotFound
+                {
+                    panic!("remove a stale Entra OIDC fixture: {error}");
+                }
+            },
         }
         let database: systemprompt::database::DbPool = Arc::new(Database::from_pools(
             Arc::clone(pool),

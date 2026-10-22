@@ -8,7 +8,8 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # Match sqlx::query( and sqlx::query_{as,scalar,file,file_as,file_scalar,with,...}(
-pattern='sqlx::query[a-z_]*\('
+# in both the plain and the turbofish (`query_as::<_, T>(`) spellings.
+pattern='sqlx::query[a-z_]*(::<[^>]*>)?\('
 
 # Enumerated exceptions, core-style: each entry is one path with its reason.
 # Empty by design — adding a path requires justification in review.

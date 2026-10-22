@@ -70,8 +70,6 @@ impl SubjectAttributeProvider for GroupAttributeProvider {
 
 systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
-        systemprompt_web_admin_core::authz::cached::cached_provider(GroupAttributeProvider::new(
-            Arc::clone(&ctx.pool),
-        ));
+        Arc::new(GroupAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });

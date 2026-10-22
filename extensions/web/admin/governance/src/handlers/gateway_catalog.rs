@@ -155,7 +155,7 @@ pub(crate) async fn detect_after_the_fact(
     pool: &PgPool,
     routes: &[GatewayRouteView],
     since_minutes: i64,
-) -> Result<usize, sqlx::Error> {
+) -> Result<usize, systemprompt_web_admin_core::authz::AuthzReadError> {
     let rows = acl_detect::list_recent_unrejected_requests(pool, since_minutes).await?;
 
     let mut emitted = 0usize;

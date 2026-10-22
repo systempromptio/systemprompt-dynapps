@@ -414,6 +414,7 @@ _lint-gates-uncoordinated:
         lint-repo-construction.sh
         check-json-value.sh
         check-sqlx.sh
+        check-outbound-urls.sh
         check-http-errors.sh
         check-test-value.sh
         lint-silent-skips.sh
@@ -421,6 +422,7 @@ _lint-gates-uncoordinated:
         lint-test-seams.sh
         lint-raw-ids.sh
         lint-env-vars.sh
+        lint-globals.sh
         check-glob-reexports.sh
         check-comments.sh
         check-yaml-comments.sh

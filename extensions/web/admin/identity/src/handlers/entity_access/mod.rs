@@ -61,7 +61,7 @@ pub(crate) async fn list_entity_access_handler(
 ) -> AdminResult<Response> {
     let kind = validate_entity_type(&entity_type)?;
     let entity = EntityRef::from_kind_and_id(kind, &entity_id)
-        .map_err(|error| AdminError::Unprocessable(error.to_string()))?;
+        .map_err(|error| AdminError::unprocessable("entity", error))?;
     let r = repo(&pool);
     let rules = r
         .list_rules_for_entity(entity.kind(), entity.id_str())
@@ -182,7 +182,7 @@ pub(crate) async fn set_entity_default_handler(
     let kind = validate_entity_type(&entity_type)?;
     registered_routes_from_services()?.require(kind, &entity_id)?;
     let entity = EntityRef::from_kind_and_id(kind, &entity_id)
-        .map_err(|error| AdminError::Unprocessable(error.to_string()))?;
+        .map_err(|error| AdminError::unprocessable("entity", error))?;
     repo(&pool)
         .upsert_entity(
             entity.kind(),

@@ -4,6 +4,7 @@
 pub mod delta;
 pub mod mcp_tool_name;
 pub mod month_range;
+pub mod outbound;
 pub mod skill_ref;
 pub mod source_path;
 pub mod svg;

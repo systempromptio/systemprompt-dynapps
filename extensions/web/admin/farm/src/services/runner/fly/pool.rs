@@ -4,21 +4,20 @@
 //! create one when none is free; stop it after the run, and destroy it when
 //! the pool already holds `pool_size` machines.
 //!
-//! Machines taken by this process are held in an in-process set, so two runs
-//! on the same API machine never launch the same runner. Every unset `fly:`
-//! field is read from the Fly runtime env (`FLY_APP_NAME`, `FLY_REGION`,
+//! Machines taken by in-flight runs are held on the shared [`RemoteRuns`], so
+//! two runs on the same API machine never launch the same runner. Every unset
+//! `fly:` field is read from the Fly runtime env (`FLY_APP_NAME`, `FLY_REGION`,
 //! `FLY_IMAGE_REF`, `FLY_MACHINE_ID`), which is why each launch re-sends the
 //! image: a pooled machine always runs the image the API runs.
 
-use std::collections::{BTreeMap, HashSet};
-use std::sync::{LazyLock, Mutex};
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use super::api::{Machine, MachineLaunch, MachinesClient, api_token, machine_config};
 use super::protocol::{API_BASE_ENV, RUN_ID_ENV, WORKER_TOKEN_ENV};
+use super::registry::RemoteRuns;
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
-
-static TAKEN: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 
 const STOPPED: &str = "stopped";
 
@@ -79,49 +78,45 @@ pub fn run_env(run_id: &str, api_base: &str, token: &str) -> BTreeMap<String, St
     ])
 }
 
-fn take(id: &str) -> bool {
-    TAKEN.lock().is_ok_and(|mut set| set.insert(id.to_owned()))
-}
-
-fn give_back(id: &str) {
-    if let Ok(mut set) = TAKEN.lock() {
-        set.remove(id);
-    }
-}
-
 #[derive(Debug)]
 pub struct RunnerPool {
     client: MachinesClient,
     config: FlyRunnerConfig,
+    runs: Arc<RemoteRuns>,
 }
 
 impl RunnerPool {
-    pub fn new(config: &FlyRunnerConfig, target: &FlyTarget) -> FarmResult<Self> {
+    pub fn new(
+        config: &FlyRunnerConfig,
+        target: &FlyTarget,
+        runs: Arc<RemoteRuns>,
+    ) -> FarmResult<Self> {
         let token = api_token().ok_or_else(|| {
             FarmError::Runner("fly runner: no fly_api_token secret or FLY_API_TOKEN".to_owned())
         })?;
         Ok(Self {
             client: MachinesClient::new(config, &target.app, &token)?,
             config: config.clone(),
+            runs,
         })
     }
 
     pub async fn acquire(&self, region: &str, launch: &MachineLaunch) -> FarmResult<Machine> {
         let config = machine_config(&self.config, launch);
         for machine in self.client.list_pool().await? {
-            if machine.state != STOPPED || !take(&machine.id) {
+            if machine.state != STOPPED || !self.runs.take_machine(&machine.id) {
                 continue;
             }
             match self.relaunch(&machine.id, config.clone()).await {
                 Ok(started) => return self.started(started).await,
                 Err(error) => {
-                    give_back(&machine.id);
+                    self.runs.give_back_machine(&machine.id);
                     tracing::warn!(machine = %machine.id, %error, "pooled runner not launched");
                 },
             }
         }
         let created = self.client.create(region, config).await?;
-        take(&created.id);
+        self.runs.take_machine(&created.id);
         self.started(created).await
     }
 
@@ -154,7 +149,7 @@ impl RunnerPool {
                 .filter(|m| m.id != id && m.state == STOPPED)
                 .count()
         });
-        give_back(id);
+        self.runs.give_back_machine(id);
         let surplus = matches!(pooled, Ok(count) if count >= self.config.pool_size);
         if surplus && let Err(error) = self.client.destroy(id).await {
             tracing::warn!(machine = %id, %error, "surplus runner machine not destroyed");

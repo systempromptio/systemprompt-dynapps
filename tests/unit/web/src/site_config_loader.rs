@@ -1,16 +1,16 @@
 //! Config loading is deliberately non-fatal: a broken `services/web/` tree
 //! degrades the affected section to "absent" instead of taking the server down,
-//! and the result is memoised so a failing load is not retried per request.
+//! and every section is loaded once into one `SiteConfig` the extension owns.
 //! The skills loader adds its own filters — a directory without a readable,
 //! parseable `config.yaml` is skipped, and a disabled skill never reaches the
 //! page even though its file parsed fine.
 
+use std::error::Error;
 use std::fs;
 use std::path::Path;
-use std::sync::OnceLock;
 
 use systemprompt_web_site::config_loader::skills::{parse_skill_entries, read_skills_dir};
-use systemprompt_web_site::config_loader::{ConfigError, log_and_discard_err};
+use systemprompt_web_site::config_loader::{ConfigError, SiteConfig};
 
 fn write_skill(root: &Path, dir: &str, yaml: &str) {
     let path = root.join(dir);
@@ -18,59 +18,71 @@ fn write_skill(root: &Path, dir: &str, yaml: &str) {
     fs::write(path.join("config.yaml"), yaml).expect("skill config");
 }
 
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "stands in for a loader, so it must have the loader's signature"
-)]
-fn ok_value() -> Result<Option<String>, ConfigError> {
-    Ok(Some("loaded".to_owned()))
-}
-
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "stands in for a loader, so it must have the loader's signature"
-)]
-fn absent() -> Result<Option<String>, ConfigError> {
-    Ok(None)
-}
-
-fn broken() -> Result<Option<String>, ConfigError> {
-    Err(ConfigError::Parse {
-        config_name: "navigation.yaml".to_owned(),
-        message: "unexpected key".to_owned(),
-    })
+fn write_web_config(services: &Path, file: &str, yaml: &str) {
+    let dir = services.join("web/config");
+    fs::create_dir_all(&dir).expect("web config dir");
+    fs::write(dir.join(file), yaml).expect("web config file");
 }
 
 #[test]
-fn a_successful_load_is_returned_and_then_memoised() {
-    static LOCK: OnceLock<Result<Option<String>, String>> = OnceLock::new();
+fn an_empty_services_tree_loads_every_section_as_absent() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let config = SiteConfig::load_from(temp.path());
+    assert!(config.branding.is_none());
+    assert!(config.navigation.is_none());
+    assert!(config.homepage.is_none());
+    assert!(config.skills_page.is_none());
+}
 
-    assert_eq!(
-        log_and_discard_err(&LOCK, ok_value, "test").as_deref(),
-        Some("loaded")
+#[test]
+fn a_broken_section_is_absent_while_its_siblings_load() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    write_web_config(
+        temp.path(),
+        "navigation.yaml",
+        "main: [oops
+",
     );
-    assert_eq!(
-        log_and_discard_err(&LOCK, broken, "test").as_deref(),
-        Some("loaded"),
-        "the memoised value must win over a second initialiser"
+    write_web_config(
+        temp.path(),
+        "theme.yaml",
+        "branding:
+  brand_name: Dynapps
+",
     );
+    write_skill(
+        &temp.path().join("skills"),
+        "good",
+        "id: good
+name: Good
+description: Loads.
+category: CRM
+",
+    );
+
+    let config = SiteConfig::load_from(temp.path());
+    assert!(config.navigation.is_none(), "unparseable YAML is absent");
+    assert!(config.branding.is_some(), "a sibling section still loads");
+    assert_eq!(config.skills_page.as_ref().map(|s| s.skills.len()), Some(1));
 }
 
 #[test]
-fn an_absent_config_is_none_without_being_an_error() {
-    static LOCK: OnceLock<Result<Option<String>, String>> = OnceLock::new();
-
-    assert!(log_and_discard_err(&LOCK, absent, "test").is_none());
-}
-
-#[test]
-fn a_failed_load_is_discarded_as_none_rather_than_panicking() {
-    static LOCK: OnceLock<Result<Option<String>, String>> = OnceLock::new();
-
-    assert!(log_and_discard_err(&LOCK, broken, "test").is_none());
+fn a_parse_failure_keeps_the_yaml_error_as_its_cause() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    write_web_config(
+        temp.path(),
+        "navigation.yaml",
+        "main: [oops
+",
+    );
+    let error =
+        systemprompt_web_site::config_loader::load_config_section(temp.path(), "navigation.yaml")
+            .expect_err("unparseable YAML is an error");
+    assert!(matches!(error, ConfigError::Parse { .. }));
     assert!(
-        log_and_discard_err(&LOCK, ok_value, "test").is_none(),
-        "a failure is cached too; the section stays absent for the process"
+        error
+            .source()
+            .is_some_and(<dyn Error>::is::<serde_yaml::Error>)
     );
 }
 

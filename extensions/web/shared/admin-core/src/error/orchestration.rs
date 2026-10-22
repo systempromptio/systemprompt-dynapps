@@ -10,7 +10,10 @@ impl From<systemprompt::system::managed::OrchestrationError> for AdminError {
             error @ (OrchestrationError::InventoryLoad(_)
             | OrchestrationError::CredentialsUnavailable(_)
             | OrchestrationError::CredentialUnresolved
-            | OrchestrationError::NotGitSource) => Self::Conflict(error.to_string()),
+            | OrchestrationError::NotGitSource) => Self::ConflictingState {
+                context: "managed source",
+                source: Box::new(error),
+            },
         }
     }
 }

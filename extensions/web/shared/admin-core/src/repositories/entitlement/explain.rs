@@ -185,7 +185,7 @@ pub async fn explain_for_user(
     user_id: &UserId,
     entity_type: &str,
     entity_id: &str,
-) -> Result<Option<Explanation>, sqlx::Error> {
+) -> Result<Option<Explanation>, crate::authz::AuthzReadError> {
     let Some(user) = super::matrix::find_user_for_matrix(pool, user_id).await? else {
         return Ok(None);
     };

@@ -133,7 +133,7 @@ impl MarketplaceAudience {
     }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug)]
 struct MembershipRow {
     user_id: UserId,
     roles: Vec<String>,
@@ -146,9 +146,11 @@ const AUDIENCE_CONCURRENCY: usize = 8;
 pub async fn get_marketplace_audience(
     pool: &PgPool,
     manifests: &[MarketplaceConfigSummary],
-) -> Result<MarketplaceAudience, sqlx::Error> {
-    let members = sqlx::query_as::<_, MembershipRow>(
-        "SELECT id AS user_id, roles FROM users WHERE NOT ('anonymous' = ANY(roles)) ORDER BY id",
+) -> Result<MarketplaceAudience, crate::authz::AuthzReadError> {
+    let members = sqlx::query_as!(
+        MembershipRow,
+        r#"SELECT id AS "user_id!: UserId", roles AS "roles!: Vec<String>"
+           FROM users WHERE NOT ('anonymous' = ANY(roles)) ORDER BY id"#
     )
     .fetch_all(pool)
     .await?;
@@ -184,7 +186,7 @@ pub async fn get_marketplace_audience(
 async fn gather_subjects(
     pool: &PgPool,
     members: Vec<MembershipRow>,
-) -> Result<Vec<MatrixSubject>, sqlx::Error> {
+) -> Result<Vec<MatrixSubject>, crate::authz::AuthzReadError> {
     let mut subjects = Vec::with_capacity(members.len());
     for chunk in members.chunks(AUDIENCE_CONCURRENCY) {
         let mut set = tokio::task::JoinSet::new();
@@ -195,7 +197,7 @@ async fn gather_subjects(
             set.spawn(async move { user_subject(&pool, &user_id, roles).await });
         }
         while let Some(joined) = set.join_next().await {
-            let subject = joined.map_err(|e| sqlx::Error::Protocol(e.to_string()))??;
+            let subject = joined??;
             subjects.push(subject);
         }
     }

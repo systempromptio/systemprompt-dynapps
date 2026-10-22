@@ -7,6 +7,7 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // are read, and the body was already verified as JSON by `response::body`.
 use serde_json::Value;
 use systemprompt::models::mcp::deployment::ConnectorIdentity;
+use systemprompt::models::net::validate_outbound_url;
 
 pub(super) async fn generic_identity(http: &reqwest::Client, grant: &mut Grant) -> AdminResult<()> {
     let wants_userinfo = grant
@@ -22,7 +23,7 @@ pub(super) async fn generic_identity(http: &reqwest::Client, grant: &mut Grant) 
     })?;
     let url = super::generic_discovery::trusted_endpoint(&grant.provider, endpoint)?;
     let response = http
-        .get(url)
+        .get(validate_outbound_url(url.as_str())?)
         .bearer_auth(&grant.access_token)
         .send()
         .await

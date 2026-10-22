@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use systemprompt::config::{AppPaths, ProfileBootstrap};
 use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::state::FarmState;
 
 use systemprompt::database::{Database, DbPool};
@@ -27,7 +28,7 @@ pub(crate) struct DbHandles {
 }
 
 impl DbHandles {
-    pub(crate) fn from_context(ctx: &dyn ExtensionContext) -> Option<Self> {
+    pub(crate) fn from_context(ctx: &dyn ExtensionContext, runs: Arc<RemoteRuns>) -> Option<Self> {
         let db_handle = ctx.database();
         let db = db_handle.as_any().downcast_ref::<Database>()?;
         let read = db.pool();
@@ -48,6 +49,7 @@ impl DbHandles {
             paths.as_ref(),
             Arc::clone(&files),
             ctx.instance_id(),
+            runs,
         );
         super::farm_public::start(&farm, paths.as_ref());
         Some(Self {

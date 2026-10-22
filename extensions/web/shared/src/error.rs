@@ -89,6 +89,9 @@ pub enum MarketplaceError {
     #[error("Services config error: {0}")]
     Services(#[from] systemprompt::loader::ConfigLoadError),
 
+    #[error("Identifier error: {0}")]
+    Identifier(#[from] systemprompt::identifiers::error::IdValidationError),
+
     #[error(transparent)]
     Infra(#[from] InfraError),
 }
@@ -132,13 +135,14 @@ impl ExtensionError for MarketplaceError {
             Self::ConfigFile { .. } => "CONFIG_FILE_ERROR",
             Self::Profile(_) => "PROFILE_ERROR",
             Self::Services(_) => "SERVICES_CONFIG_ERROR",
+            Self::Identifier(_) => "INVALID_IDENTIFIER",
             Self::Infra(e) => e.code(),
         }
     }
 
     fn status(&self) -> StatusCode {
         match self {
-            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::BadRequest(_) | Self::Identifier(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::Internal(_)

@@ -71,7 +71,7 @@ pub async fn filter_catalog_for_user(
     pool: &PgPool,
     user_id: &UserId,
     sections_in: Vec<SectionInput>,
-) -> Result<Option<UserMatrix>, sqlx::Error> {
+) -> Result<Option<UserMatrix>, crate::authz::AuthzReadError> {
     resolve_user_matrix(pool, user_id, sections_in).await
 }
 
@@ -79,7 +79,7 @@ pub async fn resolve_user_matrix(
     pool: &PgPool,
     user_id: &UserId,
     sections_in: Vec<SectionInput>,
-) -> Result<Option<UserMatrix>, sqlx::Error> {
+) -> Result<Option<UserMatrix>, crate::authz::AuthzReadError> {
     let Some(user) = find_user_for_matrix(pool, user_id).await? else {
         return Ok(None);
     };
@@ -92,7 +92,7 @@ pub(super) async fn resolve_sections_for(
     pool: &PgPool,
     subject: &MatrixSubject,
     sections_in: Vec<SectionInput>,
-) -> Result<Vec<MatrixSection>, sqlx::Error> {
+) -> Result<Vec<MatrixSection>, crate::authz::AuthzReadError> {
     if sections_in.is_empty() {
         return Ok(Vec::new());
     }
@@ -111,19 +111,19 @@ pub(super) struct ResolutionInputs {
     pub(super) chains: systemprompt::governance::authz::ParentChainIndex,
 }
 
-pub(super) async fn resolution_inputs(pool: &PgPool) -> Result<ResolutionInputs, sqlx::Error> {
+pub(super) async fn resolution_inputs(
+    pool: &PgPool,
+) -> Result<ResolutionInputs, crate::authz::AuthzReadError> {
     use systemprompt::governance::authz::{
         AccessControlRepository, ChainSources, ParentChainIndex,
     };
-    let services = systemprompt::loader::ServicesBootstrap::get()
-        .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
+    let services = systemprompt::loader::ServicesBootstrap::get()?;
     let repo = AccessControlRepository::from_pool(std::sync::Arc::new(pool.clone()));
     let chains = ParentChainIndex::load(
         &repo,
         std::sync::Arc::new(ChainSources::from_services(services)),
     )
-    .await
-    .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
+    .await?;
     Ok(ResolutionInputs {
         chains,
         rules: list_all_rules(pool).await?,
@@ -179,7 +179,7 @@ pub(super) fn sections_with(
 
 async fn load_entity_defaults(
     pool: &PgPool,
-) -> Result<HashMap<(String, String), bool>, sqlx::Error> {
+) -> Result<HashMap<(String, String), bool>, crate::authz::AuthzReadError> {
     let rows = sqlx::query!(
         r#"SELECT entity_type, entity_id, default_included
            FROM access_control_entities"#
@@ -196,7 +196,7 @@ async fn load_entity_defaults(
 pub(super) async fn find_user_for_matrix(
     pool: &PgPool,
     user_id: &UserId,
-) -> Result<Option<UserMatrixUser>, sqlx::Error> {
+) -> Result<Option<UserMatrixUser>, crate::authz::AuthzReadError> {
     let row = sqlx::query!(
         r#"SELECT u.id,
                   u.email,

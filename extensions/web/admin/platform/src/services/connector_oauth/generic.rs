@@ -12,6 +12,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use systemprompt::identifiers::ClientId;
+use systemprompt::models::net::validate_outbound_url;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 #[derive(Deserialize)]
@@ -180,7 +181,9 @@ async fn register_client(
             AdminError::Unavailable("Configure an OAuth client for this server".into())
         })?;
         let response = http
-            .post(trusted_endpoint(provider, endpoint)?)
+            .post(validate_outbound_url(
+                trusted_endpoint(provider, endpoint)?.as_str(),
+            )?)
             .json(&serde_json::json!({
                 "client_name": "Dynapps systemprompt", "redirect_uris": [callback],
                 "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"],

@@ -57,7 +57,7 @@ pub async fn get_participation(
     user_id: &UserId,
     group_ids: &[String],
     project_ids: &[String],
-) -> Result<Participation, sqlx::Error> {
+) -> Result<Participation, crate::authz::AuthzReadError> {
     if group_ids.is_empty() && project_ids.is_empty() {
         return Ok(Participation::default());
     }
@@ -118,7 +118,7 @@ async fn confirm_allowed(
     pool: &PgPool,
     user_id: &UserId,
     candidates: &BTreeSet<String>,
-) -> Result<BTreeSet<String>, sqlx::Error> {
+) -> Result<BTreeSet<String>, crate::authz::AuthzReadError> {
     let section: SectionInput = (
         MARKETPLACE_ENTITY.to_owned(),
         "Marketplaces".to_owned(),

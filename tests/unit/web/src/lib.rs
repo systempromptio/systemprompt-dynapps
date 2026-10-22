@@ -107,6 +107,8 @@ mod service_accounts_pages;
 #[cfg(test)]
 mod conversation_sort;
 #[cfg(test)]
+mod gates_outbound_urls;
+#[cfg(test)]
 mod gateway_policies_drift;
 #[cfg(test)]
 mod gateway_policies_form;
@@ -165,6 +167,8 @@ mod migration_cost;
 mod month_range;
 #[cfg(test)]
 mod observability_view;
+#[cfg(test)]
+mod outbound_url_guard;
 #[cfg(test)]
 mod overview;
 #[cfg(test)]
@@ -259,6 +263,8 @@ mod analytics_conversations_redact;
 mod asset_manifest;
 #[cfg(test)]
 mod audit_integrity_schema;
+#[cfg(test)]
+mod authz_caches;
 #[cfg(test)]
 mod authz_hook_mode;
 #[cfg(test)]

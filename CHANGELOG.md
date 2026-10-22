@@ -58,6 +58,50 @@ Conventions (strict — hold every entry to them):
 - Built on systemprompt-core 0.72.1 (`bridge/CORE_REF` is `v0.72.1`). The bridge fetches its profile with the member's own bearer, retries once with a freshly minted token when the gateway rejects a stale one, and writes OpenCode MCP entries with `oauth: false` so OpenCode does not probe bridge-owned servers.
 - `services/ai/providers.yaml`: `opencode-go-anthropic` sets `credential_from: opencode-go`, so a member's single OpenCode Go key serves the Anthropic-protocol models (go-minimax, qwen) as well as the Chat Completions ones; members are no longer asked for a second key.
 - The admin Member subscriptions page tells admins where members add their key (Dynapps app → Settings → Personal subscriptions).
+### Changed
+
+- **Every outbound HTTP destination passes core's SSRF guard.** Connector OAuth discovery,
+  registration, token and userinfo requests, the MCP verification probe, Entra ID discovery,
+  JWKS and token requests, the Fly Machines client, the farm worker's API base, the 1Password
+  Connect URL and the console's OTLP collector probe all go through
+  `systemprompt::models::net::validate_outbound_url`. Refusals are typed (`AdminError::OutboundUrl`,
+  `SsoProviderError::OutboundUrl`, `FarmError::OutboundUrl`, `OnePasswordError::ConnectUrl`,
+  `ProbeError::Url`) and keep core's `OutboundUrlError` as their cause. Plain `http` is accepted
+  only for loopback hosts and, for the OTLP probe and the farm worker, Fly's private `.internal`
+  names (`admin-core::util::outbound::validate_mesh_url`). New gate `scripts/check-outbound-urls.sh`
+  (in `lint-gates`) fails any file that sends a reqwest request without calling the guard.
+- **The at-rest master key is read from the secrets store only.** `secret_crypto::load_master_key`
+  reads `encryption_master_key` through `SecretsBootstrap` and decodes it with core's
+  `decode_master_key`; the `ENCRYPTION_MASTER_KEY` environment fallback and the connector
+  client-secret environment fallback are gone, and so are their `scripts/env-var-allowlist.txt`
+  entries. `SecretCryptoError` carries its causes (`InvalidKeyMaterial(SecretsBootstrapError)`,
+  `Database(sqlx::Error)`, the cipher errors) instead of rendered strings.
+- **Service state is owned and injected, never a process-wide static.** The public site's
+  `services/web/` sections load once into `SiteConfig`, owned by `WebExtension` and attached to
+  the router as an axum `Extension`; the blog config is loaded the same way (no `cached()`). The
+  credential-lifetime `SecurityPolicy` lives on `ManagedState` and reaches the device handlers
+  through it. The response secret scanner is built by core's scanner-registry factory from the
+  services root. The authorization caches (`AuthzCaches`) and the subject-attribute caches share
+  one per-database generation on the authz registry; `caches(pool).invalidate_all()` replaces the
+  process-wide counter. The Entra ID provider factory loads
+  `services/web/config/entra-oidc.yaml` itself, so `install_config` is gone. The agent farm's
+  in-flight remote runs and taken runner machines live on `RemoteRuns`, built once by the web
+  extension and shared by every `FarmState` in the process. New gate `scripts/lint-globals.sh`
+  (in `lint-gates`) fails a `OnceLock`/`LazyLock` that holds service state.
+- **Errors keep their causes.** `map_err(|e| e.to_string())`, `Result<_, String>` and
+  string-only variants built from another error's text are replaced by `thiserror` enums with
+  `#[source]`/`#[from]` across the admin crates (`DeclaredPoliciesError`, `DeclaredRoutesError`,
+  `RenderRoutesError`, `DeclaredChainError`, `GroupsDocError`, `RulesValidationError`,
+  `EntityRefParseError`, `HookValidationError`, `LaunchRefusal`, `RunAsError`,
+  `SecurityPolicyError`, `AuthzReadError`, `ProfilePathsError`, the site `ConfigError`).
+  `AdminError` gains `UnprocessableInput`, `ConflictingState` and `OutboundUrl`;
+  `MarketplaceError` gains `Identifier`. The services-relative content-source and blog-config
+  paths no longer fall back to `./services` when the profile is unavailable; the error is
+  reported. New gate `scripts/lint-stringly-errors.sh` (core's rules over this repo, in
+  `lint-gates`).
+- **`scripts/check-sqlx.sh` catches the turbofish spelling** (`sqlx::query_as::<_, T>(`); the two
+  runtime queries it missed, in the project detail page and the catalog inventory index, are now
+  compile-time macros with their offline cache entries.
 
 ## 0.72.0 — 2026-10-22
 
