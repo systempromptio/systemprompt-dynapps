@@ -20,12 +20,21 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **`scripts/check-claude-code-version.sh`.** Every tracked Dockerfile that installs Claude Code
+  pins it through one `ARG CLAUDE_CODE_VERSION` default, agreed across files; `@latest` and an
+  unpinned `install.sh | bash` fail the gate. It runs in `just lint-gates` and the CI static tier.
+
 ### Changed
 
 - **`scripts/check-core-ref.sh` proves the core patch is live.** With `[patch.crates-io]` active
   no tracked `Cargo.lock` may carry `[[patch.unused]]` and the root pin must equal the sibling
   core's workspace version; with the patch commented no `systemprompt*` crate may resolve from a
   `path+` or `git+` source.
+- **Claude Code is pinned in both images.** `Dockerfile` installs the native client with
+  `bash -s "${CLAUDE_CODE_VERSION}"` and `deploy/clean-client/Dockerfile` installs
+  `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}`; both default to 2.1.296.
 
 ## 0.72.0 — 2026-10-22
 

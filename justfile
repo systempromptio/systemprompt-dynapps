@@ -445,6 +445,7 @@ _lint-gates-uncoordinated:
         validate-services.sh
         check-gateway-routes.sh
         check-core-ref.sh
+        check-claude-code-version.sh
         check-schema-baseline.sh
         check-skill-cli-flags.sh
         coverage-badge.sh

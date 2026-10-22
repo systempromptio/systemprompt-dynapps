@@ -270,6 +270,8 @@ mod config_gateway_pure;
 #[cfg(test)]
 mod frontend_standards;
 #[cfg(test)]
+mod gates_check_claude_code_version;
+#[cfg(test)]
 mod gates_check_core_ref;
 #[cfg(test)]
 mod gateway_catalog_pure;

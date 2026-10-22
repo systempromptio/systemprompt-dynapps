@@ -170,8 +170,11 @@ RUN useradd --system --create-home --uid 10001 --shell /usr/sbin/nologin farm-ag
 
 USER app
 # Why: the agent farm spawns Claude Code (`claude`) for every run; the native
-# installer puts it under ~/.local/bin for the app user.
-RUN curl -fsSL https://claude.ai/install.sh | bash
+# installer puts it under ~/.local/bin for the app user. The version is pinned
+# so an image rebuild reproduces the client the run was tested against
+# (scripts/check-claude-code-version.sh keeps every Dockerfile on one value).
+ARG CLAUDE_CODE_VERSION=2.1.296
+RUN curl -fsSL https://claude.ai/install.sh | bash -s "${CLAUDE_CODE_VERSION}"
 EXPOSE 8080
 
 ENV HOST=0.0.0.0 \
