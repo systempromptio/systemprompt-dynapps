@@ -9,8 +9,8 @@
 # requirement). DeepSeek is a second live upstream for a cost comparison
 # against Claude: it is reachable only by asking for a deepseek-* id, and its
 # key is the `deepseek` secret in the profile secret stores. Adding another
-# provider also needs its secret, a gateway route (services/ai/gateway.yaml)
-# and an ai.providers entry (services/ai/config.yaml).
+# provider also needs its secret and a gateway route (services/ai/gateway.yaml);
+# it is declared here only, never restated under ai.providers.
 providers:
 - name: anthropic
   # Claude on Anthropic's own API, by the customer's API key. Every bare
