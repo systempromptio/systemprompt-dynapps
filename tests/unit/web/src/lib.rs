@@ -274,6 +274,10 @@ mod gates_check_claude_code_version;
 #[cfg(test)]
 mod gates_check_core_ref;
 #[cfg(test)]
+mod gates_check_gate_parity;
+#[cfg(test)]
+mod gates_lint_authoritative_reads;
+#[cfg(test)]
 mod gateway_catalog_pure;
 #[cfg(test)]
 mod governance_decision_view;
