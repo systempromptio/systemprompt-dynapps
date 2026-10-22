@@ -20,6 +20,7 @@ members = [
     "integration/admin-core",
     "integration/secrets",
     "integration/gateway",
+    "integration/harness",
     "integration/schema-upgrade",
     "contract/admin",
 ]
@@ -170,9 +171,9 @@ systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.71.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.71.0" }
-systemprompt-api = { version = "0.71.0" }
+systemprompt = { version = "0.72.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.72.0" }
+systemprompt-api = { version = "0.72.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -183,6 +184,10 @@ tokio-rustls = { version = "0.26", default-features = false, features = ["ring",
 tower = { version = "0.5", features = ["util"] }
 # Plain-HTTP client for suites that drive a local mock upstream.
 reqwest = { version = "0.13", default-features = false }
+# Mock upstream provider for the cross-harness gateway matrix.
+wiremock = "0.6"
+bytes = "1"
+futures-util = "0.3"
 
 # Template-rendering and error plumbing the migrated admin/front-end gates use.
 handlebars = "6"

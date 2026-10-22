@@ -9,10 +9,12 @@ workspace = true
 
 [dependencies]
 systemprompt-bridge = { path = "../../../../systemprompt-core/bin/bridge" }
-systemprompt-wire = { version = "0.71.0" }
-systemprompt-gateway = { version = "0.71.0" }
-systemprompt-manifest = { version = "0.71.0" }
-systemprompt-models = { version = "0.71.0" }
+bridge-models = { package = "systemprompt-models", path = "../../../../systemprompt-core/crates/shared/models" }
+bridge-identifiers = { package = "systemprompt-identifiers", path = "../../../../systemprompt-core/crates/shared/identifiers" }
+systemprompt-wire = { version = "0.72.0" }
+systemprompt-gateway = { version = "0.72.0" }
+systemprompt-manifest = { version = "0.72.0" }
+systemprompt-models = { version = "0.72.0" }
 axum.workspace = true
 tokio.workspace = true
 systemprompt-api.workspace = true
@@ -21,3 +23,6 @@ base64.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 temp-env = "0.3"
+wiremock.workspace = true
+reqwest = { workspace = true }
+rustls = { workspace = true }

@@ -20,6 +20,35 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.72.0 — 2026-10-22
+
+### Changed
+
+- **Built on systemprompt-core 0.72.0.** Every core pin (`Cargo.toml`, `tests/Cargo.toml`,
+  `tests/unit/bridge/Cargo.toml`) moves to 0.72.0. Core runs one turn-normalisation pass before
+  every upstream encoder (consecutive same-side turns merge, an unanswered `tool_use` gets a
+  synthetic error result), forwards an Anthropic passthrough history as sent only when every
+  `tool_use` is answered, gives OpenAI Chat clients thinking as `reasoning_content` with streamed
+  `tool_calls` indexed from 0, and counts cached tokens in `prompt_tokens`. The bridge resolves the
+  Cowork session by the deployment organization first and offers a picker when it is ambiguous,
+  and a manual update check bypasses the gateway's release cache
+  (`GET /v1/bridge/latest?refresh=true`).
+- **The bridge points OpenCode at its loopback proxy, never the gateway.** OpenCode 1.19
+  overrides `x-session-id`, which the gateway rejects, and only the proxy rewrites it; a proxy
+  that never started renders no `baseURL` rather than falling back to the gateway.
+
+### Added
+
+- **Cross-harness gateway matrix.** `tests/integration/harness` replays Claude Code, Claude
+  Desktop, OpenCode, Codex and Cursor requests, including 20 sanitised captures from the real
+  CLIs in `tests/fixtures/harness/captured`, through the inbound parsers and outbound adapters
+  of every catalogue provider, and checks tool-call pairing, headers and both the buffered and
+  streamed reply in each client format.
+- **Real-client smoke recipes.** `just smoke-harness-local` signs a throwaway `dynapps-bridge`
+  in with the run's PAT and drives Claude Code, OpenCode and Codex through its loopback proxy
+  (`CREDENTIAL=jwt|pat` keeps the direct lanes); the run's PAT is revoked and its sessions end
+  on exit. `just smoke-harness-live` runs the same smoke against a deployed gateway.
+
 ## 0.71.0 — 2026-10-21
 
 ### Breaking

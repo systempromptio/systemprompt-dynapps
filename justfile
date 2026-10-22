@@ -329,7 +329,18 @@ _test-integration-uncoordinated:
         echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
         exit 1
     fi
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-integration-tests) | package(web-integration-tests) | package(admin-db-core-tests) | package(admin-db-config-tests) | package(gateway-integration-tests) | package(schema-upgrade-tests)'
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-integration-tests) | package(web-integration-tests) | package(admin-db-core-tests) | package(admin-db-config-tests) | package(gateway-integration-tests) | package(harness-integration-tests) | package(schema-upgrade-tests)'
+
+# Opt-in live smoke for the cross-harness matrix: one parallel-tool-call round
+# trip per provider through a running gateway (GATEWAY_URL, GATEWAY_PAT). Spends
+# real tokens; never part of `just test` or CI.
+smoke-harness-live:
+    bash scripts/smoke-harness-live.sh
+
+# Real Claude Code / OpenCode / Codex sessions against the LOCAL gateway, each
+# switching models across every wire mid-session, in throwaway config homes.
+smoke-harness-local:
+    bash scripts/smoke-harness-local.sh
 
 # HTTP contract suite: drives every admin route under three principals and
 # diffs the result against tests/contract/admin/baseline.txt. Same throwaway-

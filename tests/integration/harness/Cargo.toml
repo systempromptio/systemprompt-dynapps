@@ -1,0 +1,22 @@
+[package]
+name = "harness-integration-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# The real gateway inbound parsers, outbound adapters and upstream resolver
+# (`systemprompt::gateway`, `systemprompt::ai`) — only `full` links them.
+systemprompt = { workspace = true, features = ["full"] }
+bytes = { workspace = true }
+futures-util = { workspace = true }
+rustls = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tokio = { workspace = true }
+# Stands in for every upstream provider, so the matrix captures the exact
+# bytes and headers each one would receive.
+wiremock = { workspace = true }
