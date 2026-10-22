@@ -38,6 +38,8 @@
 //! - the two front-end gates that used to be shell scripts and then in-crate
 //!   tests: admin template/CSS agreement and the textual front-end standards,
 //!   plus the asset-manifest check, all sharing `support`
+//! - fixture runs of the shell gates (`gates_*`): each over a throwaway git
+//!   tree with one passing and one failing sample, via `support::GateFixture`
 //! - the observability page's pure mapping of the profile's OTLP block and the
 //!   `otlp_export_state` rows into its view
 
@@ -267,6 +269,8 @@ mod authz_quota_subjects;
 mod config_gateway_pure;
 #[cfg(test)]
 mod frontend_standards;
+#[cfg(test)]
+mod gates_check_core_ref;
 #[cfg(test)]
 mod gateway_catalog_pure;
 #[cfg(test)]

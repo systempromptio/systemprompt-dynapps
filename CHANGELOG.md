@@ -20,6 +20,13 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Changed
+
+- **`scripts/check-core-ref.sh` proves the core patch is live.** With `[patch.crates-io]` active
+  no tracked `Cargo.lock` may carry `[[patch.unused]]` and the root pin must equal the sibling
+  core's workspace version; with the patch commented no `systemprompt*` crate may resolve from a
+  `path+` or `git+` source.
+
 ## 0.72.0 — 2026-10-22
 
 ### Changed
