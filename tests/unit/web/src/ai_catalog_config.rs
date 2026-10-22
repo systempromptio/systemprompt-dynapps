@@ -31,6 +31,8 @@ use systemprompt::manifest::services::{
 use systemprompt::identifiers::SecretName;
 use systemprompt::models::providers::ApiSurface;
 
+use systemprompt::loader::ConfigLoader;
+
 use crate::support::repo_root;
 
 const SERVED: [&str; 3] = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"];
@@ -352,5 +354,63 @@ fn deepseek_and_opencode_go_are_listed_to_opencode_but_not_to_claude_hosts() {
             !anthropic.iter().any(|m| m == id),
             "{id} must stay out of the Claude hosts"
         );
+    }
+}
+
+fn policy_provider_ids(config_yaml: &std::path::Path) -> (String, Vec<String>) {
+    let yaml = std::fs::read_to_string(config_yaml)
+        .unwrap_or_else(|e| panic!("reading {}: {e}", config_yaml.display()));
+    let root: serde_yaml::Value = serde_yaml::from_str(&yaml)
+        .unwrap_or_else(|e| panic!("parsing {}: {e}", config_yaml.display()));
+    let ai = root.get("ai").expect("ai: key");
+    let default = ai
+        .get("default_provider")
+        .and_then(serde_yaml::Value::as_str)
+        .expect("ai.default_provider")
+        .to_owned();
+    let ids = ai
+        .get("providers")
+        .and_then(serde_yaml::Value::as_mapping)
+        .map(|m| {
+            m.keys()
+                .filter_map(|k| k.as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default();
+    (default, ids)
+}
+
+// Why: core still requires `ai.default_provider` under `ai.providers`; any
+// other entry there restates a provider the catalog already declares.
+#[test]
+fn every_provider_is_declared_once() {
+    let services = ConfigLoader::load_from_path(&repo_root().join("services/config/config.yaml"))
+        .expect("services/ tree loads");
+    let mut names: Vec<&str> = services
+        .providers
+        .providers
+        .iter()
+        .map(|p| p.name.as_str())
+        .collect();
+    let total = names.len();
+    names.sort_unstable();
+    names.dedup();
+    assert_eq!(
+        names.len(),
+        total,
+        "a provider name repeats in providers.yaml"
+    );
+
+    let policies: Vec<&String> = services.ai.providers.keys().collect();
+    assert_eq!(
+        policies,
+        [&services.ai.default_provider],
+        "ai.providers may name only the default provider"
+    );
+    assert!(names.contains(&services.ai.default_provider.as_str()));
+
+    for tree in ["services", "deploy/loadtest/kind/services"] {
+        let (default, ids) = policy_provider_ids(&repo_root().join(tree).join("ai/config.yaml"));
+        assert_eq!(ids, [default], "{tree}/ai/config.yaml restates the catalog");
     }
 }
