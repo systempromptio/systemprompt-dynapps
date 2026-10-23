@@ -9,15 +9,6 @@ ignore = [
     # rsa crate Marvin Attack - no patch available yet, used transitively by oauth2/webauthn-rs
     # Tracked at: https://rustsec.org/advisories/RUSTSEC-2023-0071
     "RUSTSEC-2023-0071",
-    # proc-macro-error2 unmaintained - transitive via upstream macro crates, no
-    # runtime surface. Tracked at: https://rustsec.org/advisories/RUSTSEC-2026-0173
-    "RUSTSEC-2026-0173",
-    # quick-xml DoS advisories. In the bridge lockfile only via wayland-scanner,
-    # a build-time proc-macro parsing vendored protocol XML; never linked into
-    # the runtime binary. Fixed 0.41 is a breaking bump upstream — drop when
-    # wayland-scanner adopts it. Mirrored in .cargo/audit.toml.
-    "RUSTSEC-2026-0194",
-    "RUSTSEC-2026-0195",
 ]
 
 [licenses]

@@ -22,14 +22,6 @@ ignore = [
     # surface), or (c) wait for an upstream rsa fix. Until then the advisory is ignored
     # to keep CI green; this is a known accepted risk, not a clean bill of health.
     "RUSTSEC-2023-0071",
-    # RUSTSEC-2026-0173 — proc-macro-error2 is unmaintained.
-    #
-    # It is a build-time-only proc-macro dependency, pulled transitively by
-    # `tabled` (CLI table rendering) and `validator` (config validation). It is
-    # never linked into the runtime binary, so the unmaintained status carries
-    # no runtime security surface. Tracked — drop the ignore once `tabled` and
-    # `validator` move off it.
-    "RUSTSEC-2026-0173",
     # RUSTSEC-2026-0235 — rkyv 0.7 out-of-bounds read validating untrusted archives.
     #
     # rkyv appears in the lockfile only through rust_decimal's optional `rkyv`
@@ -38,14 +30,4 @@ ignore = [
     # 1.x line pins rkyv 0.7 (the patched 0.8.17 is a breaking bump upstream).
     # Drop the ignore when rust_decimal moves to rkyv 0.8.
     "RUSTSEC-2026-0235",
-    # RUSTSEC-2026-0194 / RUSTSEC-2026-0195 — quick-xml DoS via attacker-controlled XML.
-    #
-    # quick-xml 0.39 sits in the bridge lockfile only as a dependency of
-    # `wayland-scanner`, a build-time proc-macro that parses the vendored
-    # Wayland protocol XML during compilation (pulled via winit's Linux GUI
-    # stack). No attacker-controlled XML ever reaches it and it is not linked
-    # into the runtime binary. The fixed 0.41 is a breaking bump upstream —
-    # drop the ignores when wayland-scanner moves to it.
-    "RUSTSEC-2026-0194",
-    "RUSTSEC-2026-0195",
 ]

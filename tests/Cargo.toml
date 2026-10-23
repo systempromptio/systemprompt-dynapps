@@ -197,7 +197,7 @@ http-body-util = "0.1"
 # `test-util` gives `#[tokio::test(start_paused = true)]`, so a client that
 # backs off between retries is exercised without paying its backoff in wall
 # clock.
-tokio = { version = "1.49", features = ["rt-multi-thread", "macros", "test-util"] }
+tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "test-util"] }
 sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring-webpki", "postgres", "uuid", "chrono", "json"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 zeroize = "1"
@@ -216,10 +216,10 @@ zip = { version = "9", default-features = false, features = ["deflate"] }
 # trait the tests bring into scope is the one the MCP crates implement.
 rmcp = { version = "=3.5.1", features = ["server"] }
 uuid = { version = "1.28", features = ["v4"] }
-base64 = "0.22"
+base64 = "0.23"
 # Pinned to what `extensions/web/admin/catalog` uses for the share-token HMAC, so the
 # contract suite's expired-token forgery signs with the same primitive.
-sha2 = "0.10"
+sha2 = "0.11"
 # Pinned to the version core signs with, so the tokens this suite mints for the
 # hook audiences validate against core's own decoder.
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
