@@ -176,12 +176,12 @@ as described above.
 
 | `strategy` | First attempt |
 |---|---|
-| `ordered` (default) | The order in `deployments.yaml`. |
+| `ordered` (default) | The order in `deployments.yaml`, or the route's own `deployments:` list when it pins one. |
 | `weighted` | Drawn by each deployment's `weight` (default 1) among deployments whose circuit breaker is closed. The rest follow in descending weight. |
 | `least_busy` | The healthy deployment with the fewest requests in flight on this server process. |
 
-`weight` sits on each deployment entry.
-`weight: 0` is refused at load. A weight under `ordered` is ignored. A
+`weight` sits on each entry of the route's `deployments:` list
+(`{endpoint: provider/endpoint, weight: 3}`). `weight: 0` is refused at load. A weight under `ordered` is ignored. A
 non-ordered strategy adds `strategy:<name>` to the request's `route_match`,
 and `gateway_deployment_selected_total{route,provider,strategy}` counts every
 selection. This instance keeps the default `ordered`.
