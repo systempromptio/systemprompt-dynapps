@@ -3,15 +3,19 @@
 Everything an Dynapps operator must provide for Claude Code and OpenCode to
 work end to end.
 
-**This installation is Anthropic-only (customer requirement, 2026-10-16).**
-The one model secret is `anthropic`. The `vertex` and `gemini` providers are
-commented out of `services/ai/providers.yaml` and their secrets removed; the
-rest of this page describes them for a restore (uncomment the provider, set
-its secret, add a route).
- Each provider entry in
-[`services/ai/providers.yaml`](../../services/ai/providers.yaml) names the
-secret it reads its credential from; the profile secret store supplies the
-value per environment. The catalog is shipped in the image and is identical in
+**Claude on this installation is served only by the customer's Anthropic key
+(customer requirement).** The platform model secrets are `anthropic` and
+`deepseek`; OpenCode Go uses each member's own key, which is not a secret the
+operator provides. The `vertex` and `gemini` credentials are not declared and
+their secrets are removed; the rest of this page describes them for a restore
+(declare the credential, provider and endpoint, set its secret, add the
+deployments).
+
+Each platform credential in
+[`services/ai/credentials.yaml`](../../services/ai/credentials.yaml) names the
+secret it reads its key from, and each provider in `services/ai/providers.yaml`
+names its credential; the profile secret store supplies the value per
+environment. The catalog is shipped in the image and is identical in
 every environment — only the secrets differ.
 
 Credential issuing for the Google project is covered in more detail in
@@ -19,26 +23,30 @@ Credential issuing for the Google project is covered in more detail in
 
 ## The secrets
 
-| secret | provider entry | credential | unlocks |
+| secret | credential | providers | unlocks |
 |---|---|---|---|
-| `vertex` | `vertex`, `vertex-anthropic`, `vertex-maas`, `vertex-maas-us-central1` | Google service-account JSON | the three `claude-*` models (`claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`), the `vertex-gemini-*` models, and the open models (`zai.glm-5.2`, `deepseek.v3.2`, `moonshotai.kimi-k2-thinking`, `qwen.qwen3-coder-480b`, `openai.gpt-oss-120b` and the rest of `vertex-maas`) |
-| `anthropic` | `anthropic` | Anthropic API key | serves every `claude-*` request (Anthropic-only since 2026-10-14) |
-| `gemini` | `gemini` | Gemini API key | `gemini-3.8-flash` (the classifier job) |
+| `anthropic` | `anthropic` (platform) | `anthropic` | every `claude-*` model (`claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`) |
+| `deepseek` | `deepseek` (platform) | `deepseek` | `deepseek-v4-pro` (first deployment) and `deepseek-flash` |
+| none (per member) | `opencode-go` (personal) | `opencode-go` | the `go-*` models, and `deepseek-v4-pro`'s second deployment; see [OpenCode Go](../../services/content/documentation/opencode-go-subscription.md) |
+| `vertex` (not declared) | — | — | Claude, Gemini and the open models on Vertex AI, for a restore |
+| `gemini` (not declared) | — | — | `gemini-3.8-flash` on the public Gemini API, for a restore |
 
-One secret is the minimum: `anthropic` alone gives Claude Code and OpenCode a
-working default, since `gateway.yaml` sets `default_provider: anthropic` and
-`default_model: "claude-sonnet-5-5[1m]"` (Claude Code's 1M-context form of
-`claude-sonnet-5-5`; other hosts get the bare id). Every other secret adds models to the picker.
+One secret is the minimum: `anthropic` alone gives Claude Code a working
+default, since `gateway.yaml` sets `default_model: claude-sonnet-5-5`. Claude
+Code's 1M-context form (`claude-sonnet-5-5[1m]`) is derived from the model's
+`limits.context_window` and is never written in config. Every other secret
+adds models to the picker.
 
-A model whose provider has no secret is still advertised on `/v1/models` — that
-endpoint filters by API surface, not by credential — and fails at dispatch with
-`Gateway API key secret '<name>' not configured`. Advertise only what you have
-credentialed, or expect that error in the audit trail.
+A model whose credential has no key is still advertised on `/v1/models` — that
+endpoint filters by the model's `clients:`, not by credential — and fails at
+dispatch naming the missing secret. A missing key is health state, never a
+change to the catalog. Advertise only what you have credentialed, or expect
+that error in the audit trail.
 
 ### Gemini: API key or Vertex, not both interchangeably
 
-`gemini` and `vertex` are two entries for the same Google models, differing in
-credential and endpoint.
+`gemini` and `vertex` are two credentials for the same Google models, each
+with its own provider and endpoint.
 
 - The **public endpoint** (`generativelanguage.googleapis.com`) takes an API key
   on `x-goog-api-key`. That is the `gemini` secret. Nothing else is needed.
@@ -46,15 +54,13 @@ credential and endpoint.
   `CREDENTIALS_MISSING`. It wants an OAuth access token asserting a principal.
   That is the `vertex` secret.
 
-The model ids are prefixed on the Vertex entry (`vertex-gemini-3.8-flash`) because
-a model id must be unique across the whole catalog: `ProviderRegistry::validate`
-hoists its `seen_models` set outside the per-provider loop, so two entries both
-claiming `gemini-3.8-flash` fail at boot with `DuplicateModel`. Credential and
-endpoint therefore travel together per entry.
+A model is declared once in `models.yaml`, so `gemini-3.8-flash` served both
+ways is one model with two deployments (`gemini/api` and a `vertex` endpoint),
+in failover order.
 
 ## The Google service account
 
-Every Vertex provider reads the one `vertex` secret: a service-account JSON key
+Every Vertex endpoint uses the one `vertex` credential: a service-account JSON key
 with `roles/aiplatform.user` on the Google project. Store the whole document
 verbatim as the secret value. There is no separate `vertex_maas` secret.
 
@@ -73,7 +79,7 @@ such a document is sent verbatim as an API key, exactly as before.
 
 ### The project id comes from the service account, never the catalog
 
-Every Vertex endpoint in `providers.yaml` is project-scoped and written with a
+Every Vertex endpoint URL in `providers.yaml` is project-scoped and written with a
 `{project}` segment. The gateway fills it from the `project_id` field of the
 service-account key in the secret, so swapping the secret for another
 customer's re-targets the endpoint with it and nothing in `services/` names a
@@ -107,8 +113,8 @@ restart, not immediately.
 ## Verifying
 
 **The catalog, unauthenticated.** `/v1/models` carries no auth layer, so this
-needs no credential and proves only that the catalog loaded and the surface
-filter works:
+needs no credential and proves only that the catalog loaded and the
+`clients:` filter works:
 
 ```bash
 curl -sS localhost:8080/v1/models | jq -r '.data[].id'
@@ -128,7 +134,7 @@ SID=$(curl -sS -X POST localhost:8080/api/public/gateway/sessions \
 curl -sS -X POST localhost:8080/v1/messages \
   -H "Authorization: Bearer $PAT" -H "x-session-id: $SID" \
   -H 'content-type: application/json' -d '{
-    "model":"vertex-gemini-3.8-flash","max_tokens":64,
+    "model":"claude-haiku-5-5","max_tokens":64,
     "messages":[{"role":"user","content":"ping"}]}' | jq '{stop:.stop_reason, usage}'
 ```
 
@@ -147,8 +153,8 @@ systemprompt infra logs request list --limit 5
 Nothing changes on the developer's machine. The bridge install points Claude
 Code at the gateway and enables gateway model discovery, so every credentialed
 model appears in the `/model` picker beside the Claude models. OpenCode reads
-the same catalog. A request names the catalog id (`qwen.qwen3-coder-480b`,
-`vertex-gemini-3.8-flash`, `gemini-3.8-flash`), the gateway routes it by the
-patterns in [`services/ai/gateway.yaml`](../../services/ai/gateway.yaml),
+the same catalog. A request names the catalog id (`claude-sonnet-5-5`, `deepseek-v4-pro`,
+`go-kimi-k3`), the gateway sends it down that model's deployments in
+[`services/ai/deployments.yaml`](../../services/ai/deployments.yaml),
 rewrites it to the upstream name where `upstream_model` differs, and audits the
 call.

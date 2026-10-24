@@ -121,27 +121,31 @@ route's per-scope chain (see
 
 ## Models
 
-The catalog (`services/ai/providers.yaml`) and the routes
-(`services/ai/gateway.yaml`) ship in the image. A request is dispatched only
-if its `model` matches a route pattern or is declared in the catalog. The
-gateway runs with `allow_unlisted_models: false`, so nothing else is
-forwarded, whether or not a `default_provider` is set.
+The AI catalog ships in the image as five files under `services/ai/`:
+`credentials.yaml` (who authenticates and who pays), `providers.yaml`
+(vendor accounts and their endpoints, one wire and one URL each),
+`models.yaml` (each model once, with its limits, price and the `clients:`
+that list it), `deployments.yaml` (which endpoints serve each model, in
+failover order) and `gateway.yaml` (the one `default_model` and the policy
+routes). A request is dispatched only if its `model` is a declared model or
+a route alias; nothing else is forwarded.
 
-| Family | Ids a client can request |
-|---|---|
-| Claude (Anthropic's API, by key) | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` |
+| Family | Ids a client can request | Served by |
+|---|---|---|
+| Claude | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` | Anthropic's API, platform key |
+| DeepSeek | `deepseek-v4-pro`, `deepseek-flash` | DeepSeek's API, platform key (`deepseek-v4-pro` fails over to OpenCode Go) |
+| OpenCode Go | `go-*` (and `go-deepseek-v4-pro`, an alias of `deepseek-v4-pro` pinned to OpenCode Go) | OpenCode Go, the member's own key; see [OpenCode Go](/documentation/opencode-go-subscription) |
 
-This installation is Anthropic-only: Gemini, Vertex AI and the open models
+Claude is served only by the customer's Anthropic key. Gemini and Vertex AI
 are not served.
 
-`GET /v1/models` is the authoritative list for a running instance. The
-Claude 4.x and 5.0 ids and other retired dated ids are no longer
-declared and are refused.
+`GET /v1/models` is the authoritative list for a running instance. Retired
+ids are not declared and are refused.
 
-`gateway.default_model` (`claude-sonnet-5-5[1m]`) is the default the bridge
-hands to Claude Code. A request is not rerouted to it. The `[1m]` suffix is
-Claude Code's 1M-context marker, which the gateway accepts on any model and
-strips before routing.
+`gateway.default_model` (`claude-sonnet-5-5`) is the default the bridge
+hands to Claude Code. A request is not rerouted to it. Claude Code's `[1m]`
+1M-context marker is never written in config: the bridge derives it from the
+model's `limits.context_window`, and the gateway strips it before routing.
 
 ## Status codes before the upstream call
 

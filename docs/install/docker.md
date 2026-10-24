@@ -85,7 +85,14 @@ fails at "Running database migrations..." with `Profile initialization
 failed ... still carries a top-level providers: section`. Fix it before
 restarting: open the mounted `profile.yaml`, delete the entire `providers:`
 block (and `gateway:` if present), and restart — there's nothing to move
-those settings to, the catalog now ships baked into the image.
+those settings to, the catalog ships baked into the image.
+
+**The AI catalog is five files** in the image: `services/ai/credentials.yaml`,
+`providers.yaml`, `models.yaml`, `deployments.yaml` and `gateway.yaml`. After
+an upgrade, run `systemprompt admin config migrate` and the database
+migrations, then `systemprompt admin config apply --reason "<why>"`. Boot does
+not seed any plane: governance, gateway policies and access control are
+enforced only once `config apply` has written them.
 
 ### Changing configuration between releases
 

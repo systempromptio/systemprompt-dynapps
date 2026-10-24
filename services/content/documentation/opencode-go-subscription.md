@@ -48,17 +48,19 @@ The gateway tests the key before saving it and rejects one that OpenCode Go refu
 
 ## 3. Pick a go-* model
 
-After the profile refresh, OpenCode lists the Go models with a `go-` prefix. The prefix keeps them separate from the organization's own `deepseek-*` route, which uses the platform key.
+After the profile refresh, OpenCode lists the Go models. OpenCode Go is one provider, `opencode-go`, with two endpoints: `chat` (Chat Completions) and `messages` (Anthropic Messages). Both use the one key you stored, so you add it once.
 
 | Model id | Upstream model | Endpoint |
 |----------|----------------|----------|
 | `go-glm-5.3` | `glm-5.3` | Chat Completions |
 | `go-kimi-k3` | `kimi-k3` | Chat Completions |
-| `go-deepseek-v4-pro` | `deepseek-v4-pro` | Chat Completions |
+| `go-deepseek-v4-pro` | `deepseek-v4-pro` | Chat Completions (alias, see below) |
 | `go-deepseek-v4.1-flash` | `deepseek-v4.1-flash` | Chat Completions |
 | `go-mimo-v2.6-pro`, `go-mimo-v2.6-flash` | `mimo-v2.6-*` | Chat Completions |
 | `go-minimax-m3` | `minimax-m3` | Anthropic Messages |
 | `go-qwen3.8-max`, `go-qwen3.8-flash` | `qwen3.8-*` | Anthropic Messages |
+
+`deepseek-v4-pro` is one model with two deployments: DeepSeek's own API on the organization's key first, then OpenCode Go's chat endpoint. Failover never moves a request from the organization's key to yours. `go-deepseek-v4-pro` is an alias of `deepseek-v4-pro` pinned to OpenCode Go, so asking for it always uses your Go key.
 
 Pick one in OpenCode and send a prompt. If you have not added a key, the gateway refuses `go-*` requests with a 403 telling you to add one.
 

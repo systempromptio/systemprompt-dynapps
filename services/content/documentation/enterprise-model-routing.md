@@ -16,7 +16,7 @@ after_reading_this:
   - "Know which residency and no-retain requirements are declared (none today) and how to add one"
   - "Read latency against an SLO threshold on the analytics dashboard"
   - "Add a private or self-hosted endpoint as a configuration entry"
-  - "Name a fallback provider on a route and read a failover back off the audit row"
+  - "Declare a second deployment for a model and read a failover back off the audit row"
 related_docs:
   - title: "Cost Management, Budgets & FinOps"
     url: "/documentation/enterprise-cost-management"
@@ -30,13 +30,13 @@ related_docs:
 
 **TL;DR:** Configured clients send AI traffic through one provider-neutral
 gateway, on `/v1/messages` (Anthropic Messages), `/v1/chat/completions`
-(OpenAI Chat) and `/v1/responses` (OpenAI Responses). Routes map a requested
-model pattern onto a provider. **Claude is served from Anthropic's own API,
-the only upstream on this instance**, and every request records which provider
-actually answered. A model that no route or catalog entry names is refused.
-Every route is currently open to every signed-in role. The residency and
-no-retain requirements are a working mechanism, but no route declares one
-today.
+(OpenAI Chat) and `/v1/responses` (OpenAI Responses). Each model is declared
+once and served by an ordered list of deployments, which is both its routing
+and its failover. **Claude is served only from Anthropic's own API**, on the
+customer's key, and every request records which endpoint actually answered.
+A model that is neither declared nor a route alias is refused. Every route is
+open to every signed-in role. The residency and no-retain requirements are a
+working mechanism, but no route declares one.
 
 ## One gateway, any provider
 
@@ -49,27 +49,36 @@ that provider's own format:
 | `POST /v1/chat/completions` | OpenAI Chat Completions | OpenCode, OpenAI-compatible tools |
 | `POST /v1/responses` | OpenAI Responses | Responses-API clients |
 
-The gateway speaks three upstream formats (`anthropic`, `gemini` and
-`openai-chat`), but this instance declares one live provider, `anthropic`,
-by customer requirement since 2026-10-16. A route matches on
-model pattern, and **first match wins**. A route can rewrite the model with
-`upstream_model`, so the backend can change without any change to the
-client. Request and wire details are in the [Gateway API](/documentation/gateway-api).
+The AI catalog is five files under `services/ai/`, each with one job:
+
+| File | Declares |
+|---|---|
+| `credentials.yaml` | who authenticates and who pays: `platform` (a profile secret) or `personal` (each member stores their own key) |
+| `providers.yaml` | the vendor account (headers, user agent, governance) and its `endpoints:`, each one wire (`anthropic`, `openai-chat`, `gemini`) plus one URL |
+| `models.yaml` | each model once: capabilities, limits, base price, `upstream_model`, and the `clients:` families that list it (`clients: []` is never advertised) |
+| `deployments.yaml` | model to ordered endpoints (`provider/endpoint`); order is failover order |
+| `gateway.yaml` | the one `default_model`, and routes that are policy only: alias, pin or narrow, each with a declared id |
+
+Dispatch resolves model, then deployment, then endpoint, then provider, then
+credential, with no pattern matching. Request and wire details are in the
+[Gateway API](/documentation/gateway-api).
 
 ## What this instance serves
 
-The catalog (`services/ai/providers.yaml`) and the routes
-(`services/ai/gateway.yaml`) ship inside the image, so every environment
-boots the same set.
+The catalog ships inside the image, so every environment boots the same set.
 
-| Requested id | Provider | Models |
+| Model | Deployments, in order | Credential |
 |---|---|---|
-| `claude-*` | `anthropic` (Anthropic's API, by key; Anthropic-only since 2026-10-14) | Opus 5.5, Sonnet 5.5, Haiku 5.5 |
+| `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` | `anthropic/api` | `anthropic` (platform) |
+| `deepseek-v4-pro` | `deepseek/api`, then `opencode-go/chat` | `deepseek` (platform), then `opencode-go` (personal) |
+| `deepseek-flash` | `deepseek/api` | `deepseek` (platform) |
+| `go-*` | `opencode-go/chat` or `opencode-go/messages` | `opencode-go` (personal) |
 
-Only the customer's Anthropic API key is used. The Gemini, Vertex AI and
-Cerebras providers are kept commented out in `services/ai/providers.yaml`
-and their secrets are removed; restoring one means uncommenting it, adding
-its secret, and adding a route.
+Claude is served only by the customer's Anthropic API key. Claude hosts list
+the `claude-*` models; OpenCode lists DeepSeek and the Go models. The one
+route, `go-deepseek-v4-pro`, is an alias for `deepseek-v4-pro` pinned to
+`opencode-go/chat`, so a member can ask for DeepSeek V4 Pro on their own Go
+key. Failover never crosses from a platform key to a member's key.
 
 The Claude models, at Anthropic's rates:
 
@@ -79,48 +88,44 @@ The Claude models, at Anthropic's rates:
 | `claude-sonnet-5-5` | $2.00 / $10.00 | 1M | 128k |
 | `claude-haiku-5-5` | $0.10 / $0.50 (≤100K prompt; $0.50 / $2.50 beyond) | 1M | 128k |
 
-`gateway.default_model` is `claude-sonnet-5-5[1m]`. The `[1m]` suffix is Claude
-Code's 1M-context marker: the bridge seeds it into Claude Code, and the
+`gateway.default_model` is `claude-sonnet-5-5`. Claude Code's `[1m]`
+1M-context marker is never written in config: the bridge derives it from the
+model's `limits.context_window` and seeds it into Claude Code, and the
 gateway strips it before routing, so the request reaches Anthropic as
 `claude-sonnet-5-5`. Without the marker, Claude Code budgets 200k for every
-gateway model. Only the latest Claude models are declared; Claude 4.x and the
-5.0 models were removed on 2026-10-14. With `allow_unlisted_models: false`, a request for a
-retired id is refused rather than forwarded.
+gateway model. Only the latest Claude models are declared, and a request for
+a retired id is refused rather than forwarded.
 
 ## Provider failover
 
-A route may list **`fallbacks`**: deployments tried in order after the
-primary, each a `provider` and optionally an `upstream_model` when that
-deployment's model id differs. The shipped `claude-*` route has **no**
-fallback: Anthropic's API is the only upstream. The following is an
-**illustration** of a chain with a second deployment declared:
+A model's entry in `deployments.yaml` is its failover chain: the first
+endpoint is tried first, and the rest follow in order. Each entry is either
+`provider/endpoint` or an object with `endpoint:` plus an optional
+`upstream_model` and `pricing` override for that deployment. The shipped
+Claude models have **one** deployment each: Anthropic's API is their only
+upstream. `deepseek-v4-pro` has two:
+
+```yaml
+deployments:
+  deepseek-v4-pro:
+  - deepseek/api
+  - endpoint: opencode-go/chat
+    pricing:
+      cache_read_per_million: 0.132
+```
+
+**Per-project chains.** A route with a `when:` scope narrows the
+deployments for requests attributed to that scope, for example a project's
+own endpoint. The following is an **illustration**, not the shipped
+configuration:
 
 ```yaml
 gateway:
   routes:
-  - model_pattern: claude-*
-    provider: anthropic
-    fallbacks:
-    - provider: anthropic-secondary
-```
-
-The older `fallback_provider` / `fallback_upstream_model` keys are refused at
-boot; move them into a one-entry `fallbacks` list.
-
-**Per-project chains.** `by_scope` gives requests attributed to a value in
-one scope dimension their own chain, for example a project's own provider
-deployment. A value the route does not list is refused unless
-`unmapped: shared` sends it down the route's own chain:
-
-```yaml
-    by_scope:
-      dimension: project
-      unmapped: shared
-      chains:
-        odoo-delivery:
-          provider: anthropic
-          fallbacks:
-          - provider: anthropic-secondary
+  - id: project-odoo-delivery
+    when: { scope: { project: odoo-delivery } }
+    models: claude-*
+    deployments: [anthropic/api]
 ```
 
 The project is the one the gateway attributed the request to: the
@@ -151,40 +156,41 @@ the route-match descriptor gains a `failover:<primary>-><fallback>` segment.
 
 | `route_match` contains | Meaning |
 |---|---|
-| `failover:anthropic->anthropic-secondary` | the primary failed and the next deployment answered (`a->b->c` for a longer chain) |
-| `scope:project=<id>` | the request was attributed to that project and served by its `by_scope` chain (or the shared chain under `unmapped: shared`) |
+| `failover:deepseek->opencode-go` | the primary failed and the next deployment answered (`a->b->c` for a longer chain) |
+| `scope:project=<id>` | the request was attributed to that project and served by a route scoped to it |
  The Prometheus
 counter **`gateway_upstream_failovers_total{from,to,reason}`** (`reason` is
 `status_<code>`, `transport` or `circuit_open`) is on `/metrics`.
 
-**What boot checks.** The fallback must exist, differ from the primary, serve
-a priced model, and satisfy the route's `requires:` block. If a fallback
+**What boot checks.** Every deployment must name a declared endpoint, appear
+once in its model's list, and satisfy any `requires:` block on a route that
+serves the model. If a fallback
 cannot be used at request time, the client gets the primary's own error, as
 it would with no fallback declared.
 
 ### Selection strategy
 
-A route, and each `by_scope` chain, can set `strategy` to choose which
+A route can set `strategy` to choose which
 deployment a request tries first. Failover after that first attempt works
 as described above.
 
 | `strategy` | First attempt |
 |---|---|
-| `ordered` (default) | The chain order: `provider`, then `fallbacks`. |
+| `ordered` (default) | The order in `deployments.yaml`. |
 | `weighted` | Drawn by each deployment's `weight` (default 1) among deployments whose circuit breaker is closed. The rest follow in descending weight. |
 | `least_busy` | The healthy deployment with the fewest requests in flight on this server process. |
 
-`weight` sits on the route for the primary and on each `fallbacks` entry.
+`weight` sits on each deployment entry.
 `weight: 0` is refused at load. A weight under `ordered` is ignored. A
 non-ordered strategy adds `strategy:<name>` to the request's `route_match`,
 and `gateway_deployment_selected_total{route,provider,strategy}` counts every
-selection. This instance's routes keep the default `ordered`.
+selection. This instance keeps the default `ordered`.
 
 ### Context-window check
 
 Before any upstream call, the gateway estimates the request's input tokens
 from its text and compares the estimate with the selected model's
-`context_window` in the provider catalog. Images and tool inputs are not
+`limits.context_window` in `models.yaml`. Images and tool inputs are not
 counted, so the estimate errs low and never refuses a request that fits.
 
 - **It fits.** The request is sent as normal. Failover deployments whose
@@ -210,20 +216,20 @@ request for a route the caller is not entitled to gets **HTTP 403**
 
 **As configured, every route is open to every signed-in role.** Usage is
 shaped by governance and quota windows, not by entitlement. To restrict a
-model, declare a rule for its route with an allow band and a reason. Route
-ids are generated (`slug + fnv1a6`), so the console names each route by the
-`name:` its declaration carries.
+model, declare a rule for its route with an allow band and a reason. A
+route's id is declared in `gateway.yaml` (for example `go-deepseek-v4-pro`),
+and the console shows its `label:`.
 
 `/admin/gateway` has four tabs: **Overview** (dispatch order and provider
-health), **Providers** (each upstream with its models and routes),
+health), **Providers** (each provider with its endpoints, models and deployments),
 **Routes** (the ordered dispatch table) and **Settings**. **Policies** is a
 fifth tab that opens its own page. The route editor there writes back to
 `gateway.yaml`, and a saved route is dispatched after the next restart.
 
 ## Shadow-AI posture
 
-The gateway runs with **`allow_unlisted_models: false`**, so a model that is
-not configured cannot be called by anyone. Traffic that never reaches the
+The gateway forwards only declared models and route aliases, so a model that
+is not configured cannot be called by anyone. Traffic that never reaches the
 gateway, such as someone calling a provider directly from a laptop, is a
 network-control matter for corporate IT. The usual control is an egress
 allow-list that lets only the gateway reach provider APIs.
@@ -247,8 +253,8 @@ They record breaches and never refuse. See
 
 A private endpoint that speaks the OpenAI or Anthropic format is **a
 configuration entry, not a code change**. A provider declared with the
-`backend` surface serves routes without appearing in any model list, and
-every route is validated at boot. **None is configured on this instance.**
+model declared with `clients: []` is served without appearing in any model
+list, and every deployment is validated at boot. **None is configured on this instance.**
 
 ## Data classification & residency
 
@@ -261,8 +267,8 @@ states what it requires with a **`requires:`** block. The following is an
 ```yaml
 gateway:
   routes:
-  - model_pattern: claude-*
-    provider: anthropic
+  - id: claude-no-retain
+    models: claude-*
     requires:
       no_retain: true
 ```
