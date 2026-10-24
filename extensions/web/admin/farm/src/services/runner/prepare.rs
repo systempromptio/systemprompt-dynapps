@@ -29,7 +29,7 @@ use std::collections::BTreeMap;
 
 use systemprompt::agent_runs::{HostKind, McpServerSpec, PermissionMode, RunLayout, RunRequest};
 use systemprompt::identifiers::{AgentRunId, ScopeDimension};
-use systemprompt::models::attribution::ScopeBinding;
+use systemprompt::models::attribution::{ScopeBinding, TrafficClass};
 use walkdir::WalkDir;
 
 pub use super::identity::{RunAsClient, RunAsSetting, credential_user, effective_mode};
@@ -131,6 +131,8 @@ pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
     };
     Ok(RunRequest {
         host,
+        harness: None,
+        traffic: TrafficClass::Production,
         prompt,
         system_prompt_append: None,
         persona: (!agent.body.trim().is_empty()).then(|| agent.body.clone()),

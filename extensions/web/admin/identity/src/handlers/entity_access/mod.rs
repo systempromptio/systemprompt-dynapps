@@ -22,13 +22,14 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
-use systemprompt::governance::authz::{DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams};
+use systemprompt::governance::authz::{EntityRef, RuleType, UpsertRuleParams};
 use systemprompt::identifiers::RuleId;
 
 use systemprompt_web_admin_core::activity::RuleChange;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::gateway_catalog::registered_routes_from_services;
 use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::change_source::console_source;
 
 use support::{
     parse_access, parse_subject, record_change, repo, rule_subject, validate_entity_type,
@@ -106,7 +107,7 @@ pub(crate) async fn upsert_entity_rule_handler(
             rule_value: &rule_value,
             access,
             justification,
-            source: DASHBOARD_SOURCE,
+            source: &console_source(&user_ctx.user_id),
         })
         .await
         .map_err(AdminError::internal)?;
@@ -176,6 +177,7 @@ pub(crate) async fn delete_entity_rule_handler(
 
 pub(crate) async fn set_entity_default_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
     Path((entity_type, entity_id)): Path<(String, String)>,
     Json(body): Json<DefaultIncludedBody>,
 ) -> AdminResult<Response> {
@@ -188,7 +190,7 @@ pub(crate) async fn set_entity_default_handler(
             entity.kind(),
             entity.id_str(),
             body.default_included,
-            "admin:dashboard",
+            &console_source(&user_ctx.user_id),
         )
         .await
         .map_err(AdminError::internal)?;

@@ -23,6 +23,8 @@ use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt::traits::ConfigWatch;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
@@ -43,6 +45,7 @@ pub struct SystempromptServer {
     db_pool: DbPool,
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
+    services: ConfigWatch<ServicesConfig>,
     artifact_ingest: Arc<ArtifactIngest>,
 }
 
@@ -51,6 +54,7 @@ impl SystempromptServer {
         db_pool: DbPool,
         service_id: McpServerId,
         authz_hook: SharedAuthzHook,
+        services: ConfigWatch<ServicesConfig>,
         artifact_ingest: Arc<ArtifactIngest>,
     ) -> Self {
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
@@ -67,6 +71,7 @@ impl SystempromptServer {
             db_pool,
             executor,
             authz_hook,
+            services,
             artifact_ingest,
         }
     }
@@ -151,6 +156,7 @@ impl ServerHandler for SystempromptServer {
             &self.service_id,
             &ctx,
             &self.authz_hook,
+            &self.services.get(),
         )
         .await?;
 

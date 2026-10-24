@@ -1,7 +1,9 @@
-//! Gateway route configuration backed by the profile YAML.
+//! Gateway route configuration backed by `services/ai/gateway.yaml`, and the
+//! route and provider views every console page reads from the resolved AI
+//! catalog.
 //!
-//! The gateway config is not a Postgres table: it lives in the profile YAML's
-//! `gateway` block, which is why it sits here. These functions read, mutate,
+//! The gateway config is not a Postgres table: it lives in the services
+//! tree's `gateway` block, which is why it sits here. These functions read, mutate,
 //! and re-serialize that block. Reads never write, and a write touches the
 //! edited field only: the file is an operator's, comments and all.
 
@@ -13,9 +15,10 @@ mod routes;
 mod yaml_io;
 
 pub use catalog::{
-    client_facing_routes, client_facing_routes_from_services, dispatchable_route_ids,
-    dispatchable_routes, dispatchable_routes_from_services, registered_routes,
-    registered_routes_from_services, retain_client_facing,
+    CATALOG_ROUTE_LABEL, client_facing_routes, client_facing_routes_from_services,
+    dispatchable_route_ids, dispatchable_routes, dispatchable_routes_from_services,
+    registered_routes, registered_routes_from_services, resolved_catalog, retain_client_facing,
+    route_reaches,
 };
 pub use config::{get_gateway_config, update_gateway_settings};
 pub use labels::{
@@ -30,4 +33,4 @@ pub use routes::{
     create_route, delete_route, normalise_metadata, reorder_routes, replace_routes, update_route,
     validate_route,
 };
-pub use yaml_io::{fallbacks_from_yaml, read_gateway_file, route_from_yaml, route_to_yaml};
+pub use yaml_io::{read_gateway_file, route_from_yaml, route_to_yaml, route_view};

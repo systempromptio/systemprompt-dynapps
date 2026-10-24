@@ -2,18 +2,15 @@
 -- them: two planes whose runtime input is still a file core reads at boot.
 --
 -- `gateway_routes` is the declared `gateway.routes:` sequence of
--- services/ai/gateway.yaml, one row per route in dispatch order. Core boots
--- `GatewayConfigSpec` from that file and never reads this table; the
--- extension regenerates the file's `routes:` sequence from these rows after
--- every console write and every sync apply, so a row edited here is what
--- the next restart dispatches. `source` says who wrote the row: `code` for
--- the seed and every sync apply, `dashboard` for the /admin/gateway editor.
--- `explicit_id` records whether the declaration carried an `id:` key, so the
--- regenerated file omits an id the loader would synthesise identically.
--- `fallbacks` is the route's ordered failover chain and `by_scope` its
--- per-scope chains, both stored as declared (core validates them at boot).
--- `routing` holds the route-level `strategy`, `weight` and
--- `context_fallbacks` as declared; NULL when the route sets none.
+-- services/ai/gateway.yaml, one row per policy route in file order. Core
+-- loads the routes from that file and never reads this table; the extension
+-- regenerates the file's `routes:` sequence from these rows after every
+-- console write and every sync apply. `route` is the route as core
+-- serialises a `GatewayRoute` (id, label, models, when, requires,
+-- deployments, strategy, context_fallbacks, alias), so a block the console
+-- does not edit round-trips unchanged. `source` says who wrote the row:
+-- `code` for the seed and every sync apply, `dashboard` for the
+-- /admin/gateway editor.
 --
 -- `governance_chain` stages services/governance/config.yaml: one row per
 -- policy in chain order with its raw entry. Core builds the chain from the
@@ -24,19 +21,7 @@
 CREATE TABLE IF NOT EXISTS gateway_routes (
     id TEXT PRIMARY KEY,
     position INTEGER NOT NULL,
-    name TEXT,
-    description TEXT,
-    model_pattern TEXT NOT NULL,
-    provider TEXT NOT NULL,
-    upstream_model TEXT,
-    extra_headers JSONB NOT NULL DEFAULT '{}'::jsonb,
-    pricing JSONB,
-    when_match JSONB,
-    requires JSONB,
-    fallbacks JSONB NOT NULL DEFAULT '[]'::jsonb,
-    by_scope JSONB,
-    routing JSONB,
-    explicit_id BOOLEAN NOT NULL DEFAULT FALSE,
+    route JSONB NOT NULL,
     source TEXT NOT NULL DEFAULT 'code' CHECK (source IN ('code', 'dashboard')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP

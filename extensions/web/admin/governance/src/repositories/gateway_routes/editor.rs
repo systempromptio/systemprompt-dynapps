@@ -3,11 +3,10 @@
 //!
 //! Every write lands in `gateway_routes` stamped `dashboard`, renumbers the
 //! positions so they stay `0..n`, and regenerates the file core boots from.
-//! A route the declaration did not give an `id:` is keyed by the id the
-//! loader synthesises from its pattern and provider; editing either re-keys
-//! the row the way the loader would, so the file and the table agree on
-//! what the route is called and the access rules that name it still match.
-//! An update preserves the fields the form does not render.
+//! Every route carries a declared id: a new route without one takes the slug
+//! of its label, alias or first glob, and an update keeps the row's id unless
+//! the form names a new one, so the access rules that name a route still
+//! match. An update preserves the fields the form does not render.
 
 use std::path::Path;
 
@@ -20,7 +19,7 @@ use super::rows::{
 };
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
-    normalise_metadata, synthesize_route_id, validate_route,
+    normalise_metadata, slugify_pattern, validate_route,
 };
 use systemprompt_web_admin_core::types::GatewayRouteView;
 
@@ -47,9 +46,8 @@ pub async fn create_route_entry(
     validate_route(route)?;
     let mut to_insert = route.clone();
     normalise_metadata(&mut to_insert);
-    let explicit_id = !to_insert.id.trim().is_empty();
-    if !explicit_id {
-        to_insert.id = synthesize_route_id(&to_insert.model_pattern, &to_insert.provider);
+    if to_insert.id.trim().is_empty() {
+        to_insert.id = derived_id(&to_insert);
     }
     let rows = list_gateway_routes(pool).await?;
     if rows.iter().any(|r| r.route.id == to_insert.id) {
@@ -64,7 +62,6 @@ pub async fn create_route_entry(
         &RouteWrite {
             route: &to_insert,
             position,
-            explicit_id,
             source: SOURCE_DASHBOARD,
         },
     )
@@ -73,16 +70,22 @@ pub async fn create_route_entry(
     Ok(rows.len())
 }
 
+fn derived_id(route: &GatewayRouteView) -> String {
+    let stem = route
+        .name
+        .as_deref()
+        .or_else(|| route.alias.as_ref().map(|alias| alias.requested.as_str()))
+        .or_else(|| route.models.first().map(String::as_str))
+        .unwrap_or("route");
+    slugify_pattern(stem)
+}
+
 fn preserve_hidden_fields(merged: &mut GatewayRouteView, keep: &GatewayRouteView) {
-    merged.pricing = merged.pricing.take().or_else(|| keep.pricing.clone());
     merged.when = merged.when.take().or_else(|| keep.when.clone());
     merged.requires = merged.requires.take().or_else(|| keep.requires.clone());
-    if merged.fallbacks.is_empty() {
-        merged.fallbacks.clone_from(&keep.fallbacks);
-    }
-    merged.by_scope = merged.by_scope.take().or_else(|| keep.by_scope.clone());
-    if merged.extra_headers.is_empty() {
-        merged.extra_headers.clone_from(&keep.extra_headers);
+    merged.strategy = merged.strategy.take().or_else(|| keep.strategy.clone());
+    if merged.context_fallbacks.is_empty() {
+        merged.context_fallbacks.clone_from(&keep.context_fallbacks);
     }
 }
 
@@ -99,16 +102,11 @@ pub async fn update_route_at(
     normalise_metadata(&mut merged);
     let keep = &existing.route;
     preserve_hidden_fields(&mut merged, keep);
-    let derived = synthesize_route_id(&merged.model_pattern, &merged.provider);
     let body_id = merged.id.trim().to_owned();
-    let explicit_id =
-        existing.explicit_id || (!body_id.is_empty() && body_id != keep.id && body_id != derived);
-    merged.id = if explicit_id && !body_id.is_empty() {
-        body_id
-    } else if existing.explicit_id {
+    merged.id = if body_id.is_empty() {
         keep.id.clone()
     } else {
-        derived
+        body_id
     };
     if merged.id != keep.id {
         if rows.iter().any(|r| r.route.id == merged.id) {
@@ -124,7 +122,6 @@ pub async fn update_route_at(
         &RouteWrite {
             route: &merged,
             position: existing.position,
-            explicit_id,
             source: SOURCE_DASHBOARD,
         },
     )

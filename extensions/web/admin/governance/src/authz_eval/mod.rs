@@ -27,10 +27,10 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 use systemprompt::governance::authz::{
-    AccessControlRepository, AuthzDecision, AuthzRequest, ChainSources, Decision, DenyReason,
-    EntityKind, ParentChainIndex, ResolveBase, SubjectAttributes,
+    AccessControlRepository, AuthzDecision, AuthzRequest, ChainSources, Decision, DecisionFacts,
+    DenyReason, EntityKind, ParentChainIndex, ResolveBase, SubjectAttributes,
 };
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{ModelId, ProviderId, UserId};
 use systemprompt_web_admin_core::authz::{caches, dimensions, subject_attributes_for};
 use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
 
@@ -161,13 +161,34 @@ fn sync_verdict(decision: Decision) -> AuthzDecision {
     }
 }
 
-pub async fn evaluate(pool: &Arc<PgPool>, mut req: AuthzRequest) -> AuthzDecision {
+pub async fn evaluate(pool: &Arc<PgPool>, req: AuthzRequest) -> AuthzDecision {
+    decide(pool, req, Audit::Record).await
+}
+
+/// The same decision as [`evaluate`], without the audit row: core's probe
+/// asks what a request would get (a bridge model list, a preview) and must
+/// not record a decision nobody made.
+pub async fn probe(pool: &Arc<PgPool>, req: AuthzRequest) -> AuthzDecision {
+    decide(pool, req, Audit::Skip).await
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Audit {
+    Record,
+    Skip,
+}
+
+async fn decide(pool: &Arc<PgPool>, mut req: AuthzRequest, audit: Audit) -> AuthzDecision {
     let Ok(subject) = read_subject(pool, &req).await else {
-        audit::audit_unavailable(pool, &req).await;
+        if audit == Audit::Record {
+            audit::audit_unavailable(pool, &req).await;
+        }
         return deny(unavailable_reason());
     };
     req.roles = subject.roles;
     let (entity, rules) = &subject.grant;
+    let model = req.context.gateway_invocation_model();
+    let provider = req.context.gateway_invocation_provider();
     let decision = subject.chains.resolve(
         req.entity.kind(),
         req.entity.id_str(),
@@ -178,8 +199,14 @@ pub async fn evaluate(pool: &Arc<PgPool>, mut req: AuthzRequest) -> AuthzDecisio
             default_included: entity.as_ref().map(|e| e.default_included),
             attributes: &subject.attributes,
             dimensions: dimensions(pool),
+            facts: DecisionFacts {
+                model: model.as_ref().map(ModelId::as_str),
+                provider: provider.as_ref().map(ProviderId::as_str),
+            },
         },
     );
-    audit::audit_decision(pool, &req, rules, entity.as_ref(), &decision).await;
+    if audit == Audit::Record {
+        audit::audit_decision(pool, &req, rules, entity.as_ref(), &decision).await;
+    }
     sync_verdict(decision)
 }

@@ -10,6 +10,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 // as issued, so they are decoded untyped before `IdTokenClaims` reads them.
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use systemprompt::identifiers::{IdpTenantId, SsoAssertionId};
 use systemprompt::sso::{ExternalIdentity, SsoError};
 
 use super::super::error::SsoProviderError;
@@ -63,7 +64,9 @@ pub(super) async fn validate_id_token(
 
     let mut identity = identity_from_claims(&claims, cfg, expected_nonce, raw)?;
     if identity.assertion_id.is_none() {
-        identity.assertion_id = Some(hex::encode(Sha256::digest(id_token.as_bytes())));
+        identity.assertion_id = Some(SsoAssertionId::new(hex::encode(Sha256::digest(
+            id_token.as_bytes(),
+        ))));
     }
     Ok(identity)
 }
@@ -120,8 +123,8 @@ pub fn identity_from_claims(
         display_name: claims.name.clone(),
         groups,
         groups_overage,
-        tenant_id: claims.tid.clone(),
-        assertion_id: claims.jti.clone(),
+        tenant_id: claims.tid.clone().map(IdpTenantId::new),
+        assertion_id: claims.jti.clone().map(SsoAssertionId::new),
         assertion_expires_at: DateTime::<Utc>::from_timestamp(claims.exp, 0),
         raw_claims: raw,
     })

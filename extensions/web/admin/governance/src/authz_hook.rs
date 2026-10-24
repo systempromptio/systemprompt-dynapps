@@ -33,6 +33,10 @@ impl AuthzDecisionHook for InstallationAuthzHook {
     async fn evaluate(&self, req: AuthzRequest) -> AuthzDecision {
         crate::authz_eval::evaluate(&self.pool, req).await
     }
+
+    async fn probe(&self, req: AuthzRequest) -> AuthzDecision {
+        crate::authz_eval::probe(&self.pool, req).await
+    }
 }
 
 systemprompt::governance::register_authz_hook!(|ctx| {

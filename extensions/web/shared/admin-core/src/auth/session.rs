@@ -39,13 +39,13 @@ fn extract_user_with_audiences(
 
     let claims = validate_jwt_token(&token, &jwt_issuer, audiences)?;
 
-    let email = Email::try_new(claims.email.clone()).map_err(AdminError::unauthenticated)?;
+    let email = Email::try_new(claims.custom.email.clone()).map_err(AdminError::unauthenticated)?;
 
     Ok(CookieSession {
-        user_id: UserId::new(claims.sub),
-        username: claims.username,
+        user_id: UserId::new(claims.registered.sub),
+        username: claims.custom.username,
         email,
-        session_id: claims.session_id,
+        session_id: claims.custom.session_id,
     })
 }
 

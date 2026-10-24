@@ -18,6 +18,7 @@ use systemprompt::identifiers::{
 use systemprompt::mcp::{ArtifactIngest, IngestRequest, from_hook_failure, from_hook_response};
 use systemprompt::models::RequestContext;
 use systemprompt::models::auth::UserType;
+use systemprompt::models::bridge::host::HostKind;
 use systemprompt::models::mcp::ExecutionSource;
 
 use systemprompt_web_admin_core::repositories::ingestion::hooks_track::find_latest_skill_invocation;
@@ -79,10 +80,13 @@ pub(super) async fn ingest_tool_result(params: ToolResultIngestion<'_>) {
         mcp_execution_id: None,
         ctx,
         skill,
-        source: params.host.map_or(
-            ExecutionSource::HookClaudeCode,
-            ExecutionSource::from_hook_host,
-        ),
+        source: params
+            .host
+            .and_then(|host| host.parse::<HostKind>().ok())
+            .map_or(
+                ExecutionSource::HookClaudeCode,
+                ExecutionSource::from_hook_host,
+            ),
         started_at: None,
         input: Some(input),
     };

@@ -134,10 +134,11 @@ pub(super) fn build_bridge_profile_block() -> Option<BridgeProfileBlock> {
     let prefix = gateway.inference_path_prefix.trim_end_matches('/');
     let inference_gateway_base_url = format!("{base}{prefix}");
 
-    let models: Vec<String> = services
-        .providers
-        .advertised_model_ids(&[])
-        .into_iter()
+    let catalog = systemprompt::loader::ServicesBootstrap::catalog().ok()?;
+    let models: Vec<String> = catalog
+        .advertised_models(None)
+        .filter(|model| catalog.enabled_hops(model.id.as_str()).next().is_some())
+        .map(|model| model.id.as_str().to_owned())
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect();

@@ -93,7 +93,7 @@ pub(crate) async fn bridge_whoami_handler(
         AdminError::Unauthorized("Invalid or expired token".to_owned())
     })?;
 
-    let user_id = UserId::new(claims.sub.clone());
+    let user_id = UserId::new(claims.registered.sub.clone());
     let envelope =
         systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope(
             &pool, &user_id,
@@ -132,11 +132,21 @@ pub(crate) async fn bridge_whoami_handler(
         directory_linked_unix: envelope.linked_at.map(unix),
         directory_last_seen_unix: envelope.last_seen_at.map(unix),
         directory_groups: adfs_groups,
-        token_issuer: claims.iss,
-        token_audiences: claims.aud.iter().map(|a| a.as_str().to_owned()).collect(),
-        token_scope: claims.scope.iter().map(ToString::to_string).collect(),
-        token_issued_unix: claims.iat,
-        token_expires_unix: claims.exp,
-        login_session: claims.session_id,
+        token_issuer: claims.registered.iss,
+        token_audiences: claims
+            .registered
+            .aud
+            .iter()
+            .map(|a| a.as_str().to_owned())
+            .collect(),
+        token_scope: claims
+            .custom
+            .scope
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
+        token_issued_unix: claims.registered.iat,
+        token_expires_unix: claims.registered.exp,
+        login_session: claims.custom.session_id,
     }))
 }

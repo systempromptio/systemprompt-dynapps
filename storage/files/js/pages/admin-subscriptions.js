@@ -34,7 +34,7 @@ const metaLine = (entry) => {
 };
 
 const fillRow = (row, entry) => {
-  row.querySelector('[data-field="name"]').textContent = entry.display_name || entry.provider;
+  row.querySelector('[data-field="name"]').textContent = entry.display_name || entry.credential;
   const state = row.querySelector('[data-field="state"]');
   state.textContent = entry.configured ? 'key added' : 'no key';
   state.className = `sp-badge ${entry.configured ? 'sp-badge--ok' : 'sp-badge--muted'}`;
@@ -51,7 +51,7 @@ const saveKey = async (root, row, entry, form) => {
   reason.hidden = true;
   // The store tests the key against the provider before keeping it, so a
   // successful save is also a passing test; each refusal names its own fix.
-  const resp = await rawResponse(providerUrl(entry.provider), {
+  const resp = await rawResponse(providerUrl(entry.credential), {
     method: 'PUT',
     body: JSON.stringify({ api_key: String(data.get('api_key') || '').trim(), ...(label ? { label } : {}) }),
   }).catch(() => null);
@@ -61,7 +61,7 @@ const saveKey = async (root, row, entry, form) => {
     reason.hidden = false;
     return;
   }
-  showToast(`${entry.display_name || entry.provider} key saved and verified`, 'success');
+  showToast(`${entry.display_name || entry.credential} key saved and verified`, 'success');
   form.reset();
   await load(root);
 };
@@ -69,10 +69,10 @@ const saveKey = async (root, row, entry, form) => {
 const removeKey = (root, entry) => {
   showConfirmDialog(
     'Remove key',
-    `Remove your ${entry.display_name || entry.provider} key? Requests for its models are refused until you add one again.`,
+    `Remove your ${entry.display_name || entry.credential} key? Requests for its models are refused until you add one again.`,
     'Remove key',
     async () => {
-      await rawFetch(providerUrl(entry.provider), { method: 'DELETE' });
+      await rawFetch(providerUrl(entry.credential), { method: 'DELETE' });
       showToast('Key removed', 'success');
       await load(root);
     },

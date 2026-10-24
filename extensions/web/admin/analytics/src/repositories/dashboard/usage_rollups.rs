@@ -96,7 +96,7 @@ async fn rollup_gateway_requests(pool: &PgPool, days_back: i32) -> Result<u64, M
             COALESCE(SUM(output_tokens), 0)::BIGINT,
             COALESCE(SUM(cost_microdollars), 0)::BIGINT
         FROM ai_requests
-        WHERE NOT COALESCE(synthetic, FALSE)
+        WHERE COALESCE(traffic, 'production') = 'production'
           AND (created_at AT TIME ZONE 'UTC')::DATE >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
         GROUP BY user_id, (created_at AT TIME ZONE 'UTC')::DATE
         ON CONFLICT (user_id, date) DO UPDATE SET
@@ -124,7 +124,7 @@ async fn rollup_attribution(pool: &PgPool, days_back: i32) -> Result<u64, Market
                        s.group_id, s.project_id, COUNT(*) AS requests
                 FROM ai_requests a
                 JOIN ai_request_scopes s ON s.request_id = a.id
-                WHERE NOT COALESCE(a.synthetic, FALSE)
+                WHERE COALESCE(a.traffic, 'production') = 'production'
                   AND (a.created_at AT TIME ZONE 'UTC')::DATE >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
                 GROUP BY 1, 2, 3, 4
             ) t

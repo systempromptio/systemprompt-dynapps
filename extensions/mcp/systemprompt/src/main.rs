@@ -123,6 +123,7 @@ async fn main() -> Result<()> {
         Arc::clone(ctx.db_pool()),
         service_id.clone(),
         Arc::clone(ctx.authz_hook()),
+        ctx.services_watch().clone(),
         ctx.artifact_ingest_arc(),
     );
     let router = systemprompt::mcp::create_router(

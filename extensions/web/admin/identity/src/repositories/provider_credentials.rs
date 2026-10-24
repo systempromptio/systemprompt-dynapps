@@ -1,5 +1,5 @@
 //! Who holds a personal-subscription key, read from core's
-//! `user_provider_credentials` store.
+//! `user_provider_credentials` store, keyed by catalog credential id.
 //!
 //! Metadata only: the sealed key (`ciphertext`, `nonce`) is never selected,
 //! so no row this module returns can carry a key to a page.
@@ -14,7 +14,7 @@ pub struct ProviderCredentialHolder {
     pub user_id: UserId,
     pub email: Option<String>,
     pub display_name: Option<String>,
-    pub provider: String,
+    pub credential: String,
     pub label: Option<String>,
     pub created_at: DateTime<Utc>,
     pub verified_at: Option<DateTime<Utc>>,
@@ -30,14 +30,14 @@ pub async fn list_provider_credential_holders(
              c.user_id AS "user_id!: UserId",
              u.email AS "email?",
              u.display_name AS "display_name?",
-             c.provider,
+             c.credential,
              c.label,
              c.created_at,
              c.verified_at,
              c.last_used_at
            FROM user_provider_credentials c
            LEFT JOIN users u ON u.id = c.user_id
-           ORDER BY u.email NULLS LAST, c.provider"#,
+           ORDER BY u.email NULLS LAST, c.credential"#,
     )
     .fetch_all(pool)
     .await

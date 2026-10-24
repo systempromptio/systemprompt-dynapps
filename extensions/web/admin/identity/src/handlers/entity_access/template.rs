@@ -2,7 +2,7 @@
 //! every entity of a kind, with the outcome tallied per entity.
 
 use systemprompt::governance::authz::{
-    Access, AccessControlRepository, DASHBOARD_SOURCE, EntityKind, RuleType, UpsertRuleParams,
+    Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
 
 pub(super) struct TemplateSubject<'a> {
@@ -10,6 +10,7 @@ pub(super) struct TemplateSubject<'a> {
     pub(super) rule_type: &'a RuleType,
     pub(super) rule_value: &'a str,
     pub(super) justification: Option<&'a str>,
+    pub(super) source: &'a str,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -62,7 +63,7 @@ pub(super) async fn upsert_subject_rule(
             rule_value: subject.rule_value,
             access,
             justification: subject.justification,
-            source: DASHBOARD_SOURCE,
+            source: subject.source,
         })
         .await
     {

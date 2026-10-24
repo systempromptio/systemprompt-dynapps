@@ -46,7 +46,7 @@ pub async fn list_provider_cost_by_day(
                 COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS key_cost
             FROM report_ai_usage_hourly r
             WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2
-              AND NOT r.synthetic
+              AND r.traffic = 'production'
               AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
               AND ($4::TEXT IS NULL OR r.user_id = $4)
             GROUP BY 1, 2
@@ -113,7 +113,7 @@ pub async fn list_provider_costs(
                 COALESCE(SUM(r.user_key_cost_microdollars), 0)::BIGINT AS key_cost
             FROM report_ai_usage_hourly r
             WHERE r.bucket >= date_trunc('hour', $1::timestamptz, 'UTC') AND r.bucket < $2
-              AND NOT r.synthetic
+              AND r.traffic = 'production'
               AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
               AND ($4::TEXT IS NULL OR r.user_id = $4)
             GROUP BY 1

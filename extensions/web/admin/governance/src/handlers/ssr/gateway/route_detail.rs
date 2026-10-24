@@ -83,7 +83,7 @@ pub(crate) async fn gateway_route_page(
     let fact = |label: &'static str, value: String| RouteFactView { label, value };
     let mut facts = vec![
         fact("Route id", route.id.clone()),
-        fact("Model pattern", route.model_pattern.clone()),
+        fact("Models", route.model_pattern.clone()),
         fact("Provider", route.provider_label.clone()),
         fact("Endpoint", route.endpoint.clone()),
     ];

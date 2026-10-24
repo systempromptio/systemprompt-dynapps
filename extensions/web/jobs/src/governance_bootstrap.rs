@@ -1,7 +1,7 @@
-//! Governance bootstrap: project the committed access-control baseline into the
-//! authz tables.
+//! Governance bootstrap: check the governance declaration and report how the
+//! install's sync planes stand against their files.
 //!
-//! Three steps, in dependency order:
+//! Two steps:
 //! 0. Validate `services/governance/config.yaml`, failing the boot rather than
 //!    letting an unparseable file degrade to the built-in defaults unnoticed,
 //!    and warn when the resulting chain enforces nothing. Then report whether a
@@ -9,42 +9,25 @@
 //!    policies are counted apart from `active` ones because an active chain of
 //!    warning-only policies enforces nothing. Paths resolve against the
 //!    composed services root, the same tree `/admin/sync` reads.
-//! 1. Reconcile the services gateway-route entities into
-//!    `access_control_entities` (so the FK on `access_control_rules` is
-//!    satisfied and a `gateway_route` `entity_match` glob has routes to expand
-//!    over), deleting catalog rows no configured route claims. An empty route
-//!    set leaves the catalog untouched: reconciling against it would cascade
-//!    away every route grant, and a tree with no gateway is legitimate. The
-//!    catalog only inserts unseen routes (with the `rules.yaml` default) and
-//!    deletes stale ones; it never rewrites an existing row's access columns.
-//! 2. Run every sync plane through the one boot contract
-//!    (`repositories::sync::boot`): groups, then access control, then gateway
-//!    policies. A plane whose projection is empty is seeded from its file;
-//!    every other plane is compared and the drift logged, nothing written.
-//!    Reconciling code and database is an administrator's act on `/admin/sync`,
-//!    never a side effect of a restart. Step 1 must run first because the
-//!    `gateway_route/*` glob expands over its catalog.
+//! 1. Run every sync plane through the one boot contract
+//!    (`repositories::sync::boot`). The planes core enforces from the
+//!    database (access control, gateway policies) are only compared and the
+//!    drift logged: they reach the database through `systemprompt admin config
+//!    apply` and `/admin/sync`, never through a restart. The install's own
+//!    projections (groups, and the staging copies of the gateway routes and
+//!    the governance chain) are seeded from their files when empty.
 //!
-//! Runs once at boot as a `scheduler.bootstrap_jobs` entry so authorization is
-//! correct at app start; it is not cron-scheduled (`schedule()` is empty). The
-//! CLI `admin config` reconcile path re-materialises the catalog after a live
-//! gateway/provider edit, so no recurring cadence is needed. The catalog ids
-//! are deterministic, so re-runs are idempotent.
+//! The gateway-route entity catalog is core's: its boot reconcile registers a
+//! row for every route the resolved catalog dispatches.
+//!
+//! Runs once at boot as a `scheduler.bootstrap_jobs` entry; it is not
+//! cron-scheduled (`schedule()` is empty).
 
 use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
-use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
-
 use crate::error::JobError;
-use systemprompt_web_admin_core::repositories::access_rules::declared_load::{
-    load_declared_set, marketplace_ids_from_services,
-};
-use systemprompt_web_admin_core::repositories::gateway_catalog::{
-    dispatchable_route_ids, registered_routes,
-};
 use systemprompt_web_admin_core::repositories::sync::boot::reconcile_all;
-use systemprompt_web_admin_core::repositories::sync::route_catalog::reconcile_route_catalog;
 use systemprompt_web_admin_core::repositories::sync::sources_db::record_service_sources;
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -62,8 +45,8 @@ impl Job for GovernanceBootstrapJob {
     }
 
     fn description(&self) -> &'static str {
-        "Materialise gateway entities and project access-control + gateway-policy YAML into the \
-         authz tables"
+        "Check the governance declaration and report every sync plane against its file; \
+         seed the install's own projections when empty"
     }
 
     fn schedule(&self) -> &'static str {
@@ -87,8 +70,6 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let governance = check_governance_config(&services_path)?;
     check_judge_config()?;
 
-    let catalog = bootstrap_gateway_entities(db_pool).await?;
-
     let pool = db_pool.write_pool();
     let planes = reconcile_all(&pool)
         .await
@@ -100,8 +81,6 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
     tracing::info!(
-        gateway_entities = catalog.registered.known_ids(EntityKind::GatewayRoute).len(),
-        gateway_entities_pruned = catalog.pruned,
         groups_declared = planes.groups.declared,
         groups_seeded = planes.groups.seeded,
         groups_drift = planes.groups.drift_rows,
@@ -124,12 +103,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 }
 
 fn composed_services_root() -> Result<std::path::PathBuf, JobError> {
-    let profile = systemprompt::config::ProfileBootstrap::get()?;
-    Ok(
-        systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
-            &profile.paths.services,
-        ),
-    )
+    Ok(systemprompt::loader::services_root::ServicesRootBootstrap::require()?.path)
 }
 
 #[doc(hidden)]
@@ -146,7 +120,9 @@ pub fn check_governance_config(
     use systemprompt::governance::policy::GovernanceConfig;
 
     let path = services_path.join("governance/config.yaml");
-    let config = GovernanceConfig::load(&path)
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))?;
+    let config = GovernanceConfig::parse(&text)
         .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))?;
     let active = if config.enabled {
         config.policies.iter().filter(|p| p.enabled).count()
@@ -199,60 +175,6 @@ pub fn check_judge_config() -> Result<(), JobError> {
         );
     }
     Ok(())
-}
-
-struct GatewayCatalog {
-    registered: RegisteredEntities,
-    pruned: u64,
-}
-
-async fn bootstrap_gateway_entities(db_pool: &DbPool) -> Result<GatewayCatalog, JobError> {
-    let profile = systemprompt::config::ProfileBootstrap::get()?;
-    let services = systemprompt::loader::ServicesBootstrap::get()?;
-    let gateway_path = std::path::Path::new(&profile.paths.services)
-        .join("ai")
-        .join("gateway.yaml");
-
-    let route_ids = dispatchable_route_ids(services);
-    let registered = registered_routes(&route_ids);
-    if route_ids.is_empty() {
-        tracing::warn!(
-            gateway = %gateway_path.display(),
-            "services config declares no dispatchable gateway routes — leaving the \
-             gateway_route catalog untouched and not expanding the route glob in rules.yaml"
-        );
-        return Ok(GatewayCatalog {
-            registered,
-            pruned: 0,
-        });
-    }
-
-    let declared_open = declared_route_defaults(&registered).await?;
-    let source = format!("services:{}", gateway_path.display());
-    let report =
-        reconcile_route_catalog(&db_pool.write_pool(), &route_ids, &declared_open, &source)
-            .await
-            .map_err(JobError::from)?;
-
-    Ok(GatewayCatalog {
-        registered,
-        pruned: report.pruned,
-    })
-}
-
-async fn declared_route_defaults(
-    registered: &RegisteredEntities,
-) -> Result<std::collections::BTreeMap<String, bool>, JobError> {
-    let marketplaces = marketplace_ids_from_services().map_err(JobError::from)?;
-    let declared = load_declared_set(&composed_services_root()?, &marketplaces, registered)
-        .await
-        .map_err(JobError::from)?;
-    Ok(declared
-        .entities
-        .into_values()
-        .filter(|e| e.entity_type == EntityKind::GatewayRoute.as_str())
-        .map(|e| (e.entity_id, e.default_included))
-        .collect())
 }
 
 systemprompt::traits::submit_job!(&GovernanceBootstrapJob);

@@ -78,9 +78,10 @@ fn install_tls_crypto_provider() {
 
 fn build_env(ctx: &AppContext) -> Env {
     let pool = ctx.db_pool().write_pool();
-    let baked_services = ctx.app_paths().system().services().to_string_lossy();
-    let services_path =
-        systemprompt::loader::ServicesRootBootstrap::active_root_or(&baked_services);
+    let services_path = systemprompt::loader::ServicesRootBootstrap::require().map_or_else(
+        |_| ctx.app_paths().system().services().to_path_buf(),
+        |root| root.path,
+    );
     Env {
         #[cfg(feature = "farm")]
         farm: Some(
@@ -149,6 +150,7 @@ async fn main() -> Result<()> {
         Arc::clone(ctx.db_pool()),
         service_id.clone(),
         Arc::clone(ctx.authz_hook()),
+        ctx.services_watch().clone(),
         ctx.artifact_ingest_arc(),
         Arc::new(build_env(&ctx)),
     );

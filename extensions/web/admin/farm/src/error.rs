@@ -139,7 +139,7 @@ pub enum FarmError {
     AgentHost {
         agent: String,
         #[source]
-        source: Box<AgentRunsError>,
+        source: Box<systemprompt::models::bridge::host::UnknownHostKind>,
     },
 
     #[error("Invalid: {at}: {source}")]

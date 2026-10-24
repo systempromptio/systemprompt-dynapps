@@ -100,9 +100,13 @@ async fn collect_allowed_routes(
         {
             allowed.push(CatalogEntry {
                 id: route.id.clone(),
-                model_pattern: route.model_pattern.clone(),
-                provider: route.provider.clone(),
-                upstream_model: route.upstream_model.clone(),
+                model_pattern: route.models_line(),
+                provider: route
+                    .deployments
+                    .first()
+                    .map(|d| d.provider().to_owned())
+                    .unwrap_or_default(),
+                upstream_model: route.alias.as_ref().map(|alias| alias.model.clone()),
             });
         }
     }

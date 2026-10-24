@@ -5,7 +5,6 @@
 //! comment or a whitespace edit is not a drift.
 
 use sha2::{Digest, Sha256};
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::gateway::{GATEWAY_POLICIES_FILE, GatewayPolicyConfig, GatewayPolicyEntry};
 use systemprompt::loader::services_root::ServicesRootBootstrap;
 
@@ -61,8 +60,5 @@ pub fn parse_declared_policies(yaml: &str) -> Result<DeclaredPolicies, DeclaredP
 }
 
 pub fn services_root() -> AdminResult<std::path::PathBuf> {
-    let profile = ProfileBootstrap::get()?;
-    Ok(ServicesRootBootstrap::active_root_or(
-        &profile.paths.services,
-    ))
+    Ok(ServicesRootBootstrap::require()?.path)
 }

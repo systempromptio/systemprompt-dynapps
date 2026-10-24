@@ -84,12 +84,10 @@ impl EntraOidcProvider {
 // Why: core calls this hook once at discovery; only the client secret's
 // presence is checked, its value is re-read at every code redemption.
 pub fn factory(ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
-    let profile = systemprompt::config::ProfileBootstrap::get()
-        .inspect_err(|error| tracing::warn!(%error, "Entra OIDC: no profile; provider off"))
-        .ok()?;
-    let services_root = systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
-        &profile.paths.services,
-    );
+    let services_root = systemprompt::loader::services_root::ServicesRootBootstrap::require()
+        .inspect_err(|error| tracing::warn!(%error, "Entra OIDC: no services root; provider off"))
+        .ok()?
+        .path;
     let cfg = EntraOidcConfig::load(&services_root, &ctx.config.api_external_url)
         .inspect_err(|error| tracing::error!(%error, "Entra OIDC config rejected; provider off"))
         .ok()

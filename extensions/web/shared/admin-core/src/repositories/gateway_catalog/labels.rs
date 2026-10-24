@@ -1,21 +1,24 @@
 //! Human-facing labels for gateway routes and providers.
 //!
-//! A route id is generated (`slug + fnv1a6`) and a provider id is a key, so
-//! neither reads well on a page. Every console surface that names a route —
+//! A route id is an address and a provider id is a key, so neither reads well
+//! on a page. Every console surface that names a route —
 //! the access-control rules, the audience grid, a person's matrix, the role
 //! entitlements and the gateway page — resolves it here, so the same route
 //! carries the same label everywhere. A declared `name` wins; otherwise the
-//! label is derived from the model pattern and the provider's display name,
-//! and the generated id is demoted to a subtitle the page may still show.
+//! label is derived from the route's models and the display name of the
+//! provider its first deployment reaches, and the id is demoted to a subtitle
+//! the page may still show.
 
 use std::collections::HashMap;
 
 use systemprompt::loader::ServicesBootstrap;
 use systemprompt::manifest::ServicesConfig;
-use systemprompt::manifest::services::ProviderEntry;
+use systemprompt::manifest::services::ResolvedCatalog;
+use systemprompt::manifest::services::catalog::{ResolvedHop, ResolvedProvider};
 use systemprompt_web_shared::error::MarketplaceError;
 
-use super::catalog::dispatchable_routes;
+use super::catalog::{dispatchable_routes, resolved_catalog, route_reaches};
+use crate::types::GatewayRouteView;
 
 #[derive(Debug, Clone)]
 pub struct RouteLabel {
@@ -83,59 +86,14 @@ impl RouteLabels {
 }
 
 pub fn get_route_labels(services: &ServicesConfig) -> Result<RouteLabels, MarketplaceError> {
-    let providers: Vec<ProviderLabel> = services
-        .providers
-        .providers
-        .iter()
-        .map(provider_label)
+    let catalog = resolved_catalog(services)?;
+    let providers: Vec<ProviderLabel> = catalog
+        .providers()
+        .map(|provider| provider_label(&catalog, provider))
         .collect();
     let routes: Vec<RouteLabel> = dispatchable_routes(services)?
         .into_iter()
-        .map(|route| {
-            let entry = services.providers.find_provider(&route.provider);
-            let provider_label = derive_provider_label(&route.provider, entry);
-            let declared = route
-                .name
-                .as_deref()
-                .map(str::trim)
-                .filter(|n| !n.is_empty());
-            let fallback = (!route.fallbacks.is_empty()).then(|| {
-                route
-                    .fallbacks
-                    .iter()
-                    .map(|deployment| {
-                        let label = derive_provider_label(
-                            &deployment.provider,
-                            services.providers.find_provider(&deployment.provider),
-                        );
-                        match &deployment.upstream_model {
-                            Some(model) => format!("{label} as {model}"),
-                            None => label,
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", then ")
-            });
-            RouteLabel {
-                label: declared.map_or_else(
-                    || derive_route_label(&route.model_pattern, &provider_label),
-                    str::to_owned,
-                ),
-                declared_name: declared.is_some(),
-                id: route.id,
-                description: route.description,
-                model_pattern: route.model_pattern,
-                provider: route.provider,
-                provider_label,
-                upstream: route.upstream_model,
-                endpoint: entry.map(|e| e.endpoint.clone()).unwrap_or_default(),
-                surface: entry
-                    .map(|e| e.surface.as_tag().to_owned())
-                    .unwrap_or_default(),
-                wire: entry.map(|e| e.wire.to_string()).unwrap_or_default(),
-                fallback,
-            }
-        })
+        .map(|route| route_label(&catalog, route))
         .collect();
     let by_id = routes.iter().map(|r| (r.id.clone(), r.clone())).collect();
     Ok(RouteLabels {
@@ -149,26 +107,122 @@ pub fn get_route_labels_from_services() -> Result<RouteLabels, MarketplaceError>
     get_route_labels(ServicesBootstrap::get()?)
 }
 
-fn provider_label(entry: &ProviderEntry) -> ProviderLabel {
+/// The hops a route sends its first matched model to: the route's pinned
+/// deployments when it pins any, else the model's own chain.
+fn route_hops<'a>(catalog: &'a ResolvedCatalog, route: &GatewayRouteView) -> Vec<&'a ResolvedHop> {
+    let Some(model) = catalog
+        .models()
+        .find(|model| route_reaches(route, model.id.as_str()))
+    else {
+        return Vec::new();
+    };
+    let chain = catalog.deployments(model.id.as_str());
+    if route.deployments.is_empty() {
+        return chain.iter().collect();
+    }
+    route
+        .deployments
+        .iter()
+        .filter_map(|pinned| {
+            chain
+                .iter()
+                .find(|hop| hop.endpoint_ref().to_string() == pinned.endpoint)
+        })
+        .collect()
+}
+
+fn hop_label(catalog: &ResolvedCatalog, hop: &ResolvedHop) -> String {
+    let label = derive_provider_label(hop.provider.as_str(), catalog.provider(hop.provider.as_str()));
+    if hop.upstream_model == hop.model.as_str() {
+        label
+    } else {
+        format!("{label} as {}", hop.upstream_model)
+    }
+}
+
+fn route_label(catalog: &ResolvedCatalog, route: GatewayRouteView) -> RouteLabel {
+    let hops = route_hops(catalog, &route);
+    let primary = hops.first().copied();
+    let provider = primary.map(|hop| hop.provider.as_str().to_owned()).unwrap_or_default();
+    let provider_label = derive_provider_label(&provider, catalog.provider(&provider));
+    let declared = route
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty());
+    let fallback = (hops.len() > 1).then(|| {
+        hops.iter()
+            .skip(1)
+            .map(|hop| hop_label(catalog, hop))
+            .collect::<Vec<_>>()
+            .join(", then ")
+    });
+    let mut clients: Vec<String> = catalog
+        .models()
+        .filter(|model| route_reaches(&route, model.id.as_str()))
+        .flat_map(|model| model.clients.iter().map(ToString::to_string))
+        .collect();
+    clients.sort();
+    clients.dedup();
+    let model_pattern = route.models_line();
+    RouteLabel {
+        label: declared.map_or_else(
+            || derive_route_label(&model_pattern, &provider_label),
+            str::to_owned,
+        ),
+        declared_name: declared.is_some(),
+        id: route.id,
+        description: route.description,
+        upstream: primary
+            .filter(|hop| hop.upstream_model != hop.model.as_str())
+            .map(|hop| hop.upstream_model.clone()),
+        endpoint: primary.map(|hop| hop.url.clone()).unwrap_or_default(),
+        surface: clients.join(", "),
+        wire: primary.map(|hop| hop.wire.to_string()).unwrap_or_default(),
+        model_pattern,
+        provider,
+        provider_label,
+        fallback,
+    }
+}
+
+fn provider_label(catalog: &ResolvedCatalog, provider: &ResolvedProvider) -> ProviderLabel {
+    let id = provider.id.as_str();
+    let endpoints: Vec<_> = catalog
+        .endpoints()
+        .filter(|endpoint| endpoint.provider.as_str() == id)
+        .collect();
+    let served: Vec<_> = catalog
+        .models()
+        .filter(|model| {
+            catalog
+                .deployments(model.id.as_str())
+                .iter()
+                .any(|hop| hop.provider.as_str() == id)
+        })
+        .collect();
+    let mut clients: Vec<String> = served
+        .iter()
+        .flat_map(|model| model.clients.iter().map(ToString::to_string))
+        .collect();
+    clients.sort();
+    clients.dedup();
+    let join = |values: Vec<String>| values.join(", ");
     ProviderLabel {
-        id: entry.name.as_str().to_owned(),
-        label: derive_provider_label(entry.name.as_str(), Some(entry)),
-        description: entry.description.clone(),
-        endpoint: entry.endpoint.clone(),
-        surface: entry.surface.as_tag().to_owned(),
-        wire: entry.wire.to_string(),
-        model_count: entry.models.len(),
-        advertised: entry.surface.is_advertised(),
-        models: entry
-            .models
-            .iter()
-            .map(|m| m.id.as_str().to_owned())
-            .collect(),
+        id: id.to_owned(),
+        label: derive_provider_label(id, Some(provider)),
+        description: provider.description.clone(),
+        endpoint: join(endpoints.iter().map(|e| e.url.clone()).collect()),
+        surface: clients.join(", "),
+        wire: join(endpoints.iter().map(|e| e.wire.to_string()).collect()),
+        model_count: served.len(),
+        advertised: served.iter().any(|model| model.is_advertised()),
+        models: served.iter().map(|model| model.id.as_str().to_owned()).collect(),
     }
 }
 
 #[must_use]
-pub fn derive_provider_label(id: &str, entry: Option<&ProviderEntry>) -> String {
+pub fn derive_provider_label(id: &str, entry: Option<&ResolvedProvider>) -> String {
     if let Some(name) = entry
         .and_then(|e| e.display_name.as_deref())
         .map(str::trim)

@@ -1,8 +1,9 @@
 //! Declared routes against the rows: missing, orphaned, changed, and the
 //! one difference the other planes do not have — order.
 //!
-//! Order is policy for this plane (the first matching pattern wins), so two
-//! sets with the same routes in a different sequence are not in step. It is
+//! Order is policy for this plane (the first route that matches a request
+//! wins), so two sets with the same routes in a different sequence are not in
+//! step. It is
 //! reported once, as a single `reordered` line naming both sequences, rather
 //! than as a change on every route that moved.
 
@@ -48,18 +49,13 @@ impl RouteDrift {
 
 #[must_use]
 pub fn summarise_route(route: &GatewayRouteView) -> String {
-    let mut s = format!("{} → {}", route.model_pattern, route.provider);
+    let mut s = route.models_line();
     if let Some(name) = route.name.as_deref().filter(|n| !n.is_empty()) {
         s = format!("{name}: {s}");
     }
-    if let Some(m) = &route.upstream_model {
-        s.push_str(&format!(" as {m}"));
-    }
-    for fallback in &route.fallbacks {
-        s.push_str(&format!(", fallback {}", fallback.describe()));
-    }
-    if route.by_scope.is_some() {
-        s.push_str(", by scope");
+    if !route.deployments.is_empty() {
+        let pinned: Vec<&str> = route.deployments.iter().map(|d| d.endpoint.as_str()).collect();
+        s.push_str(&format!(" → {}", pinned.join(", then ")));
     }
     if route.requires.is_some() {
         s.push_str(", requires");
@@ -67,11 +63,11 @@ pub fn summarise_route(route: &GatewayRouteView) -> String {
     if route.when.is_some() {
         s.push_str(", when");
     }
-    if route.pricing.is_some() {
-        s.push_str(", pricing");
+    if let Some(strategy) = &route.strategy {
+        s.push_str(&format!(", {strategy}"));
     }
-    if !route.extra_headers.is_empty() {
-        s.push_str(&format!(", {} headers", route.extra_headers.len()));
+    if !route.context_fallbacks.is_empty() {
+        s.push_str(&format!(", context fallback {}", route.context_fallbacks.join(", ")));
     }
     s
 }
@@ -85,15 +81,13 @@ fn changed_fields(code: &GatewayRouteView, db: &GatewayRouteView) -> Vec<String>
     };
     check("name", code.name != db.name);
     check("description", code.description != db.description);
-    check("model_pattern", code.model_pattern != db.model_pattern);
-    check("provider", code.provider != db.provider);
-    check("upstream_model", code.upstream_model != db.upstream_model);
-    check("extra_headers", code.extra_headers != db.extra_headers);
-    check("pricing", code.pricing != db.pricing);
+    check("models", code.models != db.models);
+    check("deployments", code.deployments != db.deployments);
+    check("alias", code.alias != db.alias);
     check("when", code.when != db.when);
     check("requires", code.requires != db.requires);
-    check("fallbacks", code.fallbacks != db.fallbacks);
-    check("by_scope", code.by_scope != db.by_scope);
+    check("strategy", code.strategy != db.strategy);
+    check("context_fallbacks", code.context_fallbacks != db.context_fallbacks);
     out
 }
 

@@ -2,9 +2,9 @@
 //!
 //! Every query here takes the same [`SiteScope`] and applies it with a static
 //! null-skip bind: NULL spans every user, and otherwise the query narrows to
-//! the resolved user id list. Synthetic gateway rows
-//! (`ai_requests.synthetic`) are excluded everywhere: demo traffic is not a
-//! business metric.
+//! the resolved user id list. Only production gateway rows
+//! (`ai_requests.traffic = 'production'`) count: evaluation and demo traffic
+//! is not a business metric.
 //!
 //! Every total, leaderboard and cost figure is reported under `Exclusive`
 //! attribution, so container figures partition the instance and sum back to

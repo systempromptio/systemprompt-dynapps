@@ -1,11 +1,16 @@
-//! What boot does with every plane: seed an empty projection, otherwise look
-//! and report.
+//! What boot does with every plane: look and report, and seed an empty
+//! projection only for the planes this install owns.
 //!
 //! The database is what is enforced and what the console edits; the file is
-//! what the database is expected to contain. Boot therefore writes exactly
-//! once per plane — when there is nothing yet to disagree with — and every
-//! later start computes the drift and says so in the log, leaving the
-//! decision to reconcile to an administrator on `/admin/sync`. Upserting on
+//! what the database is expected to contain. Every start computes the drift
+//! and says so in the log, leaving the decision to reconcile to an
+//! administrator on `/admin/sync` or to `systemprompt admin config apply` in
+//! the deploy pipeline. The planes core enforces from the database (access
+//! control, gateway policies) are never written at boot: an empty one stays
+//! empty until an apply, and core reports it as unapplied. The install's own
+//! projections (groups and the staging copies of the gateway routes and the
+//! governance chain) are seeded once, when there is nothing yet to disagree
+//! with. Upserting on
 //! every start was how console edits vanished overnight and how rules for
 //! deleted entities lived on for months; one loop over the registry is what
 //! stops a plane from drifting back to that.
@@ -51,6 +56,16 @@ pub struct BootReport {
     pub governance: PlaneBoot,
 }
 
+/// Whether boot may seed this plane's empty projection: never for a plane
+/// core enforces from the database, which only an explicit apply writes.
+#[must_use]
+pub fn seeds_at_boot(plane_id: &str) -> bool {
+    !matches!(
+        plane_id,
+        plane_ids::ACCESS_CONTROL | plane_ids::GATEWAY_POLICIES
+    )
+}
+
 pub async fn reconcile_plane(pool: &PgPool, plane: &dyn SyncPlane) -> AdminResult<PlaneBoot> {
     let drift = plane.drift(pool).await?;
     if let Some(reason) = drift.unreadable {
@@ -65,7 +80,7 @@ pub async fn reconcile_plane(pool: &PgPool, plane: &dyn SyncPlane) -> AdminResul
         drift_rows: drift.rows.len(),
         ..PlaneBoot::default()
     };
-    if drift.in_db == 0 && drift.declared_count > 0 {
+    if drift.in_db == 0 && drift.declared_count > 0 && seeds_at_boot(plane.id()) {
         let outcome = plane.apply(pool, SyncMode::Overwrite, Actor::Boot).await?;
         boot.seeded = true;
         boot.inserted = outcome.inserted;

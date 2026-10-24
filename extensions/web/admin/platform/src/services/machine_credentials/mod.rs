@@ -20,8 +20,16 @@ use crate::repositories::connectors::machine_credentials::{
 };
 use crate::services::service_accounts::ServiceAccounts;
 use sqlx::PgPool;
+use std::sync::LazyLock;
+
 use systemprompt::identifiers::UserId;
+use systemprompt::security::credential::TokenCache;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+
+// Why: core's `TokenCache` is now a value the caller owns; this broker is
+// reached from request handlers with no `AppContext`, so one process-wide
+// cache keeps a minted service-account token reused across requests.
+static SERVICE_ACCOUNT_TOKENS: LazyLock<TokenCache> = LazyLock::new(TokenCache::new);
 
 pub use grant::endpoint_allowed;
 pub use input::{AttachCredential, MachineKind};
@@ -113,7 +121,10 @@ pub async fn broker_token(
     // Why: core's token cache is keyed by string; the rotation stamp in the
     // key means a rotated credential never serves the previous token.
     let header_value = grant
-        .authorization(&format!("service-account:{user}:{provider}:{stamp}"))
+        .authorization(
+            &SERVICE_ACCOUNT_TOKENS,
+            &format!("service-account:{user}:{provider}:{stamp}"),
+        )
         .await
         .map_err(|error| {
             tracing::warn!(target: "connector_broker", user_id = %user, provider,

@@ -69,7 +69,6 @@ async fn write_declared(
             &RouteWrite {
                 route: &d.route,
                 position: i32::try_from(position).unwrap_or(i32::MAX),
-                explicit_id: d.explicit_id,
                 source: SOURCE_CODE,
             },
         )

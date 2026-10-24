@@ -1,6 +1,6 @@
 -- Measured gateway overhead (NFR-1.6): one row per UTC day per inbound wire
 -- dialect, plus an `all` row, written nightly by the `gateway_overhead_rollup`
--- job from completed, non-synthetic `ai_requests`. Overhead is
+-- job from completed, production-traffic `ai_requests`. Overhead is
 -- `latency_ms - upstream_latency_ms` clamped at zero: the time the gateway
 -- itself added around the provider call. Percentiles are milliseconds,
 -- interpolated (`percentile_cont`). The job keeps the last 400 days.

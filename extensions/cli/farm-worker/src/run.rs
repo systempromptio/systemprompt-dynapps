@@ -67,6 +67,7 @@ pub(crate) async fn run(client: &WorkerClient, root: Option<PathBuf>) -> Result<
         gateway_base_url: &spec.gateway_base_url,
         hooks_file: hooks,
         seq_after,
+        harness: None,
         sink: &sink,
         cancel,
     })

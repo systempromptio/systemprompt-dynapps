@@ -156,7 +156,7 @@ fn orphan_row(orphan: &OrphanRule) -> DriftRow {
 }
 
 fn changed_row(changed: &ChangedRule) -> DriftRow {
-    let console = changed.db_source == "dashboard";
+    let console = crate::util::change_source::is_console_source(&changed.db_source);
     let (resolve, resolve_tone) = resolution(false, true, "updated");
     DriftRow {
         kind: "changed",

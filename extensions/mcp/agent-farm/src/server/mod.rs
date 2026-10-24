@@ -19,6 +19,8 @@ use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt::traits::ConfigWatch;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
@@ -39,6 +41,7 @@ pub struct AgentFarmServer {
     db_pool: DbPool,
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
+    services: ConfigWatch<ServicesConfig>,
     env: Arc<Env>,
 }
 
@@ -47,6 +50,7 @@ impl AgentFarmServer {
         db_pool: DbPool,
         service_id: McpServerId,
         authz_hook: SharedAuthzHook,
+        services: ConfigWatch<ServicesConfig>,
         artifact_ingest: Arc<ArtifactIngest>,
         env: Arc<Env>,
     ) -> Self {
@@ -63,6 +67,7 @@ impl AgentFarmServer {
             db_pool,
             executor,
             authz_hook,
+            services,
             env,
         }
     }
@@ -119,6 +124,7 @@ impl ServerHandler for AgentFarmServer {
             &self.service_id,
             &ctx,
             &self.authz_hook,
+            &self.services.get(),
         )
         .await?;
 

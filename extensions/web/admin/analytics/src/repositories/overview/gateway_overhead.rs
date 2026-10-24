@@ -2,7 +2,7 @@
 //!
 //! Overhead is what the gateway adds around the provider call:
 //! `latency_ms - upstream_latency_ms`, clamped at zero, over completed,
-//! non-synthetic requests that carry both timings. The nightly
+//! production-traffic requests that carry both timings. The nightly
 //! `gateway_overhead_rollup` job writes one row per wire dialect plus an
 //! `all` row for a day in a single `GROUPING SETS` pass; the percentiles are
 //! Postgres `percentile_cont` (linear interpolation), in milliseconds.
@@ -68,7 +68,7 @@ pub async fn upsert_gateway_overhead_for_day(
                    upstream_latency_ms::FLOAT8 AS upstream_ms
             FROM ai_requests
             WHERE status = 'completed'
-              AND NOT synthetic
+              AND traffic = 'production'
               AND latency_ms IS NOT NULL
               AND upstream_latency_ms IS NOT NULL
               AND created_at >= ($1::DATE)::TIMESTAMP AT TIME ZONE 'UTC'

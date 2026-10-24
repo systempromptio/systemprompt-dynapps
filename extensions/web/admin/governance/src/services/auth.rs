@@ -32,5 +32,5 @@ pub(crate) fn validate_plugin_jwt(headers: &HeaderMap) -> AdminResult<String> {
         AdminError::Unauthorized("Invalid or expired token".to_owned())
     })?;
 
-    Ok(claims.sub)
+    Ok(claims.registered.sub)
 }

@@ -10,6 +10,7 @@ use rmcp::service::{RequestContext, RoleServer};
 use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
+use systemprompt::manifest::services::ServicesConfig;
 use systemprompt::mcp::middleware::enforce_rbac_from_registry;
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
 
@@ -21,9 +22,10 @@ pub async fn authenticate_tool_request(
     service_id: &McpServerId,
     ctx: &RequestContext<RoleServer>,
     authz_hook: &SharedAuthzHook,
+    services_config: &ServicesConfig,
 ) -> Result<(SysRequestContext, String), McpError> {
     let server_name = service_id.as_str();
-    let rbac_result = enforce_rbac_from_registry(ctx, service_id, authz_hook).await;
+    let rbac_result = enforce_rbac_from_registry(ctx, service_id, authz_hook, services_config).await;
 
     match rbac_result {
         Ok(result) => {

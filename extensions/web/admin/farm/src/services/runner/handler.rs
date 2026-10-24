@@ -199,6 +199,7 @@ impl FarmRunHandler {
             seq_after,
             sink: &sink,
             cancel: claimed.run_token.clone(),
+            harness: None,
         })
         .await;
         watcher.abort();

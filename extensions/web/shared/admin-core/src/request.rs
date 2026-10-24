@@ -15,9 +15,7 @@ pub(crate) struct ErrorBody {
 }
 
 pub fn get_services_path() -> AdminResult<PathBuf> {
-    Ok(ServicesRootBootstrap::active_root_or(
-        &ProfileBootstrap::get()?.paths.services,
-    ))
+    Ok(ServicesRootBootstrap::require()?.path)
 }
 
 // Why: core's composed services root is a content-addressed overlay the next

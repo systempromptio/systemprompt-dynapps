@@ -10,7 +10,6 @@
 use std::collections::BTreeMap;
 
 use sqlx::{PgPool, Postgres, Transaction};
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::MarketplaceId;
 use systemprompt::loader::ConfigLoader;
 use systemprompt::loader::services_root::ServicesRootBootstrap;
@@ -41,12 +40,9 @@ pub async fn record_service_sources(pool: &PgPool) -> Result<SourcesRecorded, Ma
     let sources = build_sources().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     let services = ConfigLoader::load().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     let owned = owned_ids(&sources, &services);
-    let root = ServicesRootBootstrap::active_root_or(
-        &ProfileBootstrap::get()
-            .map_err(|e| MarketplaceError::Internal(e.to_string()))?
-            .paths
-            .services,
-    );
+    let root = ServicesRootBootstrap::require()
+        .map_err(|e| MarketplaceError::Internal(e.to_string()))?
+        .path;
     let versions = compute_marketplace_versions(&root, &services, &sources);
 
     let mut tx = pool.begin().await?;

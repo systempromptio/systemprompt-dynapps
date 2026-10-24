@@ -18,7 +18,6 @@
 
 use async_trait::async_trait;
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::services_root::ServicesRootBootstrap;
 
 use super::access_control_rows::{awaiting_rows, rows};
@@ -61,8 +60,7 @@ pub async fn declared_from(from: DeclarationSource<'_>) -> AdminResult<DeclaredS
         .map_err(|source| AdminError::invalid("services tree could not be composed", source))?;
     let loaded = match from {
         DeclarationSource::Disk => {
-            let profile = ProfileBootstrap::get()?;
-            let services_path = ServicesRootBootstrap::active_root_or(&profile.paths.services);
+            let services_path = ServicesRootBootstrap::require()?.path;
             load_declared_set(&services_path, &marketplace_ids, &registered).await
         },
         DeclarationSource::Text(text) => match parse_rules_doc(text) {

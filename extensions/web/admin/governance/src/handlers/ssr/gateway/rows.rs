@@ -75,17 +75,29 @@ pub(super) fn route_rows(inputs: RouteRowInputs<'_>, faults: &mut Faults) -> Vec
         .iter()
         .enumerate()
         .map(|(index, route)| {
-            let (surface, surface_tone) = surfaces.surface_of(&route.provider);
+            let resolved = labels.find(&route.id);
+            let provider = resolved.map_or_else(
+                || {
+                    route
+                        .deployments
+                        .first()
+                        .map(|d| d.provider().to_owned())
+                        .unwrap_or_default()
+                },
+                |l| l.provider.clone(),
+            );
+            let (surface, surface_tone) = surfaces.surface_of(&provider);
             let provider_label = labels
-                .find_provider(&route.provider)
-                .map_or_else(|| route.provider.clone(), |p| p.label.clone());
+                .find_provider(&provider)
+                .map_or_else(|| provider.clone(), |p| p.label.clone());
+            let model_pattern = route.models_line();
             let label = route
                 .name
                 .as_deref()
                 .map(str::trim)
                 .filter(|n| !n.is_empty())
                 .map_or_else(
-                    || derive_route_label(&route.model_pattern, &provider_label),
+                    || derive_route_label(&model_pattern, &provider_label),
                     str::to_owned,
                 );
             GatewayRouteRow {
@@ -96,19 +108,21 @@ pub(super) fn route_rows(inputs: RouteRowInputs<'_>, faults: &mut Faults) -> Vec
                 description: route.description.clone().unwrap_or_default(),
                 label,
                 provider_label,
-                upstream_model: route.upstream_model.clone().unwrap_or_default(),
+                upstream_model: resolved
+                    .and_then(|l| l.upstream.clone())
+                    .unwrap_or_default(),
                 requires: yaml_summary(route.requires.as_ref(), faults),
                 when: yaml_summary(route.when.as_ref(), faults),
-                has_pricing: route.pricing.is_some(),
-                header_count: route.extra_headers.len(),
+                has_pricing: false,
+                header_count: 0,
                 grants: grants.get(&route.id).copied().unwrap_or(0),
                 dispatchable: dispatchable.contains(&route.id),
                 is_first: index == 0,
                 is_last: index == last,
                 matrix_url: matrix_url(&route.id),
                 id: route.id.clone(),
-                model_pattern: route.model_pattern.clone(),
-                provider: route.provider.clone(),
+                model_pattern,
+                provider,
             }
         })
         .collect()
@@ -122,13 +136,16 @@ pub(super) fn resolved_only(
     resolved
         .iter()
         .filter(|r| !declared.iter().any(|d| d.id == r.id))
-        .map(|r| ResolvedOnlyRow {
-            matrix_url: matrix_url(&r.id),
-            label: labels.label_of(&r.id),
-            id: r.id.clone(),
-            model_pattern: r.model_pattern.clone(),
-            provider: r.provider.clone(),
-            upstream_model: r.upstream_model.clone().unwrap_or_default(),
+        .map(|r| {
+            let resolved = labels.find(&r.id);
+            ResolvedOnlyRow {
+                matrix_url: matrix_url(&r.id),
+                label: labels.label_of(&r.id),
+                id: r.id.clone(),
+                model_pattern: r.models_line(),
+                provider: resolved.map(|l| l.provider.clone()).unwrap_or_default(),
+                upstream_model: resolved.and_then(|l| l.upstream.clone()).unwrap_or_default(),
+            }
         })
         .collect()
 }
@@ -139,7 +156,7 @@ pub(super) fn kpis(
     resolved_extra: usize,
     surfaces: &Surfaces,
 ) -> Vec<GatewayKpiView> {
-    let backend = rows.iter().filter(|r| r.surface == "backend").count();
+    let backend = rows.iter().filter(|r| r.surface.is_empty()).count();
     let unknown = rows.iter().filter(|r| r.surface == "unknown").count();
     let grants: i64 = rows.iter().map(|r| r.grants).sum();
     let governed = rows.iter().filter(|r| !r.requires.is_empty()).count();
@@ -159,7 +176,7 @@ pub(super) fn kpis(
         GatewayKpiView {
             label: "Providers",
             value: surfaces.providers.len().to_string(),
-            note: format!("{backend} routes on a backend-only provider"),
+            note: format!("{backend} routes reaching no client-listed model"),
             tone: "",
         },
         GatewayKpiView {

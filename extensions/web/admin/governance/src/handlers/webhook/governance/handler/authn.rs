@@ -79,9 +79,9 @@ pub(super) fn authenticate_request(
     })?;
 
     Ok(Principal {
-        user_id: UserId::new(&claims.sub),
-        client_id: claims.client_id,
-        gateway_session: claims.session_id,
+        user_id: UserId::new(&claims.registered.sub),
+        client_id: claims.custom.client_id,
+        gateway_session: claims.custom.session_id,
     })
 }
 

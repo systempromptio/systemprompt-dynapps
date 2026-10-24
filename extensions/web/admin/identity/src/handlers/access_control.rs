@@ -62,6 +62,7 @@ pub(crate) async fn update_entity_rules_handler(
         kind,
         &entity_id,
         &body.rules,
+        &user_ctx.user_id,
     )
     .await?;
 
@@ -82,6 +83,7 @@ pub(crate) async fn update_entity_rules_handler(
 
 pub(crate) async fn bulk_assign_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
     Json(body): Json<BulkAssignRequest>,
 ) -> AdminResult<Response> {
     let registered = registered_routes_from_services()?;
@@ -97,6 +99,7 @@ pub(crate) async fn bulk_assign_handler(
         &pool,
         &entities,
         &body.rules,
+        &user_ctx.user_id,
     )
     .await?;
     Ok(Json(BulkAssignResponse {

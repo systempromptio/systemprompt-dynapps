@@ -14,6 +14,7 @@ use sqlx::PgPool;
 use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::loader::ConfigLoader;
+use systemprompt::manifest::services::catalog::CatalogContext;
 use systemprompt::models::execution::context::RequestContext;
 
 use crate::repositories::analysis::reports::{
@@ -43,23 +44,26 @@ impl ReportModel {
             .scheduler
             .as_ref()
             .and_then(|s| s.jobs.iter().find(|j| j.name == JUDGE_JOB_NAME));
-        let provider = judge
-            .and_then(|j| j.parameters.get("provider").cloned())
-            .filter(|p| !p.is_empty())
-            .unwrap_or_else(|| services.ai.default_provider.clone());
-        let model = judge
-            .and_then(|j| j.parameters.get("model").cloned())
-            .filter(|m| !m.is_empty())
+        let param = |name: &str| {
+            judge
+                .and_then(|j| j.parameters.get(name).cloned())
+                .filter(|v| !v.is_empty())
+        };
+        let catalog = services
+            .resolve_catalog(&CatalogContext::default())
+            .map_err(AdminError::internal)?;
+        let model = param("model")
+            .or_else(|| catalog.default_model().map(|m| m.as_str().to_owned()))
+            .ok_or_else(|| AdminError::internal("no judge model and no catalog default model"))?;
+        let provider = param("provider")
             .or_else(|| {
-                services
-                    .ai
-                    .providers
-                    .get(&provider)
-                    .map(|p| p.default_model.clone())
-                    .filter(|m| !m.is_empty())
+                catalog
+                    .enabled_hops(&model)
+                    .next()
+                    .map(|hop| hop.provider.as_str().to_owned())
             })
             .ok_or_else(|| {
-                AdminError::internal(format!("no model is configured for provider {provider}"))
+                AdminError::internal(format!("no enabled deployment serves model {model}"))
             })?;
         Ok(Self { provider, model })
     }

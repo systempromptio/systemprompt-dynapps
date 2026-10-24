@@ -60,7 +60,9 @@ pub async fn upsert_rule(
     rule_type: RuleType,
     rule_value: &str,
     access: Access,
+    actor: &systemprompt::identifiers::UserId,
 ) -> Result<AccessRule, sqlx::Error> {
+    let source = systemprompt_web_admin_core::util::change_source::console_source(actor);
     repo(pool)
         .upsert_rule(UpsertRuleParams {
             entity_type: ENTITY_TYPE,
@@ -69,7 +71,7 @@ pub async fn upsert_rule(
             rule_value,
             access,
             justification: None,
-            source: systemprompt::governance::authz::DASHBOARD_SOURCE,
+            source: &source,
         })
         .await
         .map_err(|e| map_err(&e))

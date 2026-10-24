@@ -85,6 +85,7 @@ pub(crate) async fn review(
                 operation_key: form.operation_key,
                 comparison_evidence,
                 limitations: form.limitations,
+                cohort: None,
             },
         )
         .await?;

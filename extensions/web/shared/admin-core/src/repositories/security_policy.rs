@@ -13,7 +13,6 @@ use std::path::PathBuf;
 
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::services_root::ServicesRootBootstrap;
 
 pub const SECURITY_FILE: &str = "web/config/security.yaml";
@@ -47,8 +46,8 @@ struct SecurityDoc {
 
 #[derive(Debug, thiserror::Error)]
 pub enum SecurityPolicyError {
-    #[error("profile unavailable: {0}")]
-    Profile(#[source] systemprompt::config::ProfileBootstrapError),
+    #[error("services root unavailable: {0}")]
+    Root(#[source] systemprompt::loader::ConfigLoadError),
     #[error("{path}: {source}")]
     Read {
         path: PathBuf,
@@ -74,9 +73,10 @@ impl SecurityPolicy {
     }
 
     pub fn load() -> Result<Self, SecurityPolicyError> {
-        let profile = ProfileBootstrap::get().map_err(SecurityPolicyError::Profile)?;
-        let path =
-            ServicesRootBootstrap::active_root_or(&profile.paths.services).join(SECURITY_FILE);
+        let path = ServicesRootBootstrap::require()
+            .map_err(SecurityPolicyError::Root)?
+            .path
+            .join(SECURITY_FILE);
         let text = match std::fs::read_to_string(&path) {
             Ok(text) => text,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),

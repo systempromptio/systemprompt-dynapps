@@ -57,14 +57,14 @@ impl SecretsScanner {
 }
 
 fn configured_scanner() -> Option<SecretScanner> {
-    let profile = systemprompt::config::ProfileBootstrap::get()
-        .inspect_err(|error| tracing::error!(%error, "response secret scanner: no profile"))
+    let root = systemprompt::loader::services_root::ServicesRootBootstrap::require()
+        .inspect_err(|error| tracing::error!(%error, "response secret scanner: no services root"))
         .ok()?;
-    let path = systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
-        &profile.paths.services,
-    )
-    .join("governance/config.yaml");
-    let config = GovernanceConfig::load(&path)
+    let path = root.path.join("governance/config.yaml");
+    let text = std::fs::read_to_string(&path)
+        .inspect_err(|error| tracing::error!(%error, "response secret scanner: config unreadable"))
+        .ok()?;
+    let config = GovernanceConfig::parse(&text)
         .inspect_err(
             |error| tracing::error!(%error, "response secret scanner configuration rejected"),
         )

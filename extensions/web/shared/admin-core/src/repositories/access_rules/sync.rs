@@ -19,7 +19,7 @@
 //! filter.
 
 use sqlx::{PgPool, Postgres, Transaction};
-use systemprompt::governance::authz::YAML_SOURCE;
+use systemprompt::governance::authz::SERVICES_SOURCE;
 
 use super::declared::{DeclaredEntity, DeclaredRule, DeclaredSet};
 use super::drift::{DriftReport, compute_drift};
@@ -27,7 +27,7 @@ use super::rules::{list_band_rules, list_entity_defaults};
 use super::validity::set_rule_validity;
 pub use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
 
-pub const RULES_SOURCE: &str = "services/access-control/rules.yaml";
+pub const RULES_SOURCE: &str = "code:access-control/rules.yaml";
 
 
 pub async fn apply_sync(
@@ -150,7 +150,7 @@ async fn insert_rule(
         rule.key.rule_value,
         access,
         rule.justification,
-        YAML_SOURCE,
+        SERVICES_SOURCE,
     )
     .fetch_one(&mut **tx)
     .await?;
@@ -172,7 +172,7 @@ async fn update_changed(
             changed.db_id,
             access,
             changed.declared_why,
-            YAML_SOURCE,
+            SERVICES_SOURCE,
         )
         .execute(&mut **tx)
         .await?;

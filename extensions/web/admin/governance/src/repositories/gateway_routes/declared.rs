@@ -5,22 +5,20 @@
 //! boots from — or, when a pinned services bundle owns `ai/`, from the
 //! composed root the dispatcher reads (and then never written); hashed on the
 //! parsed routes so a comment or whitespace edit is not a drift. Every field
-//! core's `GatewayRoute` carries is part of the hash, the fallback pair
-//! included.
+//! core's `GatewayRoute` carries is part of the hash.
 
 use serde_yaml::Value;
 use sha2::{Digest, Sha256};
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
-use systemprompt_web_admin_core::repositories::gateway_catalog::route_from_yaml;
-use systemprompt_web_admin_core::types::{GatewayRouteView, RouteFallbackView};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{route_from_yaml, route_to_yaml};
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 pub const GATEWAY_FILE: &str = "ai/gateway.yaml";
 
 #[derive(Debug, Clone)]
 pub struct DeclaredRoute {
     pub route: GatewayRouteView,
-    pub explicit_id: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -28,38 +26,14 @@ pub struct DeclaredRoutes {
     pub routes: Vec<DeclaredRoute>,
 }
 
+/// The route as core serialises it, so two routes that load identically
+/// fingerprint identically and a comment or key-order edit is not drift.
 #[must_use]
 pub fn route_fingerprint(route: &GatewayRouteView) -> String {
-    let block = |v: Option<&Value>| {
-        v.map(|v| serde_yaml::to_string(v).unwrap_or_default())
-            .unwrap_or_default()
-    };
-    let headers = route
-        .extra_headers
-        .iter()
-        .map(|(k, v)| format!("{k}={v}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    format!(
-        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-        route.id,
-        route.name.as_deref().unwrap_or_default(),
-        route.description.as_deref().unwrap_or_default(),
-        route.model_pattern,
-        route.provider,
-        route.upstream_model.as_deref().unwrap_or_default(),
-        headers,
-        block(route.pricing.as_ref()),
-        block(route.when.as_ref()),
-        block(route.requires.as_ref()),
-        route
-            .fallbacks
-            .iter()
-            .map(RouteFallbackView::describe)
-            .collect::<Vec<_>>()
-            .join(","),
-        block(route.by_scope.as_ref()),
-    )
+    route_to_yaml(route)
+        .ok()
+        .and_then(|value| serde_yaml::to_string(&value).ok())
+        .unwrap_or_else(|| format!("unrenderable route {}", route.id))
 }
 
 impl DeclaredRoutes {
@@ -82,7 +56,7 @@ impl DeclaredRoutes {
 pub enum DeclaredRoutesError {
     #[error("gateway.yaml does not parse: {0}")]
     Yaml(#[from] serde_yaml::Error),
-    #[error("gateway.routes[{index}] lacks model_pattern or provider")]
+    #[error("gateway.routes[{index}] is not a route core loads")]
     IncompleteRoute { index: usize },
     #[error("gateway.routes[{index}] repeats id `{id}`")]
     DuplicateRoute { index: usize, id: String },
@@ -102,9 +76,6 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, DeclaredRoute
         let Some(route) = route_from_yaml(entry) else {
             return Err(DeclaredRoutesError::IncompleteRoute { index: i });
         };
-        let explicit_id = entry
-            .as_mapping()
-            .is_some_and(|m| m.contains_key(Value::from("id")));
         if routes
             .iter()
             .any(|d: &DeclaredRoute| d.route.id == route.id)
@@ -114,7 +85,7 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, DeclaredRoute
                 id: route.id,
             });
         }
-        routes.push(DeclaredRoute { route, explicit_id });
+        routes.push(DeclaredRoute { route });
     }
     Ok(DeclaredRoutes { routes })
 }

@@ -41,6 +41,8 @@ pub enum RenderRoutesError {
     RootNotMapping,
     #[error("gateway block is not a mapping")]
     GatewayNotMapping,
+    #[error("a route does not render: {0}")]
+    Route(String),
 }
 
 pub fn render_routes_export(
@@ -57,10 +59,12 @@ pub fn render_routes_export(
     let gateway = gateway
         .as_mapping_mut()
         .ok_or(RenderRoutesError::GatewayNotMapping)?;
-    gateway.insert(
-        Value::from("routes"),
-        Value::Sequence(rows.iter().map(|r| route_to_yaml(&r.route)).collect()),
-    );
+    let routes = rows
+        .iter()
+        .map(|r| route_to_yaml(&r.route))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| RenderRoutesError::Route(e.to_string()))?;
+    gateway.insert(Value::from("routes"), Value::Sequence(routes));
     let body = serde_yaml::to_string(&doc)?;
     Ok(format!("{}{body}", leading_comment_header(file_yaml)))
 }

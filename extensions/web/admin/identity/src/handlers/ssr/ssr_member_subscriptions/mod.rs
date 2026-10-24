@@ -50,7 +50,7 @@ fn holder_view(h: &ProviderCredentialHolder) -> HolderView {
             .clone()
             .or_else(|| h.email.clone())
             .unwrap_or_else(|| h.user_id.as_str().to_owned()),
-        provider: h.provider.clone(),
+        provider: h.credential.clone(),
         label: h.label.clone().unwrap_or_else(|| "—".to_owned()),
         created: relative_time(h.created_at),
         created_at: h.created_at.to_rfc3339(),
