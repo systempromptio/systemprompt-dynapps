@@ -163,11 +163,27 @@ run_migrations() {
     /app/bin/systemprompt infra db migrate --repair-drift
 }
 
+# Core boots no config plane: access control, governance and gateway policies
+# reach the database only through `admin config apply`, run here wherever the
+# migrations run (the one-shot migrate step, or a node that migrates on boot).
+# The apply takes core's advisory lock, so replicas cannot race it. A conflict
+# (an entity changed in both the image and the console) exits non-zero and is
+# left for /admin/sync; the node still starts, but it does not start with a
+# plane that was never applied.
+apply_config() {
+    echo "Applying the image's services/ declarations (admin config apply)..."
+    /app/bin/systemprompt admin config apply \
+        --reason "${CONFIG_APPLY_REASON:-image start: apply shipped services/}" \
+        || echo "WARN: config apply reported conflicts; resolve them on /admin/sync." >&2
+    /app/bin/check-config-applied.sh /app/bin/systemprompt
+}
+
 # `migrate` is the one-shot step for profiles with database.migrate_on_boot:
 # false (deploy/self-host): migrate, ensure the admin, exit.
 if [ "${1:-}" = "migrate" ]; then
     run_migrations
     /app/bin/systemprompt admin bootstrap
+    apply_config
     exit 0
 fi
 
@@ -202,6 +218,9 @@ if [ "$ROLE" = "gateway" ]; then
 else
     echo "Ensuring bootstrap admin user..."
     /app/bin/systemprompt admin bootstrap
+    if migrate_on_boot; then
+        apply_config
+    fi
 fi
 
 echo "Starting services..."

@@ -155,6 +155,7 @@ COPY demo /app/demo
 COPY extensions/mcp /app/extensions/mcp
 
 COPY docker/entrypoint.sh /app/entrypoint.sh
+COPY scripts/check-config-applied.sh /app/bin/check-config-applied.sh
 RUN chmod +x /app/entrypoint.sh /app/bin/* \
     && chown -R app:app /app
 
