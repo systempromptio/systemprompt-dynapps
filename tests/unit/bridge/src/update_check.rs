@@ -1,7 +1,7 @@
 //! A manual "Check for updates" asks the gateway to bypass its release cache;
 //! the scheduled check keeps using it.
 
-use bridge_identifiers::ValidatedUrl;
+use systemprompt_identifiers::ValidatedUrl;
 use systemprompt_bridge::gateway::GatewayClient;
 use systemprompt_bridge::ids::BearerToken;
 use wiremock::matchers::{method, path, query_param, query_param_is_missing};

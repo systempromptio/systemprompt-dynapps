@@ -2220,6 +2220,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lock_api"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65d91b22da179613dcf4d6ec8349563f52a363f6849e03b00dd0a185ec4a59af"
+dependencies = [
+ "scopeguard",
+]
+
+[[package]]
 name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2709,8 +2718,18 @@ version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a"
 dependencies = [
- "lock_api",
- "parking_lot_core",
+ "lock_api 0.4.14",
+ "parking_lot_core 0.9.12",
+]
+
+[[package]]
+name = "parking_lot"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9cf937ca4e1d0b7578784559063422fc39ae7c5a00f02471f2614d5486fd226"
+dependencies = [
+ "lock_api 0.5.0",
+ "parking_lot_core 0.10.0",
 ]
 
 [[package]]
@@ -2722,6 +2741,18 @@ dependencies = [
  "cfg-if",
  "libc",
  "redox_syscall 0.5.18",
+ "smallvec",
+ "windows-link",
+]
+
+[[package]]
+name = "parking_lot_core"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cfff060068cc18aa7815010fcaf80c68c7fb9e85fc7f5c0f9bf142c21d19826"
+dependencies = [
+ "libc",
+ "redox_syscall 0.9.5",
  "smallvec",
  "windows-link",
 ]
@@ -3166,14 +3197,15 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "3.5.1"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5023804cbe0304cbe06197ac16e645a0a0d0ffa2953bf735c15c2fa0213350"
+checksum = "ece64e19631fc38758181e637c15509a2c2709ee53bfde1e1d58f9dc991f919e"
 dependencies = [
  "base64 0.23.1",
  "chrono",
  "futures",
  "indexmap",
+ "libc",
  "pastey",
  "pin-project-lite",
  "rmcp-macros",
@@ -3775,7 +3807,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a18596f8c785a729f2819c0f6a7eae6ebeebdfffbfe4214ae6b087f690e31901"
 dependencies = [
  "new_debug_unreachable",
- "parking_lot",
+ "parking_lot 0.12.5",
  "phf_shared",
  "precomputed-hash",
 ]
@@ -3877,7 +3909,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-bridge"
-version = "0.72.1"
+version = "0.73.0"
 dependencies = [
  "apple-native-keyring-store",
  "arc-swap",
@@ -3908,7 +3940,7 @@ dependencies = [
  "linux-keyutils-keyring-store",
  "muda",
  "opener",
- "parking_lot",
+ "parking_lot 0.13.0",
  "rand",
  "raw-window-handle",
  "reqwest",
@@ -3947,7 +3979,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-identifiers"
-version = "0.72.1"
+version = "0.73.0"
 dependencies = [
  "chrono",
  "schemars",
@@ -3959,7 +3991,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-models"
-version = "0.72.1"
+version = "0.73.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3987,7 +4019,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-provider-contracts"
-version = "0.72.1"
+version = "0.73.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4004,8 +4036,9 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-traits"
-version = "0.72.1"
+version = "0.73.0"
 dependencies = [
+ "arc-swap",
  "async-trait",
  "bytes",
  "chrono",

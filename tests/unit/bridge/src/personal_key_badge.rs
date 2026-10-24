@@ -1,8 +1,8 @@
 //! An advertised personal-subscription provider the user has no key for
 //! becomes the "add your key" badge, with the Settings button as its fix.
 
-use bridge_models::bridge::profile::ProviderHealth;
-use bridge_models::providers::ApiSurface;
+use systemprompt_models::bridge::profile::ProviderHealth;
+use systemprompt_models::providers::ApiSurface;
 use systemprompt_bridge::gateway::model_view::host_model_view;
 use systemprompt_bridge::integration::agent_health::AgentReason;
 
