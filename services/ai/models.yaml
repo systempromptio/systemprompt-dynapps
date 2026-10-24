@@ -1,3 +1,9 @@
+# Models: identity, capabilities, limits and base price, each stated once.
+# `clients` decides which client families list a model: Claude hosts see the
+# claude-* ids, OpenCode sees DeepSeek and the Go models, and the e2e mock is
+# never advertised. DeepSeek rates are the PEAK list rates (off-peak is half),
+# which keeps the Claude cost comparison conservative; OpenCode Go rates are
+# its published per-token list prices, kept for cost comparison only.
 models:
   claude-haiku-5-5:
     upstream_model: claude-haiku-5-5
@@ -107,24 +113,6 @@ models:
       cache_write_per_million: 0.0
       per_image_cents: null
     clients: []
-  go-deepseek-v4-pro:
-    upstream_model: deepseek-v4-pro
-    capabilities:
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-    limits:
-      context_window: 1048576
-      max_output_tokens: 393216
-    pricing:
-      input_per_million: 1.32
-      output_per_million: 3.96
-      cache_read_per_million: 0.132
-      cache_write_per_million: 1.32
-      per_image_cents: null
-    clients:
-    - openai
   go-deepseek-v4.1-flash:
     upstream_model: deepseek-v4.1-flash
     capabilities:

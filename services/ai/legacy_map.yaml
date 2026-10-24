@@ -17,7 +17,7 @@ providers:
     credential: opencode-go
   opencode-go-anthropic:
     provider: opencode-go
-    endpoint: opencode-go/anthropic
+    endpoint: opencode-go/messages
     credential: opencode-go
 routes:
   claude-star-4203d1: star-bf70e4

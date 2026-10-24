@@ -1,20 +1,19 @@
-# OpenCode — external-agent (super-agent) catalog entry.
+# OpenCode desktop app — external-agent catalog entry (host id `opencode`).
 #
-# OpenCode is one host with two installs: the `opencode` CLI/TUI and the
-# Electron desktop app. Both read the same admin-managed `opencode.json`, so the
-# bridge governs either with one profile; the desktop app needs no CLI on PATH.
+# Core 0.73 splits OpenCode into two hosts: `opencode` is the Electron desktop
+# app and `opencode-cli` (opencode_cli.yaml) is the terminal CLI/TUI. Both read
+# the same admin-managed `opencode.json`.
 #
 # enabled: false removes the opencode host from every user's bridge manifest
 # on this installation (gateway instance_enabled_hosts gate). Deleting this
 # file would RE-enable the host: absent from the catalog means enabled.
 
-
 external_agents:
   opencode:
     id: opencode
     display_name: "OpenCode"
-    kind: cli_tool
+    kind: desktop_app
     enabled: true
-    description: "The open-source OpenCode coding agent (terminal and desktop app). Routes inference through this gateway."
+    description: "The OpenCode desktop app. Routes inference through this gateway."
     platforms: [macos, windows, linux]
     docs_url: "https://opencode.ai/"

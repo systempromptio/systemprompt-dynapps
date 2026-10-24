@@ -1,3 +1,7 @@
+# Providers: the vendor account (headers, user agent, governance) and its
+# endpoints, one wire plus one URL each. OpenCode Go is one subscription with
+# two wires: `chat` (Chat Completions) and `messages` (Anthropic Messages),
+# both on the opencode-go personal credential.
 providers:
   anthropic:
     credential: anthropic
@@ -147,7 +151,7 @@ providers:
       max_concurrent: 16
     google_search_enabled: false
     endpoints:
-      anthropic:
+      messages:
         wire: anthropic
         url: https://opencode.ai/inference/go/anthropic/v1
         accepted_betas: []

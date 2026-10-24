@@ -1,0 +1,16 @@
+# Codex desktop app — external-agent catalog entry (host id `codex`).
+#
+# Core 0.73 splits Codex into the desktop app (`codex`, this file) and the
+# command-line tool (`codex-cli`, codex_cli.yaml). Codex is off on this
+# installation, so both entries are disabled. Deleting this file would
+# RE-enable the host: absent from the catalog means enabled.
+
+external_agents:
+  codex:
+    id: codex
+    display_name: "Codex"
+    kind: desktop_app
+    enabled: false
+    description: "The OpenAI Codex desktop app. Routes inference through this gateway."
+    platforms: [macos, windows]
+    docs_url: "https://github.com/openai/codex"

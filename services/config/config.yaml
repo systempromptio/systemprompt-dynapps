@@ -27,7 +27,10 @@ includes:
 
   # External agents (native apps and CLI tools that run off our infra; not A2A agents)
   - ../external_agents/claude_desktop.yaml
+  - ../external_agents/codex.yaml
   - ../external_agents/codex_cli.yaml
+  - ../external_agents/opencode.yaml
+  - ../external_agents/opencode_cli.yaml
   - ../external_agents/hermes.yaml
 
 settings:

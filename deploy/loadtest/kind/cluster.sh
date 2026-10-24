@@ -85,7 +85,10 @@ services_configmap() {
     local policies="$HERE/services/gateway/policies.yaml"
     [ "${1:-default}" = enforce ] && policies="$HERE/services/gateway/policies-enforce.yaml"
     k -n "$NS" create configmap loadtest-services \
+        --from-file=credentials.yaml="$HERE/services/ai/credentials.yaml" \
         --from-file=providers.yaml="$HERE/services/ai/providers.yaml" \
+        --from-file=models.yaml="$HERE/services/ai/models.yaml" \
+        --from-file=deployments.yaml="$HERE/services/ai/deployments.yaml" \
         --from-file=gateway.yaml="$HERE/services/ai/gateway.yaml" \
         --from-file=config.yaml="$HERE/services/ai/config.yaml" \
         --from-file=policies.yaml="$policies" \
