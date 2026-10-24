@@ -12,7 +12,7 @@
 # (`mcp_server/dynbrain`). See docs/CONFIGURED-CONNECTORS.md.
 mcp_servers:
   dynbrain:
-    type: external
+    server_type: external
     endpoint: https://portal.dynapps.es/mcp/HHqBulo1Jyae9zA-IE95WA
     enabled: true
     tool_policy: allow
