@@ -1,21 +1,13 @@
 ai:
-  default_provider: anthropic
+  history:
+    retention_days: 30
+    log_tool_executions: true
   default_max_output_tokens: 2048
   sampling:
     enable_smart_routing: false
     fallback_enabled: false
-  # Only the default provider is named here: core still requires it under
-  # ai.providers. Every other provider is declared once, in providers.yaml.
-  providers:
-    anthropic:
-      enabled: true
-      google_search_enabled: true
-      default_model: claude-sonnet-5-5
   mcp:
     auto_discover: true
     connect_timeout_ms: 5000
     execution_timeout_ms: 30000
     retry_attempts: 3
-  history:
-    retention_days: 30
-    log_tool_executions: true

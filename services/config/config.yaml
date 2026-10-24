@@ -23,8 +23,6 @@ includes:
   - ../ai/config.yaml
   # Provider catalog and gateway routes: implementation configuration that
   # ships in the image, not profile sections.
-  - ../ai/providers.yaml
-  - ../ai/gateway.yaml
   - ../scheduler/config.yaml
 
   # External agents (native apps and CLI tools that run off our infra; not A2A agents)

@@ -1,0 +1,29 @@
+providers:
+  anthropic:
+    provider: anthropic
+    endpoint: anthropic/api
+    credential: anthropic
+  deepseek:
+    provider: deepseek
+    endpoint: deepseek/api
+    credential: deepseek
+  e2e-mock:
+    provider: e2e-mock
+    endpoint: e2e-mock/api
+    credential: anthropic
+  opencode-go:
+    provider: opencode-go
+    endpoint: opencode-go/chat
+    credential: opencode-go
+  opencode-go-anthropic:
+    provider: opencode-go
+    endpoint: opencode-go/anthropic
+    credential: opencode-go
+routes:
+  claude-star-4203d1: star-bf70e4
+  deepseek-route: star-bf70e4
+  e2e-mock-route: star-bf70e4
+  opencode-go-minimax-route: star-bf70e4
+  opencode-go-qwen-route: star-bf70e4
+  opencode-go-route: star-bf70e4
+dropped_models: []

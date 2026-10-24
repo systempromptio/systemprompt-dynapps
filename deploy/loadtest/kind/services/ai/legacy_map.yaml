@@ -1,0 +1,15 @@
+providers:
+  mock-anthropic:
+    provider: mock-anthropic
+    endpoint: mock-anthropic/messages
+    credential: anthropic
+  mock-anthropic-eu:
+    provider: mock-anthropic
+    endpoint: mock-anthropic/eu
+    credential: anthropic
+routes:
+  claude-star-4203d1: star-38c293
+dropped_models:
+- mock-eu-claude-sonnet-5-5
+- mock-eu-claude-haiku-5-5
+- mock-eu-claude-opus-5-5
