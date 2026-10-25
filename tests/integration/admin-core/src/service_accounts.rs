@@ -156,7 +156,9 @@ async fn the_broker_refuses_a_caller_that_is_not_a_write_back() {
     .await
     .expect("attach");
     for caller in [None, Some("interactive"), Some("workflow:x:read")] {
-        let refused = machine_credentials::broker_token(&db.pool, &id, "github", caller).await;
+        let refused =
+            machine_credentials::broker_token(&db.pool, &accounts(&db.pool), &id, "github", caller)
+                .await;
         assert!(
             matches!(
                 refused,
@@ -176,9 +178,10 @@ async fn the_broker_returns_a_github_installation_token() {
     let _secrets = dynapps_test_common::bootstrap_master_key().await;
     let id = service_account(&db.pool).await;
     let (api, request) = mock_github().await;
+    let accounts = accounts(&db.pool);
     machine_credentials::attach(
         &db.pool,
-        &accounts(&db.pool),
+        &accounts,
         Holder {
             user: &id,
             provider: "github",
@@ -190,6 +193,7 @@ async fn the_broker_returns_a_github_installation_token() {
     .expect("attach");
     let value = machine_credentials::broker_token(
         &db.pool,
+        &accounts,
         &id,
         "github",
         Some("workflow:release-notes:write"),
@@ -201,9 +205,10 @@ async fn the_broker_returns_a_github_installation_token() {
     assert!(request.starts_with("POST /app/installations/777/access_tokens "));
     assert!(request.to_lowercase().contains("authorization: bearer ey"));
 
-    let cached = machine_credentials::broker_token(&db.pool, &id, "github", Some("farm:triage"))
-        .await
-        .expect("cached token; the mock answers only once");
+    let cached =
+        machine_credentials::broker_token(&db.pool, &accounts, &id, "github", Some("farm:triage"))
+            .await
+            .expect("cached token; the mock answers only once");
     assert_eq!(cached, value);
     db.cleanup().await;
 }
@@ -214,8 +219,14 @@ async fn a_credential_with_no_row_is_not_connected() {
         return;
     };
     let id = service_account(&db.pool).await;
-    let missing =
-        machine_credentials::broker_token(&db.pool, &id, "github", Some("farm:triage")).await;
+    let missing = machine_credentials::broker_token(
+        &db.pool,
+        &accounts(&db.pool),
+        &id,
+        "github",
+        Some("farm:triage"),
+    )
+    .await;
     assert!(matches!(
         missing,
         Err(systemprompt_web_admin_core::error::AdminError::NotFound(_))

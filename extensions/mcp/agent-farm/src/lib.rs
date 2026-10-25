@@ -20,4 +20,4 @@ pub mod typed;
 
 pub use env::Env;
 pub use error::{ToolError, ToolResult};
-pub use server::{AgentFarmServer, RunOrigin, Viewer, authorize_run};
+pub use server::{AgentFarmServer, RunOrigin, ServerAccess, Viewer, authorize_run};

@@ -9,7 +9,7 @@ use sqlx::PgPool;
 
 use systemprompt::manifest::services::GatewayRoute;
 use systemprompt_web_admin_core::repositories::gateway_catalog::route_view;
-use systemprompt_web_admin_core::types::{GatewayRouteView, RouteAliasView};
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 pub const SOURCE_CODE: &str = "code";
 pub const SOURCE_DASHBOARD: &str = "dashboard";
@@ -120,10 +120,4 @@ pub async fn set_gateway_route_position(
     .execute(pool)
     .await?;
     Ok(())
-}
-
-/// The alias line a page shows for a route: `requested → model`.
-#[must_use]
-pub fn alias_line(alias: Option<&RouteAliasView>) -> String {
-    alias.map_or_else(String::new, |a| format!("{} → {}", a.requested, a.model))
 }

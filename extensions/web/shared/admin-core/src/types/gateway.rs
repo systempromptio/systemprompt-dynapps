@@ -34,8 +34,6 @@ pub struct GatewayRouteView {
 }
 
 impl GatewayRouteView {
-    /// The models the route addresses, as one line: its globs, or the alias
-    /// `requested → model`.
     #[must_use]
     pub fn models_line(&self) -> String {
         let mut parts: Vec<String> = Vec::new();

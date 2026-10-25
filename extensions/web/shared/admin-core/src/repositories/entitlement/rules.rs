@@ -11,9 +11,7 @@
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::governance::authz::{
-    AccessControlRepository, AuthzError, EntityKind,
-};
+use systemprompt::governance::authz::{AccessControlRepository, AuthzError, EntityKind};
 use systemprompt::identifiers::UserId;
 
 use crate::types::access_control::{

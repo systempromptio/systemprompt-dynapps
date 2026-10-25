@@ -12,12 +12,12 @@
 //!    warning-only policies enforces nothing. Paths resolve against the
 //!    composed services root, the same tree `/admin/sync` reads.
 //! 1. Run every sync plane through the one boot contract
-//!    (`repositories::sync::boot`). The planes core enforces from the
-//!    database (access control, gateway policies) are only compared and the
-//!    drift logged: they reach the database through `systemprompt admin config
-//!    apply` and `/admin/sync`, never through a restart. The install's own
-//!    projections (groups, and the staging copies of the gateway routes and
-//!    the governance chain) are seeded from their files when empty.
+//!    (`repositories::sync::boot`). The planes core enforces from the database
+//!    (access control, gateway policies) are only compared and the drift
+//!    logged: they reach the database through `systemprompt admin config apply`
+//!    and `/admin/sync`, never through a restart. The install's own projections
+//!    (groups, and the staging copies of the gateway routes and the governance
+//!    chain) are seeded from their files when empty.
 //!
 //! The gateway-route entity catalog is core's: its boot reconcile registers a
 //! row for every route the resolved catalog dispatches.
@@ -132,7 +132,7 @@ pub fn check_governance_config(
                  the same chain `governance.unapplied_planes: warn` leaves in force"
             );
             GovernanceConfig::defaults()
-        }
+        },
         Err(e) => return Err(MarketplaceError::config_file(path.display().to_string(), e).into()),
     };
     let active = if config.enabled {

@@ -54,7 +54,11 @@ pub fn summarise_route(route: &GatewayRouteView) -> String {
         s = format!("{name}: {s}");
     }
     if !route.deployments.is_empty() {
-        let pinned: Vec<&str> = route.deployments.iter().map(|d| d.endpoint.as_str()).collect();
+        let pinned: Vec<&str> = route
+            .deployments
+            .iter()
+            .map(|d| d.endpoint.as_str())
+            .collect();
         s.push_str(&format!(" → {}", pinned.join(", then ")));
     }
     if route.requires.is_some() {
@@ -67,7 +71,10 @@ pub fn summarise_route(route: &GatewayRouteView) -> String {
         s.push_str(&format!(", {strategy}"));
     }
     if !route.context_fallbacks.is_empty() {
-        s.push_str(&format!(", context fallback {}", route.context_fallbacks.join(", ")));
+        s.push_str(&format!(
+            ", context fallback {}",
+            route.context_fallbacks.join(", ")
+        ));
     }
     s
 }
@@ -87,7 +94,10 @@ fn changed_fields(code: &GatewayRouteView, db: &GatewayRouteView) -> Vec<String>
     check("when", code.when != db.when);
     check("requires", code.requires != db.requires);
     check("strategy", code.strategy != db.strategy);
-    check("context_fallbacks", code.context_fallbacks != db.context_fallbacks);
+    check(
+        "context_fallbacks",
+        code.context_fallbacks != db.context_fallbacks,
+    );
     out
 }
 

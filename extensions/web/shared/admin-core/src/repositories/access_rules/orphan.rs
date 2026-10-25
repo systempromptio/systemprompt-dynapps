@@ -1,8 +1,8 @@
 //! The database-only rule rows of the access-control drift: where each came
 //! from, and whether an overwrite from code retires it.
 
-use serde::Serialize;
 use crate::util::change_source::is_console_source;
+use serde::Serialize;
 
 use super::drift::BandRuleRow;
 

@@ -45,13 +45,15 @@ pub(crate) async fn refresh_sources_handler(
     Extension(user_ctx): Extension<UserContext>,
     Extension(refresh): Extension<ServicesRefresh>,
 ) -> AdminResult<Response> {
-    let result = refresh.run(&user_ctx.user_id).await.map_err(|e| {
-        let err = e.into_inner();
-        match err.code.status_code() {
-            StatusCode::CONFLICT => AdminError::Conflict(err.message),
-            _ => AdminError::Upstream(format!("services refresh failed: {}", err.message)),
-        }
-    })?;
+    let result = Box::pin(refresh.run(&user_ctx.user_id))
+        .await
+        .map_err(|e| {
+            let err = e.into_inner();
+            match err.code.status_code() {
+                StatusCode::CONFLICT => AdminError::Conflict(err.message),
+                _ => AdminError::Upstream(format!("services refresh failed: {}", err.message)),
+            }
+        })?;
     // JSON: core's typed reply, relayed through our own shape so the page's
     // contract does not follow core's field set
     let sources = result

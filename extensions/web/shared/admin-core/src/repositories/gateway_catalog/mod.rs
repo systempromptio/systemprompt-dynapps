@@ -3,9 +3,9 @@
 //! catalog.
 //!
 //! The gateway config is not a Postgres table: it lives in the services
-//! tree's `gateway` block, which is why it sits here. These functions read, mutate,
-//! and re-serialize that block. Reads never write, and a write touches the
-//! edited field only: the file is an operator's, comments and all.
+//! tree's `gateway` block, which is why it sits here. These functions read,
+//! mutate, and re-serialize that block. Reads never write, and a write touches
+//! the edited field only: the file is an operator's, comments and all.
 
 mod catalog;
 mod config;

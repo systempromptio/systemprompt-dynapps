@@ -20,13 +20,12 @@ use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::manifest::services::ServicesConfig;
-use systemprompt::traits::ConfigWatch;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
 };
-use systemprompt::traits::DynToolCallIntentClaims;
-use systemprompt_mcp_shared::auth::authenticate_tool_request;
+use systemprompt::traits::{ConfigWatch, DynToolCallIntentClaims};
+use systemprompt_mcp_shared::auth::{ToolAuth, authenticate_tool_request};
 use systemprompt_mcp_shared::record_mcp_access;
 
 use crate::env::Env;
@@ -45,15 +44,26 @@ pub struct AgentFarmServer {
     env: Arc<Env>,
 }
 
+/// What every tool call is authorised against: the authz hook and the live
+/// services config.
+#[derive(Clone, Debug)]
+pub struct ServerAccess {
+    pub authz_hook: SharedAuthzHook,
+    pub services: ConfigWatch<ServicesConfig>,
+}
+
 impl AgentFarmServer {
     pub fn new(
         db_pool: DbPool,
         service_id: McpServerId,
-        authz_hook: SharedAuthzHook,
-        services: ConfigWatch<ServicesConfig>,
+        access: ServerAccess,
         artifact_ingest: Arc<ArtifactIngest>,
         env: Arc<Env>,
     ) -> Self {
+        let ServerAccess {
+            authz_hook,
+            services,
+        } = access;
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
         let executor = McpToolExecutor::new(
@@ -119,12 +129,14 @@ impl ServerHandler for AgentFarmServer {
         let server_name = self.service_id.to_string();
 
         let (request_context, _auth_token) = authenticate_tool_request(
-            &self.db_pool,
+            ToolAuth {
+                db_pool: &self.db_pool,
+                service_id: &self.service_id,
+                authz_hook: &self.authz_hook,
+                services_config: &self.services.get(),
+            },
             &tool_name,
-            &self.service_id,
             &ctx,
-            &self.authz_hook,
-            &self.services.get(),
         )
         .await?;
 

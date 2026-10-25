@@ -23,9 +23,7 @@ use crate::types::GatewayRouteView;
 pub const CATALOG_ROUTE_LABEL: &str = "Every catalog model";
 
 pub fn resolved_catalog(services: &ServicesConfig) -> Result<ResolvedCatalog, MarketplaceError> {
-    services
-        .resolve_catalog(&CatalogContext::default())
-        .map_err(|e| MarketplaceError::Internal(format!("the AI catalog does not resolve: {e}")))
+    Ok(services.resolve_catalog(&CatalogContext::default())?)
 }
 
 pub fn dispatchable_route_ids(services: &ServicesConfig) -> Vec<String> {
@@ -69,10 +67,12 @@ pub fn client_facing_routes(
     services: &ServicesConfig,
 ) -> Result<Vec<GatewayRouteView>, MarketplaceError> {
     let catalog = resolved_catalog(services)?;
-    Ok(retain_client_facing(dispatchable_routes(services)?, &catalog))
+    Ok(retain_client_facing(
+        dispatchable_routes(services)?,
+        &catalog,
+    ))
 }
 
-/// Keeps the routes that reach at least one model some client lists.
 #[must_use]
 pub fn retain_client_facing(
     routes: Vec<GatewayRouteView>,
@@ -89,10 +89,12 @@ pub fn retain_client_facing(
         .collect()
 }
 
-/// Whether a request for `model` can land on this route.
 #[must_use]
 pub fn route_reaches(route: &GatewayRouteView, model: &str) -> bool {
-    route.alias.as_ref().is_some_and(|alias| alias.model == model)
+    route
+        .alias
+        .as_ref()
+        .is_some_and(|alias| alias.model == model)
         || route
             .models
             .iter()

@@ -42,7 +42,7 @@ pub enum RenderRoutesError {
     #[error("gateway block is not a mapping")]
     GatewayNotMapping,
     #[error("a route does not render: {0}")]
-    Route(String),
+    Route(#[source] systemprompt_web_shared::error::MarketplaceError),
 }
 
 pub fn render_routes_export(
@@ -63,7 +63,7 @@ pub fn render_routes_export(
         .iter()
         .map(|r| route_to_yaml(&r.route))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| RenderRoutesError::Route(e.to_string()))?;
+        .map_err(RenderRoutesError::Route)?;
     gateway.insert(Value::from("routes"), Value::Sequence(routes));
     let body = serde_yaml::to_string(&doc)?;
     Ok(format!("{}{body}", leading_comment_header(file_yaml)))

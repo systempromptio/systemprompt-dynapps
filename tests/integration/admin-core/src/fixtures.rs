@@ -56,7 +56,7 @@ pub(crate) fn unclaimed_email(local: &str) -> String {
 
 // `users.name` is unique and `users.email` must be lowercase and trimmed, so
 // the email doubles as the name.
-/// The administrator console writes are attributed to.
+// The administrator console writes are attributed to.
 pub(crate) fn actor() -> UserId {
     UserId::new("console-test-admin")
 }

@@ -23,9 +23,7 @@ pub fn synthesize_route_id(glob: &str, provider: &str) -> String {
 
 #[must_use]
 pub fn find_matching_route_index(routes: &[GatewayRouteView], model: &str) -> Option<usize> {
-    routes
-        .iter()
-        .position(|r| route_matches(r, model))
+    routes.iter().position(|r| route_matches(r, model))
 }
 
 #[must_use]

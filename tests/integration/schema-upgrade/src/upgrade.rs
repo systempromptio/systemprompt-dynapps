@@ -81,9 +81,9 @@ async fn restore_and_upgrade(db: &TempDb, rung: &Rung) {
     restore_seed_and_upgrade(db, rung, "").await;
 }
 
-/// [`restore_and_upgrade`] with `extra_seed` run against the restored
-/// release schema before the installer, for a test that needs rows the
-/// release wrote in its own shape.
+// [`restore_and_upgrade`] with `extra_seed` run against the restored
+// release schema before the installer, for a test that needs rows the
+// release wrote in its own shape.
 pub(super) async fn restore_seed_and_upgrade(db: &TempDb, rung: &Rung, extra_seed: &str) {
     sqlx::raw_sql(sqlx::AssertSqlSafe(rung.sql.clone()))
         .execute(&*db.pool)

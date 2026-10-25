@@ -230,8 +230,9 @@ impl<'a> ExportContext<'a> {
     }
 }
 
-// Why: Rust native async trait methods are not dyn-compatible, and the
-// registry holds datasets as `&dyn DataSet`.
+/// One exportable dataset. `#[async_trait]` because the registry holds
+/// datasets as `&dyn DataSet`, and native async trait methods are not dyn
+/// compatible.
 #[async_trait]
 pub trait DataSet: Send + Sync {
     fn id(&self) -> &'static str;

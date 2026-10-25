@@ -107,8 +107,6 @@ pub fn get_route_labels_from_services() -> Result<RouteLabels, MarketplaceError>
     get_route_labels(ServicesBootstrap::get()?)
 }
 
-/// The hops a route sends its first matched model to: the route's pinned
-/// deployments when it pins any, else the model's own chain.
 fn route_hops<'a>(catalog: &'a ResolvedCatalog, route: &GatewayRouteView) -> Vec<&'a ResolvedHop> {
     let Some(model) = catalog
         .models()
@@ -132,7 +130,10 @@ fn route_hops<'a>(catalog: &'a ResolvedCatalog, route: &GatewayRouteView) -> Vec
 }
 
 fn hop_label(catalog: &ResolvedCatalog, hop: &ResolvedHop) -> String {
-    let label = derive_provider_label(hop.provider.as_str(), catalog.provider(hop.provider.as_str()));
+    let label = derive_provider_label(
+        hop.provider.as_str(),
+        catalog.provider(hop.provider.as_str()),
+    );
     if hop.upstream_model == hop.model.as_str() {
         label
     } else {
@@ -143,7 +144,9 @@ fn hop_label(catalog: &ResolvedCatalog, hop: &ResolvedHop) -> String {
 fn route_label(catalog: &ResolvedCatalog, route: GatewayRouteView) -> RouteLabel {
     let hops = route_hops(catalog, &route);
     let primary = hops.first().copied();
-    let provider = primary.map(|hop| hop.provider.as_str().to_owned()).unwrap_or_default();
+    let provider = primary
+        .map(|hop| hop.provider.as_str().to_owned())
+        .unwrap_or_default();
     let provider_label = derive_provider_label(&provider, catalog.provider(&provider));
     let declared = route
         .name
@@ -217,7 +220,10 @@ fn provider_label(catalog: &ResolvedCatalog, provider: &ResolvedProvider) -> Pro
         wire: join(endpoints.iter().map(|e| e.wire.to_string()).collect()),
         model_count: served.len(),
         advertised: served.iter().any(|model| model.is_advertised()),
-        models: served.iter().map(|model| model.id.as_str().to_owned()).collect(),
+        models: served
+            .iter()
+            .map(|model| model.id.as_str().to_owned())
+            .collect(),
     }
 }
 

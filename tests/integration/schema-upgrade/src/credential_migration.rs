@@ -77,7 +77,12 @@ async fn release_0_72_1_keys_audit_and_rules_move_to_the_catalog() {
     assert_eq!(report.route_ids_rewritten, 1, "{report:?}");
 
     let owned = |user: &str, credential: &str, ct: &str, nonce: &str| {
-        (user.to_owned(), credential.to_owned(), ct.to_owned(), nonce.to_owned())
+        (
+            user.to_owned(),
+            credential.to_owned(),
+            ct.to_owned(),
+            nonce.to_owned(),
+        )
     };
     assert_eq!(
         keys(&db.pool).await,
@@ -95,12 +100,17 @@ async fn release_0_72_1_keys_audit_and_rules_move_to_the_catalog() {
         .expect("committed services tree loads")
         .resolve_catalog(&CatalogContext::default())
         .expect("committed catalog resolves");
-    let go = catalog.credential("opencode-go").expect("opencode-go credential");
+    let go = catalog
+        .credential("opencode-go")
+        .expect("opencode-go credential");
     assert!(go.is_personal(), "OpenCode Go is a member's own key");
 
     assert_eq!(
         audit(&db.pool, "opencode-go-anthropic").await,
-        vec![(Some("opencode-go".into()), Some("opencode-go/messages".into()))]
+        vec![(
+            Some("opencode-go".into()),
+            Some("opencode-go/messages".into())
+        )]
     );
     assert_eq!(
         audit(&db.pool, "anthropic").await,

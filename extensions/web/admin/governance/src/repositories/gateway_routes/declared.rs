@@ -26,8 +26,6 @@ pub struct DeclaredRoutes {
     pub routes: Vec<DeclaredRoute>,
 }
 
-/// The route as core serialises it, so two routes that load identically
-/// fingerprint identically and a comment or key-order edit is not drift.
 #[must_use]
 pub fn route_fingerprint(route: &GatewayRouteView) -> String {
     route_to_yaml(route)

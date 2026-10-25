@@ -56,8 +56,6 @@ pub struct BootReport {
     pub governance: PlaneBoot,
 }
 
-/// Whether boot may seed this plane's empty projection: never for a plane
-/// core enforces from the database, which only an explicit apply writes.
 #[must_use]
 pub fn seeds_at_boot(plane_id: &str) -> bool {
     !matches!(

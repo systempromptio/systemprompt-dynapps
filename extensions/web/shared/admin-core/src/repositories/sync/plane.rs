@@ -148,6 +148,8 @@ pub struct ApplyOutcome {
     pub entities_retired: usize,
 }
 
+/// One sync plane. `#[async_trait]` because the registry builds planes as
+/// `Box<dyn SyncPlane>`.
 #[async_trait]
 pub trait SyncPlane: Send + Sync {
     fn id(&self) -> &'static str;

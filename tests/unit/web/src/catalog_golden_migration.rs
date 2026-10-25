@@ -38,7 +38,7 @@ const CATALOG_FILES: [&str; 6] = [
     "gateway.yaml",
 ];
 
-/// Requested ids whose chain may differ from 0.72.1, and how.
+// Requested ids whose chain may differ from 0.72.1, and how.
 const ALLOWED_CHAIN_GROWTH: [(&str, usize); 1] = [("deepseek-v4-pro", 2)];
 const ALLOWED_UNADVERTISED: [&str; 1] = ["go-deepseek-v4-pro"];
 
@@ -50,8 +50,8 @@ fn golden_dir() -> PathBuf {
     repo_root().join("tests/fixtures/catalog/0.72.1/dynapps")
 }
 
-/// A scratch services tree holding only the AI files, so the comparison sees
-/// the catalog and nothing else of the install.
+// A scratch services tree holding only the AI files, so the comparison sees
+// the catalog and nothing else of the install.
 fn ai_tree(source: &Path, files: &[&str]) -> (TempDir, PathBuf) {
     let dir = TempDir::new().expect("tempdir");
     let services = dir.path().join("services");

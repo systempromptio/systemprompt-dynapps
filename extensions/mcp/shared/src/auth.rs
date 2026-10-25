@@ -16,16 +16,38 @@ use systemprompt::models::execution::context::RequestContext as SysRequestContex
 
 use crate::{record_mcp_access, record_mcp_access_rejected};
 
+/// What a server authenticates its tool calls against: its pool, its id,
+/// the authz hook and the services config it was built with.
+#[derive(Clone, Copy)]
+pub struct ToolAuth<'a> {
+    pub db_pool: &'a DbPool,
+    pub service_id: &'a McpServerId,
+    pub authz_hook: &'a SharedAuthzHook,
+    pub services_config: &'a ServicesConfig,
+}
+
+impl std::fmt::Debug for ToolAuth<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ToolAuth")
+            .field("service_id", self.service_id)
+            .finish_non_exhaustive()
+    }
+}
+
 pub async fn authenticate_tool_request(
-    db_pool: &DbPool,
+    auth: ToolAuth<'_>,
     tool_name: &str,
-    service_id: &McpServerId,
     ctx: &RequestContext<RoleServer>,
-    authz_hook: &SharedAuthzHook,
-    services_config: &ServicesConfig,
 ) -> Result<(SysRequestContext, String), McpError> {
+    let ToolAuth {
+        db_pool,
+        service_id,
+        authz_hook,
+        services_config,
+    } = auth;
     let server_name = service_id.as_str();
-    let rbac_result = enforce_rbac_from_registry(ctx, service_id, authz_hook, services_config).await;
+    let rbac_result =
+        enforce_rbac_from_registry(ctx, service_id, authz_hook, services_config).await;
 
     match rbac_result {
         Ok(result) => {

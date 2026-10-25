@@ -144,7 +144,9 @@ pub(super) fn resolved_only(
                 id: r.id.clone(),
                 model_pattern: r.models_line(),
                 provider: resolved.map(|l| l.provider.clone()).unwrap_or_default(),
-                upstream_model: resolved.and_then(|l| l.upstream.clone()).unwrap_or_default(),
+                upstream_model: resolved
+                    .and_then(|l| l.upstream.clone())
+                    .unwrap_or_default(),
             }
         })
         .collect()

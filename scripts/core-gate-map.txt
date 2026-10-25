@@ -49,3 +49,11 @@ lint-bridge-layers        n/a: the bridge GUI is core's; bridge/src is a thin cl
 lint-bridge-globals       n/a: the bridge GUI is core's; bridge/src is a thin client over core's bridge crate
 lint-bridge-file-size     n/a: check-file-size.sh covers bridge/src with the repo-wide limit
 lint-repo-hygiene         n/a: docs/ and deploy/ prose are committed by design in this repo
+lint-migrations           n/a: core's script scans core's crate migrations against core release tags and takes no install roots; check-migration-numbers.sh orders this repo's migrations
+lint-host-ids             n/a: core's script scans core's tree only (no ROOT args); host ids here come from core's HostKind
+lint-header-literals      n/a: core's script scans core's tree only (no ROOT args); header names here come from core's identifiers::headers
+lint-path-literals        n/a: core's script scans core's tree only (no ROOT args); bridge paths here come from core's ApiPaths
+lint-mode-enums           n/a: core's script scans core's tree only (no ROOT args)
+lint-sql-vocab            n/a: core's script reads core's sql-vocabularies.txt registry only (no ROOT args)
+lint-core-globals         install:lint-globals.sh
+lint-serde-aliases        n/a: not adopted for 0.73; five public-API aliases (farm launch/evals farm+agent, branding themeColor, run diff kind) need a caller-facing rename decision first

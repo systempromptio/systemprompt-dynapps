@@ -200,7 +200,8 @@ pub(crate) async fn token(
     let claimed = extract_mcp_accessor_user(&headers)?;
     let caller = headers.get(CALLER_HEADER).and_then(|v| v.to_str().ok());
     if accounts.is_service_account(&claimed.user_id).await? {
-        let value = service_account_token(&pool, &claimed.user_id, provider, caller).await?;
+        let value =
+            service_account_token(&pool, &accounts, &claimed.user_id, provider, caller).await?;
         return Ok(bearer_response(&value));
     }
     // Why: core runs a `run_as: {mode: user}` farm run headless, so its
@@ -224,6 +225,7 @@ pub(crate) async fn token(
 
 async fn service_account_token(
     pool: &PgPool,
+    accounts: &ServiceAccounts,
     user: &UserId,
     provider: Provider,
     caller: Option<&str>,
@@ -232,7 +234,8 @@ async fn service_account_token(
         .await?
         .is_some();
     if holds_machine || !machine_credentials::caller::allowed(caller) {
-        return machine_credentials::broker_token(pool, user, provider.slug(), caller).await;
+        return machine_credentials::broker_token(pool, accounts, user, provider.slug(), caller)
+            .await;
     }
     oauth::verified_token(pool, user, provider, false).await
 }

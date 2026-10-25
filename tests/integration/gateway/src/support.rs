@@ -56,8 +56,8 @@ impl Fixture {
         self
     }
 
-    /// Deploys `model` on each `provider/endpoint` (or full deployment
-    /// mapping) in order: the first is the primary hop.
+    // Deploys `model` on each `provider/endpoint` (or full deployment
+    // mapping) in order: the first is the primary hop.
     pub(crate) fn deploy(mut self, model: &str, targets: &[&str]) -> Self {
         self.deployments.push_str(&format!("  {model}:\n"));
         for target in targets {
@@ -66,7 +66,7 @@ impl Fixture {
         self
     }
 
-    /// One `gateway.routes` entry, written as the YAML list item it is.
+    // One `gateway.routes` entry, written as the YAML list item it is.
     pub(crate) fn route(mut self, yaml: &str) -> Self {
         self.routes.push_str(yaml);
         self

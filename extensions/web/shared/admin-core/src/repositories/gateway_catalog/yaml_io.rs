@@ -47,9 +47,6 @@ fn leading_comment_header(gateway_path: &Path) -> String {
         })
 }
 
-/// Reads one `gateway.routes` entry through core's `GatewayRoute`, so the
-/// console sees exactly what the gateway would load; an entry core refuses
-/// is skipped.
 pub fn route_from_yaml(val: &Value) -> Option<GatewayRouteView> {
     let route: GatewayRoute = serde_yaml::from_value(val.clone()).ok()?;
     Some(route_view(route))
@@ -87,8 +84,6 @@ pub fn route_view(route: GatewayRoute) -> GatewayRouteView {
     }
 }
 
-/// Writes a route in core's own serialisation; a field the view leaves empty
-/// is omitted, so an edit adds nothing the operator did not write.
 pub fn route_to_yaml(route: &GatewayRouteView) -> Result<Value, MarketplaceError> {
     let mut map = Mapping::new();
     map.insert(Value::from("id"), Value::from(route.id.trim().to_owned()));
@@ -121,27 +116,36 @@ pub fn route_to_yaml(route: &GatewayRouteView) -> Result<Value, MarketplaceError
     }
     if let Some(alias) = &route.alias {
         let mut entry = Mapping::new();
-        entry.insert(Value::from("requested"), Value::from(alias.requested.clone()));
+        entry.insert(
+            Value::from("requested"),
+            Value::from(alias.requested.clone()),
+        );
         entry.insert(Value::from("model"), Value::from(alias.model.clone()));
         map.insert(Value::from("alias"), Value::Mapping(entry));
     }
     let value = Value::Mapping(map);
-    serde_yaml::from_value::<GatewayRoute>(value.clone()).map_err(|e| {
-        MarketplaceError::BadRequest(format!("route `{}` is not a valid route: {e}", route.id))
+    serde_yaml::from_value::<GatewayRoute>(value.clone()).map_err(|source| {
+        MarketplaceError::InvalidRoute {
+            route: route.id.clone(),
+            source,
+        }
     })?;
     Ok(value)
 }
 
 fn deployment_to_yaml(deployment: &RouteDeploymentView) -> Value {
-    match deployment.weight {
-        None => Value::from(deployment.endpoint.clone()),
-        Some(weight) => {
+    deployment.weight.map_or_else(
+        || Value::from(deployment.endpoint.clone()),
+        |weight| {
             let mut entry = Mapping::new();
-            entry.insert(Value::from("endpoint"), Value::from(deployment.endpoint.clone()));
+            entry.insert(
+                Value::from("endpoint"),
+                Value::from(deployment.endpoint.clone()),
+            );
             entry.insert(Value::from("weight"), Value::from(weight));
             Value::Mapping(entry)
         },
-    }
+    )
 }
 
 pub(super) fn ensure_gateway_mut(doc: &mut Value) -> Result<&mut Mapping, MarketplaceError> {

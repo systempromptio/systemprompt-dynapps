@@ -1,6 +1,8 @@
-//! The `source` an access-control row carries: core's closed vocabulary
-//! (`code:<file>`, `bundle:<name>`, `console:<user>`, `migration`), which the
-//! governance tables enforce with a CHECK. Every console write names the
+//! The `source` an access-control row carries.
+//!
+//! Core's vocabulary is closed (`code:<file>`, `bundle:<name>`,
+//! `console:<user>`, `migration`) and the governance tables enforce it with a
+//! CHECK. Every console write names the
 //! administrator who made it; every write projected from the services tree is
 //! [`SERVICES_SOURCE`].
 

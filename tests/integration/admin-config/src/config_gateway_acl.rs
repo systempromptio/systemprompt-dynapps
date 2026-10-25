@@ -38,9 +38,11 @@ async fn upsert_rule_then_list_rules_for_route_round_trips() {
     let created = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
         &actor(),
     )
     .await
@@ -68,9 +70,11 @@ async fn upsert_rule_updates_access_in_place_rather_than_duplicating() {
     let first = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
         &actor(),
     )
     .await
@@ -78,9 +82,11 @@ async fn upsert_rule_updates_access_in_place_rather_than_duplicating() {
     let second = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Deny,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Deny,
+        },
         &actor(),
     )
     .await
@@ -105,9 +111,11 @@ async fn upsert_rule_fails_without_a_catalog_entity() {
     let result = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(unique("route")),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
         &actor(),
     )
     .await;
@@ -134,9 +142,11 @@ async fn list_rules_bulk_groups_rules_by_route() {
     gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route_a),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
         &actor(),
     )
     .await
@@ -144,9 +154,11 @@ async fn list_rules_bulk_groups_rules_by_route() {
     gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route_a),
-        RuleType::ROLE,
-        "user",
-        Access::Deny,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "user",
+            access: Access::Deny,
+        },
         &actor(),
     )
     .await
@@ -154,9 +166,11 @@ async fn list_rules_bulk_groups_rules_by_route() {
     gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route_b),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
         &actor(),
     )
     .await
@@ -188,9 +202,11 @@ async fn delete_rule_reports_whether_a_row_was_removed() {
     let rule = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
         &actor(),
     )
     .await

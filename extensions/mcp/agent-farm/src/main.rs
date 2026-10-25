@@ -7,7 +7,7 @@ use std::time::Duration;
 use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
 use systemprompt::identifiers::McpServerId;
 use systemprompt::system::AppContext;
-use systemprompt_mcp_agent_farm::{AgentFarmServer, Env};
+use systemprompt_mcp_agent_farm::{AgentFarmServer, Env, ServerAccess};
 // Why: core discovers the governance authz hook, the connection snapshot
 // source and the group/project/role subject providers through inventory, so
 // the crates that register them must be linked into this binary or rules on
@@ -149,8 +149,10 @@ async fn main() -> Result<()> {
     let server = AgentFarmServer::new(
         Arc::clone(ctx.db_pool()),
         service_id.clone(),
-        Arc::clone(ctx.authz_hook()),
-        ctx.services_watch().clone(),
+        ServerAccess {
+            authz_hook: Arc::clone(ctx.authz_hook()),
+            services: ctx.services_watch().clone(),
+        },
         ctx.artifact_ingest_arc(),
         Arc::new(build_env(&ctx)),
     );

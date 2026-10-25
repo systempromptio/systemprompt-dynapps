@@ -54,14 +54,25 @@ pub async fn list_rules_bulk(
         .map_err(|e| map_err(&e))
 }
 
+/// One rule on a gateway route: who it names and what it grants.
+#[derive(Debug, Clone)]
+pub struct RouteRule<'a> {
+    pub rule_type: RuleType,
+    pub rule_value: &'a str,
+    pub access: Access,
+}
+
 pub async fn upsert_rule(
     pool: &PgPool,
     route_id: &RouteId,
-    rule_type: RuleType,
-    rule_value: &str,
-    access: Access,
+    rule: RouteRule<'_>,
     actor: &systemprompt::identifiers::UserId,
 ) -> Result<AccessRule, sqlx::Error> {
+    let RouteRule {
+        rule_type,
+        rule_value,
+        access,
+    } = rule;
     let source = systemprompt_web_admin_core::util::change_source::console_source(actor);
     repo(pool)
         .upsert_rule(UpsertRuleParams {

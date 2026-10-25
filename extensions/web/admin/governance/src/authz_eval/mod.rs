@@ -165,9 +165,6 @@ pub async fn evaluate(pool: &Arc<PgPool>, req: AuthzRequest) -> AuthzDecision {
     decide(pool, req, Audit::Record).await
 }
 
-/// The same decision as [`evaluate`], without the audit row: core's probe
-/// asks what a request would get (a bridge model list, a preview) and must
-/// not record a decision nobody made.
 pub async fn probe(pool: &Arc<PgPool>, req: AuthzRequest) -> AuthzDecision {
     decide(pool, req, Audit::Skip).await
 }

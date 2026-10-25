@@ -24,7 +24,6 @@ use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::manifest::services::ServicesConfig;
-use systemprompt::traits::ConfigWatch;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
@@ -32,8 +31,8 @@ use systemprompt::mcp::{
     build_resource_template_list_result, build_tool_list_result, parse_artifact_resource_uri,
     read_artifact_resource, read_artifact_viewer_resource,
 };
-use systemprompt::traits::DynToolCallIntentClaims;
-use systemprompt_mcp_shared::auth::authenticate_tool_request;
+use systemprompt::traits::{ConfigWatch, DynToolCallIntentClaims};
+use systemprompt_mcp_shared::auth::{ToolAuth, authenticate_tool_request};
 use systemprompt_mcp_shared::record_mcp_access;
 
 use systemprompt::mcp::client_profile_from_peer;
@@ -151,12 +150,14 @@ impl ServerHandler for SystempromptServer {
         let server_name = self.service_id.to_string();
 
         let (request_context, auth_token) = authenticate_tool_request(
-            &self.db_pool,
+            ToolAuth {
+                db_pool: &self.db_pool,
+                service_id: &self.service_id,
+                authz_hook: &self.authz_hook,
+                services_config: &self.services.get(),
+            },
             &tool_name,
-            &self.service_id,
             &ctx,
-            &self.authz_hook,
-            &self.services.get(),
         )
         .await?;
 
