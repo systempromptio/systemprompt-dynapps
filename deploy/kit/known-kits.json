@@ -4,7 +4,7 @@
         "This is the single list both sides read: `just services-pin <kit> <digest>` takes the image and public key from here to write the profile's services.sources[] entry, and the e2e seed derives its bundled expectations from the marketplaces listed here (playwright/tests/support/services-yaml.ts). Nothing is hand-typed twice.",
         "A kit's marketplace, plugins and skills live in the kit's repository; who reaches them is declared in services/access-control/rules.yaml with `owner: bundle:<name>`.",
         "status: pinned \u2014 the profile pins this kit (or is expected to); the seed asserts its marketplaces are served. planned \u2014 the kit repository is being seeded (`just kit-export`); its ids still live in services/ until it is pinned, so the seed ignores it.",
-        "pull: public \u2014 the GHCR package is public, so the profile entry carries no auth_secret. channel \u2014 the tag the kit's CI moves on every release; `just services-pin <kit> <channel>` follows it, `just services-pin <kit> sha256:<digest>` pins one upload."
+        "pull: public \u2014 the GHCR package allows anonymous pulls, so the profile entry carries no auth_secret; private \u2014 it does not, and the entry carries auth_secret: ghcr_pull_token. channel \u2014 the tag the kit's CI moves on every release; `just services-pin <kit> <channel>` follows it, `just services-pin <kit> sha256:<digest>` pins one upload."
     ],
     "kits": [
         {
@@ -12,7 +12,7 @@
             "repository": "systempromptio/systemprompt-agent-farm",
             "image": "ghcr.io/systempromptio/systemprompt-agent-farm",
             "channel": "stable",
-            "pull": "public",
+            "pull": "private",
             "status": "pinned",
             "public_key": "B4UBK6UgOqiVwFETibS+a65y4Yf7ALC68CSosD1+RKE=",
             "key_id": "6e148c4b59e64177",

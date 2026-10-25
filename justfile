@@ -453,6 +453,7 @@ _lint-gates-uncoordinated:
         lint-authoritative-reads.sh
         lint-async-trait.sh
         lint-owned-tasks.sh
+        lint-serde-aliases.sh
         lint-stringly-errors.sh
         check-schema-baseline.sh
         check-skill-cli-flags.sh
