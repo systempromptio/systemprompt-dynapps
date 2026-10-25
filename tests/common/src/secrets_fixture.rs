@@ -1,6 +1,7 @@
-//! A bootstrapped profile and secrets store carrying an
-//! `encryption_master_key`, for suites that exercise the at-rest sealing path
-//! (`secret_crypto`), and optionally a signing key and `Config`, for suites
+//! A bootstrapped profile and secrets store for suites that read secrets.
+//!
+//! It carries an `encryption_master_key` for the at-rest sealing path
+//! (`secret_crypto`), and optionally a signing key and `Config` for suites
 //! that build the web router.
 //!
 //! The key is served the way production reads it, through core's
@@ -14,7 +15,7 @@ pub const MASTER_KEY_HEX: &str = "0123456789abcdef0123456789abcdef0123456789abcd
 
 const FIXTURE_PROFILE: &str = include_str!("../../contract/admin/fixtures/profile.yaml");
 
-fn secrets(signing_key_pem: Option<String>) -> String {
+fn secrets(signing_key_pem: Option<&str>) -> String {
     serde_json::json!({
         "database_url": "postgres://unused:unused@localhost:5432/postgres",
         "oauth_at_rest_pepper": "secrets-fixture-pepper-not-a-real-secret",
@@ -50,7 +51,7 @@ async fn bootstrap(signing_key_pem: Option<String>) -> tempfile::TempDir {
         .replace("__REPO__", &root.to_string_lossy());
     std::fs::create_dir_all(dir.path().join("bin")).expect("bin directory");
     std::fs::write(dir.path().join("profile.yaml"), yaml).expect("fixture profile");
-    std::fs::write(dir.path().join("secrets.json"), secrets(signing_key_pem))
+    std::fs::write(dir.path().join("secrets.json"), secrets(signing_key_pem.as_deref()))
         .expect("fixture secrets");
     if !systemprompt::config::ProfileBootstrap::is_initialized() {
         systemprompt::config::ProfileBootstrap::init_from_path(&dir.path().join("profile.yaml"))
