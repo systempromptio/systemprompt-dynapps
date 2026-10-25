@@ -59,7 +59,8 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
 
     if let Some(core_planes) =
         systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::from_context(
-            ctx, &db.db,
+            ctx,
+            systemprompt::scheduler::repository::ConfigReconcileRepository::new(&db.db),
         )
     {
         combined = combined.layer(Extension(core_planes));

@@ -258,7 +258,10 @@ pub(crate) fn access_planes(
         services_root.to_path_buf(),
     )
     .expect("access-control plane set");
-    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(planes, &db)
+    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(
+        planes,
+        systemprompt::scheduler::repository::ConfigReconcileRepository::new(&db),
+    )
 }
 
 // Projects `<services_root>/access-control/rules.yaml` into the database the

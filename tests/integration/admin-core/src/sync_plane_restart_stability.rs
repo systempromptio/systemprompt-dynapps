@@ -67,7 +67,10 @@ fn access_planes(db: &TempDb, root: &std::path::Path) -> CorePlanes {
         root.to_path_buf(),
     )
     .expect("access-control plane set");
-    CorePlanes::over(planes, &pool)
+    CorePlanes::over(
+        planes,
+        systemprompt::scheduler::repository::ConfigReconcileRepository::new(&pool),
+    )
 }
 
 async fn open_routes(pool: &PgPool, routes: &[String]) -> i64 {

@@ -16,7 +16,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use systemprompt::database::DbPool;
 use systemprompt::extension::prelude::{
     ApplyMode, ChangeActor, ChangeRequest, ConfigPlaneSet, EntityScope, ExtensionContext,
 };
@@ -95,20 +94,19 @@ impl std::fmt::Debug for CorePlanes {
 
 impl CorePlanes {
     #[must_use]
-    pub fn over(planes: ConfigPlaneSet, db: &DbPool) -> Self {
-        let reconcile = ConfigReconcileService::new(
-            planes,
-            ConfigReconcileRepository::new(db),
-            Dependencies::new(),
-        );
+    pub fn over(planes: ConfigPlaneSet, repository: ConfigReconcileRepository) -> Self {
+        let reconcile = ConfigReconcileService::new(planes, repository, Dependencies::new());
         Self {
             apply: Arc::new(ConfigApplyService::new(reconcile)),
         }
     }
 
-    pub fn from_context(ctx: &dyn ExtensionContext, db: &DbPool) -> Option<Self> {
+    pub fn from_context(
+        ctx: &dyn ExtensionContext,
+        repository: ConfigReconcileRepository,
+    ) -> Option<Self> {
         match ctx.config_planes() {
-            Ok(planes) => Some(Self::over(planes, db)),
+            Ok(planes) => Some(Self::over(planes, repository)),
             Err(error) => {
                 tracing::error!(%error, "core's config planes are unavailable; /admin/sync cannot read or apply them");
                 None

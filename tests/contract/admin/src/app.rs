@@ -98,7 +98,10 @@ fn core_planes(
         root,
     )
     .expect("core plane set");
-    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(planes, database)
+    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(
+        planes,
+        systemprompt::scheduler::repository::ConfigReconcileRepository::new(database),
+    )
 }
 
 impl App {
