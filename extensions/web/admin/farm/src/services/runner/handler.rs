@@ -19,6 +19,7 @@
 
 use std::sync::Arc;
 use std::time::Duration;
+use systemprompt::traits::OwnedTask;
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -254,11 +255,11 @@ async fn record_notes(
     Ok((total > 0).then_some(total - 1))
 }
 
-fn watch_cancel(claimed: &ClaimedRun) -> tokio::task::JoinHandle<()> {
+fn watch_cancel(claimed: &ClaimedRun) -> OwnedTask<()> {
     let repo = claimed.repo.clone();
     let token = claimed.run_token.clone();
     let id: AgentRunId = claimed.row.id.clone();
-    tokio::spawn(async move {
+    OwnedTask::spawn("farm_cancel_watch", async move {
         loop {
             tokio::select! {
                 () = token.cancelled() => return,

@@ -2,6 +2,7 @@
 
 use std::str::FromStr;
 use std::sync::Arc;
+use systemprompt::traits::BackgroundTasks;
 
 use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
@@ -50,6 +51,7 @@ pub(crate) async fn list_access_rules_handler(
 pub(crate) async fn update_entity_rules_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(tasks): Extension<BackgroundTasks>,
     Path((entity_type, entity_id)): Path<(String, String)>,
     Json(body): Json<UpdateEntityRulesRequest>,
 ) -> AdminResult<Response> {
@@ -70,7 +72,7 @@ pub(crate) async fn update_entity_rules_handler(
         let uid = user_ctx.user_id.clone();
         let eid = entity_id.clone();
         let pool_arc = Arc::clone(&pool);
-        tokio::spawn(async move {
+        tasks.spawn("access_control_activity", async move {
             activity::record(
                 &pool_arc,
                 NewActivity::entity_updated(&uid, ActivityEntity::GatewayRoute, &eid, &eid),

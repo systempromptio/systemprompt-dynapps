@@ -114,7 +114,8 @@ pub async fn resume_eval_runs(state: &Arc<FarmState>) -> usize {
     let count = open.len();
     for eval_run in open {
         let state = Arc::clone(state);
-        tokio::spawn(async move {
+        let tasks = state.tasks.clone();
+        tasks.spawn("farm_eval_resume", async move {
             if let Err(err) = resume_one(&state, &eval_run).await {
                 fail_eval_run(&state.pool, &eval_run.id, &err).await;
             }

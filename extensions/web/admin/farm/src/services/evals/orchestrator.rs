@@ -123,7 +123,8 @@ pub async fn start_eval_run(
         evals::insert_eval_result(pool, &result_id, &eval_run_id, &case.id).await?;
         planned.push((case, result_id));
     }
-    tokio::spawn(async move {
+    let tasks = state.tasks.clone();
+    tasks.spawn("farm_eval_run", async move {
         let id = eval_run_id.clone();
         let scope = DriveScope {
             farm_id: &farm_id,

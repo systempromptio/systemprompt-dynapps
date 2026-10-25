@@ -11,6 +11,7 @@ mod paths;
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use systemprompt::traits::BackgroundTasks;
 
 use crate::services::runner::fly::registry::RemoteRuns;
 
@@ -52,6 +53,7 @@ pub struct FarmState {
     pub artefacts: Arc<dyn FileStorage>,
     pub instance: InstanceId,
     pub runs: Arc<RemoteRuns>,
+    pub tasks: BackgroundTasks,
 }
 
 impl std::fmt::Debug for FarmState {
@@ -69,12 +71,14 @@ impl std::fmt::Debug for FarmState {
 ///
 /// Core's file storage (eval files), this replica's identity (recorded on
 /// the eval runs it drives) and the in-flight remote run registry every
-/// `FarmState` in the process shares.
+/// `FarmState` in the process shares, and the runtime's background-task
+/// owner that eval runs are driven on.
 #[derive(Clone)]
 pub struct FarmHost {
     pub artefacts: Arc<dyn FileStorage>,
     pub instance: InstanceId,
     pub runs: Arc<RemoteRuns>,
+    pub tasks: BackgroundTasks,
 }
 
 impl std::fmt::Debug for FarmHost {
@@ -104,6 +108,7 @@ pub fn build_farm_state(
         artefacts,
         instance: InstanceId::new("local"),
         runs: Arc::new(RemoteRuns::default()),
+        tasks: BackgroundTasks::new(),
     })
 }
 
@@ -137,6 +142,7 @@ pub fn build_farm_state_with_ai(
         artefacts: host.artefacts,
         instance: host.instance,
         runs: host.runs,
+        tasks: host.tasks,
     })
 }
 

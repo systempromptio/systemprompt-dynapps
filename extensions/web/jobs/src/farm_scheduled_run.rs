@@ -56,6 +56,7 @@ impl FarmScheduledRunJob {
             artefacts: Arc::clone(app.file_storage()),
             instance: app.config().instance_id.clone(),
             runs: queue_only_runs(),
+            tasks: app.background_tasks().clone(),
         };
         let state = build_farm_state_with_ai(
             db.write_pool(),

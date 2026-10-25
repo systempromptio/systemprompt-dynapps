@@ -55,7 +55,9 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
     }
 
     Some(ExtensionRouter::public(
-        combined.layer(Extension(Arc::clone(&web.site))),
+        combined
+            .layer(Extension(Arc::clone(&web.site)))
+            .layer(Extension(ctx.background_tasks())),
         "/",
     ))
 }

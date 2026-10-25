@@ -13,6 +13,7 @@
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use systemprompt::traits::OwnedTask;
 
 use anyhow::{Context, Result};
 use systemprompt::agent_runs::governance::{HookBases, hooks_file};
@@ -120,13 +121,9 @@ async fn upload_outputs(client: &WorkerClient, root: &Path) {
     }
 }
 
-fn heartbeat(
-    client: WorkerClient,
-    every_seconds: u64,
-    cancel: CancellationToken,
-) -> tokio::task::JoinHandle<()> {
+fn heartbeat(client: WorkerClient, every_seconds: u64, cancel: CancellationToken) -> OwnedTask<()> {
     let every = Duration::from_secs(every_seconds.max(1));
-    tokio::spawn(async move {
+    OwnedTask::spawn("farm_worker_heartbeat", async move {
         loop {
             match client.post("heartbeat", &serde_json::json!({})).await {
                 Ok(text) => {

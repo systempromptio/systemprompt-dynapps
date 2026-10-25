@@ -150,6 +150,7 @@ async fn evaluate_and_record(
 pub(crate) struct GovernDeps {
     engine: Arc<GovernanceEngine>,
     session_service: Arc<SessionCreationService>,
+    tasks: systemprompt::traits::BackgroundTasks,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for GovernDeps {
@@ -158,9 +159,11 @@ impl<S: Send + Sync> FromRequestParts<S> for GovernDeps {
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Extension(engine) = Extension::from_request_parts(parts, state).await?;
         let Extension(session_service) = Extension::from_request_parts(parts, state).await?;
+        let Extension(tasks) = Extension::from_request_parts(parts, state).await?;
         Ok(Self {
             engine,
             session_service,
+            tasks,
         })
     }
 }
@@ -170,6 +173,7 @@ pub(crate) async fn govern_tool_use(
     GovernDeps {
         engine,
         session_service,
+        tasks,
     }: GovernDeps,
     headers: HeaderMap,
     Query(query): Query<GovernQuery>,
@@ -197,6 +201,7 @@ pub(crate) async fn govern_tool_use(
         plugin_id,
         session_service: &session_service,
         headers: &headers,
+        tasks: &tasks,
     };
 
     let principal = match authenticate_request(&headers, &denial_params) {

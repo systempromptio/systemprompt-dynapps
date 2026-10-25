@@ -15,6 +15,7 @@ mod report_context;
 mod view;
 
 use std::sync::Arc;
+use systemprompt::traits::BackgroundTasks;
 
 use axum::Json;
 use axum::extract::{Extension, Form, Path, State};
@@ -136,7 +137,28 @@ pub(crate) async fn report_page(
     )
 }
 
+/// What a report generation runs on: the AI service and the runtime's
+/// background-task owner the generation is spawned through.
+pub(crate) struct ReportRunner {
+    ai: Option<Arc<AiService>>,
+    tasks: BackgroundTasks,
+}
+
+impl<S: Send + Sync> axum::extract::FromRequestParts<S> for ReportRunner {
+    type Rejection = axum::extract::rejection::ExtensionRejection;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let Extension(ai) = Extension::from_request_parts(parts, state).await?;
+        let Extension(tasks) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self { ai, tasks })
+    }
+}
+
 async fn start(
+    tasks: &BackgroundTasks,
     pool: &Arc<PgPool>,
     ai: Option<Arc<AiService>>,
     shell: &Page,
@@ -145,13 +167,16 @@ async fn start(
     let resolved = resolve(pool, &shell.user, form).await?;
     let queued = queue(pool, &shell.user, resolved).await?;
     let row = load_report(pool, &queued.id).await?;
-    tokio::spawn(generate_report(
-        Arc::clone(pool),
-        ai,
-        shell.user.user_id.clone(),
-        row,
-        queued.lease_token,
-    ));
+    tasks.spawn(
+        "analysis_report",
+        generate_report(
+            Arc::clone(pool),
+            ai,
+            shell.user.user_id.clone(),
+            row,
+            queued.lease_token,
+        ),
+    );
     tracing::info!(report_id = %queued.id, requested_by = %shell.user.user_id, "analysis report generation started from the console");
     Ok(queued.id)
 }
@@ -163,27 +188,27 @@ fn report_redirect(id: &str) -> Redirect {
 pub(crate) async fn create(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
-    Extension(ai): Extension<Option<Arc<AiService>>>,
+    ReportRunner { ai, tasks }: ReportRunner,
     headers: HeaderMap,
     Form(form): Form<ReportRequestForm>,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
     systemprompt_web_admin_core::request::require_write_origin(&headers)?;
-    let id = start(&pool, ai, &shell, &form).await?;
+    let id = start(&tasks, &pool, ai, &shell, &form).await?;
     Ok(report_redirect(&id))
 }
 
 pub(crate) async fn regenerate(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
-    Extension(ai): Extension<Option<Arc<AiService>>>,
+    ReportRunner { ai, tasks }: ReportRunner,
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
     systemprompt_web_admin_core::request::require_write_origin(&headers)?;
     let row = load_report(&pool, &id).await?;
-    let new_id = start(&pool, ai, &shell, &regenerate_form(&row)).await?;
+    let new_id = start(&tasks, &pool, ai, &shell, &regenerate_form(&row)).await?;
     Ok(report_redirect(&new_id))
 }
 

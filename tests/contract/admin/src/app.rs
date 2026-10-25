@@ -158,7 +158,8 @@ impl App {
             .nest(FARM_PUBLIC_PREFIX, farm)
             .merge(hooks)
             .merge(secrets)
-            .merge(share);
+            .merge(share)
+            .layer(axum::Extension(systemprompt::traits::BackgroundTasks::new()));
 
         Self {
             router,

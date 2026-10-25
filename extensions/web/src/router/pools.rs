@@ -47,9 +47,12 @@ impl DbHandles {
         let farm = super::farm_public::build_state(
             Arc::clone(&write),
             paths.as_ref(),
-            Arc::clone(&files),
-            ctx.instance_id(),
-            runs,
+            systemprompt_web_admin_farm::state::FarmHost {
+                artefacts: Arc::clone(&files),
+                instance: ctx.instance_id(),
+                runs,
+                tasks: ctx.background_tasks(),
+            },
         );
         super::farm_public::start(&farm, paths.as_ref());
         Some(Self {

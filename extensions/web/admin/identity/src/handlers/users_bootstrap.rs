@@ -8,6 +8,7 @@
 //! scoped before that first sign-in rather than after it.
 
 use std::sync::Arc;
+use systemprompt::traits::BackgroundTasks;
 
 use axum::Json;
 use axum::extract::{Extension, State};
@@ -30,6 +31,7 @@ pub(crate) struct CreatedUserResponse {
 pub(crate) async fn create_user_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(tasks): Extension<BackgroundTasks>,
     Json(body): Json<CreateUserRequest>,
 ) -> AdminResult<Response> {
     if !user_ctx.is_admin {
@@ -47,7 +49,7 @@ pub(crate) async fn create_user_handler(
         .display_name
         .clone()
         .unwrap_or_else(|| user.user_id.as_str().to_owned());
-    tokio::spawn(async move {
+    tasks.spawn("user_created_activity", async move {
         activity::record(
             &p,
             NewActivity::entity_created(&uid, ActivityEntity::User, new_user_id.as_str(), &name),

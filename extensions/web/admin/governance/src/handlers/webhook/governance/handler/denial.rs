@@ -47,7 +47,7 @@ pub(super) fn spawn_auth_denial(params: &AuthDenialParams<'_>, reason: &str) {
     let session_service = Arc::clone(params.session_service);
     let headers = params.headers.clone();
 
-    tokio::spawn(async move {
+    params.tasks.spawn("auth_denial_audit", async move {
         let analytics = anonymous_fingerprint_signals(&headers);
         let user_id = match session_service.ensure_anonymous_user(&analytics).await {
             Ok((uid, _fingerprint)) => uid,

@@ -68,4 +68,5 @@ pub(super) struct AuthDenialParams<'a> {
     pub plugin_id: Option<&'a PluginId>,
     pub session_service: &'a Arc<SessionCreationService>,
     pub headers: &'a HeaderMap,
+    pub tasks: &'a systemprompt::traits::BackgroundTasks,
 }

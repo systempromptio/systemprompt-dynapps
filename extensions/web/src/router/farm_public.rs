@@ -16,10 +16,9 @@ use axum::middleware::{self as axum_middleware, Next};
 use axum::response::Response;
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
-use systemprompt::identifiers::InstanceId;
 use systemprompt::prelude::PgPool;
 use systemprompt::system::AppContext;
-use systemprompt::traits::{FileStorage, JobContext, RunnerService};
+use systemprompt::traits::{JobContext, RunnerService};
 use systemprompt_web_admin_core::ssr::viewer_tz::with_viewer_tz;
 use systemprompt_web_admin_farm::routes::public::agent_farm_public_routes;
 use systemprompt_web_admin_farm::routes::worker::agent_farm_worker_routes;
@@ -76,7 +75,8 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
         |paths| paths.system().services().to_path_buf(),
     );
     let state = Arc::clone(state);
-    tokio::spawn(async move {
+    let tasks = state.tasks.clone();
+    tasks.spawn("farm_boot_seed", async move {
         match seed_farms_from_yaml(&state.pool, &services).await {
             Ok(count) => tracing::info!(farms = count, "agent farms seeded"),
             Err(e) => tracing::error!(error = %e, "agent farm seed failed"),
@@ -119,9 +119,12 @@ impl RunnerService for FarmRunner {
         let state = build_state(
             pool,
             paths.as_deref(),
-            Arc::clone(app.file_storage()),
-            app.config().instance_id.clone(),
-            Arc::clone(&self.runs),
+            FarmHost {
+                artefacts: Arc::clone(app.file_storage()),
+                instance: app.config().instance_id.clone(),
+                runs: Arc::clone(&self.runs),
+                tasks: app.background_tasks().clone(),
+            },
         );
         FarmRunnerService::new(state).run(ctx, shutdown).await;
     }
@@ -130,17 +133,7 @@ impl RunnerService for FarmRunner {
 pub fn build_state(
     pool: Arc<PgPool>,
     app_paths: Option<&AppPaths>,
-    artefacts: Arc<dyn FileStorage>,
-    instance: InstanceId,
-    runs: Arc<RemoteRuns>,
+    host: FarmHost,
 ) -> Arc<FarmState> {
-    build_farm_state_from_app(
-        pool,
-        app_paths,
-        FarmHost {
-            artefacts,
-            instance,
-            runs,
-        },
-    )
+    build_farm_state_from_app(pool, app_paths, host)
 }
