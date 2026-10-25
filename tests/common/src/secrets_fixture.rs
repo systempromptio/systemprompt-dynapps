@@ -51,8 +51,11 @@ async fn bootstrap(signing_key_pem: Option<String>) -> tempfile::TempDir {
         .replace("__REPO__", &root.to_string_lossy());
     std::fs::create_dir_all(dir.path().join("bin")).expect("bin directory");
     std::fs::write(dir.path().join("profile.yaml"), yaml).expect("fixture profile");
-    std::fs::write(dir.path().join("secrets.json"), secrets(signing_key_pem.as_deref()))
-        .expect("fixture secrets");
+    std::fs::write(
+        dir.path().join("secrets.json"),
+        secrets(signing_key_pem.as_deref()),
+    )
+    .expect("fixture secrets");
     if !systemprompt::config::ProfileBootstrap::is_initialized() {
         systemprompt::config::ProfileBootstrap::init_from_path(&dir.path().join("profile.yaml"))
             .expect("profile bootstrap");
