@@ -57,3 +57,4 @@ lint-mode-enums           n/a: core's script scans core's tree only (no ROOT arg
 lint-sql-vocab            n/a: core's script reads core's sql-vocabularies.txt registry only (no ROOT args)
 lint-core-globals         install:lint-globals.sh
 lint-serde-aliases        n/a: not adopted for 0.73; five public-API aliases (farm launch/evals farm+agent, branding themeColor, run diff kind) need a caller-facing rename decision first
+check-removed-config-names  install:check-removed-config-names.sh

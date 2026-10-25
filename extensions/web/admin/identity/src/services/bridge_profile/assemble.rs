@@ -13,7 +13,6 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::{TenantId, UserId};
-use uuid::Uuid;
 
 use systemprompt_web_admin_core::repositories::bridge::{BridgeIdentityRow, find_bridge_user};
 use systemprompt_web_admin_core::repositories::user_usage as usage_repo;
@@ -147,7 +146,7 @@ pub(super) fn build_bridge_profile_block() -> Option<BridgeProfileBlock> {
         .cloud
         .as_ref()
         .and_then(|cloud| cloud.tenant_id.as_ref())
-        .map(canonicalize_org_uuid);
+        .map(TenantId::organization_uuid);
 
     let models_count = models.len();
     Some(BridgeProfileBlock {
@@ -157,15 +156,6 @@ pub(super) fn build_bridge_profile_block() -> Option<BridgeProfileBlock> {
         models_count,
         organization_uuid,
     })
-}
-
-fn canonicalize_org_uuid(tenant_id: &TenantId) -> String {
-    let s = tenant_id.as_str();
-    let suffix = s.strip_prefix("local_").unwrap_or(s);
-    if let Ok(parsed) = Uuid::parse_str(suffix) {
-        return parsed.to_string();
-    }
-    Uuid::new_v5(&Uuid::NAMESPACE_OID, s.as_bytes()).to_string()
 }
 
 pub(super) fn build_agents_block() -> AgentsBlock {
