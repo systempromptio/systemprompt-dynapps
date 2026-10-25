@@ -1,0 +1,16 @@
+# Files that still spawn detached tokio tasks, baselined for core 0.73's
+# lint-owned-tasks gate. One `path  # reason` per line. Each entry moves to an
+# injected BackgroundTasks / OwnedTask owner after 0.73; a new spawn site is
+# never added here. Gate: scripts/lint-owned-tasks.sh (in `just lint-gates`).
+extensions/web/admin/governance/src/handlers/webhook/governance/handler/denial.rs  # writes the anonymous denial audit row after the webhook has answered
+extensions/web/admin/identity/src/handlers/access_control.rs  # records the gateway-route activity row off the response path
+extensions/web/admin/analytics/src/handlers/ssr/analysis/reports/mod.rs  # report generation outlives the request that queued it
+extensions/web/admin/farm/src/services/evals/orchestrator.rs  # eval run executes after the trigger request returns
+extensions/web/admin/farm/src/services/evals/resume.rs  # resumes interrupted eval runs at boot
+extensions/web/admin/farm/src/services/evals/triggers.rs  # trigger fires its eval run asynchronously
+extensions/web/admin/farm/src/services/runner/handler.rs  # farm runner job executes after the dispatch request returns
+extensions/web/admin/identity/src/handlers/users_bootstrap.rs  # records the user-created activity row off the response path
+extensions/web/admin/identity/src/handlers/users.rs  # records the user updated/deleted activity rows off the response path (three sites)
+extensions/web/admin/identity/src/handlers/user_sessions.rs  # records the session-revocation activity row off the response path
+extensions/web/src/router/farm_public.rs  # seeds agent farms and restores checkouts without blocking router construction
+extensions/cli/farm-worker/src/run.rs  # worker heartbeat; the caller holds the JoinHandle and a CancellationToken
