@@ -15,9 +15,11 @@ use crate::repositories::connectors::{
 use crate::services::connector_oauth::{self as oauth, Consent, Provider};
 use crate::services::service_accounts::ServiceAccounts;
 use crate::services::{connector_accounts as service, machine_credentials};
-use axum::extract::{Path, Query, State};
+use axum::extract::rejection::ExtensionRejection;
+use axum::extract::{FromRequestParts, Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::header::CACHE_CONTROL;
+use axum::http::request::Parts;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{Extension, Json};
 use base64::Engine;
@@ -27,6 +29,7 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
+use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::auth::session::extract_mcp_accessor_user;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
@@ -35,6 +38,28 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // `machine_credentials::caller` allows.
 const CALLER_HEADER: &str = "x-systemprompt-caller";
 const SERVICE_ACCOUNT_STATE: &str = "sa.";
+
+/// What the consent handlers read from the router besides the pool: the keys
+/// a caller's session token is validated with and the service accounts an
+/// administrator may consent for.
+#[derive(Debug, Clone)]
+pub(crate) struct ConsentDeps {
+    keys: SigningKeys,
+    service_accounts: ServiceAccounts,
+}
+
+impl<S: Send + Sync> FromRequestParts<S> for ConsentDeps {
+    type Rejection = ExtensionRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Extension(keys) = Extension::from_request_parts(parts, state).await?;
+        let Extension(service_accounts) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self {
+            keys,
+            service_accounts,
+        })
+    }
+}
 
 #[derive(Deserialize)]
 pub(crate) struct Start {
@@ -45,12 +70,15 @@ pub(crate) struct Start {
 
 pub(crate) async fn start(
     State(pool): State<Arc<PgPool>>,
-    Extension(service_accounts): Extension<ServiceAccounts>,
+    ConsentDeps {
+        keys,
+        service_accounts,
+    }: ConsentDeps,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
     Query(params): Query<Start>,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &headers, false).await?;
+    let user = live_user(&pool, &keys, &headers, false).await?;
     if params
         .expected_user
         .is_some_and(|id| id != user.user_id.as_str())
@@ -136,22 +164,25 @@ pub(crate) struct Callback {
 
 pub(crate) async fn callback(
     State(pool): State<Arc<PgPool>>,
-    Extension(service_accounts): Extension<ServiceAccounts>,
+    deps: ConsentDeps,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
     Query(params): Query<Callback>,
 ) -> AdminResult<Response> {
-    complete(&pool, &service_accounts, provider, &headers, params).await
+    complete(&pool, &deps, provider, &headers, params).await
 }
 
 async fn complete(
     pool: &PgPool,
-    service_accounts: &ServiceAccounts,
+    ConsentDeps {
+        keys,
+        service_accounts,
+    }: &ConsentDeps,
     provider: Provider,
     headers: &HeaderMap,
     params: Callback,
 ) -> AdminResult<Response> {
-    let user = live_user(pool, headers, false).await?;
+    let user = live_user(pool, keys, headers, false).await?;
     let owner = if let Some(account) = service_account_of(&params.state) {
         require_acting_admin(service_accounts, &user.user_id, &account).await?;
         account
@@ -184,11 +215,22 @@ async fn complete(
     let code = params
         .code
         .ok_or_else(|| AdminError::BadRequest("Consent code missing".into()))?;
-    super::completion::finish(pool, &owner, headers, grant, &code).await
+    super::completion::finish(
+        super::completion::CallbackSession {
+            pool,
+            keys,
+            user: &owner,
+            headers,
+        },
+        grant,
+        &code,
+    )
+    .await
 }
 
 pub(crate) async fn token(
     State(pool): State<Arc<PgPool>>,
+    Extension(keys): Extension<SigningKeys>,
     Extension(accounts): Extension<ServiceAccounts>,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
@@ -197,7 +239,7 @@ pub(crate) async fn token(
     // Why: core's MCP client presents a service account's in-process JWT, which
     // has no interactive session behind it; the purpose-bound caller check in
     // `broker_token` is that account's trust anchor instead of `live_user`.
-    let claimed = extract_mcp_accessor_user(&headers)?;
+    let claimed = extract_mcp_accessor_user(&keys, &headers)?;
     let caller = headers.get(CALLER_HEADER).and_then(|v| v.to_str().ok());
     if accounts.is_service_account(&claimed.user_id).await? {
         let value =
@@ -217,7 +259,7 @@ pub(crate) async fn token(
         let access_token = oauth::verified_token(&pool, &claimed.user_id, provider, false).await?;
         return Ok(bearer_response(&access_token));
     }
-    let user = live_user(&pool, &headers, false).await?;
+    let user = live_user(&pool, &keys, &headers, false).await?;
     service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
     let access_token = oauth::verified_token(&pool, &user.user_id, provider.clone(), false).await?;
     Ok(bearer_response(&access_token))

@@ -24,6 +24,11 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
     let sessions = Arc::new(SessionCreationService::new(
         Arc::new(session_repository),
         Arc::new(users),
+        systemprompt::security::keys::SigningKeys::new(
+            systemprompt::security::keys::RsaSigningKey::generate().expect("signing key"),
+            &[9; 32],
+        )
+        .expect("signing keys"),
     ));
     let router = systemprompt_web_extension::admin::hooks_webhook_router(
         &database,

@@ -22,7 +22,14 @@ pub use fake_portal::{DYNBRAIN_PATH, FakePortal, ODOO_PATH, TokenPair};
 pub use onepassword_fake::FakeConnect;
 pub use onepassword_fake_cli::FakeOpCli;
 pub use paths::{repo_path, repo_root};
-pub use secrets_fixture::bootstrap_master_key;
+
+use systemprompt::security::keys::{RsaSigningKey, SigningKeys};
+
+pub fn ephemeral_signing_keys() -> SigningKeys {
+    let key = RsaSigningKey::generate().expect("generate an ephemeral RSA signing key");
+    SigningKeys::new(key, &[9; 32]).expect("build the signing keys")
+}
+pub use secrets_fixture::{bootstrap_master_key, bootstrap_signing_config};
 pub use skip::{ci, skip_or_panic};
 pub use sso::{FakeOidcIdp, HeaderSpec, IdTokenSpec, KidForm, TestIdpKeys, TokenForm};
 pub use tempdb::TempDb;

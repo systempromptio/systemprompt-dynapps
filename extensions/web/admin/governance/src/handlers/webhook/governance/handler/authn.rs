@@ -8,6 +8,7 @@ use systemprompt::governance::authz::{Decision, DenyReason};
 use systemprompt::identifiers::{ClientId, SessionId, UserId};
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::OauthError;
+use systemprompt::security::keys::SigningKeys;
 
 use crate::handlers::webhook::helpers::{extract_bearer_token, get_jwt_issuer};
 
@@ -33,6 +34,7 @@ pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
 // Why: a Claude Code `PreToolUse` hook treats a 401 as "hook unavailable" and
 // allows the call, so this `Err` is a 200 deny verdict, never an `AdminError`.
 pub(super) fn authenticate_request(
+    keys: &SigningKeys,
     headers: &HeaderMap,
     denial_params: &AuthDenialParams<'_>,
 ) -> Result<Principal, Box<HookVerdict>> {
@@ -60,6 +62,7 @@ pub(super) fn authenticate_request(
 
     let expected_aud = "hook|plugin|api";
     let claims = systemprompt::oauth::validate_jwt_token(
+        keys,
         token,
         &jwt_issuer,
         &[

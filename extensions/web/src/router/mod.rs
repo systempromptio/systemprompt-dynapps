@@ -23,13 +23,16 @@ use std::sync::Arc;
 use axum::{Extension, Router};
 
 use systemprompt::extension::prelude::{ExtensionContext, ExtensionRouter};
+use systemprompt::manifest::Config;
+use systemprompt::security::keys::SigningKeys;
 
 use crate::extension::WebExtension;
 use pools::DbHandles;
 
 pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<ExtensionRouter> {
     let db = DbHandles::from_context(ctx, Arc::clone(&web.farm_runs))?;
-    let session_service = pools::build_session_service(&db);
+    let signing_keys = signing_keys()?;
+    let session_service = pools::build_session_service(&db, signing_keys.clone());
 
     let sso_deps = sso::build(&db, &session_service);
 
@@ -54,10 +57,30 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
         },
     }
 
+    if let Some(core_planes) =
+        systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::from_context(
+            ctx, &db.db,
+        )
+    {
+        combined = combined.layer(Extension(core_planes));
+    }
+
     Some(ExtensionRouter::public(
         combined
             .layer(Extension(Arc::clone(&web.site)))
-            .layer(Extension(ctx.background_tasks())),
+            .layer(Extension(ctx.background_tasks()))
+            .layer(Extension(signing_keys)),
         "/",
     ))
+}
+
+fn signing_keys() -> Option<SigningKeys> {
+    let config = Config::get()
+        .inspect_err(|error| tracing::error!(%error, "config unavailable; web routes not mounted"))
+        .ok()?;
+    SigningKeys::resolve(&config.signing_key_path)
+        .inspect_err(
+            |error| tracing::error!(%error, "signing keys unavailable; web routes not mounted"),
+        )
+        .ok()
 }

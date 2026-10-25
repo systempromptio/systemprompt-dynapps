@@ -14,12 +14,14 @@ use systemprompt::prelude::PgPool;
 
 use crate::api::OkResponse;
 use crate::api::auth::clear_session;
+use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_identity::sign_out::revoke_cookie_session;
 
 pub(super) async fn sign_out(
     pool: Arc<PgPool>,
+    keys: SigningKeys,
     headers: HeaderMap,
 ) -> (HeaderMap, Json<OkResponse>) {
-    revoke_cookie_session(&pool, &headers).await;
+    revoke_cookie_session(&pool, &keys, &headers).await;
     clear_session().await
 }

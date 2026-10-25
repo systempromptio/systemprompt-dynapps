@@ -32,8 +32,11 @@ fn server(pool: &Arc<PgPool>) -> SystempromptServer {
     SystempromptServer::new(
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid fixture identifier"),
-        hook(),
-        ConfigWatch::new(ServicesConfig::default()),
+        systemprompt_mcp_shared::auth::ServerAccess {
+            authz_hook: hook(),
+            services: ConfigWatch::new(ServicesConfig::default()),
+            signing_keys: dynapps_test_common::ephemeral_signing_keys(),
+        },
         ingest,
     )
 }
@@ -119,8 +122,11 @@ async fn a_different_service_id_only_changes_the_server_name() {
     let renamed = SystempromptServer::new(
         db_pool,
         McpServerId::try_new("sp-staging").expect("valid fixture identifier"),
-        hook(),
-        ConfigWatch::new(ServicesConfig::default()),
+        systemprompt_mcp_shared::auth::ServerAccess {
+            authz_hook: hook(),
+            services: ConfigWatch::new(ServicesConfig::default()),
+            signing_keys: dynapps_test_common::ephemeral_signing_keys(),
+        },
         ingest,
     );
 

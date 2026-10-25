@@ -22,6 +22,7 @@ systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-jobs = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
+systemprompt-mcp-shared = { workspace = true }
 # The farm lifecycle suite launches, cancels and finishes runs over a real schema.
 systemprompt-web-admin-farm = { workspace = true }
 # The farm attribution suite reads the `farm` dimension through its provider trait.

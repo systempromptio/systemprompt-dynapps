@@ -1,6 +1,7 @@
 //! JSON API, webhook, and secrets routes.
 
 use std::sync::Arc;
+use systemprompt::security::keys::SigningKeys;
 
 use axum::Router;
 use axum::http::HeaderMap;
@@ -36,7 +37,9 @@ pub(crate) fn build(
             "/auth/session",
             post(api::auth::set_session).delete({
                 let pool = Arc::clone(&db.write);
-                move |headers: HeaderMap| sign_out::sign_out(Arc::clone(&pool), headers)
+                move |axum::Extension(keys): axum::Extension<SigningKeys>, headers: HeaderMap| {
+                    sign_out::sign_out(Arc::clone(&pool), keys, headers)
+                }
             }),
         )
         .merge(links_router)

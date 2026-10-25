@@ -24,7 +24,9 @@ use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
 };
+use systemprompt::security::keys::SigningKeys;
 use systemprompt::traits::{ConfigWatch, DynToolCallIntentClaims};
+pub use systemprompt_mcp_shared::auth::ServerAccess;
 use systemprompt_mcp_shared::auth::{ToolAuth, authenticate_tool_request};
 use systemprompt_mcp_shared::record_mcp_access;
 
@@ -41,15 +43,8 @@ pub struct AgentFarmServer {
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
     services: ConfigWatch<ServicesConfig>,
+    signing_keys: SigningKeys,
     env: Arc<Env>,
-}
-
-/// What every tool call is authorised against: the authz hook and the live
-/// services config.
-#[derive(Clone, Debug)]
-pub struct ServerAccess {
-    pub authz_hook: SharedAuthzHook,
-    pub services: ConfigWatch<ServicesConfig>,
 }
 
 impl AgentFarmServer {
@@ -63,6 +58,7 @@ impl AgentFarmServer {
         let ServerAccess {
             authz_hook,
             services,
+            signing_keys,
         } = access;
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
@@ -78,6 +74,7 @@ impl AgentFarmServer {
             executor,
             authz_hook,
             services,
+            signing_keys,
             env,
         }
     }
@@ -134,6 +131,7 @@ impl ServerHandler for AgentFarmServer {
                 service_id: &self.service_id,
                 authz_hook: &self.authz_hook,
                 services_config: &self.services.get(),
+                signing_keys: &self.signing_keys,
             },
             &tool_name,
             &ctx,

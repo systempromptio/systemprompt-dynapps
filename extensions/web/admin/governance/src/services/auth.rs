@@ -4,10 +4,11 @@ use axum::http::HeaderMap;
 use systemprompt::manifest::Config;
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::validate_jwt_token;
+use systemprompt::security::keys::SigningKeys;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-pub(crate) fn validate_plugin_jwt(headers: &HeaderMap) -> AdminResult<String> {
+pub(crate) fn validate_plugin_jwt(keys: &SigningKeys, headers: &HeaderMap) -> AdminResult<String> {
     let token = headers
         .get("authorization")
         .and_then(|v| v.to_str().ok())
@@ -23,6 +24,7 @@ pub(crate) fn validate_plugin_jwt(headers: &HeaderMap) -> AdminResult<String> {
         .clone();
 
     let claims = validate_jwt_token(
+        keys,
         token,
         &jwt_issuer,
         &[JwtAudience::Resource("plugin".to_owned())],

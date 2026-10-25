@@ -85,7 +85,8 @@ pub(crate) async fn broker_bearer(
     let router = connector_api_router(
         Arc::clone(pool),
         ServiceAccounts::new(UserRepository::new(&database)),
-    );
+    )
+    .layer(axum::Extension(PortalEnv::signing_keys().clone()));
     let jwt = PortalEnv::mint(Principal {
         user_id: user.as_str(),
         email: &format!("{user}@test.invalid"),

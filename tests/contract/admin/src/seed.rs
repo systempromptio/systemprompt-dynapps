@@ -78,12 +78,10 @@ pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
     };
     let claims = JwtClaims { registered, custom };
 
-    let kid =
-        systemprompt_security::keys::authority::active_kid().expect("an installed signing key");
+    let keys = globals::signing_keys();
     let mut header = Header::new(Algorithm::RS256);
-    header.kid = Some(kid.to_owned());
-    let key = systemprompt_security::keys::authority::encoding_key().expect("an encoding key");
-    encode(&header, &claims, key).expect("sign the token")
+    header.kid = Some(keys.active_kid().to_owned());
+    encode(&header, &claims, keys.encoding_key()).expect("sign the token")
 }
 
 // `users.name` is unique, so the email doubles as the name.

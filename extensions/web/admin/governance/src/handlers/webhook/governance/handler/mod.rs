@@ -24,6 +24,7 @@ use systemprompt::governance::policy::{
 };
 use systemprompt::identifiers::{CallId, ClientId, PluginId, SessionId, UserId};
 use systemprompt::oauth::SessionCreationService;
+use systemprompt::security::keys::SigningKeys;
 
 use systemprompt_web_admin_core::repositories::ingestion::usage as ingestion;
 use systemprompt_web_admin_core::types::webhook::{GovernQuery, HookEventPayload};
@@ -151,6 +152,7 @@ pub(crate) struct GovernDeps {
     engine: Arc<GovernanceEngine>,
     session_service: Arc<SessionCreationService>,
     tasks: systemprompt::traits::BackgroundTasks,
+    keys: SigningKeys,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for GovernDeps {
@@ -160,10 +162,12 @@ impl<S: Send + Sync> FromRequestParts<S> for GovernDeps {
         let Extension(engine) = Extension::from_request_parts(parts, state).await?;
         let Extension(session_service) = Extension::from_request_parts(parts, state).await?;
         let Extension(tasks) = Extension::from_request_parts(parts, state).await?;
+        let Extension(keys) = Extension::from_request_parts(parts, state).await?;
         Ok(Self {
             engine,
             session_service,
             tasks,
+            keys,
         })
     }
 }
@@ -174,6 +178,7 @@ pub(crate) async fn govern_tool_use(
         engine,
         session_service,
         tasks,
+        keys,
     }: GovernDeps,
     headers: HeaderMap,
     Query(query): Query<GovernQuery>,
@@ -204,7 +209,7 @@ pub(crate) async fn govern_tool_use(
         tasks: &tasks,
     };
 
-    let principal = match authenticate_request(&headers, &denial_params) {
+    let principal = match authenticate_request(&keys, &headers, &denial_params) {
         Ok(principal) => principal,
         Err(verdict) => return *verdict,
     };

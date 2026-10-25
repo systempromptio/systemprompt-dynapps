@@ -21,9 +21,7 @@ use std::future::Future;
 use std::sync::Arc;
 use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
-use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
-use systemprompt::manifest::services::ServicesConfig;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
@@ -31,8 +29,8 @@ use systemprompt::mcp::{
     build_resource_template_list_result, build_tool_list_result, parse_artifact_resource_uri,
     read_artifact_resource, read_artifact_viewer_resource,
 };
-use systemprompt::traits::{ConfigWatch, DynToolCallIntentClaims};
-use systemprompt_mcp_shared::auth::{ToolAuth, authenticate_tool_request};
+use systemprompt::traits::DynToolCallIntentClaims;
+use systemprompt_mcp_shared::auth::{ServerAccess, ToolAuth, authenticate_tool_request};
 use systemprompt_mcp_shared::record_mcp_access;
 
 use systemprompt::mcp::client_profile_from_peer;
@@ -43,8 +41,7 @@ pub struct SystempromptServer {
     service_id: McpServerId,
     db_pool: DbPool,
     executor: McpToolExecutor,
-    authz_hook: SharedAuthzHook,
-    services: ConfigWatch<ServicesConfig>,
+    access: ServerAccess,
     artifact_ingest: Arc<ArtifactIngest>,
 }
 
@@ -52,8 +49,7 @@ impl SystempromptServer {
     pub fn new(
         db_pool: DbPool,
         service_id: McpServerId,
-        authz_hook: SharedAuthzHook,
-        services: ConfigWatch<ServicesConfig>,
+        access: ServerAccess,
         artifact_ingest: Arc<ArtifactIngest>,
     ) -> Self {
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
@@ -69,8 +65,7 @@ impl SystempromptServer {
             service_id,
             db_pool,
             executor,
-            authz_hook,
-            services,
+            access,
             artifact_ingest,
         }
     }
@@ -153,8 +148,9 @@ impl ServerHandler for SystempromptServer {
             ToolAuth {
                 db_pool: &self.db_pool,
                 service_id: &self.service_id,
-                authz_hook: &self.authz_hook,
-                services_config: &self.services.get(),
+                authz_hook: &self.access.authz_hook,
+                services_config: &self.access.services.get(),
+                signing_keys: &self.access.signing_keys,
             },
             &tool_name,
             &ctx,

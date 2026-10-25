@@ -6,22 +6,24 @@ use crate::repositories::connectors::{
 };
 use crate::services::connector_accounts as service;
 use crate::services::connector_oauth::{self as oauth, Provider};
-use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::http::header::CACHE_CONTROL;
 use axum::response::{IntoResponse, Response};
+use axum::{Extension, Json};
 use chrono::Utc;
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::connections::source::get_connections;
 use systemprompt_web_admin_core::error::AdminResult;
 
 pub(crate) async fn list(
     State(pool): State<Arc<PgPool>>,
+    Extension(keys): Extension<SigningKeys>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &headers, false).await?;
+    let user = live_user(&pool, &keys, &headers, false).await?;
     Ok((
         [(CACHE_CONTROL, "no-store")],
         Json(get_connections(&pool, &user.user_id).await?),
@@ -31,10 +33,11 @@ pub(crate) async fn list(
 
 pub(crate) async fn disconnect(
     State(pool): State<Arc<PgPool>>,
+    Extension(keys): Extension<SigningKeys>,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &headers, true).await?;
+    let user = live_user(&pool, &keys, &headers, true).await?;
     let mut tx = pool.begin().await?;
     let mut row = accounts::get_locked_account(&mut tx, &user.user_id, provider.slug()).await?;
     credentials::delete(&mut tx, &user.user_id, provider.slug()).await?;
@@ -60,10 +63,11 @@ pub(crate) async fn disconnect(
 
 pub(crate) async fn test(
     State(pool): State<Arc<PgPool>>,
+    Extension(keys): Extension<SigningKeys>,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &headers, true).await?;
+    let user = live_user(&pool, &keys, &headers, true).await?;
     service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
     let report = if provider.is_session_attested() {
         service::probe_session_connection(&pool, &user.user_id, &provider).await?

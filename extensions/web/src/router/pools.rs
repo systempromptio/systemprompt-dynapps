@@ -15,6 +15,7 @@ use systemprompt::database::{Database, DbPool};
 use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::prelude::PgPool;
+use systemprompt::security::keys::SigningKeys;
 use systemprompt::traits::FileStorage;
 use systemprompt::users::{SessionRepository, UserService};
 
@@ -83,7 +84,10 @@ fn scratch_root() -> Option<PathBuf> {
     app_paths().map(|paths| paths.storage().scratch().to_path_buf())
 }
 
-pub(crate) fn build_session_service(db: &DbHandles) -> Arc<SessionCreationService> {
+pub(crate) fn build_session_service(
+    db: &DbHandles,
+    signing_keys: SigningKeys,
+) -> Arc<SessionCreationService> {
     let dbpool = Arc::clone(&db.db);
     let user_repo = systemprompt::users::UserRepository::new(&dbpool);
     let user = UserService::new(Arc::new(user_repo));
@@ -91,5 +95,6 @@ pub(crate) fn build_session_service(db: &DbHandles) -> Arc<SessionCreationServic
     Arc::new(SessionCreationService::new(
         Arc::new(sessions),
         Arc::new(user),
+        signing_keys,
     ))
 }

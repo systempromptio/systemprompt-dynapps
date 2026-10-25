@@ -7,10 +7,9 @@
 //! plane — and pins where each plane is mounted by driving requests through the
 //! returned `axum::Router`.
 //!
-//! No profile is bootstrapped in a test process, so the admin template
-//! directory cannot be resolved and the SSR nests are skipped. That is the
-//! documented degradation: the API plane must still mount at its normal prefix,
-//! which is what the last tests here assert.
+//! The router resolves its signing keys from the profile's config, so every
+//! test that builds it bootstraps the fixture profile with a signing key first;
+//! the same profile resolves the admin template directory the SSR nests read.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -145,6 +144,7 @@ async fn the_router_assembles_from_a_context_carrying_a_real_database() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let _profile = dynapps_test_common::bootstrap_signing_config().await;
 
     let built = WebExtension::new().router(&PoolCtx::new(&db.pool));
 
@@ -174,6 +174,7 @@ async fn the_session_route_is_mounted_under_the_public_api_prefix() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let _profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
         .router(&PoolCtx::new(&db.pool))
         .expect("router builds")
@@ -195,6 +196,7 @@ async fn the_admin_json_api_is_nested_below_the_public_api_prefix() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let _profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
         .router(&PoolCtx::new(&db.pool))
         .expect("router builds")
@@ -216,6 +218,7 @@ async fn a_path_outside_every_mounted_plane_is_not_found() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let _profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
         .router(&PoolCtx::new(&db.pool))
         .expect("router builds")
@@ -228,25 +231,25 @@ async fn a_path_outside_every_mounted_plane_is_not_found() {
     db.cleanup().await;
 }
 
-// The SSR nests need the admin template directory, which is resolved from the
-// bootstrapped profile; a test process has none. The documented degradation is
-// that assembly still succeeds and only the SSR nests are skipped.
+// The SSR nests resolve the admin template directory from the bootstrapped
+// profile, which the signing keys already require.
 #[tokio::test]
-async fn the_ssr_dashboard_is_skipped_when_the_profile_cannot_be_resolved() {
+async fn the_ssr_dashboard_mounts_from_the_bootstrapped_profile() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let _profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
         .router(&PoolCtx::new(&db.pool))
-        .expect("the API plane mounts even with no template engine")
+        .expect("router builds")
         .router;
 
     let status = status_of(router, "GET", "/admin/login").await;
 
     assert_eq!(
         status,
-        StatusCode::NOT_FOUND,
-        "with no template engine the dashboard is absent rather than erroring"
+        StatusCode::OK,
+        "the login page is served by the SSR nest"
     );
 
     db.cleanup().await;
@@ -257,6 +260,7 @@ async fn two_builds_from_the_same_pool_mount_the_same_surface() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let _profile = dynapps_test_common::bootstrap_signing_config().await;
 
     let first = WebExtension::new()
         .router(&PoolCtx::new(&db.pool))

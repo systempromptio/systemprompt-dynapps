@@ -45,7 +45,8 @@ impl Harness {
             Some(Arc::clone(&db.pool)),
         ));
         let accounts = ServiceAccounts::new(UserRepository::new(&database));
-        let router = connector_api_router(Arc::clone(&db.pool), accounts);
+        let router = connector_api_router(Arc::clone(&db.pool), accounts)
+            .layer(axum::Extension(PortalEnv::signing_keys().clone()));
         let ca = reqwest::Certificate::from_pem(&env.portal.ca_pem()).expect("fake CA");
         let http = reqwest::Client::builder()
             .add_root_certificate(ca)

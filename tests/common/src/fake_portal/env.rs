@@ -3,11 +3,11 @@
 //! A throwaway profile whose
 //! services tree declares `dynapps-odoo` and `dynbrain` at the fake's MCP
 //! paths (adapter `generic`, as in `services/mcp/*.yaml`), secrets carrying a
-//! credential-broker secret and master key, an installed signing authority
-//! for [`PortalEnv::mint`], and `SSL_CERT_FILE` naming the fake's CA so every
-//! default `reqwest` client in the connector code trusts it.
+//! credential-broker secret and master key, the signing keys
+//! [`PortalEnv::mint`] signs with, and `SSL_CERT_FILE` naming the fake's CA so
+//! every default `reqwest` client in the connector code trusts it.
 //!
-//! Core's profile, config, services and signing authority are process-wide,
+//! Core's profile, config and services are process-wide,
 //! so one test process holds one `PortalEnv`; nextest gives each test its own
 //! process. Call [`PortalEnv::start`] before anything else touches
 //! `ServicesBootstrap`.
@@ -16,17 +16,21 @@ use std::collections::BTreeMap;
 
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header, encode};
+use std::sync::OnceLock;
 use systemprompt::identifiers::SessionId;
 use systemprompt::models::auth::{
     CustomClaims, JwtAudience, JwtClaims, Permission, RateLimitTier, RegisteredClaims, TokenType,
     UserType,
 };
-use systemprompt::security::keys::authority;
+
+use systemprompt::security::keys::SigningKeys;
 
 use super::{DYNBRAIN_PATH, FakePortal, ODOO_PATH};
 
 // The broker secret core presents as `x-systemprompt-credential-broker`.
 pub const BROKER_SECRET: &str = "fake-portal-broker-secret-not-a-real-secret";
+
+static KEYS: OnceLock<SigningKeys> = OnceLock::new();
 
 const PROFILE: &str = include_str!("../../../contract/admin/fixtures/profile.yaml");
 const COPIED: [&str; 3] = [
@@ -78,9 +82,14 @@ impl PortalEnv {
             .expect("init secrets");
         systemprompt::config::try_init_config(None).expect("init config");
         systemprompt::loader::ServicesBootstrap::init_from_path(&config).expect("init services");
-        let key = systemprompt::security::keys::RsaSigningKey::generate().expect("signing key");
-        authority::install(key).expect("install signing key");
+        KEYS.get_or_init(crate::ephemeral_signing_keys);
         Self { portal, _dir: dir }
+    }
+
+    // The keys every minted JWT is signed with, and the routers under test
+    // validate against.
+    pub fn signing_keys() -> &'static SigningKeys {
+        KEYS.get_or_init(crate::ephemeral_signing_keys)
     }
 
     // An `aud=mcp` JWT for `who`, signed by the installed authority, the
@@ -117,9 +126,9 @@ impl PortalEnv {
         };
         let claims = JwtClaims { registered, custom };
         let mut header = Header::new(Algorithm::RS256);
-        header.kid = Some(authority::active_kid().expect("active kid").to_owned());
-        let key = authority::encoding_key().expect("encoding key");
-        encode(&header, &claims, key).expect("sign JWT")
+        let keys = Self::signing_keys();
+        header.kid = Some(keys.active_kid().to_owned());
+        encode(&header, &claims, keys.encoding_key()).expect("sign JWT")
     }
 }
 

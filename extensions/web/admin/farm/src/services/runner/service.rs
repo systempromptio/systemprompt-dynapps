@@ -10,6 +10,7 @@
 
 use std::sync::Arc;
 use std::time::Duration;
+use systemprompt::security::keys::SigningKeys;
 
 use async_trait::async_trait;
 use systemprompt::agent_runs::AgentRunRepository;
@@ -55,6 +56,7 @@ impl FarmRunnerService {
                 RunCredentialRepositories::new(db),
                 issuer.jwt_issuer,
                 issuer.key_lifetime,
+                issuer.signing_keys,
             ),
             hooks: HookBases {
                 govern_url: gateway.govern_url(),
@@ -75,13 +77,19 @@ fn hostname() -> String {
 struct RunIssuer {
     jwt_issuer: String,
     key_lifetime: ApiKeyLifetime,
+    signing_keys: SigningKeys,
 }
 
-fn run_issuer() -> Option<RunIssuer> {
+fn run_issuer(ctx: &JobContext) -> Option<RunIssuer> {
+    let Ok(signing_keys) = ctx.get::<SigningKeys>().cloned() else {
+        tracing::error!("farm runner has no signing keys; no farm run will be claimed");
+        return None;
+    };
     match systemprompt::manifest::Config::get() {
         Ok(config) => Some(RunIssuer {
             jwt_issuer: config.jwt_issuer.clone(),
             key_lifetime: ApiKeyLifetime::from_max_days(config.api_key_max_lifetime_days),
+            signing_keys,
         }),
         Err(error) => {
             tracing::error!(%error, "config unavailable; no farm run will be claimed");
@@ -101,7 +109,7 @@ impl RunnerService for FarmRunnerService {
             tracing::error!("farm runner has no DbPool; no farm run will be claimed");
             return;
         };
-        let Some(issuer) = run_issuer() else {
+        let Some(issuer) = run_issuer(&ctx) else {
             return;
         };
         let mut claim = ClaimLoop::new(

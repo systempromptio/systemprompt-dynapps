@@ -13,7 +13,9 @@
 //! knows (`user_id`, `email`, `display_name`, `provider`, `roles`) so they
 //! land in typed slots rather than the passthrough map.
 
+use axum::Extension;
 use std::sync::Arc;
+use systemprompt::security::keys::SigningKeys;
 
 use axum::Json;
 use axum::extract::State;
@@ -84,11 +86,12 @@ const fn unix(ts: DateTime<Utc>) -> i64 {
 
 pub(crate) async fn bridge_whoami_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(keys): Extension<SigningKeys>,
     headers: HeaderMap,
 ) -> AdminResult<Json<BridgeWhoamiResponse>> {
     let token = extract_token_from_headers(&headers)?;
     let jwt_issuer = Config::get()?.jwt_issuer.clone();
-    let claims = validate_jwt_token(&token, &jwt_issuer, BRIDGE_AUDIENCES).map_err(|e| {
+    let claims = validate_jwt_token(&keys, &token, &jwt_issuer, BRIDGE_AUDIENCES).map_err(|e| {
         tracing::warn!(error = %e, "bridge whoami: token rejected");
         AdminError::Unauthorized("Invalid or expired token".to_owned())
     })?;

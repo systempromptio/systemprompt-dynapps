@@ -6,17 +6,21 @@
 use axum::http::HeaderMap;
 use systemprompt::identifiers::{PluginId, UserId};
 use systemprompt::manifest::Config;
+use systemprompt::security::keys::SigningKeys;
 use systemprompt_security::HookTokenValidator;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-pub(super) fn extract_and_validate_jwt(headers: &HeaderMap) -> AdminResult<(UserId, PluginId)> {
+pub(super) fn extract_and_validate_jwt(
+    keys: &SigningKeys,
+    headers: &HeaderMap,
+) -> AdminResult<(UserId, PluginId)> {
     let token = headers
         .get("authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
         .ok_or_else(|| AdminError::Unauthorized("Missing Authorization header".to_owned()))?;
     let jwt_issuer = Config::get()?.jwt_issuer.clone();
-    let claims = HookTokenValidator::new(jwt_issuer)
+    let claims = HookTokenValidator::new(jwt_issuer, keys.clone())
         .validate_track(token, None)
         .map_err(AdminError::unauthenticated)?;
     Ok((claims.subject, claims.plugin_id))

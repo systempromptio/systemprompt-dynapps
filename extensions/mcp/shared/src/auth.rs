@@ -13,17 +13,31 @@ use systemprompt::identifiers::McpServerId;
 use systemprompt::manifest::services::ServicesConfig;
 use systemprompt::mcp::middleware::enforce_rbac_from_registry;
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
+use systemprompt::security::keys::SigningKeys;
+use systemprompt::traits::ConfigWatch;
 
 use crate::{record_mcp_access, record_mcp_access_rejected};
 
 /// What a server authenticates its tool calls against: its pool, its id,
-/// the authz hook and the services config it was built with.
+/// the authz hook, the services config and the signing keys it was built
+/// with.
 #[derive(Clone, Copy)]
 pub struct ToolAuth<'a> {
     pub db_pool: &'a DbPool,
     pub service_id: &'a McpServerId,
     pub authz_hook: &'a SharedAuthzHook,
     pub services_config: &'a ServicesConfig,
+    pub signing_keys: &'a SigningKeys,
+}
+
+/// What a server authorises every tool call against, held for its lifetime:
+/// the authz hook, the live services config and the signing keys tokens are
+/// validated with.
+#[derive(Clone, Debug)]
+pub struct ServerAccess {
+    pub authz_hook: SharedAuthzHook,
+    pub services: ConfigWatch<ServicesConfig>,
+    pub signing_keys: SigningKeys,
 }
 
 impl std::fmt::Debug for ToolAuth<'_> {
@@ -44,10 +58,12 @@ pub async fn authenticate_tool_request(
         service_id,
         authz_hook,
         services_config,
+        signing_keys,
     } = auth;
     let server_name = service_id.as_str();
     let rbac_result =
-        enforce_rbac_from_registry(ctx, service_id, authz_hook, services_config).await;
+        enforce_rbac_from_registry(ctx, service_id, authz_hook, services_config, signing_keys)
+            .await;
 
     match rbac_result {
         Ok(result) => {

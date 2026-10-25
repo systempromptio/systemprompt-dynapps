@@ -12,6 +12,7 @@ use crate::services::connector_oauth as oauth;
 use axum::http::HeaderMap;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
+use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::auth::session::extract_mcp_accessor_user;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
@@ -32,6 +33,7 @@ fn require_broker(headers: &HeaderMap) -> AdminResult<()> {
 
 async fn live_user(
     pool: &PgPool,
+    keys: &SigningKeys,
     headers: &HeaderMap,
     mutation: bool,
 ) -> AdminResult<systemprompt_web_admin_core::types::CookieSession> {
@@ -54,7 +56,7 @@ async fn live_user(
             ));
         }
     }
-    let user = extract_mcp_accessor_user(headers)?;
+    let user = extract_mcp_accessor_user(keys, headers)?;
     let session = user
         .session_id
         .as_ref()

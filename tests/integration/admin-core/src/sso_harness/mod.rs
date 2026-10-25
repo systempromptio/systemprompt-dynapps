@@ -108,6 +108,7 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
     Arc::new(SessionCreationService::new(
         Arc::new(SessionRepository::new(&db)),
         Arc::new(users),
+        dynapps_test_common::ephemeral_signing_keys(),
     ))
 }
 

@@ -1,7 +1,9 @@
 //! HTTP handlers for secret storage, rotation, and short-lived resolution
 //! tokens.
 
+use axum::Extension;
 use std::sync::Arc;
+use systemprompt::security::keys::SigningKeys;
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -31,9 +33,10 @@ pub(crate) struct ResolveQuery {
 pub(crate) async fn create_resolution_token_handler(
     State(pool): State<Arc<PgPool>>,
     Path(plugin_id): Path<PluginId>,
+    Extension(keys): Extension<SigningKeys>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let subject = validate_plugin_jwt(&headers)?;
+    let subject = validate_plugin_jwt(&keys, &headers)?;
     let user_id = UserId::new(&subject);
     let token = secret_service::create_resolution_token(&pool, &user_id, &plugin_id).await?;
     Ok(Json(ResolutionTokenResponse {
@@ -55,9 +58,10 @@ pub(crate) async fn resolve_secrets_handler(
 pub(crate) async fn audit_log_handler(
     State(pool): State<Arc<PgPool>>,
     Path(plugin_id): Path<PluginId>,
+    Extension(keys): Extension<SigningKeys>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let session = extract_user_from_cookie(&headers)?;
+    let session = extract_user_from_cookie(&keys, &headers)?;
     let entries = secret_service::list_audit_log(&pool, &session.user_id, &plugin_id).await?;
     let items: Vec<AuditLogEntry> = entries
         .into_iter()
@@ -76,9 +80,10 @@ pub(crate) async fn audit_log_handler(
 pub(crate) async fn rotate_handler(
     State(pool): State<Arc<PgPool>>,
     Path(plugin_id): Path<PluginId>,
+    Extension(keys): Extension<SigningKeys>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let session = extract_user_from_cookie(&headers)?;
+    let session = extract_user_from_cookie(&keys, &headers)?;
     secret_service::rotate_user_keys(&pool, &session.user_id, &plugin_id).await?;
     Ok(Json(ResultOkResponse { result: "ok" }).into_response())
 }

@@ -1,8 +1,8 @@
 //! Process-wide globals the admin handlers read, installed once per test
 //! binary.
 //!
-//! Core's config, profile, secrets and signing authority are `OnceLock`s, so
-//! they are installed behind a `Once` and every token minted in
+//! Core's config, profile and secrets are `OnceLock`s, so they and the
+//! test's signing keys are installed behind a `Once` and every token minted in
 //! [`crate::principal`] validates against the same issuer. The profile is a
 //! checked-in fixture: the developer's `.systemprompt` profile is git-ignored,
 //! so relying on it would pass locally and silently skip in CI.
@@ -10,8 +10,11 @@
 use std::path::PathBuf;
 use std::sync::{Once, OnceLock};
 
+use systemprompt_security::keys::SigningKeys;
+
 static INIT: Once = Once::new();
 static READY: OnceLock<bool> = OnceLock::new();
+static KEYS: OnceLock<SigningKeys> = OnceLock::new();
 
 const ISSUER: &str = "http://localhost:8099";
 
@@ -51,10 +54,13 @@ fn try_init() -> bool {
     systemprompt::loader::ServicesBootstrap::try_init()
         .expect("load the services tree the fixture profile points at");
 
-    let key = systemprompt_security::keys::RsaSigningKey::generate()
-        .expect("generate an ephemeral RSA signing key");
-    systemprompt_security::keys::authority::install(key).expect("install signing authority");
+    KEYS.set(dynapps_test_common::ephemeral_signing_keys())
+        .expect("try_init runs once, so KEYS is unset");
     true
+}
+
+pub(crate) fn signing_keys() -> &'static SigningKeys {
+    KEYS.get().expect("globals::init installs the signing keys")
 }
 
 const FIXTURE_PROFILE: &str = include_str!("../fixtures/profile.yaml");

@@ -59,8 +59,6 @@ fn try_init() -> bool {
             .expect("the secrets bootstrap thread did not panic");
     });
     systemprompt::config::try_init_config(None).expect("build config from the fixture profile");
-    let key = systemprompt_security::keys::RsaSigningKey::generate().expect("ephemeral RSA key");
-    systemprompt_security::keys::authority::install(key).expect("install signing authority");
     true
 }
 

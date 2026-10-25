@@ -45,6 +45,7 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
     Arc::new(SessionCreationService::new(
         Arc::new(sessions),
         Arc::new(user),
+        globals::signing_keys().clone(),
     ))
 }
 
@@ -75,6 +76,29 @@ fn farm_state(pool: &Arc<PgPool>) -> Arc<farm::state::FarmState> {
         },
         farm::state::RunnerLimits::default(),
     )
+}
+
+// Core's three planes over the fixture services tree, as the runtime builds
+// them for the extension router.
+fn core_planes(
+    database: &systemprompt::database::DbPool,
+) -> systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes {
+    let root = std::path::PathBuf::from(
+        &systemprompt::manifest::Config::get()
+            .expect("config installed by globals::init")
+            .services_path,
+    );
+    let planes = systemprompt::extension::prelude::ConfigPlaneSet::new(
+        vec![
+            Arc::new(systemprompt::governance::authz::AccessControlPlane),
+            Arc::new(systemprompt::governance::policy::GovernancePlane),
+            Arc::new(systemprompt::gateway::policies::GatewayPoliciesPlane),
+        ],
+        std::collections::BTreeMap::new(),
+        root,
+    )
+    .expect("core plane set");
+    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(planes, database)
 }
 
 impl App {
@@ -159,7 +183,9 @@ impl App {
             .merge(hooks)
             .merge(secrets)
             .merge(share)
-            .layer(axum::Extension(systemprompt::traits::BackgroundTasks::new()));
+            .layer(axum::Extension(core_planes(&database)))
+            .layer(axum::Extension(systemprompt::traits::BackgroundTasks::new()))
+            .layer(axum::Extension(globals::signing_keys().clone()));
 
         Self {
             router,

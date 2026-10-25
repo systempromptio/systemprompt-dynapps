@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::UserId;
 use systemprompt::manifest::ServicesConfig;
 use systemprompt::models::mcp::McpServerType;
+use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const TOKEN_TTL_SECS: i64 = 300;
@@ -66,19 +67,9 @@ pub fn claims(
     }
 }
 
-pub fn sign(claims: &IdentityClaims) -> AdminResult<String> {
-    use systemprompt_security::keys::authority;
+pub fn sign(keys: &SigningKeys, claims: &IdentityClaims) -> AdminResult<String> {
     let mut header = Header::new(Algorithm::RS256);
     header.typ = Some("JWT".into());
-    header.kid = Some(
-        authority::active_kid()
-            .map_err(AdminError::internal)?
-            .to_owned(),
-    );
-    encode(
-        &header,
-        claims,
-        authority::encoding_key().map_err(AdminError::internal)?,
-    )
-    .map_err(AdminError::internal)
+    header.kid = Some(keys.active_kid().to_owned());
+    encode(&header, claims, keys.encoding_key()).map_err(AdminError::internal)
 }

@@ -153,6 +153,7 @@ async fn main() -> Result<()> {
         ServerAccess {
             authz_hook: Arc::clone(ctx.authz_hook()),
             services: ctx.services_watch().clone(),
+            signing_keys: ctx.signing_keys().clone(),
         },
         ctx.artifact_ingest_arc(),
         Arc::new(build_env(&ctx)),

@@ -163,14 +163,17 @@ async fn provision_one(
     }
 
     let session_id = SessionId::new(uuid::Uuid::new_v4().to_string());
-    let token = JwtService::generate_admin_token(&AdminTokenParams {
-        user_id: &user_id,
-        session_id: &session_id,
-        email: &email,
-        issuer: &globals::jwt_issuer(),
-        duration: chrono::Duration::hours(1),
-        client_id: None,
-    })
+    let token = JwtService::generate_admin_token(
+        globals::signing_keys(),
+        &AdminTokenParams {
+            user_id: &user_id,
+            session_id: &session_id,
+            email: &email,
+            issuer: &globals::jwt_issuer(),
+            duration: chrono::Duration::hours(1),
+            client_id: None,
+        },
+    )
     .expect("mint a session token");
 
     (token.as_str().to_owned(), user_id)

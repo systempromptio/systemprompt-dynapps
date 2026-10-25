@@ -4,7 +4,9 @@
 //! list: the definitions decide `valid`, which unlocks export, so degrading
 //! would fail open.
 
+use axum::Extension;
 use std::sync::Arc;
+use systemprompt::security::keys::SigningKeys;
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -23,12 +25,14 @@ use systemprompt_web_admin_core::types::UserQuery;
 pub(crate) async fn list_plugin_env_handler(
     State(pool): State<Arc<PgPool>>,
     Path(plugin_id): Path<PluginId>,
+    Extension(keys): Extension<SigningKeys>,
     headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> AdminResult<Response> {
-    let cookie_uid = systemprompt_web_admin_core::auth::session::extract_user_from_cookie(&headers)
-        .ok()
-        .map(|s| s.user_id);
+    let cookie_uid =
+        systemprompt_web_admin_core::auth::session::extract_user_from_cookie(&keys, &headers)
+            .ok()
+            .map(|s| s.user_id);
     let Some(user_id) = systemprompt_web_admin_core::auth::session::resolve_principal(
         cookie_uid.as_ref().map(UserId::as_str),
         query.user_id.as_ref().map(UserId::as_str),

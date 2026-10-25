@@ -11,25 +11,34 @@ use systemprompt::identifiers::{Email, UserId};
 use systemprompt::manifest::Config;
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::validate_jwt_token;
+use systemprompt::security::keys::SigningKeys;
 
 use crate::error::AdminError;
 use crate::types::CookieSession;
 
-pub fn extract_user_from_cookie(headers: &HeaderMap) -> Result<CookieSession, AdminError> {
-    extract_user_with_audiences(headers, &[JwtAudience::Api])
+pub fn extract_user_from_cookie(
+    keys: &SigningKeys,
+    headers: &HeaderMap,
+) -> Result<CookieSession, AdminError> {
+    extract_user_with_audiences(keys, headers, &[JwtAudience::Api])
 }
 
 // Why: core's token accessors are called with a bridge-forwarded token that
 // carries `Mcp`, not `Api`; the widening lives here so the cookie path keeps
 // its single audience.
-pub fn extract_mcp_accessor_user(headers: &HeaderMap) -> Result<CookieSession, AdminError> {
+pub fn extract_mcp_accessor_user(
+    keys: &SigningKeys,
+    headers: &HeaderMap,
+) -> Result<CookieSession, AdminError> {
     extract_user_with_audiences(
+        keys,
         headers,
         &[JwtAudience::Api, JwtAudience::Mcp, JwtAudience::Bridge],
     )
 }
 
 fn extract_user_with_audiences(
+    keys: &SigningKeys,
     headers: &HeaderMap,
     audiences: &[JwtAudience],
 ) -> Result<CookieSession, AdminError> {
@@ -37,7 +46,7 @@ fn extract_user_with_audiences(
 
     let jwt_issuer = Config::get()?.jwt_issuer.clone();
 
-    let claims = validate_jwt_token(&token, &jwt_issuer, audiences)?;
+    let claims = validate_jwt_token(keys, &token, &jwt_issuer, audiences)?;
 
     let email = Email::try_new(claims.custom.email.clone()).map_err(AdminError::unauthenticated)?;
 

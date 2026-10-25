@@ -70,8 +70,11 @@ fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
     let server = SystempromptServer::new(
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid service id"),
-        deny_all_hook(),
-        ConfigWatch::new(services()),
+        systemprompt_mcp_shared::auth::ServerAccess {
+            authz_hook: deny_all_hook(),
+            services: ConfigWatch::new(services()),
+            signing_keys: dynapps_test_common::ephemeral_signing_keys(),
+        },
         Arc::clone(&ingest),
     );
     (server, ingest)
