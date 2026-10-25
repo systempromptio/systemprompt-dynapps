@@ -28,7 +28,6 @@ use crate::types::{EvalRunId, EvalSuiteId, FarmId};
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct EvalLaunchBody {
-    #[serde(alias = "farm_id")]
     farm: FarmId,
     cases: Option<Vec<String>>,
 }

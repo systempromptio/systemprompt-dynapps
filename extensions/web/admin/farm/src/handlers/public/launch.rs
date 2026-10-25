@@ -31,9 +31,7 @@ const WAIT_LIMIT: Duration = Duration::from_secs(600);
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct LaunchBody {
-    #[serde(alias = "farm_id")]
     farm: FarmId,
-    #[serde(alias = "agent_id")]
     agent: FarmAgentId,
     prompt: Option<String>,
     case: Option<String>,

@@ -71,9 +71,11 @@ fn request_origin(headers: &HeaderMap) -> String {
         .get("x-forwarded-proto")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("http");
-    let host = headers
+    headers
         .get("host")
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("localhost:8080");
-    format!("{scheme}://{host}")
+        .map_or_else(
+            || systemprompt::models::defaults::DEFAULT_API_URL.to_owned(),
+            |host| format!("{scheme}://{host}"),
+        )
 }
