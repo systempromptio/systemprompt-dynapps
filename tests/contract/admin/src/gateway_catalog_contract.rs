@@ -285,7 +285,7 @@ async fn the_detector_records_a_request_that_should_have_been_denied() {
 }
 
 #[tokio::test]
-async fn the_detector_skips_requests_outside_the_window_and_judges_undeclared_models_on_the_catalog_route()
+async fn the_detector_skips_requests_outside_the_window_and_judges_undeclared_models_on_their_model_entity()
  {
     if !globals::init() {
         return;
@@ -335,8 +335,8 @@ async fn the_detector_skips_requests_outside_the_window_and_judges_undeclared_mo
         "a request older than the window is not swept"
     );
 
-    // A model no declared route matches falls to the catalog route, whose ACL
-    // the gateway evaluates for it; with no grant on it the request is flagged.
+    // A model no declared route matches is decided on its own model entity,
+    // as the gateway decides it; with no grant on it the request is flagged.
     sqlx::query(
         "UPDATE ai_requests SET created_at = NOW(), model = 'llama-3-70b' WHERE user_id = $1",
     )
@@ -348,7 +348,7 @@ async fn the_detector_skips_requests_outside_the_window_and_judges_undeclared_mo
     assert_eq!(
         sweep_and_count(&app, &db.pool, &user).await,
         1,
-        "the catalog route judges a model no declared route matched"
+        "the model entity judges a model no declared route matched"
     );
 
     db.cleanup().await;

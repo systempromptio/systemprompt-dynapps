@@ -6,8 +6,7 @@
 
 use systemprompt::manifest::services::GatewayRoute;
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
-    CATALOG_ROUTE_LABEL, derive_provider_label, derive_route_label, get_route_labels,
-    resolved_catalog,
+    derive_provider_label, derive_route_label, get_route_labels, resolved_catalog,
 };
 
 use crate::support::{committed_services, services_with_routes};
@@ -52,17 +51,21 @@ fn route_label_reads_the_pattern_as_a_model_family() {
 fn declared_name_wins_and_an_unnamed_route_is_derived() {
     let unnamed: GatewayRoute =
         serde_yaml::from_str("id: claude-family\nmodels: claude-*\n").expect("route parses");
-    let labels = get_route_labels(&services_with_routes(vec![unnamed])).expect("labels resolve");
+    let named: GatewayRoute = serde_yaml::from_str(
+        "id: go-glm\nlabel: GLM on OpenCode Go\ndescription: The member's own key.\n\
+         alias:\n  requested: go-glm\n  model: go-glm-5.3\ndeployments:\n- opencode-go/chat\n",
+    )
+    .expect("route parses");
+    let labels =
+        get_route_labels(&services_with_routes(vec![named, unnamed])).expect("labels resolve");
 
-    let go = labels
-        .find("go-deepseek-v4-pro")
-        .expect("declared alias route");
-    assert_eq!(go.label, "DeepSeek V4 Pro on OpenCode Go (member key)");
+    let go = labels.find("go-glm").expect("declared alias route");
+    assert_eq!(go.label, "GLM on OpenCode Go");
     assert!(go.declared_name);
     assert_eq!(go.provider, "opencode-go");
     assert_eq!(
         go.subtitle(),
-        "go-deepseek-v4-pro → deepseek-v4-pro → OpenCode Go"
+        "go-glm → go-glm-5.3 → OpenCode Go as glm-5.3"
     );
     assert!(go.description.is_some());
 
@@ -71,8 +74,10 @@ fn declared_name_wins_and_an_unnamed_route_is_derived() {
     assert!(!claude.declared_name);
     assert_eq!(claude.subtitle(), "claude-* → Anthropic");
 
-    let catalog = labels.find("star-bf70e4").expect("the catalog route");
-    assert_eq!(catalog.label, CATALOG_ROUTE_LABEL);
+    assert!(
+        labels.find("star-bf70e4").is_none(),
+        "no synthetic catalog route is listed"
+    );
 
     assert_eq!(labels.label_of("no-such-route"), "no-such-route");
     assert_eq!(

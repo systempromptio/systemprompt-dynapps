@@ -19,11 +19,12 @@ providers:
     provider: opencode-go
     endpoint: opencode-go/messages
     credential: opencode-go
-routes:
-  claude-star-4203d1: star-bf70e4
-  deepseek-route: star-bf70e4
-  e2e-mock-route: star-bf70e4
-  opencode-go-minimax-route: star-bf70e4
-  opencode-go-qwen-route: star-bf70e4
-  opencode-go-route: star-bf70e4
+route_models:
+  claude-star-4203d1: claude-*
+  deepseek-route: deepseek-*
+  e2e-mock-route: e2e-mock-*
+  opencode-go-minimax-route: go-minimax-*
+  opencode-go-qwen-route: go-qwen*
+  opencode-go-route: go-*
+  star-bf70e4: '*'
 dropped_models: []

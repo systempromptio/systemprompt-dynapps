@@ -26,7 +26,6 @@ fn declared() -> DeclaredSet {
     build_declared_set(
         &doc,
         &DeclaredInputs {
-            gateway_routes: &[],
             marketplace_ids: &[],
             registered: &RegisteredEntities::default(),
         },

@@ -3,8 +3,8 @@
 //! band, and never both allows and denies the same subject.
 
 use super::rules_yaml_types::{
-    BandSpec, EntityDecl, EntityRef, EntityRefParseError, GLOB_ONLY_KINDS, OWNER_BUNDLE_PREFIX,
-    RulesDoc,
+    BandSpec, EntityDecl, EntityRef, EntityRefParseError, GLOB_KINDS, GLOB_ONLY_KINDS,
+    OWNER_BUNDLE_PREFIX, RulesDoc,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -13,7 +13,7 @@ pub enum RulesValidationError {
     Entity(#[from] EntityRefParseError),
     #[error("{entity}: `why` is required")]
     MissingWhy { entity: String },
-    #[error("{entity}: only gateway_route and hook take a glob; write the id")]
+    #[error("{entity}: only gateway_route, hook and model take a glob; write the id")]
     GlobNotAllowed { entity: String },
     #[error("{entity}: {kind} ids are generated, never written — use {kind}/*")]
     GlobRequired { entity: String, kind: String },
@@ -111,16 +111,18 @@ impl EntityDecl {
 }
 
 fn check_glob_shape(entity: &EntityRef) -> Result<(), RulesValidationError> {
-    match (entity.is_glob(), GLOB_ONLY_KINDS.contains(&entity.kind)) {
-        (true, false) => Err(RulesValidationError::GlobNotAllowed {
+    if entity.is_glob() && !GLOB_KINDS.contains(&entity.kind) {
+        return Err(RulesValidationError::GlobNotAllowed {
             entity: entity.to_string(),
-        }),
-        (false, true) => Err(RulesValidationError::GlobRequired {
+        });
+    }
+    if !entity.is_glob() && GLOB_ONLY_KINDS.contains(&entity.kind) {
+        return Err(RulesValidationError::GlobRequired {
             entity: entity.to_string(),
             kind: entity.kind.as_str().to_owned(),
-        }),
-        (true, true) | (false, false) => Ok(()),
+        });
     }
+    Ok(())
 }
 
 fn subject_problem(spec: &BandSpec) -> Option<&'static str> {

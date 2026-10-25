@@ -15,10 +15,9 @@ mod routes;
 mod yaml_io;
 
 pub use catalog::{
-    CATALOG_ROUTE_LABEL, client_facing_routes, client_facing_routes_from_services,
-    dispatchable_route_ids, dispatchable_routes, dispatchable_routes_from_services,
-    registered_routes, registered_routes_from_services, resolved_catalog, retain_client_facing,
-    route_reaches,
+    client_facing_routes, client_facing_routes_from_services, dispatchable_route_ids,
+    dispatchable_routes, dispatchable_routes_from_services, registered_routes,
+    registered_routes_from_services, resolved_catalog, retain_client_facing, route_reaches,
 };
 pub use config::{get_gateway_config, update_gateway_settings};
 pub use labels::{

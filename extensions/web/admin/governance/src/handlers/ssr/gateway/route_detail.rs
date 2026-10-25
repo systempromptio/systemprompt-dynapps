@@ -2,8 +2,9 @@
 //! and the shared "Who gets this" panel for the `gateway_route` entity.
 //!
 //! `rules.yaml` declares gateway routes only through the glob
-//! `gateway_route/*`, which the declared set expands to every dispatchable
-//! route; a rule written here names this route alone and is a console rule.
+//! `gateway_route/*`, which core stores once and matches against this route
+//! when a request is decided; a rule written here names this route alone and
+//! is a console rule.
 
 use std::sync::Arc;
 
@@ -27,7 +28,7 @@ use super::ENTITY_GATEWAY_ROUTE;
 
 pub(super) const ROUTES_URL: &str = "/admin/gateway/routes";
 
-const GLOB_NOTE: &str = "Code declares gateway routes only as gateway_route/* in rules.yaml: those rules apply to every route and are listed here as they were applied to this one. A rule added here names this route alone and lives in the console until exported.";
+const GLOB_NOTE: &str = "Code declares gateway routes only as gateway_route/* in rules.yaml: that glob applies to every route and is matched against this one when a request is decided. A rule added here names this route alone and lives in the console until exported.";
 
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct RouteQuery {

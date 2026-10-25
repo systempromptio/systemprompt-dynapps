@@ -70,14 +70,14 @@ The catalog ships inside the image, so every environment boots the same set.
 | Model | Deployments, in order | Credential |
 |---|---|---|
 | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` | `anthropic/api` | `anthropic` (platform) |
-| `deepseek-v4-pro` | `deepseek/api`, then `opencode-go/chat` | `deepseek` (platform), then `opencode-go` (personal) |
+| `deepseek-v4-pro` | `deepseek/api` | `deepseek` (platform) |
 | `deepseek-flash` | `deepseek/api` | `deepseek` (platform) |
 | `go-*` | `opencode-go/chat` or `opencode-go/messages` | `opencode-go` (personal) |
 
 Claude is served only by the customer's Anthropic API key. Claude hosts list
-the `claude-*` models; OpenCode lists DeepSeek and the Go models. The one
-route, `go-deepseek-v4-pro`, is an alias for `deepseek-v4-pro` pinned to
-`opencode-go/chat`, so a member can ask for DeepSeek V4 Pro on their own Go
+the `claude-*` models; OpenCode lists DeepSeek and the Go models. DeepSeek
+V4 Pro on a member's own Go key is its own model, `go-deepseek-v4-pro`, served
+only by `opencode-go/chat`; `deepseek-v4-pro` is never served from a member's
 key. Failover never crosses from a platform key to a member's key.
 
 The Claude models, at Anthropic's rates:
@@ -208,17 +208,19 @@ is clamped to the model's output ceiling rather than refused.
 
 ## Model access control
 
-Model access is an access-control entity, `gateway_route/*`, declared in
+Model access is an access-control entity, `model/*`, declared in
 `services/access-control/rules.yaml` and administered at `/admin/access-control`.
-The mechanism grants or denies routes per role, group or project, and a
-request for a route the caller is not entitled to gets **HTTP 403**
-(`authz denied [<policy>]: <reason>`), and the denial is audited.
+A request that matches a declared route is decided on that route
+(`gateway_route/<id>`); any other request is decided on the model it asks for,
+with the matching `model/<glob>` entities and its provider as parents. Access
+is granted or denied per role, group or project, a request the caller is not
+entitled to gets **HTTP 403** (`authz denied [<policy>]: <reason>`), and the
+denial is audited.
 
-**As configured, every route is open to every signed-in role.** Usage is
+**As configured, every model is open to every signed-in role.** Usage is
 shaped by governance and quota windows, not by entitlement. To restrict a
-model, declare a rule for its route with an allow band and a reason. A
-route's id is declared in `gateway.yaml` (for example `go-deepseek-v4-pro`),
-and the console shows its `label:`.
+model, declare a rule for `model/<id>` (or a glob such as `model/go-*`) with an
+allow band and a reason.
 
 `/admin/gateway` has four tabs: **Overview** (dispatch order and provider
 health), **Providers** (each provider with its endpoints, models and deployments),

@@ -17,7 +17,7 @@
 
 use std::path::Path;
 
-use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
+use systemprompt::governance::authz::RegisteredEntities;
 use systemprompt::loader::ConfigLoader;
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -41,15 +41,9 @@ pub fn build_declared_from_doc(
     marketplace_ids: &[String],
     registered: &RegisteredEntities,
 ) -> Result<DeclaredSet, MarketplaceError> {
-    let gateway_routes: Vec<String> = registered
-        .known_ids(EntityKind::GatewayRoute)
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
     let mut set = build_declared_set(
         doc,
         &DeclaredInputs {
-            gateway_routes: &gateway_routes,
             marketplace_ids,
             registered,
         },

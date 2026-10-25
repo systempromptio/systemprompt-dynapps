@@ -2,11 +2,10 @@
 //! entity kind, with a kind collapsed to one line when the role reaches
 //! every entity of that kind the same way.
 //!
-//! The flat ledger writes `gateway_route/*` as one row per route, so a
-//! rule that means "every model route" arrives here as a dozen rows; the
-//! catalog says how many of each kind exist, and a role that names them all
-//! with one access is shown as "All model routes (12)" with the rows
-//! underneath for whoever wants them.
+//! A role can name every entity of a kind one by one; the catalog says how
+//! many of each kind exist, and a role that names them all with one access is
+//! shown as "All model routes (12)" with the rows underneath for whoever wants
+//! them.
 
 use serde::Serialize;
 

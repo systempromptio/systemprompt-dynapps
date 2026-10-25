@@ -2,7 +2,6 @@ gateway:
   enabled: true
   routes: []
   default_model: claude-sonnet-5-5
-  catalog_route_id: star-38c293
   quota_fault_mode: closed
   automatic_prompt_caching: true
   auth_scheme: bearer

@@ -17,9 +17,13 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use systemprompt::governance::authz::EntityRef;
 use systemprompt::governance::authz::resolver::ResolveInput;
+use systemprompt::governance::authz::{
+    AccessControlRepository, ChainSources, DecisionFacts, DenyReason, EntityKind, EntityRef,
+    ParentChainIndex, ResolveBase,
+};
 use systemprompt::identifiers::{RouteId, UserId};
+use systemprompt::loader::ServicesBootstrap;
 
 use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
@@ -151,8 +155,8 @@ pub(crate) async fn detect_handler(
 struct AclDetectAudit<'a> {
     ai_request_id: &'a str,
     model: &'a str,
-    matched_route_id: &'a str,
-    reason: &'a systemprompt::governance::authz::DenyReason,
+    matched_route_id: Option<&'a str>,
+    reason: &'a DenyReason,
 }
 
 pub(crate) async fn detect_after_the_fact(
@@ -161,75 +165,108 @@ pub(crate) async fn detect_after_the_fact(
     since_minutes: i64,
 ) -> Result<usize, systemprompt_web_admin_core::authz::AuthzReadError> {
     let rows = acl_detect::list_recent_unrejected_requests(pool, since_minutes).await?;
+    let repo = AccessControlRepository::from_pool(Arc::new(pool.clone()));
+    let chains = ParentChainIndex::load(
+        &repo,
+        Arc::new(ChainSources::from_services(ServicesBootstrap::get()?)),
+    )
+    .await?;
 
     let mut emitted = 0usize;
     for row in rows {
-        let Some(route) =
-            systemprompt_web_admin_core::repositories::gateway_catalog::find_matching_route(
-                routes, &row.model,
-            )
-        else {
+        let route = systemprompt_web_admin_core::repositories::gateway_catalog::find_matching_route(
+            routes, &row.model,
+        );
+        let Some(reason) = deny_reason(pool, &repo, &chains, route, &row).await? else {
             continue;
         };
-        let Some(profile) =
-            systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
-                pool,
-                &row.user_id,
-            )
-            .await?
-        else {
-            continue;
-        };
-        let user_roles = profile.roles;
-        let attributes = subject_attributes_for(pool, &UserId::new(&row.user_id)).await?;
-        let route_id = RouteId::new(route.id.clone());
-        let rules = gateway_acl::list_rules_for_route(pool, &route_id).await?;
-        let default_included = gateway_acl::find_entity(pool, &route_id)
-            .await?
-            .map(|e| e.default_included);
-        let entity = EntityRef::GatewayRoute(route_id);
-        let uid = UserId::new(&row.user_id);
-        if let Decision::Deny { reason } = gateway_acl::resolve(ResolveInput {
-            entity: &entity,
-            rules: &rules,
-            user_id: &uid,
-            user_roles: &user_roles,
-            default_included,
-            parents: &[],
-            attributes: &attributes,
-            dimensions: dimensions(pool),
-        }) {
-            let decision_id = uuid::Uuid::new_v4().to_string();
-            let reason_str = reason.to_string();
-            let session_id = row
-                .session_id
-                .as_ref()
-                .map(|s| s.as_str().to_owned())
-                .unwrap_or_default();
-            // JSON: JSONB `evaluated_rules`, from typed `AclDetectAudit`
-            let evaluated = serde_json::to_value(AclDetectAudit {
-                ai_request_id: &row.id,
-                model: &row.model,
-                matched_route_id: &route.id,
-                reason: &reason,
-            })
-            .map_err(|error| sqlx::Error::Encode(Box::new(error)))?;
-            acl_detect::insert_gateway_acl_decision(
-                pool,
-                acl_detect::GatewayAclDecision {
-                    decision_id: &decision_id,
-                    user_id: row.user_id.as_str(),
-                    session_id: &session_id,
-                    model: &row.model,
-                    agent_scope: "inference",
-                    decision: "deny",
-                    reason: &reason_str,
-                    evaluated_rules: &evaluated,
-                },
-            )
-            .await?;
-            emitted += 1;
-        }
+        record_detected_denial(pool, &row, route, &reason).await?;
+        emitted += 1;
     }
     Ok(emitted)
+}
+
+async fn deny_reason(
+    pool: &PgPool,
+    repo: &AccessControlRepository,
+    chains: &ParentChainIndex,
+    route: Option<&GatewayRouteView>,
+    row: &acl_detect::RecentAiRequest,
+) -> Result<Option<DenyReason>, systemprompt_web_admin_core::authz::AuthzReadError> {
+    let Some(profile) =
+        systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+            pool,
+            &row.user_id,
+        )
+        .await?
+    else {
+        return Ok(None);
+    };
+    let attributes = subject_attributes_for(pool, &row.user_id).await?;
+    let (kind, entity_id) = route.map_or((EntityKind::Model, row.model.as_str()), |route| {
+        (EntityKind::GatewayRoute, route.id.as_str())
+    });
+    let rules = repo.list_rules_for_entity(kind, entity_id).await?;
+    let default_included = repo
+        .get_entity(kind, entity_id)
+        .await?
+        .map(|e| e.default_included);
+    let decision = chains.resolve(
+        kind,
+        entity_id,
+        ResolveBase {
+            rules: &rules,
+            user_id: &row.user_id,
+            user_roles: &profile.roles,
+            default_included,
+            attributes: &attributes,
+            dimensions: dimensions(pool),
+            facts: DecisionFacts {
+                model: Some(&row.model),
+                provider: None,
+            },
+        },
+    );
+    Ok(match decision {
+        Decision::Deny { reason } => Some(reason),
+        Decision::Allow { .. } | Decision::Warn { .. } | Decision::Pending { .. } => None,
+    })
+}
+
+async fn record_detected_denial(
+    pool: &PgPool,
+    row: &acl_detect::RecentAiRequest,
+    route: Option<&GatewayRouteView>,
+    reason: &DenyReason,
+) -> Result<(), systemprompt_web_admin_core::authz::AuthzReadError> {
+    let decision_id = uuid::Uuid::new_v4().to_string();
+    let reason_str = reason.to_string();
+    let session_id = row
+        .session_id
+        .as_ref()
+        .map(|s| s.as_str().to_owned())
+        .unwrap_or_default();
+    // JSON: JSONB `evaluated_rules`, from typed `AclDetectAudit`
+    let evaluated = serde_json::to_value(AclDetectAudit {
+        ai_request_id: &row.id,
+        model: &row.model,
+        matched_route_id: route.map(|route| route.id.as_str()),
+        reason,
+    })
+    .map_err(|error| sqlx::Error::Encode(Box::new(error)))?;
+    acl_detect::insert_gateway_acl_decision(
+        pool,
+        acl_detect::GatewayAclDecision {
+            decision_id: &decision_id,
+            user_id: row.user_id.as_str(),
+            session_id: &session_id,
+            model: &row.model,
+            agent_scope: "inference",
+            decision: "deny",
+            reason: &reason_str,
+            evaluated_rules: &evaluated,
+        },
+    )
+    .await?;
+    Ok(())
 }

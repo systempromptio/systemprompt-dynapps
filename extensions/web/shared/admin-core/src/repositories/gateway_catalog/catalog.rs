@@ -4,11 +4,11 @@
 //! bootstrap, the rules.yaml projection it feeds, and the dashboard handlers
 //! — derives the set here, from the same resolved catalog the gateway
 //! dispatches by, so no two of them can disagree about which ids are real.
-//! It includes the catalog route, the id access control evaluates for a
-//! request no declared route matched, which `gateway.yaml` never lists. The
-//! routes and the catalog they resolve against are services configuration
-//! (`services/ai/*.yaml`), read from the `ServicesBootstrap` cell the process
-//! booted with.
+//! A request no declared route matches has no route id: core decides it on
+//! the `model/<id>` entity it asked for, so no synthetic route stands in for
+//! it here. The routes and the catalog they resolve against are services
+//! configuration (`services/ai/*.yaml`), read from the `ServicesBootstrap` cell
+//! the process booted with.
 
 use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 use systemprompt::identifiers::RouteId;
@@ -19,8 +19,6 @@ use systemprompt_web_shared::error::MarketplaceError;
 
 use super::yaml_io::route_view;
 use crate::types::GatewayRouteView;
-
-pub const CATALOG_ROUTE_LABEL: &str = "Every catalog model";
 
 pub fn resolved_catalog(services: &ServicesConfig) -> Result<ResolvedCatalog, MarketplaceError> {
     Ok(services.resolve_catalog(&CatalogContext::default())?)
@@ -39,24 +37,12 @@ pub fn dispatchable_route_ids(services: &ServicesConfig) -> Vec<String> {
 pub fn dispatchable_routes(
     services: &ServicesConfig,
 ) -> Result<Vec<GatewayRouteView>, MarketplaceError> {
-    let catalog = resolved_catalog(services)?;
-    let mut routes: Vec<GatewayRouteView> =
-        catalog.routes().iter().cloned().map(route_view).collect();
-    let catalog_id = catalog.catalog_route_id().as_str();
-    if !routes.iter().any(|route| route.id == catalog_id) {
-        routes.push(GatewayRouteView {
-            id: catalog_id.to_owned(),
-            name: Some(CATALOG_ROUTE_LABEL.to_owned()),
-            description: Some(
-                "Any request no declared route matches: each model is served from its own \
-                 deployments."
-                    .to_owned(),
-            ),
-            models: vec!["*".to_owned()],
-            ..GatewayRouteView::default()
-        });
-    }
-    Ok(routes)
+    Ok(resolved_catalog(services)?
+        .routes()
+        .iter()
+        .cloned()
+        .map(route_view)
+        .collect())
 }
 
 pub fn dispatchable_routes_from_services() -> Result<Vec<GatewayRouteView>, MarketplaceError> {

@@ -21,17 +21,14 @@ fn key(entity_type: &str, entity_id: &str, rule_type: &str, rule_value: &str) ->
 
 fn project(
     yaml: &str,
-    routes: &[&str],
     marketplaces: &[&str],
 ) -> Result<systemprompt_web_admin_core::repositories::access_rules::declared::DeclaredSet, String>
 {
     let doc = parse_rules_doc(yaml).map_err(|e| e.to_string())?;
-    let routes: Vec<String> = routes.iter().map(|r| (*r).to_owned()).collect();
     let marketplaces: Vec<String> = marketplaces.iter().map(|m| (*m).to_owned()).collect();
     build_declared_set(
         &doc,
         &DeclaredInputs {
-            gateway_routes: &routes,
             marketplace_ids: &marketplaces,
             registered: &RegisteredEntities::default(),
         },
@@ -43,7 +40,6 @@ fn project(
 fn every_band_value_becomes_one_row_carrying_the_entity_why() {
     let set = project(
         "entities:\n  - entity: mcp_server/dynbrain\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs, uk]\n    deny:\n      project: [storefront]\n",
-        &[],
         &[],
     )
     .expect("projects");
@@ -63,7 +59,6 @@ fn every_band_value_becomes_one_row_carrying_the_entity_why() {
 fn a_band_may_override_the_why_and_the_default_may_be_open() {
     let set = project(
         "entities:\n  - entity: marketplace/commons\n    default: open\n    why: baseline\n    allow:\n      role:\n        values: [user]\n        why: everyone gets the commons\n",
-        &[],
         &["commons"],
     )
     .expect("projects");
@@ -73,29 +68,16 @@ fn a_band_may_override_the_why_and_the_default_may_be_open() {
 }
 
 #[test]
-fn the_gateway_glob_expands_over_the_catalog_only() {
+fn a_glob_projects_as_the_pattern_entity_core_stores() {
     let set = project(
-        "entities:\n  - entity: gateway_route/*\n    default: open\n    why: routes\n    allow:\n      role: [user]\n",
-        &["claude-star-4203d1", "gemini-star-5db635"],
+        "entities:\n  - entity: gateway_route/*\n    default: open\n    why: routes\n    allow:\n      role: [user]\n  - entity: model/go-*\n    why: go\n    allow:\n      group: [uk]\n",
         &[],
     )
-    .expect("projects");
+    .expect("projects without a catalog to expand over");
     assert_eq!(set.rules.len(), 2);
-    assert!(set.governs("gateway_route", "claude-star-4203d1"));
-    assert!(set.governs("gateway_route", "gemini-star-5db635"));
-    assert!(!set.governs("gateway_route", "openai-o4-mini"));
-}
-
-#[test]
-fn a_glob_over_an_empty_catalog_is_an_error_not_an_empty_declaration() {
-    let err = project(
-        "entities:\n  - entity: gateway_route/*\n    default: open\n    why: routes\n    allow:\n      role: [user]\n",
-        &[],
-        &[],
-    )
-    .expect_err("an empty expansion declares nothing and must not read as clean");
-    assert!(err.contains("gateway_route/*"), "{err}");
-    assert!(err.contains("no entity of that kind"), "{err}");
+    assert!(set.governs("gateway_route", "*"));
+    assert!(set.governs("model", "go-*"));
+    assert!(!set.governs("gateway_route", "claude-star-4203d1"));
 }
 
 #[test]
@@ -121,7 +103,10 @@ fn why_is_required_and_globs_are_for_generated_kinds_only() {
     )
     .expect_err("rejected")
     .to_string();
-    assert!(glob.contains("only gateway_route and hook"), "{glob}");
+    assert!(
+        glob.contains("only gateway_route, hook and model"),
+        "{glob}"
+    );
 }
 
 #[test]
@@ -138,7 +123,6 @@ fn a_subject_cannot_be_both_allowed_and_denied_on_one_band() {
 fn an_undefined_marketplace_is_rejected_at_projection() {
     let err = project(
         "entities:\n  - entity: marketplace/ghost\n    why: x\n    allow:\n      role: [user]\n",
-        &[],
         &["commons"],
     )
     .expect_err("rejected");
@@ -159,7 +143,6 @@ fn unknown_keys_and_bands_are_rejected() {
 fn an_owned_marketplace_waits_for_its_bundle_instead_of_failing() {
     let set = project(
         "entities:\n  - entity: marketplace/europe\n    owner: bundle:sfnext\n    why: kit\n    allow:\n      group: [europe-devs]\n",
-        &[],
         &["commons"],
     )
     .expect("an absent id with an owner is not an error");
@@ -178,7 +161,6 @@ fn an_owned_marketplace_waits_for_its_bundle_instead_of_failing() {
 
     let active = project(
         "entities:\n  - entity: marketplace/europe\n    owner: bundle:sfnext\n    why: kit\n    allow:\n      group: [europe-devs]\n",
-        &[],
         &["commons", "europe"],
     )
     .expect("projects once the id exists");
@@ -273,18 +255,15 @@ fn the_declared_hash_follows_meaning_not_formatting() {
     let a = project(
         "entities:\n  - entity: mcp_server/x\n    why: pilot\n    allow:\n      role: [admin]\n      group: [uk]\n",
         &[],
-        &[],
     )
     .expect("a");
     let b = project(
         "entities:\n\n  - entity: mcp_server/x\n    why: \"pilot\"\n    allow:\n      group: [uk]\n      role: [admin]\n",
         &[],
-        &[],
     )
     .expect("b");
     let c = project(
         "entities:\n  - entity: mcp_server/x\n    why: pilot for now\n    allow:\n      role: [admin]\n      group: [uk]\n",
-        &[],
         &[],
     )
     .expect("c");

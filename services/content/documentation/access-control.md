@@ -99,9 +99,9 @@ entities:
       group: [staff]
     deny: {}                             # same shape
 
-  - entity: gateway_route/*              # glob: route ids are generated, never written
+  - entity: model/*                      # glob: matched against the requested model
     default: open
-    why: Every model route is reachable by every signed-in role.
+    why: Every model is reachable by every signed-in role.
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
@@ -119,7 +119,7 @@ Rules of the file, all checked by `scripts/validate-services.sh` in CI and again
 - `gateway_route` and `hook` take only the glob `*`, expanded against the live catalog at boot. A hand-written route id names a route that cannot exist.
 - Band keys are `role`, `group`, `project`, `connector`. Every `group:`/`project:` value must be declared in `services/web/config/groups.yaml`.
 - A subject may not be both allowed and denied on the same band of one entity.
-- `valid_until` is optional, an RFC 3339 instant (`2026-12-31T00:00:00Z`), and applies to every rule of the entity. A declaration already past it is treated as not declared; the hourly `access_expiry` sweep deletes the rows once the instant passes. The console's date picker writes the same window on a rule it saves, and the export writes it back. See [time-bound access](/documentation/enterprise-user-access#time-bound-sharing).
+- A time-bound window (`valid_until`) is set on a rule from the console's date picker; the hourly `access_expiry` sweep deletes the rows once the instant passes. The file does not declare it: core applies `rules.yaml` and its dialect has no `valid_until`, so a file carrying one is refused at apply and the export leaves windows out. See [time-bound access](/documentation/enterprise-user-access#time-bound-sharing).
 - **No `services/marketplaces/*/config.yaml` may carry an `access:` block.** The gate refuses it, so the second truth cannot return.
 
 Per-person overrides (the `user` band) have no place in the file. They belong to one account, are set on that person's Access tab, and are never synced or exported.

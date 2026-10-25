@@ -8,7 +8,8 @@
 //! `services/ai/legacy_map.yaml`, exactly as a deploy does. Nothing a member
 //! stored is lost, every key lands on the credential it now belongs to, audit
 //! rows gain their credential and endpoint while `provider` keeps its
-//! history, and the rule follows its route to the declared id.
+//! history, and the rule on a route that only routed moves to the
+//! `model/<glob>` entity access decisions now evaluate in its place.
 
 use dynapps_test_common::{empty_db_or_skip, repo_path};
 use sqlx::PgPool;
@@ -74,7 +75,7 @@ async fn release_0_72_1_keys_audit_and_rules_move_to_the_catalog() {
         .expect("migrate --data");
     assert_eq!(report.personal_keys_moved, 1, "{report:?}");
     assert_eq!(report.audit_rows_backfilled, 20, "{report:?}");
-    assert_eq!(report.route_ids_rewritten, 1, "{report:?}");
+    assert_eq!(report.route_rules_moved_to_models, 1, "{report:?}");
 
     let owned = |user: &str, credential: &str, ct: &str, nonce: &str| {
         (
@@ -119,13 +120,16 @@ async fn release_0_72_1_keys_audit_and_rules_move_to_the_catalog() {
 
     let rules: Vec<(String, String)> = sqlx::query_as(
         "SELECT entity_id, source FROM access_control_rules \
-         WHERE entity_type = 'gateway_route' AND rule_type = 'group' AND rule_value = 'uk'",
+         WHERE entity_type = 'model' AND rule_type = 'group' AND rule_value = 'uk'",
     )
     .fetch_all(&*db.pool)
     .await
     .expect("route rules");
     assert_eq!(rules.len(), 1, "{rules:?}");
-    assert_eq!(rules[0].0, "star-bf70e4", "the rule follows its route");
+    assert_eq!(
+        rules[0].0, "go-*",
+        "the rule moves to the model glob its route matched"
+    );
     let closed = ["code:", "bundle:", "console:"];
     assert!(
         rules[0].1 == "migration" || closed.iter().any(|p| rules[0].1.starts_with(p)),
@@ -139,7 +143,7 @@ async fn release_0_72_1_keys_audit_and_rules_move_to_the_catalog() {
         (
             again.personal_keys_moved,
             again.audit_rows_backfilled,
-            again.route_ids_rewritten
+            again.route_rules_moved_to_models
         ),
         (0, 0, 0),
         "the data migration is idempotent"

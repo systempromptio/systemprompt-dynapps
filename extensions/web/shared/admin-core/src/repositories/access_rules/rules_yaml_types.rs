@@ -224,6 +224,12 @@ pub const BAND_NAMES: [&str; 4] = ["role", "group", "project", "connector"];
 
 pub const GLOB_ONLY_KINDS: [EntityKind; 2] = [EntityKind::GatewayRoute, EntityKind::Hook];
 
+pub const GLOB_KINDS: [EntityKind; 3] = [
+    EntityKind::GatewayRoute,
+    EntityKind::Hook,
+    EntityKind::Model,
+];
+
 #[must_use]
 pub const fn access_of(band_is_allow: bool) -> Access {
     if band_is_allow {
