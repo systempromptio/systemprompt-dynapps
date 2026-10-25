@@ -47,8 +47,8 @@ impl Job for GovernanceBootstrapJob {
     }
 
     fn description(&self) -> &'static str {
-        "Check the governance declaration and report every sync plane against its file; \
-         seed the install's own projections when empty"
+        "Check the governance declaration and report the install's sync planes against \
+         their files; seed them when empty"
     }
 
     fn schedule(&self) -> &'static str {
@@ -86,12 +86,9 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         groups_declared = planes.groups.declared,
         groups_seeded = planes.groups.seeded,
         groups_drift = planes.groups.drift_rows,
-        access_rules_declared = planes.access_control.declared,
-        access_rules_seeded = planes.access_control.seeded,
-        access_drift = planes.access_control.drift_rows,
-        gateway_policies_declared = planes.gateway_policies.declared,
-        gateway_policies_seeded = planes.gateway_policies.seeded,
-        gateway_policies_drift = planes.gateway_policies.drift_rows,
+        gateway_routes_declared = planes.gateway_routes.declared,
+        gateway_routes_seeded = planes.gateway_routes.seeded,
+        gateway_routes_drift = planes.gateway_routes.drift_rows,
         service_sources = sources.sources,
         service_owned_ids = sources.owned_ids,
         marketplace_versions = sources.versions.marketplaces,

@@ -27,6 +27,7 @@ use systemprompt_web_admin_core::repositories::sync::archive::staging::{
     StagedArchive, StagingStore,
 };
 use systemprompt_web_admin_core::repositories::sync::archive::write::build_export_zip;
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
 use systemprompt_web_admin_core::repositories::sync::plane::{
     Actor, ApplyOutcome, DeclarationSource, PlaneDrift, SyncMode,
 };
@@ -41,8 +42,9 @@ fn preview_url(stage_id: &str) -> String {
 pub(crate) async fn export_zip_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(core_planes): Extension<CorePlanes>,
 ) -> AdminResult<Response> {
-    let zip = build_export_zip(&pool, user_ctx.user_id.as_str()).await?;
+    let zip = build_export_zip(&pool, &core_planes, user_ctx.user_id.as_str()).await?;
     activity::record(
         &pool,
         NewActivity::configuration_exported(&user_ctx.user_id, zip.planes, zip.rows),

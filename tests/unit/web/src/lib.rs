@@ -109,7 +109,6 @@ mod conversation_sort;
 #[cfg(test)]
 mod gates_outbound_urls;
 #[cfg(test)]
-mod gateway_policies_drift;
 #[cfg(test)]
 mod gateway_policies_form;
 #[cfg(test)]
@@ -125,7 +124,6 @@ mod gateway_routes_drift;
 #[cfg(test)]
 mod gateway_text_markers;
 #[cfg(test)]
-mod governance_chain_drift;
 #[cfg(test)]
 mod groups_sync_drift;
 #[cfg(test)]
@@ -240,7 +238,6 @@ mod web_schemas;
 #[cfg(test)]
 mod access_control_drift;
 #[cfg(test)]
-mod access_control_export;
 #[cfg(test)]
 mod access_control_review;
 #[cfg(test)]
@@ -318,7 +315,6 @@ mod sync_boot_contract;
 #[cfg(test)]
 mod sync_declaration_text;
 #[cfg(test)]
-mod sync_drift_kpis;
 #[cfg(test)]
 mod sync_inventory;
 #[cfg(test)]

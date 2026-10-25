@@ -33,31 +33,30 @@ related_docs:
 | word | meaning | today |
 |---|---|---|
 | **source** | a tree of declarations with a content hash | `base` (this repository), plus one `bundle:<name>` per kit the profile pins (none today) |
-| **plane** | a projection of declarations into database tables, with drift and three directions | `access_control` (`rules.yaml` → `access_control_rules`, `access_control_entities`); `groups` (`web/config/groups.yaml` → `groups`, `projects`, `group_ad_mappings`, `project_ad_mappings`); `gateway_policies` (`gateway/policies.yaml` → `ai_gateway_policies`) |
+| **plane** | a projection of declarations into database tables, with drift and a way to apply | core's planes: `access_control` (`rules.yaml` → `access_control_rules`, `access_control_entities`), `governance` (`governance/config.yaml`), `gateway_policies` (`gateway/policies.yaml` → `ai_gateway_policies`); this installation's planes: `groups` (`web/config/groups.yaml` → `groups`, `projects`, `group_ad_mappings`, `project_ad_mappings`) and `gateway_routes` (`ai/gateway.yaml` `routes:` → `gateway_routes`) |
 | **ownership** | decided by id at composition | a bundle owns its marketplaces, plugins and skills; the base owns everything else, every entitlement included |
 | **hash control** | every source reports what it declares; every plane records what it applied | the table below |
 
-Planes are a contract, not a list: one `impl SyncPlane` and one registry line each, and the page grows a card. The three differ in what their loaders were built to do, and the drift table says so on every row:
+**Core owns three planes.** Access control, the governance chain and the gateway policies are enforced by core from the database, and core is their only writer. Their cards show core's state: the declared hash, core's last apply (who, when, which hash) and each entity whose database value differs from the file. They have two actions. **Apply from code** is core's entity merge: what only code changed is written, what only this database changed is kept, and an entity both sides changed is recorded as a conflict and left alone. **Export** renders the database back as the file. A marketplace participant's apply on their own marketplace is core's apply narrowed to that `marketplace/<id>` entity. `systemprompt admin config apply` in the deploy pipeline runs the same merge.
+
+**This installation owns two planes**, each one `impl SyncPlane` and one registry line, with three directions:
 
 | plane | insert only | overwrite from code | export | the other writer |
 |---|---|---|---|---|
-| `access_control` | missing rules and entity defaults | corrects what differs; deletes undeclared rules on declared entities | `rules.yaml` | the access-control console (rows stamped `dashboard`) |
 | `groups` | missing groups, projects and AD mappings | upserts every set, reconciles `yaml`-sourced mappings. **Never deletes a group or project** — those own members, usage and rules, and are deleted from their own page. A console-written mapping is kept. | `groups.yaml`, every dashboard-created set and mapping included — never a member | the Groups and Projects pages |
-| `gateway_policies` | missing policies | upserts every declared policy, deletes undeclared rows | `policies.yaml`, with calendar-month windows declared as `calendar: month` | `/admin/gateway/policies` — live within a minute, because core reads the table per request |
 | `gateway_routes` | missing routes, appended after the rows already there | makes the table equal the file's `routes:` sequence, order included; deletes undeclared rows | the whole `ai/gateway.yaml` — the settings as the file has them, the `routes:` sequence from the table | `/admin/gateway` (rows stamped `dashboard`). **Core boots the dispatcher from the file and never reads the table**; every console write and every apply by a person regenerates the file's `routes:` sequence from the rows, so a change is dispatched at the next restart. The boot seed does not rewrite the file (it came from the file). |
-| `governance` | missing policies | makes `governance_chain` and its settings row equal the file: switch, inherited mode, every entry, order | `governance/config.yaml`, rendered from the staged chain | none yet — the plane validates through core's own parser and stages. **Core builds the chain from the file at boot and never reads the table**; a staged change is enforced after export, commit and restart. |
 
-**Two planes take effect after a restart.** `gateway_routes` and `governance` project a file core reads once at boot. Their cards carry a notice saying so, and an image built from a tree whose file moved on shows the move as drift on the next boot — the database is the console's ledger, the file is what the process runs, and the page is where the two are reconciled. A route the console wrote on the previous image is *In database, not in code* until it is applied or exported.
+**Gateway routes take effect after a restart.** Core reads `ai/gateway.yaml` once at boot. The card carries a notice saying so; a route the console wrote on the previous image is *In database, not in code* until it is applied or exported.
 
 ### One boot contract
 
-Every plane meets the same rule at boot, in the order groups → access control → gateway policies (the rules name group and project ids, so those must exist first). If the plane's projection is **empty**, boot seeds it from code — *overwrite from code* run once, recorded in `sync_state` with actor `boot` and mode `seed`. Otherwise boot **compares and writes nothing**: the drift is logged and the card on this page shows it. A restart therefore never undoes a console edit, on any plane; reconciling code and database is an administrator's act here, in one of the three directions. A declaration that cannot be read — the file does not parse, or the services tree it validates against does not compose — fails the boot rather than starting a server on half a declaration.
+Boot never writes core's planes; they reach the database through `config apply` and this page. The installation's two planes meet one rule at boot, groups first. If the plane's projection is **empty**, boot seeds it from code — *overwrite from code* run once, recorded in `sync_state` with actor `boot` and mode `seed`. Otherwise boot **compares and writes nothing**: the drift is logged and the card on this page shows it. A restart therefore never undoes a console edit, on any plane. A declaration that cannot be read — the file does not parse, or the services tree it validates against does not compose — fails the boot rather than starting a server on half a declaration.
 
 Before the planes run, boot makes the `gateway_route` catalog equal the routes the profile dispatches: it inserts unseen routes with the default `rules.yaml` declares and deletes stale ones, but never rewrites an existing row's `default_included` — that column belongs to the access-control plane, and `scripts/check-plane-ownership.sh` refuses any other plane that writes it.
 
 **People are never declared in code.** Group and project membership, manually granted roles and per-person access overrides live only in the database and the directory; no plane declares them, no drift row names them and no export carries them. The role set itself is closed in code, and the directory → role map is sign-in configuration (`web/config/entra-oidc.yaml`), not a projection.
 
-`gateway_policies` is the one plane the console edits in place: a save at `/admin/gateway/policies` is enforced on the next request, and shows here as drift until it is exported and committed or overwritten from code. `/admin/governance/quotas` reads the same table's windows against `ai_quota_buckets` to show usage per subject against each ceiling.
+`gateway_policies` is edited in place too: a save at `/admin/gateway/policies` is enforced on the next request, and shows here as drift until it is exported and committed or applied from code. `/admin/governance/quotas` reads the same table's windows against `ai_quota_buckets` to show usage per subject against each ceiling.
 
 ## The four hashes
 
@@ -93,7 +92,7 @@ A row on the Sources table is **in step** when the active digest is what the pro
 
 The distinction is the honest one. Only the projected kinds have a database to disagree with; for everything else "what is running" is the tree, and the sources on Code sync say which tree.
 
-## The three directions
+## The three directions (installation planes)
 
 Each projected plane's sync location — `/admin/sync?tab=access` (access control; `/admin/access-control?tab=sync` redirects there), `/admin/groups?tab=sync`, `/admin/gateway/policies?tab=sync`, `/admin/gateway?tab=sync` (gateway routes), `/admin/governance?tab=sync` (the governance chain) — counts its differences by cause (*added in code*, *changed in code*, *removed from code*, *written in console*), prints a **Next:** line naming the action that settles the plane, and offers the same three actions, confirmed in words that name what will move. Each difference line carries a **Resolves with** badge naming its button.
 
@@ -111,7 +110,7 @@ Code sync's **Export & import** tab moves every projected plane at once.
 
 **Export** (`GET /api/public/admin/sync/export.zip`) renders each plane's database as its file, laid out as `services/<file>`, plus a `MANIFEST.yaml` naming the release, the tree and composition hashes, and per plane the declared and applied hashes at the moment of export. Extract at the repository root, review the diff, commit: the code is back in step with what the console decided.
 
-**Import** (`POST /api/public/admin/sync/import`, the zip as the request body) **writes nothing on upload.** The archive is unpacked under strict rules — no absolute or parent paths, no symlinks, nothing outside `services/<a directory the instance loads>/` but the manifest, every size checked as bytes are read — and staged in memory for thirty minutes. The preview at `/admin/sync/import/{stage}` shows each plane the archive carries as the same component the owner page renders, with its drift computed from the uploaded file rather than the one on disk; entries the instance serves from code are listed as things to commit or to publish as a bundle; projected planes the archive did not carry are named. An apply from the preview is per plane and per direction, or every plane at once, and is recorded in `sync_state` with the uploaded declaration's hash — so the next page load, which reads the file on disk, honestly says *declaration changed since last apply* until that file is committed too.
+**Import** (`POST /api/public/admin/sync/import`, the zip as the request body) **writes nothing on upload.** The archive is unpacked under strict rules — no absolute or parent paths, no symlinks, nothing outside `services/<a directory the instance loads>/` but the manifest, every size checked as bytes are read — and staged in memory for thirty minutes. The preview at `/admin/sync/import/{stage}` shows each plane the archive carries as the same component the owner page renders, with its drift computed from the uploaded file rather than the one on disk; entries the instance serves from code are listed as things to commit or to publish as a bundle; projected planes the archive did not carry are named. The preview covers the installation's two planes; a core plane's file in the archive is listed as one to commit, since core applies it from the tree. An apply from the preview is per plane and per direction, or every plane at once, and is recorded in `sync_state` with the uploaded declaration's hash — so the next page load, which reads the file on disk, honestly says *declaration changed since last apply* until that file is committed too.
 
 ## Kits: content from another repository
 
@@ -177,7 +176,7 @@ receive.
 | the component | `partials/components/sync-plane.hbs` + `js/components/sp-sync-plane.js`, built by `handlers/ssr/sync_plane/` for any plane from disk or from uploaded text |
 | the inventory | `repositories/sync/inventory.rs` — every kind the configuration page lists |
 | the planes | the registry in `extensions/web/shared/admin-core/src/repositories/sync/`; each plane is one `impl SyncPlane` plus one `inventory::submit!` in the crate that owns it (`repositories/sync_planes/` in identity and governance) |
-| the state | table `sync_state`, one row per plane |
+| the state | table `sync_state`, one row per installation plane; core's `config_plane_state` for core's three |
 | the kit template and registry | `deploy/kit/` — runbook, publish workflow, the sanitation gate (`tools/sanitize-kit.py`), sidecars, `known-kits.json` |
 | the exporter | `just kit-export <marketplace> <dir>` — writes a kit and proves it re-imports identically |
 | the pin | `just services-pin <kit> <digest \| channel> [profile]` |

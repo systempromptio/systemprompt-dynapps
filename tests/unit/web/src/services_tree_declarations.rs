@@ -18,20 +18,11 @@ use systemprompt::manifest::services::ServicesConfig;
 use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredSet, build_declared_set,
 };
-use systemprompt_web_admin_core::repositories::access_rules::drift::{
-    BandRuleRow, EntityDefaultRow,
-};
-use systemprompt_web_admin_core::repositories::access_rules::export::{Owners, render_export};
 use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::{
     RULES_FILE, parse_rules_doc,
 };
 use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_types::RulesDoc;
 use systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_route_ids;
-use systemprompt_web_admin_governance::repositories::gateway_policies::declared::{
-    POLICIES_FILE, parse_declared_policies,
-};
-use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin_governance::repositories::gateway_policies::rows::PolicyRow;
 use systemprompt_web_admin_identity::repositories::sync_planes::groups_db::{
     parse_groups_doc, render_groups_export,
 };
@@ -40,6 +31,8 @@ use systemprompt_web_admin_identity::repositories::sync_planes::groups_drift::{
 };
 
 use crate::support::repo_root;
+
+const POLICIES_FILE: &str = "gateway/policies.yaml";
 
 fn services_dir() -> PathBuf {
     repo_root().join("services")
@@ -72,7 +65,6 @@ fn rules_doc() -> RulesDoc {
 
 fn declared() -> (ServicesConfig, DeclaredSet) {
     let services = services();
-    let routes = dispatchable_route_ids(&services);
     let marketplaces: Vec<String> = services
         .marketplaces
         .keys()
@@ -81,7 +73,6 @@ fn declared() -> (ServicesConfig, DeclaredSet) {
     let set = build_declared_set(
         &rules_doc(),
         &DeclaredInputs {
-            gateway_routes: &routes,
             marketplace_ids: &marketplaces,
             registered: &catalog(&services),
         },
@@ -191,66 +182,12 @@ fn groups_yaml_round_trips_through_the_export() {
     assert_eq!(shape(&back), shape(&doc));
 }
 
-#[test]
-fn policies_yaml_parses_and_declares_calendar_months_natively() {
-    let declared = parse_declared_policies(&read(POLICIES_FILE)).expect("policies.yaml");
-    assert!(!declared.entries.is_empty(), "the file declares policies");
-    for entry in &declared.entries {
-        for window in &entry.spec.quota_windows {
-            assert!(
-                window.calendar.is_some() || window.window_seconds > 0,
-                "policy '{}' has a window with neither a calendar period nor a length",
-                entry.name
-            );
-            assert_ne!(
-                window.window_seconds, 2_678_400,
-                "policy '{}' still declares the retired 31-day month sentinel",
-                entry.name
-            );
-        }
-    }
-}
-
 // Why: people are the one thing this mechanism must never carry into code.
-// Each export is a pure function over what the database holds, so it is fed
-// the shapes a person would arrive in and must leave them all out.
+// The groups export is a pure function over what the database holds, so it is
+// fed the shapes a person would arrive in and must leave them all out; the
+// shipped declarations must not name one either.
 #[test]
 fn no_export_carries_a_person() {
-    let rules = [
-        BandRuleRow {
-            id: "u1".to_owned(),
-            entity_type: "mcp_server".to_owned(),
-            entity_id: "dynbrain".to_owned(),
-            rule_type: "user".to_owned(),
-            rule_value: "someone@dynapps.es".to_owned(),
-            access: systemprompt::governance::authz::Access::Allow,
-            justification: Some("override".to_owned()),
-            source: "dashboard".to_owned(),
-            valid_until: None,
-        },
-        BandRuleRow {
-            id: "g1".to_owned(),
-            entity_type: "mcp_server".to_owned(),
-            entity_id: "dynbrain".to_owned(),
-            rule_type: "group".to_owned(),
-            rule_value: "uk".to_owned(),
-            access: systemprompt::governance::authz::Access::Allow,
-            justification: Some("team".to_owned()),
-            source: "yaml".to_owned(),
-            valid_until: None,
-        },
-    ];
-    let entities = [EntityDefaultRow {
-        entity_type: "mcp_server".to_owned(),
-        entity_id: "dynbrain".to_owned(),
-        default_included: false,
-        source: "yaml".to_owned(),
-    }];
-    let access = render_export(&rules, &entities, &Owners::default());
-    assert!(!access.contains("someone@dynapps.es"));
-    assert!(!access.contains("user:"));
-    assert!(access.contains("group: [uk]") || access.contains("- uk"));
-
     let sets = [MemberSetRow {
         kind: "group".to_owned(),
         id: "uk".to_owned(),
@@ -269,18 +206,6 @@ fn no_export_carries_a_person() {
     ] {
         assert!(!groups.contains(key), "groups export carries `{key}`");
     }
-
-    let policies = render_policies_export(
-        &[PolicyRow {
-            name: "default".to_owned(),
-            spec: systemprompt::gateway::GatewayPolicySpec::default(),
-            enabled: true,
-            priority: 0,
-            updated_at: chrono::Utc::now(),
-        }],
-        chrono::Utc::now(),
-    );
-    assert!(!policies.contains("user_id"));
 
     for file in [RULES_FILE, "web/config/groups.yaml", POLICIES_FILE] {
         let text = read(file);

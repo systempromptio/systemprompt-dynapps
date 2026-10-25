@@ -1,6 +1,7 @@
 //! The Access review tab of `/admin/sync`: the access-control drift as one
 //! row per entity, each settled on its own — apply code, keep the database,
-//! or export — with the whole-plane card below for the rare wholesale move.
+//! or export — with core's whole-plane card below for the rare wholesale
+//! move.
 
 use serde::Serialize;
 use sqlx::PgPool;
@@ -12,8 +13,11 @@ use systemprompt_web_admin_core::repositories::sync::access_control::{
 use systemprompt_web_admin_core::repositories::sync::attention::{
     ReviewSplit, ReviewedEntity, reviews_for,
 };
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
+use systemprompt_web_admin_core::ssr::core_plane::{
+    CorePlaneCardOpts, CorePlaneCardView, core_plane_card,
+};
 use systemprompt_web_admin_core::ssr::entity_panel::entity_access_url;
-use systemprompt_web_admin_core::ssr::sync_plane::{PlaneCardView, plane_card_by_id};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ReviewRowView {
@@ -31,7 +35,7 @@ pub(crate) struct AccessReviewView {
     pub not_live_count: usize,
     pub unreadable: Option<String>,
     pub export_url: String,
-    pub plane: Option<PlaneCardView>,
+    pub plane: Option<CorePlaneCardView>,
 }
 
 fn rows(list: Vec<ReviewedEntity>) -> Vec<ReviewRowView> {
@@ -49,10 +53,17 @@ async fn split(pool: &PgPool) -> AdminResult<ReviewSplit> {
     Ok(reviews_for(pool, &drift).await?)
 }
 
-pub(super) async fn access_review(pool: &PgPool) -> AdminResult<AccessReviewView> {
+pub(super) async fn access_review(
+    pool: &PgPool,
+    core_planes: &CorePlanes,
+) -> AdminResult<AccessReviewView> {
+    let opts = CorePlaneCardOpts {
+        entity_filter: "",
+        show_export: true,
+    };
     let mut view = AccessReviewView {
         export_url: format!("/api/public/admin/sync/planes/{PLANE_ID}/export"),
-        plane: plane_card_by_id(pool, PLANE_ID, "").await?,
+        plane: core_plane_card(pool, core_planes, PLANE_ID, &opts).await?,
         ..AccessReviewView::default()
     };
     match split(pool).await {

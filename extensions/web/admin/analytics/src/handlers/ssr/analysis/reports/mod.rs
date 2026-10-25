@@ -137,8 +137,6 @@ pub(crate) async fn report_page(
     )
 }
 
-/// What a report generation runs on: the AI service and the runtime's
-/// background-task owner the generation is spawned through.
 pub(crate) struct ReportRunner {
     ai: Option<Arc<AiService>>,
     tasks: BackgroundTasks,

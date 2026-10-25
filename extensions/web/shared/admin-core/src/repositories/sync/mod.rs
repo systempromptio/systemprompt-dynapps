@@ -7,10 +7,11 @@
 //! administrator chooses one, and [`state`] records what was applied.
 
 pub mod access_control;
-pub mod access_control_rows;
 pub mod archive;
 pub mod attention;
 pub mod boot;
+pub mod core_plane_state;
+pub mod core_planes;
 pub mod declaration;
 pub mod drift_shape;
 pub mod history;

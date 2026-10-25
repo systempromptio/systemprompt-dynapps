@@ -1,16 +1,16 @@
 {{#> layout page_title=title page_id=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="The policy chain declared in services/governance/config.yaml against what this console staged in governance_chain. Core enforces the file it booted from, so a staged change takes effect only after Export, commit and restart."}}
+    {{#> components/page-header title=title subtitle="The policy chain declared in services/governance/config.yaml against the chain core enforces from this database. Apply from code merges the declaration in; Export renders the database back as the file."}}
     {{/components/page-header}}
 
     {{> components/tabs tabs=tabs nav_label="Governance views"}}
 
     {{#if sync}}
-    {{> components/sync-plane plane=sync can_write=can_write}}
+    {{> components/core-plane plane=sync can_write=can_write}}
     {{> components/sync-plane-dialogs}}
     {{else}}
-    {{> components/notice tone="warn" title="The governance plane is not registered" message="This build registers no governance sync plane."}}
+    {{> components/notice tone="warn" title="The governance plane is not registered" message="Core registers no governance plane on this build."}}
     {{/if}}
     {{/inline}}
     {{#*inline "scripts"}}

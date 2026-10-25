@@ -6,6 +6,9 @@
 
 use serde::Serialize;
 use systemprompt::identifiers::MarketplaceId;
+use systemprompt_web_admin_core::repositories::sync::core_planes::{
+    CORE_PLANE_IDS, core_plane_meta,
+};
 
 use super::access_review::AccessReviewView;
 use super::planes::PlaneRowView;
@@ -15,7 +18,8 @@ use systemprompt_web_admin_core::repositories::sync::attention::access_attention
 use systemprompt_web_admin_core::repositories::sync::history::SyncHistoryRow;
 use systemprompt_web_admin_core::repositories::sync::registry::planes;
 use systemprompt_web_admin_core::repositories::sync::sources::SourcesView;
-use systemprompt_web_admin_core::ssr::sync_plane::{HashView, PlaneCardView};
+use systemprompt_web_admin_core::ssr::core_plane::CorePlaneCardView;
+use systemprompt_web_admin_core::ssr::sync_plane::HashView;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
@@ -50,7 +54,7 @@ impl From<SyncHistoryRow> for SyncHistoryView {
 pub(crate) struct MarketplaceSyncView {
     pub marketplace_id: MarketplaceId,
     pub versions_url: String,
-    pub card: PlaneCardView,
+    pub card: CorePlaneCardView,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -104,15 +108,22 @@ pub(super) struct SyncPageInput {
 }
 
 fn export_planes() -> Vec<ExportPlaneView> {
-    planes()
+    let install = planes().into_iter().map(|p| ExportPlaneView {
+        id: p.id(),
+        label: p.label(),
+        source_file: p.source_file(),
+        owner_url: p.owner_url(),
+    });
+    let core = CORE_PLANE_IDS
         .iter()
-        .map(|p| ExportPlaneView {
-            id: p.id(),
-            label: p.label(),
-            source_file: p.source_file(),
-            owner_url: p.owner_url(),
-        })
-        .collect()
+        .filter_map(|id| core_plane_meta(id))
+        .map(|m| ExportPlaneView {
+            id: m.id,
+            label: m.label,
+            source_file: m.source_file,
+            owner_url: m.owner_url,
+        });
+    install.chain(core).collect()
 }
 
 pub(super) fn page_data(input: SyncPageInput) -> SyncPageData {

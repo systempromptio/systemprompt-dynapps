@@ -20,6 +20,31 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Breaking
+
+- **Request and config fields have one name each.** The agent-farm launch and eval bodies
+  (`POST /api/public/agent-farm/…/launch`, `…/evals`) accept only `farm` and `agent`; the
+  `farm_id` and `agent_id` spellings are refused as unknown fields. The branding section of
+  `services/web/config/theme.yaml` reads only `theme_color` (the committed file is renamed).
+  The run detail's Artifacts tab reads core's `DiffSummary` (`entries[].kind`) directly, so the
+  file list shows again and the empty Size column is gone. `scripts/lint-serde-aliases.sh` runs
+  core's gate over this repo with an empty `scripts/serde-aliases-allowlist.txt`.
+- **`deepseek-v4-pro` and `go-deepseek-v4-pro` are separate models.** `deepseek-v4-pro` is
+  deployed on `deepseek/api` alone, so an unhealthy DeepSeek endpoint can no longer make a
+  member's OpenCode Go deployment its first attempt and bill the member's own plan.
+  `go-deepseek-v4-pro` is its own model again, on `opencode-go/chat` with Go's prices, and is
+  listed to OpenAI-family clients as it was in 0.72.1; the alias route is gone.
+- **Access control, governance and gateway policies are core's planes.** `/admin/sync` reads
+  their state from core's `config_plane_state` and applies them through core's
+  `ConfigApplyService`; this install's write paths, sync planes and staged governance chain for
+  the three are removed, and migration `025_core_owned_planes` drops their `sync_state` rows and
+  the `governance_chain` tables. Groups and gateway routes stay install planes.
+- **Model access is declared on `model/*`.** Core 0.73 removes `gateway.catalog_route_id`: a
+  request no declared route matches is decided on its model entity. `rules.yaml` grants
+  `model/*` in place of `gateway_route/*`, `legacy_map.yaml` carries `route_models`, the console
+  projects a glob as the pattern entity core stores, and the after-the-fact ACL detector judges
+  an unrouted request on its model.
+
 ### Added
 
 - **Core gates run here through the pinned core checkout.** `scripts/lint-async-trait.sh`,

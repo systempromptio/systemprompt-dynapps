@@ -9,7 +9,20 @@ use systemprompt::identifiers::UserId;
 
 use super::super::enums::{ActivityAction, ActivityCategory, ActivityEntity};
 use super::super::types::{ActivityEntityRef, NewActivity};
-use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
+use crate::repositories::sync::plane::{ApplyOutcome, SyncMode};
+
+/// What a core-plane apply moved: the entities written, settled, kept as
+/// drift and left in conflict, and the entities it was narrowed to.
+#[derive(Debug, Clone, Copy)]
+pub struct CorePlaneApply<'a> {
+    pub plane: &'a str,
+    pub label: &'a str,
+    pub entities: &'a [String],
+    pub written: usize,
+    pub conflicts: usize,
+    pub drift: usize,
+    pub reason: &'a str,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct PlaneApply<'a> {
@@ -30,7 +43,7 @@ fn plane_ref(plane: &str, label: &str) -> ActivityEntityRef {
 
 impl NewActivity {
     #[must_use]
-    pub fn sync_applied(user_id: &UserId, apply: PlaneApply<'_>, scope: EntityScope<'_>) -> Self {
+    pub fn sync_applied(user_id: &UserId, apply: PlaneApply<'_>) -> Self {
         let PlaneApply {
             plane,
             label,
@@ -38,19 +51,6 @@ impl NewActivity {
             outcome,
             reason,
         } = apply;
-        let marketplaces: Vec<&str> = scope
-            .keys()
-            .iter()
-            .filter_map(|k| k.strip_prefix("marketplace/"))
-            .collect();
-        let scoped = if marketplaces.is_empty() {
-            match scope.keys() {
-                [] => String::new(),
-                keys => format!(" for {}", keys.join(", ")),
-            }
-        } else {
-            format!(" for {}", marketplaces.join(", "))
-        };
         let because = reason.map_or_else(String::new, |r| format!(" — {r}"));
         Self {
             user_id: user_id.clone(),
@@ -58,23 +58,68 @@ impl NewActivity {
             action: ActivityAction::Imported,
             entity: Some(plane_ref(plane, label)),
             description: format!(
-                "Synced {label} from code{scoped} ({}): +{} ~{} -{}{because}",
+                "Synced {label} from code ({}): +{} ~{} -{}{because}",
                 mode.human(),
                 outcome.inserted,
                 outcome.updated,
                 outcome.deleted
             ),
-            // JSON: JSONB column — plane, scope and counts for the event page
+            // JSON: JSONB column — plane and counts for the event page
             metadata: serde_json::json!({
                 "plane": plane,
                 "mode": mode.label(),
-                "entity_scope": scope.keys(),
-                "marketplaces": marketplaces,
+                "entity_scope": [],
+                "marketplaces": [],
                 "inserted": outcome.inserted,
                 "updated": outcome.updated,
                 "deleted": outcome.deleted,
                 "entities_inserted": outcome.entities_inserted,
                 "entities_updated": outcome.entities_updated,
+                "reason": reason,
+            }),
+        }
+    }
+
+    #[must_use]
+    pub fn sync_core_applied(user_id: &UserId, apply: CorePlaneApply<'_>) -> Self {
+        let CorePlaneApply {
+            plane,
+            label,
+            entities,
+            written,
+            conflicts,
+            drift,
+            reason,
+        } = apply;
+        let marketplaces: Vec<&str> = entities
+            .iter()
+            .filter_map(|k| k.strip_prefix("marketplace/"))
+            .collect();
+        let scoped = if marketplaces.is_empty() {
+            match entities {
+                [] => String::new(),
+                keys => format!(" for {}", keys.join(", ")),
+            }
+        } else {
+            format!(" for {}", marketplaces.join(", "))
+        };
+        Self {
+            user_id: user_id.clone(),
+            category: ActivityCategory::UserManagement,
+            action: ActivityAction::Imported,
+            entity: Some(plane_ref(plane, label)),
+            description: format!(
+                "Applied {label} from code{scoped}: {written} written, {conflicts} in conflict, {drift} kept as drift — {reason}"
+            ),
+            // JSON: JSONB column — plane, scope and counts for the event page
+            metadata: serde_json::json!({
+                "plane": plane,
+                "mode": "merge",
+                "entity_scope": entities,
+                "marketplaces": marketplaces,
+                "written": written,
+                "conflicts": conflicts,
+                "drift": drift,
                 "reason": reason,
             }),
         }

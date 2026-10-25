@@ -1,5 +1,6 @@
-//! `/admin/governance?tab=sync` — the `governance` plane's card:
-//! `services/governance/config.yaml` against the staged `governance_chain`.
+//! `/admin/governance?tab=sync` — core's `governance` plane:
+//! `services/governance/config.yaml` against the chain core enforces from the
+//! database.
 //!
 //! The other three tabs share a time window, a scope and a KPI strip the
 //! plane has no use for, so this tab renders its own template with the same
@@ -10,9 +11,13 @@ use serde::Serialize;
 use sqlx::PgPool;
 
 use super::{BASE_URL, GovernanceTab};
-use crate::repositories::sync_planes::governance::PLANE_ID;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
-use systemprompt_web_admin_core::ssr::sync_plane::{PlaneCardView, plane_card_by_id, sync_tab};
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
+use systemprompt_web_admin_core::repositories::sync::plane_ids::GOVERNANCE;
+use systemprompt_web_admin_core::ssr::core_plane::{
+    CorePlaneCardOpts, CorePlaneCardView, core_plane_card,
+};
+use systemprompt_web_admin_core::ssr::sync_plane::sync_tab;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
@@ -24,7 +29,7 @@ struct GovernanceSyncPage {
     title: &'static str,
     breadcrumbs: Vec<BreadcrumbView>,
     tabs: Vec<TabLinkView>,
-    sync: Option<PlaneCardView>,
+    sync: Option<CorePlaneCardView>,
     can_write: bool,
 }
 
@@ -53,6 +58,7 @@ fn tabs() -> Vec<TabLinkView> {
 
 pub(super) async fn sync_page(
     pool: &PgPool,
+    core_planes: &CorePlanes,
     user_ctx: &UserContext,
     mkt_ctx: &MarketplaceContext,
     engine: &AdminTemplateEngine,
@@ -66,7 +72,16 @@ pub(super) async fn sync_page(
             BreadcrumbView::current("Sync"),
         ],
         tabs: tabs(),
-        sync: plane_card_by_id(pool, PLANE_ID, "").await?,
+        sync: core_plane_card(
+            pool,
+            core_planes,
+            GOVERNANCE,
+            &CorePlaneCardOpts {
+                entity_filter: "",
+                show_export: true,
+            },
+        )
+        .await?,
         can_write: user_ctx.is_admin,
     };
     Ok(

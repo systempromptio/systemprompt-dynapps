@@ -13,11 +13,6 @@ use systemprompt::governance::authz::{
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
 use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
-use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
-use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
-use systemprompt_web_admin_core::repositories::gateway_catalog::{
-    dispatchable_route_ids, registered_routes,
-};
 use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
 
 use crate::fixtures::{insert_user_with_roles, unique};
@@ -75,18 +70,7 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
     groups_yaml_loader::load_groups_from_yaml(&db.pool, &path)
         .await
         .expect("groups");
-    let marketplace_ids: Vec<String> = services
-        .marketplaces
-        .keys()
-        .map(|id| id.as_str().to_owned())
-        .collect();
-    let registered = registered_routes(&dispatchable_route_ids(&services));
-    let declared = load_declared_set(&path, &marketplace_ids, &registered)
-        .await
-        .expect("rules.yaml");
-    apply_sync(&db.pool, &declared, SyncMode::Overwrite)
-        .await
-        .expect("seed");
+    crate::fixtures::apply_access_rules(&db.pool, &path).await;
     let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
     let chains = ParentChainIndex::load(&repo, Arc::new(ChainSources::from_services(&services)))
         .await

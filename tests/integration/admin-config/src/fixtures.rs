@@ -239,3 +239,36 @@ pub(crate) fn write_services_file(dir: &std::path::Path, rel: &str, contents: &s
     }
     std::fs::write(path, contents).expect("write services file");
 }
+
+// Core's access-control plane over `services_root`, as production builds it.
+pub(crate) fn access_planes(
+    pool: &std::sync::Arc<PgPool>,
+    services_root: &std::path::Path,
+) -> systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes {
+    let db: systemprompt::database::DbPool =
+        std::sync::Arc::new(systemprompt::database::Database::from_pools(
+            std::sync::Arc::clone(pool),
+            Some(std::sync::Arc::clone(pool)),
+        ));
+    let planes = systemprompt::extension::prelude::ConfigPlaneSet::new(
+        vec![std::sync::Arc::new(
+            systemprompt::governance::authz::AccessControlPlane,
+        )],
+        std::collections::BTreeMap::new(),
+        services_root.to_path_buf(),
+    )
+    .expect("access-control plane set");
+    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(planes, &db)
+}
+
+// Projects `<services_root>/access-control/rules.yaml` into the database the
+// way a deploy's `config apply` does: core's access-control plane, merged.
+pub(crate) async fn apply_access_rules(
+    pool: &std::sync::Arc<PgPool>,
+    services_root: &std::path::Path,
+) {
+    access_planes(pool, services_root)
+        .apply("access_control", &user_id("rules-seeder"), "test seed")
+        .await
+        .expect("apply rules.yaml through core");
+}

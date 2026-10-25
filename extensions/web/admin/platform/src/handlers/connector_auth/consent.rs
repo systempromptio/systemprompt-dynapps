@@ -39,9 +39,6 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 const CALLER_HEADER: &str = "x-systemprompt-caller";
 const SERVICE_ACCOUNT_STATE: &str = "sa.";
 
-/// What the consent handlers read from the router besides the pool: the keys
-/// a caller's session token is validated with and the service accounts an
-/// administrator may consent for.
 #[derive(Debug, Clone)]
 pub(crate) struct ConsentDeps {
     keys: SigningKeys,

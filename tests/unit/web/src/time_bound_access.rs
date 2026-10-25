@@ -11,7 +11,6 @@ use systemprompt_web_admin_core::repositories::access_rules::declared::{
 use systemprompt_web_admin_core::repositories::access_rules::drift::{
     BandRuleRow, EntityDefaultRow, compute_drift,
 };
-use systemprompt_web_admin_core::repositories::access_rules::export::{Owners, render_export};
 use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
 use systemprompt_web_admin_core::repositories::security_policy::{
     DEFAULT_MAX_PAT_LIFETIME_DAYS, PatExpiryError, SecurityPolicy, bound_pat_expiry,
@@ -85,7 +84,6 @@ fn project(yaml: &str) -> DeclaredSet {
     build_declared_set(
         &doc,
         &DeclaredInputs {
-            gateway_routes: &[],
             marketplace_ids: &[],
             registered: &RegisteredEntities::default(),
         },
@@ -167,38 +165,6 @@ fn a_window_that_differs_between_code_and_database_is_drift() {
         Some(at("2026-12-31T00:00:00Z"))
     );
     assert_eq!(differs.changed[0].db_valid_until, None);
-}
-
-#[test]
-fn the_export_writes_the_window_back_and_the_document_round_trips() {
-    let rows = [db_row(Some(at("2026-12-31T00:00:00Z")))];
-    let entities = [EntityDefaultRow {
-        entity_type: "mcp_server".to_owned(),
-        entity_id: "dynbrain".to_owned(),
-        default_included: false,
-        source: "yaml".to_owned(),
-    }];
-    let exported = render_export(&rows, &entities, &Owners::default());
-    assert!(exported.contains("valid_until:"), "{exported}");
-    let reparsed = project(&exported);
-    assert_eq!(
-        reparsed.rules[&key("group", "uk")].valid_until,
-        Some(at("2026-12-31T00:00:00Z"))
-    );
-}
-
-#[test]
-fn rows_that_disagree_on_the_window_export_open_ended_with_a_note() {
-    let mut second = db_row(None);
-    second.id = "r2".to_owned();
-    second.rule_value = "india-devs".to_owned();
-    let rows = [db_row(Some(at("2026-12-31T00:00:00Z"))), second];
-    let exported = render_export(&rows, &[], &Owners::default());
-    assert!(!exported.contains("valid_until:"), "{exported}");
-    assert!(
-        exported.contains("different valid_until windows"),
-        "{exported}"
-    );
 }
 
 #[test]

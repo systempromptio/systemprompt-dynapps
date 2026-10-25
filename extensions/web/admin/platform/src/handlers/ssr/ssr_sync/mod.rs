@@ -38,18 +38,16 @@ use systemprompt::identifiers::MarketplaceId;
 
 use self::view::MarketplaceSyncView;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
-use systemprompt_web_admin_core::repositories::sync::access_control::{
-    AccessControlPlane, PLANE_ID,
-};
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
 use systemprompt_web_admin_core::repositories::sync::history::{
     SyncHistoryRow, SyncHistoryScope, list_sync_history,
 };
-use systemprompt_web_admin_core::repositories::sync::plane::DeclarationSource;
+use systemprompt_web_admin_core::repositories::sync::plane_ids::ACCESS_CONTROL;
 use systemprompt_web_admin_core::repositories::sync::sources::{SourcesView, build_sources};
-use systemprompt_web_admin_core::ssr::sync_plane::{PlaneCardOpts, plane_card};
+use systemprompt_web_admin_core::ssr::core_plane::{CorePlaneCardOpts, core_plane_card};
+use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) const DOCS_URL: &str = "/documentation/services-sync";
 pub(crate) const BASE_URL: &str = "/admin/sync";
@@ -131,6 +129,7 @@ fn visible_sources(user_ctx: &UserContext) -> (SourcesView, Option<String>) {
 
 async fn scoped_cards(
     pool: &PgPool,
+    core_planes: &CorePlanes,
     user_ctx: &UserContext,
 ) -> AdminResult<(Vec<MarketplaceSyncView>, Vec<SyncHistoryRow>)> {
     if user_ctx.is_console {
@@ -141,18 +140,22 @@ async fn scoped_cards(
     }
     let ids = &user_ctx.participation.marketplaces;
     Ok((
-        marketplace_cards(pool, ids).await?,
+        marketplace_cards(pool, core_planes, ids).await?,
         list_sync_history(pool, SyncHistoryScope::Marketplaces(ids), HISTORY_LIMIT).await?,
     ))
 }
 
 pub(crate) async fn sync_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    page: Page,
+    Extension(core_planes): Extension<CorePlanes>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<SyncQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = page;
     if !user_ctx.has_scoped_console() {
         return Err(AdminError::Forbidden(
             "Console access or marketplace participation required.".to_owned(),
@@ -161,16 +164,16 @@ pub(crate) async fn sync_page(
     }
     let is_participant = !user_ctx.is_console;
     let (sources, sources_unreadable) = visible_sources(&user_ctx);
-    let (marketplaces, history) = scoped_cards(&pool, &user_ctx).await?;
+    let (marketplaces, history) = scoped_cards(&pool, &core_planes, &user_ctx).await?;
     let tab = SyncTab::for_viewer(is_participant, query.tab.as_deref());
     let access_review = if tab == SyncTab::Access {
-        Some(access_review::access_review(&pool).await?)
+        Some(access_review::access_review(&pool, &core_planes).await?)
     } else {
         None
     };
 
     let planes = if tab == SyncTab::Sources && user_ctx.is_console {
-        planes::plane_rows(&pool).await?
+        planes::plane_rows(&pool, &core_planes).await?
     } else {
         Vec::new()
     };
@@ -195,19 +198,19 @@ pub(crate) async fn sync_page(
 
 async fn marketplace_cards(
     pool: &PgPool,
+    core_planes: &CorePlanes,
     marketplace_ids: &[MarketplaceId],
 ) -> AdminResult<Vec<MarketplaceSyncView>> {
-    let plane = AccessControlPlane;
     let mut out = Vec::with_capacity(marketplace_ids.len());
     for id in marketplace_ids {
         let entity_filter = format!("marketplace/{id}");
-        let opts = PlaneCardOpts {
+        let opts = CorePlaneCardOpts {
             entity_filter: &entity_filter,
-            apply_url: Some(format!("/api/public/admin/sync/planes/{PLANE_ID}/apply")),
             show_export: false,
-            source_label: None,
         };
-        let card = plane_card(pool, &plane, DeclarationSource::Disk, &opts).await?;
+        let Some(card) = core_plane_card(pool, core_planes, ACCESS_CONTROL, &opts).await? else {
+            continue;
+        };
         out.push(MarketplaceSyncView {
             marketplace_id: id.clone(),
             versions_url: format!(

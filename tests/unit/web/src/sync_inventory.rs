@@ -51,16 +51,7 @@ fn ids_are_unique_and_projected_kinds_come_first() {
 #[test]
 fn registered_planes_keep_the_page_order() {
     let ids: Vec<&str> = planes().iter().map(|p| p.id()).collect();
-    assert_eq!(
-        ids,
-        [
-            "access_control",
-            "groups",
-            "gateway_policies",
-            "gateway_routes",
-            "governance"
-        ]
-    );
+    assert_eq!(ids, ["groups", "gateway_routes"]);
 }
 
 #[test]

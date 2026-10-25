@@ -9,12 +9,12 @@
 use sqlx::PgPool;
 
 use super::view::{OptionView, ReachView, SubjectOptions};
+use crate::repositories::access_rules::review::band_label;
 use crate::repositories::access_rules::rules::LedgerRuleRow;
 use crate::repositories::entitlement::{
     MatrixSubject, SectionInput, group_subject, project_subject, resolve_subject_matrices,
     role_subject,
 };
-use crate::repositories::sync::access_control_rows::band_label;
 use crate::ssr::faults::Faults;
 use crate::types::access_control::AccessDecision;
 

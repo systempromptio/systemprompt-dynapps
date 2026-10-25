@@ -1,22 +1,18 @@
-//! A restart changes nothing. Boot never writes a plane core enforces from
-//! the database (access control, gateway policies): it reports drift and
-//! leaves the projection as it is, even when it is empty, while the
-//! install's own projections still seed once when empty. An explicit
-//! overwrite apply is idempotent: running it again leaves both authz tables
-//! byte-identical, so a `gateway_route/*` declared `default: open` stays open
-//! on every apply after the first.
+//! A restart changes nothing. Boot runs the install's own planes alone
+//! (groups, gateway routes), which still seed once when empty; the planes
+//! core owns are core's. Core's access-control apply is idempotent: running it
+//! again leaves both authz tables byte-identical, so a `gateway_route/*`
+//! declared `default: open` stays open on every apply after the first.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use async_trait::async_trait;
 use sqlx::PgPool;
-use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
+use systemprompt::governance::authz::AccessControlPlane;
+use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::error::AdminResult;
-use systemprompt_web_admin_core::repositories::access_rules::declared::DeclaredSet;
-use systemprompt_web_admin_core::repositories::access_rules::declared_load::build_declared_from_doc;
-use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
-use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
-use systemprompt_web_admin_core::repositories::sync::boot::{reconcile_plane, seeds_at_boot};
+use systemprompt_web_admin_core::repositories::sync::boot::{BOOT_ORDER, reconcile_plane};
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
 use systemprompt_web_admin_core::repositories::sync::plane::{
     Actor, ApplyOutcome, Export, PlaneDrift, SyncMode as PlaneSyncMode, SyncPlane,
 };
@@ -24,8 +20,6 @@ use systemprompt_web_admin_core::repositories::sync::plane_ids;
 
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;
-
-const RULES: &str = "entities:\n  - entity: gateway_route/*\n    default: open\n    why: every signed-in user may reach the gateway\n    allow:\n      role: [user]\n";
 
 async fn snapshot(pool: &PgPool) -> (Vec<String>, Vec<String>, Vec<String>) {
     let entities = sqlx::query_scalar::<_, String>(
@@ -51,11 +45,29 @@ async fn snapshot(pool: &PgPool) -> (Vec<String>, Vec<String>, Vec<String>) {
     (entities, rules, policies)
 }
 
-fn declared_for(routes: &[String]) -> DeclaredSet {
-    let doc = parse_rules_doc(RULES).expect("rules doc");
-    let registered = RegisteredEntities::new()
-        .with_kind(EntityKind::GatewayRoute, routes.iter().map(String::as_str));
-    build_declared_from_doc(&doc, &[], &registered).expect("declared set")
+fn rules_for(routes: &[String]) -> String {
+    let mut rules = String::from("entities:\n");
+    for route in routes {
+        rules.push_str(&format!(
+            "  - entity: gateway_route/{route}\n    default: open\n    why: every signed-in user may reach the gateway\n    allow:\n      role: [user]\n"
+        ));
+    }
+    rules
+}
+
+fn access_planes(db: &TempDb, root: &std::path::Path) -> CorePlanes {
+    let pool: systemprompt::database::DbPool =
+        std::sync::Arc::new(systemprompt::database::Database::from_pools(
+            std::sync::Arc::clone(&db.pool),
+            Some(std::sync::Arc::clone(&db.pool)),
+        ));
+    let planes = systemprompt::extension::prelude::ConfigPlaneSet::new(
+        vec![std::sync::Arc::new(AccessControlPlane)],
+        std::collections::BTreeMap::new(),
+        root.to_path_buf(),
+    )
+    .expect("access-control plane set");
+    CorePlanes::over(planes, &pool)
 }
 
 async fn open_routes(pool: &PgPool, routes: &[String]) -> i64 {
@@ -70,23 +82,28 @@ async fn open_routes(pool: &PgPool, routes: &[String]) -> i64 {
 }
 
 #[test]
-fn boot_seeds_only_the_planes_this_install_owns() {
-    assert!(!seeds_at_boot(plane_ids::ACCESS_CONTROL));
-    assert!(!seeds_at_boot(plane_ids::GATEWAY_POLICIES));
-    assert!(seeds_at_boot(plane_ids::GROUPS));
-    assert!(seeds_at_boot(plane_ids::GATEWAY_ROUTES));
-    assert!(seeds_at_boot(plane_ids::GOVERNANCE));
+fn boot_runs_only_the_planes_this_install_owns() {
+    assert_eq!(BOOT_ORDER, [plane_ids::GROUPS, plane_ids::GATEWAY_ROUTES]);
 }
 
 #[tokio::test]
-async fn a_second_overwrite_apply_leaves_the_authz_tables_identical() {
+async fn a_second_core_apply_leaves_the_authz_tables_identical() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let routes = vec![unique("route-a"), unique("route-b")];
-    let declared = declared_for(&routes);
+    let dir = tempfile::tempdir().expect("temp services dir");
+    std::fs::create_dir_all(dir.path().join("access-control")).expect("rules dir");
+    std::fs::write(
+        dir.path().join("access-control/rules.yaml"),
+        rules_for(&routes),
+    )
+    .expect("write rules.yaml");
+    let planes = access_planes(&db, dir.path());
+    let actor = UserId::new("restart-tester");
 
-    apply_sync(&db.pool, &declared, SyncMode::Overwrite)
+    planes
+        .apply("access_control", &actor, "first apply")
         .await
         .expect("first apply");
     let first = snapshot(&db.pool).await;
@@ -96,7 +113,8 @@ async fn a_second_overwrite_apply_leaves_the_authz_tables_identical() {
         "rules.yaml declares the routes open"
     );
 
-    apply_sync(&db.pool, &declared, SyncMode::Overwrite)
+    planes
+        .apply("access_control", &actor, "second apply")
         .await
         .expect("second apply");
     assert_eq!(snapshot(&db.pool).await, first, "the second apply drifted");
@@ -161,20 +179,6 @@ fn unconnected_pool() -> PgPool {
     sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
         .expect("a lazy pool never connects")
-}
-
-#[tokio::test]
-async fn boot_never_seeds_an_empty_core_enforced_plane() {
-    let pool = unconnected_pool();
-    for id in [plane_ids::ACCESS_CONTROL, plane_ids::GATEWAY_POLICIES] {
-        let plane = EmptyPlane::new(id);
-        let boot = reconcile_plane(&pool, &plane)
-            .await
-            .unwrap_or_else(|e| panic!("boot reconcile of {id}: {e}"));
-        assert!(!boot.seeded, "{id} was seeded at boot");
-        assert!(!plane.applied.load(Ordering::SeqCst), "{id} was written");
-        assert_eq!(boot.drift_rows, 0);
-    }
 }
 
 #[tokio::test]

@@ -7,4 +7,4 @@ mod session_events;
 mod sync;
 
 pub use access::RuleChange;
-pub use sync::PlaneApply;
+pub use sync::{CorePlaneApply, PlaneApply};

@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT plane, authority, declared_hash, drift_rows, outcome, reconciled_at,\n                 last_apply_declared_hash, last_apply_actor, last_apply_mode, last_apply_at\n            FROM config_plane_state\n           WHERE plane = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "plane",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "plane"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "authority",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "authority"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "declared_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "declared_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "drift_rows",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "drift_rows"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "outcome",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "outcome"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "reconciled_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "reconciled_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "last_apply_declared_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "last_apply_declared_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "last_apply_actor",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "last_apply_actor"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "last_apply_mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "last_apply_mode"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "last_apply_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "config_plane_state",
+            "name": "last_apply_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "fcb8b2aeddda1acd916e4f8fc99bc113692d372dd6f9ca5ac53d8dfd01e7e1a2"
+}

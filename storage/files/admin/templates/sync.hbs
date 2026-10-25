@@ -48,7 +48,7 @@
         {{#each kept}}{{> components/access-review-row row=this can_write=@root.can_write}}{{/each}}
     </details>
     {{/if}}
-    {{#if plane}}{{> components/sync-plane plane=plane can_write=@root.can_write}}{{/if}}
+    {{#if plane}}{{> components/core-plane plane=plane can_write=@root.can_write}}{{/if}}
     {{/with}}
     {{> components/sync-plane-dialogs}}
     {{> components/access-reason-dialog}}
@@ -140,8 +140,8 @@ owner key for rules.yaml: {{owner_key}}</pre>
         {{#each planes}}
         <tr data-plane="{{id}}">
             <td><strong>{{label}}</strong><br><span class="sp-u-mono sp-u-text-tertiary">services/{{source_file}}</span></td>
-            <td class="sp-u-mono">{{declared_count}}</td>
-            <td class="sp-u-mono">{{in_db}}</td>
+            <td class="sp-u-mono">{{#if is_core}}—{{else}}{{declared_count}}{{/if}}</td>
+            <td class="sp-u-mono">{{#if is_core}}—{{else}}{{in_db}}{{/if}}</td>
             <td>{{#if unreadable}}<span title="{{unreadable}}">{{> components/badge tone="err" text="unreadable"}}</span>{{else}}{{#if is_clean}}{{> components/badge tone="ok" text="in sync"}}{{else}}{{> components/badge tone="warn" text=drift_label}}{{/if}}{{/if}}</td>
             <td>{{#if applied}}<time datetime="{{applied.at}}" title="{{applied.at}}">{{relativeTime applied.at}}</time><br><span class="sp-u-text-tertiary">{{applied.mode}} · {{applied.by}}</span>{{else}}<span class="sp-u-text-tertiary">never</span>{{/if}}</td>
             <td><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{review_url}}">Review</a></td>
@@ -156,7 +156,7 @@ owner key for rules.yaml: {{owner_key}}</pre>
     {{#each marketplaces}}
     <div class="sp-sync-marketplace" data-marketplace="{{marketplace_id}}">
         <h3 class="sp-sync-marketplace__title"><span class="sp-u-mono">{{marketplace_id}}</span> <a class="sp-btn sp-btn--xs sp-btn--outline" href="{{versions_url}}">Versions</a></h3>
-        {{> components/sync-plane plane=card can_write=true}}
+        {{> components/core-plane plane=card can_write=true}}
     </div>
     {{/each}}
     {{> components/sync-plane-dialogs}}

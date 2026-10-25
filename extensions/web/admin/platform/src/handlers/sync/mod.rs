@@ -1,17 +1,23 @@
 //! The JSON API behind `/admin/sync`: status of every source and plane,
-//! a plane's drift, the two writes, the export, and the source refresh.
+//! a plane's drift, the writes, the export, and the source refresh.
 //!
-//! Reads are open to the console tier. The plane apply, the per-entity
-//! "keep the database" decision and the source refresh sit in the
+//! The planes core owns (access control, governance, gateway policies) are
+//! read and written through core alone ([`CorePlanes`]): an administrator's
+//! apply is core's entity merge, and an apply naming entities is core's
+//! scoped apply. The install planes (groups, gateway routes) keep their two
+//! directions. Reads are open to the console tier. The plane apply, the
+//! per-entity "keep the database" decision and the source refresh sit in the
 //! participant tier: an administrator applies a whole plane; a marketplace
 //! participant must name the marketplaces they are syncing, every one inside
-//! their participation, and the apply is narrowed to those entities. Every
-//! apply carries a stated reason. The archive import stays in the manage
+//! their participation, on the access-control plane alone. Every apply
+//! carries a stated reason. The archive import stays in the manage
 //! tier. Every write and every export leaves an activity row, awaited inline
 //! so the audit trail exists by the time the response does.
 
 mod archive;
+mod core;
 mod refresh;
+mod status;
 
 use std::sync::Arc;
 
@@ -26,21 +32,30 @@ pub(crate) use archive::{
     apply_import_handler, discard_import_handler, export_zip_handler, stage_import_handler,
 };
 pub(crate) use refresh::refresh_sources_handler;
+pub(crate) use status::status_handler;
 
 use systemprompt_web_admin_core::activity;
 use systemprompt_web_admin_core::activity::{NewActivity, PlaneApply};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::sync::core_planes::{CorePlanes, core_plane_meta};
 use systemprompt_web_admin_core::repositories::sync::plane::{
-    Actor, ApplyOutcome, EntityScope, PlaneDrift, SyncMode, SyncPlane,
+    Actor, ApplyOutcome, PlaneDrift, SyncMode, SyncPlane,
 };
-use systemprompt_web_admin_core::repositories::sync::registry::{find_plane, planes};
-use systemprompt_web_admin_core::repositories::sync::sources::{SourcesView, build_sources};
-use systemprompt_web_admin_core::repositories::sync::state::{SyncStateRow, find_sync_state};
+use systemprompt_web_admin_core::repositories::sync::plane_ids;
+use systemprompt_web_admin_core::repositories::sync::registry::find_plane;
 use systemprompt_web_admin_core::types::UserContext;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ApplyMode {
+    InsertOnly,
+    Overwrite,
+    Merge,
+}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ApplyRequest {
-    pub mode: SyncMode,
+    pub mode: ApplyMode,
     #[serde(default)]
     pub entities: Vec<String>,
     #[serde(default)]
@@ -61,16 +76,9 @@ fn required_reason(reason: Option<&str>) -> AdminResult<&str> {
         .ok_or_else(|| AdminError::BadRequest("a reason is required to apply a sync".to_owned()))
 }
 
-fn authorise_scope<'a>(
-    user_ctx: &UserContext,
-    entities: &'a [String],
-) -> AdminResult<EntityScope<'a>> {
+fn authorise_entities(user_ctx: &UserContext, entities: &[String]) -> AdminResult<()> {
     if user_ctx.is_console {
-        return Ok(if entities.is_empty() {
-            EntityScope::All
-        } else {
-            EntityScope::Entities(entities)
-        });
+        return Ok(());
     }
     if entities.is_empty() {
         return Err(AdminError::Forbidden(
@@ -87,7 +95,7 @@ fn authorise_scope<'a>(
             )));
         }
     }
-    Ok(EntityScope::Entities(entities))
+    Ok(())
 }
 
 #[derive(Debug, Serialize)]
@@ -98,58 +106,18 @@ pub(crate) struct ApplyResponse {
     pub drift_after: PlaneDrift,
 }
 
-#[derive(Debug, Serialize)]
-pub(crate) struct PlaneStatus {
-    pub id: &'static str,
-    pub label: &'static str,
-    pub source_file: &'static str,
-    pub projection: &'static str,
-    pub runtime_note: Option<&'static str>,
-    pub drift: PlaneDrift,
-    pub state: Option<SyncStateRow>,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct StatusResponse {
-    pub sources: SourcesView,
-    pub planes: Vec<PlaneStatus>,
-}
-
 fn plane_or_404(id: &str) -> AdminResult<Box<dyn SyncPlane>> {
     find_plane(id).ok_or_else(|| AdminError::NotFound(format!("no sync plane '{id}'")))
 }
 
-pub(crate) async fn plane_status(pool: &PgPool, plane: &dyn SyncPlane) -> AdminResult<PlaneStatus> {
-    let drift = plane.drift(pool).await?;
-    let state = find_sync_state(pool, plane.id()).await?;
-    Ok(PlaneStatus {
-        id: plane.id(),
-        label: plane.label(),
-        source_file: plane.source_file(),
-        projection: plane.projection(),
-        runtime_note: plane.runtime_note(),
-        drift,
-        state,
-    })
-}
-
-pub(crate) async fn status_handler(State(pool): State<Arc<PgPool>>) -> AdminResult<Response> {
-    let sources = build_sources()?;
-    let mut out = Vec::new();
-    for plane in planes() {
-        out.push(plane_status(&pool, plane.as_ref()).await?);
-    }
-    Ok(Json(StatusResponse {
-        sources,
-        planes: out,
-    })
-    .into_response())
-}
-
 pub(crate) async fn drift_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(core_planes): Extension<CorePlanes>,
     Path(plane): Path<String>,
 ) -> AdminResult<Response> {
+    if core_plane_meta(&plane).is_some() {
+        return Ok(Json(core_planes.diff(&plane).await?).into_response());
+    }
     let plane = plane_or_404(&plane)?;
     Ok(Json(plane.drift(&pool).await?).into_response())
 }
@@ -157,14 +125,45 @@ pub(crate) async fn drift_handler(
 pub(crate) async fn apply_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(core_planes): Extension<CorePlanes>,
     Path(plane): Path<String>,
     Json(body): Json<ApplyRequest>,
 ) -> AdminResult<Response> {
-    let plane = plane_or_404(&plane)?;
-    let scope = authorise_scope(&user_ctx, &body.entities)?;
     let reason = required_reason(body.reason.as_deref())?;
+    if let Some(meta) = core_plane_meta(&plane) {
+        authorise_entities(&user_ctx, &body.entities)?;
+        if !body.entities.is_empty() && meta.id != plane_ids::ACCESS_CONTROL {
+            return Err(AdminError::Unprocessable(format!(
+                "the {} plane cannot be applied for single entities",
+                meta.label
+            )));
+        }
+        return core::apply_core(&pool, &core_planes, &user_ctx, meta, &body).await;
+    }
+    let plane = plane_or_404(&plane)?;
+    if !user_ctx.is_console {
+        return Err(AdminError::Forbidden(
+            "Applying this plane needs an administrator".to_owned(),
+        ));
+    }
+    if !body.entities.is_empty() {
+        return Err(AdminError::Unprocessable(format!(
+            "the {} plane cannot be applied for single entities",
+            plane.label()
+        )));
+    }
+    let mode = match body.mode {
+        ApplyMode::InsertOnly => SyncMode::InsertOnly,
+        ApplyMode::Overwrite => SyncMode::Overwrite,
+        ApplyMode::Merge => {
+            return Err(AdminError::BadRequest(format!(
+                "the {} plane applies insert_only or overwrite",
+                plane.label()
+            )));
+        },
+    };
     let outcome = plane
-        .apply_scoped(&pool, body.mode, Actor::User(&user_ctx.user_id), scope)
+        .apply(&pool, mode, Actor::User(&user_ctx.user_id))
         .await?;
     activity::record(
         &pool,
@@ -173,18 +172,17 @@ pub(crate) async fn apply_handler(
             PlaneApply {
                 plane: plane.id(),
                 label: plane.label(),
-                mode: body.mode,
+                mode,
                 outcome: &outcome,
                 reason: Some(reason),
             },
-            scope,
         ),
     )
     .await;
     let drift_after = plane.drift(&pool).await?;
     Ok(Json(ApplyResponse {
         plane: plane.id(),
-        mode: body.mode,
+        mode,
         outcome,
         drift_after,
     })
@@ -201,7 +199,7 @@ pub(crate) async fn keep_handler(
         return Err(AdminError::BadRequest("fingerprint required".to_owned()));
     }
     let keys = [body.entity.clone()];
-    authorise_scope(&user_ctx, &keys)?;
+    authorise_entities(&user_ctx, &keys)?;
     activity::record(
         &pool,
         NewActivity::sync_kept(&user_ctx.user_id, &body.entity, &body.fingerprint, reason),
@@ -213,8 +211,12 @@ pub(crate) async fn keep_handler(
 pub(crate) async fn export_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(core_planes): Extension<CorePlanes>,
     Path(plane): Path<String>,
 ) -> AdminResult<Response> {
+    if let Some(meta) = core_plane_meta(&plane) {
+        return core::export_core(&pool, &core_planes, &user_ctx, meta).await;
+    }
     let plane = plane_or_404(&plane)?;
     let Some(export) = plane.export(&pool).await? else {
         return Err(AdminError::NotFound(format!(
@@ -232,14 +234,22 @@ pub(crate) async fn export_handler(
         ),
     )
     .await;
-    let disposition = format!("attachment; filename=\"{}\"", export.filename);
-    Ok((
+    Ok(file_response(
+        export.content_type,
+        export.filename,
+        export.body,
+    ))
+}
+
+fn file_response(content_type: &str, filename: &str, body: String) -> Response {
+    let disposition = format!("attachment; filename=\"{filename}\"");
+    (
         StatusCode::OK,
         [
-            (header::CONTENT_TYPE, export.content_type),
+            (header::CONTENT_TYPE, content_type),
             (header::CONTENT_DISPOSITION, disposition.as_str()),
         ],
-        export.body,
+        body,
     )
-        .into_response())
+        .into_response()
 }

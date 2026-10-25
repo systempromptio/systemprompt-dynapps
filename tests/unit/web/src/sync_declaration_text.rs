@@ -1,56 +1,14 @@
-//! Export → import is a no-op: a plane's database rendered as its file,
-//! parsed back as an uploaded declaration, drifts by nothing against the
-//! rows it was rendered from.
+//! Export → import is a no-op for an install plane: its database rendered as
+//! its file, parsed back as an uploaded declaration, drifts by nothing against
+//! the rows it was rendered from.
 
-use chrono::Utc;
 use systemprompt_web_admin_core::repositories::sync::plane::DeclarationSource;
-use systemprompt_web_admin_governance::repositories::gateway_policies::declared::parse_declared_policies;
-use systemprompt_web_admin_governance::repositories::gateway_policies::drift::compute_policy_drift;
-use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin_governance::repositories::gateway_policies::rows::PolicyRow;
 use systemprompt_web_admin_identity::repositories::sync_planes::groups_db::{
     parse_groups_doc, render_groups_export,
 };
 use systemprompt_web_admin_identity::repositories::sync_planes::groups_drift::{
     MappingRow, MemberSetRow, compute_groups_drift,
 };
-
-const POLICIES: &str = r"
-policies:
-  - name: team-quotas
-    enabled: true
-    priority: 10
-    spec:
-      quota_mode: enforce
-      quota_windows:
-        - subject: user
-          window_seconds: 86400
-          max_requests: 200
-      safety:
-        mode: warn
-        scanners: [secrets]
-";
-
-#[test]
-fn gateway_policies_export_then_import_is_clean() {
-    let declared = parse_declared_policies(POLICIES).expect("parses");
-    let rows: Vec<PolicyRow> = declared
-        .entries
-        .iter()
-        .map(|e| PolicyRow {
-            name: e.name.clone(),
-            spec: e.spec.clone(),
-            enabled: e.enabled,
-            priority: e.priority,
-            updated_at: Utc::now(),
-        })
-        .collect();
-    let exported = render_policies_export(&rows, Utc::now());
-    let reimported = parse_declared_policies(&exported).expect("export parses as a declaration");
-    let drift = compute_policy_drift(&reimported, &rows);
-    assert!(drift.is_clean(), "{drift:?}");
-    assert_eq!(reimported.declared_hash(), declared.declared_hash());
-}
 
 #[test]
 fn groups_export_then_import_is_clean() {

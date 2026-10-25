@@ -19,6 +19,7 @@
 
 pub mod analysis_urls;
 pub mod context;
+pub mod core_plane;
 pub mod demo_help;
 pub mod entity_kind;
 pub mod entity_panel;
