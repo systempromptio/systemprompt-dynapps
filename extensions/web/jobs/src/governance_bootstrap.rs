@@ -3,7 +3,9 @@
 //!
 //! Two steps:
 //! 0. Validate `services/governance/config.yaml`, failing the boot rather than
-//!    letting an unparseable file degrade to the built-in defaults unnoticed,
+//!    letting an unparseable file degrade to the built-in defaults unnoticed.
+//!    An absent file runs core's built-in chain in warn mode, logged as a
+//!    warning, never anything more permissive than `unapplied_planes: warn`,
 //!    and warn when the resulting chain enforces nothing. Then report whether a
 //!    plugin owns `hooks.judge`, the conversation judge's switch. `warning`
 //!    policies are counted apart from `active` ones because an active chain of
@@ -120,10 +122,19 @@ pub fn check_governance_config(
     use systemprompt::governance::policy::GovernanceConfig;
 
     let path = services_path.join("governance/config.yaml");
-    let text = std::fs::read_to_string(&path)
-        .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))?;
-    let config = GovernanceConfig::parse(&text)
-        .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))?;
+    let config = match std::fs::read_to_string(&path) {
+        Ok(text) => GovernanceConfig::parse(&text)
+            .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))?,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            tracing::warn!(
+                path = %path.display(),
+                "no governance declaration: running core's built-in policies in warn mode, \
+                 the same chain `governance.unapplied_planes: warn` leaves in force"
+            );
+            GovernanceConfig::defaults()
+        }
+        Err(e) => return Err(MarketplaceError::config_file(path.display().to_string(), e).into()),
+    };
     let active = if config.enabled {
         config.policies.iter().filter(|p| p.enabled).count()
     } else {
