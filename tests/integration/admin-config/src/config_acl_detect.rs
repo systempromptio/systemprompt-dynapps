@@ -38,7 +38,7 @@ async fn list_recent_unrejected_requests_includes_a_fresh_completed_request() {
 }
 
 #[tokio::test]
-async fn list_recent_unrejected_requests_omits_rejected_and_denied() {
+async fn list_recent_unrejected_requests_omits_rejected_but_keeps_failed() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -52,9 +52,12 @@ async fn list_recent_unrejected_requests_omits_rejected_and_denied() {
     seed.model = None;
     insert_request(&db.pool, &seed).await;
 
-    let denied = unique("req-den");
-    let mut seed = RequestSeed::new(&denied, &user, chrono::Utc::now());
-    seed.status = "denied";
+    // Why: core's ai_requests status CHECK admits only pending, completed,
+    // failed and rejected, so a refused dispatch lands as `failed` and is a
+    // request that reached the gateway.
+    let failed = unique("req-fail");
+    let mut seed = RequestSeed::new(&failed, &user, chrono::Utc::now());
+    seed.status = "failed";
     insert_request(&db.pool, &seed).await;
 
     let rows = list_recent_unrejected_requests(&db.pool, 60)
@@ -62,7 +65,7 @@ async fn list_recent_unrejected_requests_omits_rejected_and_denied() {
         .expect("list recent requests");
 
     assert!(!rows.iter().any(|r| r.id == rejected));
-    assert!(!rows.iter().any(|r| r.id == denied));
+    assert!(rows.iter().any(|r| r.id == failed));
 
     db.cleanup().await;
 }

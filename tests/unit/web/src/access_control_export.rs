@@ -1,6 +1,6 @@
 //! Database → `rules.yaml`: the export is the loader's inverse.
 
-use systemprompt::governance::authz::Access;
+use systemprompt::governance::authz::{Access, SERVICES_SOURCE};
 use systemprompt_web_admin_core::repositories::access_rules::drift::{
     BandRuleRow, EntityDefaultRow,
 };
@@ -30,7 +30,7 @@ fn row(
         rule_value: value.to_owned(),
         access,
         justification: why.map(str::to_owned),
-        source: "yaml".to_owned(),
+        source: SERVICES_SOURCE.to_owned(),
         valid_until: None,
     }
 }
@@ -40,7 +40,7 @@ fn entity(entity_type: &str, entity_id: &str, open: bool) -> EntityDefaultRow {
         entity_type: entity_type.to_owned(),
         entity_id: entity_id.to_owned(),
         default_included: open,
-        source: "yaml".to_owned(),
+        source: SERVICES_SOURCE.to_owned(),
     }
 }
 

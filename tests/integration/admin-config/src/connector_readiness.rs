@@ -36,7 +36,7 @@ fn install_services() {
         &path,
         "mcp_servers:\n\
          \x20 crm-mcp:\n\
-         \x20   type: external\n\
+         \x20   server_type: external\n\
          \x20   endpoint: https://crm.example.test/mcp\n\
          \x20   enabled: true\n\
          \x20   display_in_web: false\n\
@@ -44,7 +44,7 @@ fn install_services() {
          \x20   oauth: {required: false, scopes: [user], audience: mcp, client_id: null}\n\
          \x20   connector: {adapter: generic, scopes: [tools:read]}\n\
          \x20 systemprompt:\n\
-         \x20   type: internal\n\
+         \x20   server_type: internal\n\
          \x20   binary: systemprompt-mcp-agent\n\
          \x20   port: 5010\n\
          \x20   enabled: true\n\
@@ -74,7 +74,7 @@ impl Harness {
         let filter = TemplateMarketplaceFilter::from_db(&database);
         let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
         for id in [CRM, CONTROL_PLANE] {
-            repo.upsert_entity(EntityKind::McpServer, id, true, "test")
+            repo.upsert_entity(EntityKind::McpServer, id, true, "code:test-fixture")
                 .await
                 .expect("upsert entity");
         }

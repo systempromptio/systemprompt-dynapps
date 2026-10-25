@@ -20,11 +20,12 @@ use systemprompt::governance::authz::{DenyAllHook, SharedAuthzHook};
 use systemprompt::identifiers::{
     Actor, AgentName, ArtifactId, ContextId, McpServerId, SessionId, TraceId, UserId,
 };
+use systemprompt::manifest::services::ServicesConfig;
 use systemprompt::mcp::{ArtifactIngest, artifact_resource_uri};
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
 use systemprompt::models::execution::context::RequestContext;
 use systemprompt::models::mcp::ExecutionSource;
-use systemprompt::traits::InjectContextHeaders;
+use systemprompt::traits::{ConfigWatch, InjectContextHeaders};
 use systemprompt_mcp_agent::SystempromptServer;
 use tower::ServiceExt as _;
 
@@ -54,6 +55,15 @@ fn http_request_context() -> RequestContext {
     request_context()
 }
 
+// The shipped `systemprompt` server definition: its `oauth.required` is what
+// the RBAC middleware enforces, so the registry must name it.
+fn services() -> ServicesConfig {
+    let path = dynapps_test_common::repo_path("services/mcp/systemprompt.yaml");
+    let yaml =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    serde_yaml::from_str(&yaml).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
+}
+
 fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
     let db_pool = db_pool(pool);
     let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None));
@@ -61,6 +71,7 @@ fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid service id"),
         deny_all_hook(),
+        ConfigWatch::new(services()),
         Arc::clone(&ingest),
     );
     (server, ingest)

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::time::Duration;
 
-use systemprompt::agent_runs::{HostKind, McpServerSpec, PermissionMode, RunRequest};
+use systemprompt::agent_runs::{HostKind, McpServerSpec, PermissionMode, RunRequest, TrafficClass};
 use systemprompt_web_admin_farm::config::{FlyRunnerConfig, parse_farms_doc};
 use systemprompt_web_admin_farm::services::runner::fly::egress::{
     EgressPolicy, FLY_PRIVATE_NET, Net, nft_ruleset, url_host,
@@ -40,6 +40,8 @@ fn request(mcp_url: &str) -> RunRequest {
         attribution_scopes: Vec::new(),
         plugin_id: None,
         plugin_dirs: Vec::new(),
+        harness: None,
+        traffic: TrafficClass::default(),
     }
 }
 

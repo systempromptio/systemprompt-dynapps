@@ -5,7 +5,7 @@
 # copy of services/ so the identity accessor routes have something to sign for.
 mcp_servers:
   sfcore_dev:
-    type: external
+    server_type: external
     endpoint: https://identity-fixture.invalid/mcp
     enabled: true
     tool_policy: allow

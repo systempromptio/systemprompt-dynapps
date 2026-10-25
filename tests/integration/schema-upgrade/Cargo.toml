@@ -12,6 +12,8 @@ dynapps-test-common = { workspace = true }
 # The shared harness links the extension inventory, so this installer sees
 # the same migration set as the server without a redundant direct edge.
 systemprompt = { workspace = true, features = ["full"] }
+# `admin config migrate --data`, the step an upgrade runs after the installer.
+systemprompt-cli = { workspace = true }
 
 sqlx = { workspace = true }
 tokio = { workspace = true }

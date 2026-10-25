@@ -1,27 +1,31 @@
 //! Personal subscription keys through the gateway's credential seam.
 //!
-//! A `credential: user` provider is served only from the key the calling user
-//! stored: a user without one is refused 403 with no fallback to any platform
-//! secret, a user with one presents exactly that key upstream (with the
-//! provider's user-agent and the `OpenCode` session header), one user's key is
-//! never presented for another, and a request billed to it is stamped
-//! `billing_source = 'user_key'`.
+//! A hop on a `kind: personal` credential is served only from the key the
+//! calling user stored under that credential id: a user without one is refused
+//! 403 with no fallback to any platform secret, a user with one presents
+//! exactly that key upstream (with the provider's user-agent and the `OpenCode`
+//! session header), one user's key is never presented for another, and a
+//! request billed to it is stamped `billing_source = 'user_key'`.
 
 use std::sync::{Arc, Mutex};
 
 use axum::http::HeaderMap;
+use systemprompt::ai::BillingSource;
 use systemprompt::ai::repository::{AiRequestRepository, UserProviderCredentialRepository};
 use systemprompt::database::{Database, DbPool};
 use systemprompt::gateway::service::DispatchError;
-use systemprompt::gateway::service::credentials::{BillingSource, KeyOwner, resolve};
-use systemprompt::identifiers::{AiRequestId, UserId};
-use systemprompt::manifest::services::ProviderEntry;
+use systemprompt::gateway::service::credentials::{KeyOwner, resolve};
+use systemprompt::identifiers::{AiRequestId, CredentialId, UserId};
+use systemprompt::manifest::services::catalog::{
+    CatalogContext, CatalogDocument, ResolvedCatalog, ResolvedHop,
+};
 use systemprompt::wire::WireProtocol;
 
 use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
-const PROVIDER: &str = "opencode-go";
+const CREDENTIAL: &str = "opencode-go";
+const MODEL: &str = "go-kimi-k3";
 const USER_AGENT: &str = "opencode/1.0 (systemprompt-gateway)";
 
 async fn secrets() -> tempfile::TempDir {
@@ -70,12 +74,27 @@ async fn upstream() -> (String, Seen) {
     (format!("http://{addr}/v1"), seen)
 }
 
-fn personal_provider(endpoint: &str) -> ProviderEntry {
-    serde_yaml::from_str(&format!(
-        "name: {PROVIDER}\nwire: openai_chat\nsurface: openai\nendpoint: {endpoint}\n\
-         credential: user\nuser_agent: \"{USER_AGENT}\"\nforward_headers: [x-opencode-session]\n"
-    ))
-    .expect("provider entry")
+fn personal_catalog(endpoint: &str) -> ResolvedCatalog {
+    let yaml = format!(
+        "credentials:\n  {CREDENTIAL}:\n    kind: personal\n    label: OpenCode Go\n\
+         providers:\n  opencode-go:\n    credential: {CREDENTIAL}\n    user_agent: \"{USER_AGENT}\"\n\
+         \x20   forward_headers: [x-opencode-session]\n    endpoints:\n      chat:\n\
+         \x20       wire: openai-chat\n        url: {endpoint}\n\
+         models:\n  {MODEL}:\n    upstream_model: kimi-k3\n    clients: [openai]\n\
+         deployments:\n  {MODEL}:\n  - opencode-go/chat\n"
+    );
+    CatalogDocument::from_yaml_str("personal-keys", &yaml)
+        .expect("catalog document")
+        .resolve(&CatalogContext::for_install("personal-keys-test"))
+        .expect("resolved catalog")
+}
+
+fn hop(catalog: &ResolvedCatalog) -> ResolvedHop {
+    catalog
+        .deployments(MODEL)
+        .first()
+        .cloned()
+        .expect("one personal hop")
 }
 
 fn owner(keys: &UserProviderCredentialRepository, user: &UserId) -> KeyOwner {
@@ -114,10 +133,12 @@ async fn personal_key_is_required_used_and_never_shared() {
     let alice = insert_user(&db.pool, &unique("alice"), &unclaimed_email("alice")).await;
     let bob = insert_user(&db.pool, &unique("bob"), &unclaimed_email("bob")).await;
     let (endpoint, seen) = upstream().await;
-    let entry = personal_provider(&endpoint);
+    let catalog = personal_catalog(&endpoint);
+    let hop = hop(&catalog);
+    let credential = CredentialId::new(CREDENTIAL);
     let keys = UserProviderCredentialRepository::new(&pool);
 
-    let refused = resolve(&entry, &owner(&keys, &alice))
+    let refused = resolve(&catalog, &hop, &owner(&keys, &alice))
         .await
         .expect_err("no key stored yet");
     let DispatchError::PreAudit(error) = refused else {
@@ -127,18 +148,18 @@ async fn personal_key_is_required_used_and_never_shared() {
     assert!(
         error
             .to_string()
-            .contains("personal key required for provider opencode-go")
+            .contains("personal key required for credential opencode-go")
     );
 
     let sealed = systemprompt::security::at_rest::seal("go-key-alice").expect("seal alice's key");
-    keys.set_key(&alice, PROVIDER, &sealed, Some("laptop"))
+    keys.set_key(&alice, &credential, &sealed, Some("laptop"))
         .await
         .expect("store alice's key");
     let listed = keys.list_metadata(&alice).await.expect("list");
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].label.as_deref(), Some("laptop"));
 
-    let (call, billing) = resolve(&entry, &owner(&keys, &alice))
+    let (call, billing) = resolve(&catalog, &hop, &owner(&keys, &alice))
         .await
         .expect("alice is served from her key");
     assert_eq!(billing, BillingSource::UserKey);
@@ -149,20 +170,24 @@ async fn personal_key_is_required_used_and_never_shared() {
     assert_eq!(headers["user-agent"], USER_AGENT);
     assert!(headers.get("anthropic-beta").is_none());
 
-    let bob_refused = resolve(&entry, &owner(&keys, &bob)).await;
+    let bob_refused = resolve(&catalog, &hop, &owner(&keys, &bob)).await;
     assert!(
         matches!(bob_refused, Err(DispatchError::PreAudit(ref e)) if e.status().as_u16() == 403),
         "alice's key must never serve bob"
     );
     assert!(
-        keys.find_key(&bob, PROVIDER)
+        keys.find_key(&bob, &credential)
             .await
             .expect("lookup")
             .is_none()
     );
 
-    assert!(keys.delete_key(&alice, PROVIDER).await.expect("delete"));
-    assert!(resolve(&entry, &owner(&keys, &alice)).await.is_err());
+    assert!(keys.delete_key(&alice, &credential).await.expect("delete"));
+    assert!(
+        resolve(&catalog, &hop, &owner(&keys, &alice))
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test]

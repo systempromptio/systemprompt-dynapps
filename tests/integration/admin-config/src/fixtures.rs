@@ -183,7 +183,7 @@ pub(crate) async fn insert_acl_entity(
 ) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
-         VALUES ($1, $2, $3, 'test')
+         VALUES ($1, $2, $3, 'code:test-fixture')
          ON CONFLICT (entity_type, entity_id) DO UPDATE SET default_included = EXCLUDED.default_included",
     )
     .bind(entity_type)

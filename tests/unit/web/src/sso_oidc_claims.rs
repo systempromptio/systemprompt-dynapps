@@ -60,8 +60,11 @@ fn full_claims_map_to_identity() {
     assert_eq!(identity.display_name.as_deref(), Some("Ana Lopez"));
     assert_eq!(identity.groups, vec!["g-admins", "g-users"]);
     assert!(!identity.groups_overage);
-    assert_eq!(identity.tenant_id.as_deref(), Some(TENANT));
-    assert_eq!(identity.assertion_id.as_deref(), Some("token-id-1"));
+    assert_eq!(identity.tenant_id.as_ref().map(AsRef::as_ref), Some(TENANT));
+    assert_eq!(
+        identity.assertion_id.as_ref().map(AsRef::as_ref),
+        Some("token-id-1")
+    );
     assert_eq!(
         identity.assertion_expires_at.map(|t| t.timestamp()),
         Some(1_900_000_000)

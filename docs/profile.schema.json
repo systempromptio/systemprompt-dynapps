@@ -99,7 +99,8 @@
         "outbox_processed_days": 7,
         "ai_request_payload_raw_days": 7,
         "governance_decisions_days": 180,
-        "archived_users_days": 90
+        "archived_users_days": 90,
+        "agent_run_dirs_days": 7
       }
     },
     "services": {
@@ -1201,6 +1202,10 @@
             "shared_subject_shards": 8,
             "principal_subject_shards": 1
           }
+        },
+        "unapplied_planes": {
+          "$ref": "#/$defs/UnappliedPlaneMode",
+          "default": "warn"
         }
       },
       "additionalProperties": false
@@ -1292,6 +1297,14 @@
       },
       "additionalProperties": false
     },
+    "UnappliedPlaneMode": {
+      "description": "What a node does while a config plane has never been applied.\n\nCovers `governance` and `gateway_policies` until `systemprompt admin\nconfig apply` records them: `warn` lets requests through and warns at\nboot, in `doctor`, `/readyz` and on every request; `deny` refuses every\ngoverned and gateway request.",
+      "type": "string",
+      "enum": [
+        "warn",
+        "deny"
+      ]
+    },
     "JudgeProfile": {
       "type": "object",
       "properties": {
@@ -1303,7 +1316,7 @@
       "additionalProperties": false
     },
     "RetentionConfig": {
-      "description": "Retention windows, in days, for the high-volume operational tables.\n\nEach field names the table it bounds and rows older than the window are\ndeleted, with two exceptions worth knowing:\n\n- `ai_request_messages_days` drops the stored messages and keeps the request\n  row; `None` follows `ai.history.retention_days` from the services\n  configuration instead.\n- `ai_request_payload_raw_days` sets the raw request and response bodies on\n  `ai_request_payloads` to NULL rather than deleting the row; the excerpts,\n  hashes and sizes stay.\n- `archived_users_days` is how long an archived user (status `deleted`,\n  `archived_at` set) stays restorable before `database_cleanup` purges the\n  account and its rows; an account under legal hold is never purged.",
+      "description": "Retention windows, in days, for the high-volume operational tables.\n\nEach field names the table it bounds and rows older than the window are\ndeleted, with two exceptions worth knowing:\n\n- `ai_request_messages_days` drops the stored messages and keeps the request\n  row; `None` follows `ai.history.retention_days` from the services\n  configuration instead.\n- `ai_request_payload_raw_days` sets the raw request and response bodies on\n  `ai_request_payloads` to NULL rather than deleting the row; the excerpts,\n  hashes and sizes stay.\n- `archived_users_days` is how long an archived user (status `deleted`,\n  `archived_at` set) stays restorable before `database_cleanup` purges the\n  account and its rows; an account under legal hold is never purged.\n- `agent_run_dirs_days` is how long a finished agent run keeps its run\n  directory (logs and `outputs/`) on disk; the `agent_run_dirs_cleanup` job\n  removes it and clears `agent_runs.run_dir`, the row stays.",
       "type": "object",
       "properties": {
         "logs_days": {
@@ -1356,6 +1369,12 @@
           "format": "uint32",
           "minimum": 0,
           "default": 90
+        },
+        "agent_run_dirs_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 7
         }
       },
       "additionalProperties": false

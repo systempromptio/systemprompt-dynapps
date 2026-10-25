@@ -46,6 +46,7 @@ fn agent_run_row(turns: Option<i32>, cost: Option<i64>) -> AgentRunRow {
         exit_code: Some(0),
         error: None,
         diff_summary: None,
+        harness_digest: None,
         cancel_requested_at: None,
         task_id: None,
         context_id: None,

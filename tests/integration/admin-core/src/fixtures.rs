@@ -56,6 +56,11 @@ pub(crate) fn unclaimed_email(local: &str) -> String {
 
 // `users.name` is unique and `users.email` must be lowercase and trimmed, so
 // the email doubles as the name.
+/// The administrator console writes are attributed to.
+pub(crate) fn actor() -> UserId {
+    UserId::new("console-test-admin")
+}
+
 pub(crate) async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
     insert_user_full(pool, id, email, Some(email), &["user".to_owned()], "active").await
 }
@@ -479,7 +484,7 @@ pub(crate) async fn insert_acl_rule(
 ) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
-         VALUES ($1, $2, false, 'fixture')
+         VALUES ($1, $2, false, 'code:test-fixture')
          ON CONFLICT (entity_type, entity_id) DO NOTHING",
     )
     .bind(entity_type)
@@ -490,8 +495,8 @@ pub(crate) async fn insert_acl_rule(
 
     sqlx::query(
         "INSERT INTO access_control_rules
-             (id, entity_type, entity_id, rule_type, rule_value, access)
-         VALUES ($1, $2, $3, $4, $5, $6)",
+             (id, entity_type, entity_id, rule_type, rule_value, access, source)
+         VALUES ($1, $2, $3, $4, $5, $6, 'code:test-fixture')",
     )
     .bind(unique("rule"))
     .bind(entity_type)

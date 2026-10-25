@@ -1,5 +1,5 @@
 //! Where this deployment's gateway sends a Claude Code turn, resolved through
-//! the shipped `services/ai/gateway.yaml` and `providers.yaml`.
+//! the catalog the committed `services/ai/*.yaml` resolve to.
 //!
 //! A route that matches Claude Code's client tools by name captures every
 //! turn, because Claude Code declares its whole catalogue on every request.
@@ -10,11 +10,10 @@
 //! on a client tool name.
 
 use systemprompt::identifiers::ModelId;
-use systemprompt::loader::config_loader::gateway::backfill_route_ids;
-use systemprompt::manifest::services::{GatewayConfig, GatewayConfigSpec, ProviderRegistry};
+use systemprompt::manifest::services::{CatalogContext, ModelRequest, ResolvedCatalog};
 use systemprompt::wire::canonical::{CanonicalRequest, CanonicalTool};
 
-use crate::support::repo_root;
+use crate::support::committed_services;
 
 const CLAUDE_CODE_CATALOGUE: [&str; 9] = [
     "Bash",
@@ -28,28 +27,10 @@ const CLAUDE_CODE_CATALOGUE: [&str; 9] = [
     "ToolSearch",
 ];
 
-fn yaml_section<T: serde::de::DeserializeOwned>(file: &str, key: &str) -> T {
-    let path = repo_root().join(file);
-    let text = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("reading {}: {e}", path.display()));
-    let root: serde_yaml::Value =
-        serde_yaml::from_str(&text).unwrap_or_else(|e| panic!("parsing {}: {e}", path.display()));
-    let node = root
-        .get(key)
-        .unwrap_or_else(|| panic!("{} has no {key}: key", path.display()))
-        .clone();
-    serde_yaml::from_value(node)
-        .unwrap_or_else(|e| panic!("parsing {key}: in {}: {e}", path.display()))
-}
-
-fn registry() -> ProviderRegistry {
-    yaml_section("services/ai/providers.yaml", "providers")
-}
-
-fn gateway() -> GatewayConfig {
-    let mut spec: GatewayConfigSpec = yaml_section("services/ai/gateway.yaml", "gateway");
-    backfill_route_ids(&mut spec);
-    spec.resolve()
+fn catalog() -> ResolvedCatalog {
+    committed_services()
+        .resolve_catalog(&CatalogContext::default())
+        .expect("the AI catalog resolves")
 }
 
 fn client_tool(name: &str) -> CanonicalTool {
@@ -78,23 +59,34 @@ fn server_tool(kind: &str, name: &str) -> CanonicalTool {
 
 fn request(model: &str, tools: Vec<CanonicalTool>) -> CanonicalRequest {
     let mut request = CanonicalRequest::new(ModelId::new(model), Vec::new(), 1024);
-    request.tools = tools;
+    request.tooling.tools = tools;
     request
 }
 
-fn provider_for(request: &CanonicalRequest) -> String {
-    gateway()
-        .resolve_route(&registry(), request)
-        .unwrap_or_else(|| panic!("no route for {}", request.model))
-        .provider
+fn endpoint_for(request: &CanonicalRequest) -> String {
+    let catalog = catalog();
+    let target = catalog
+        .resolve(&ModelRequest::new(request.model.as_str()).with_request(request))
+        .unwrap_or_else(|e| panic!("{} does not resolve: {e}", request.model));
+    target
+        .primary()
+        .unwrap_or_else(|| panic!("no deployment for {}", request.model))
+        .endpoint_ref()
         .to_string()
+}
+
+fn provider_for(request: &CanonicalRequest) -> String {
+    endpoint_for(request)
+        .split_once('/')
+        .map(|(provider, _)| provider.to_owned())
+        .unwrap_or_default()
 }
 
 #[test]
 fn a_claude_code_turn_with_its_full_catalogue_stays_on_anthropic() {
     let catalogue = CLAUDE_CODE_CATALOGUE.map(client_tool).to_vec();
     assert_eq!(
-        provider_for(&request("claude-sonnet-5", catalogue.clone())),
+        provider_for(&request("claude-sonnet-5-5", catalogue.clone())),
         "anthropic"
     );
     assert_eq!(
@@ -112,7 +104,7 @@ fn every_server_tool_stays_on_anthropic() {
         ("tool_search_tool_bm25_20251119", "tool_search_tool_bm25"),
     ] {
         assert_eq!(
-            provider_for(&request("claude-sonnet-5", vec![server_tool(kind, name)])),
+            provider_for(&request("claude-sonnet-5-5", vec![server_tool(kind, name)])),
             "anthropic",
             "{kind}"
         );
@@ -122,32 +114,32 @@ fn every_server_tool_stays_on_anthropic() {
 #[test]
 fn only_an_explicit_deepseek_id_reaches_deepseek() {
     assert_eq!(
-        provider_for(&request("deepseek-chat", Vec::new())),
+        provider_for(&request("deepseek-flash", Vec::new())),
         "deepseek"
     );
     let catalogue = CLAUDE_CODE_CATALOGUE.map(client_tool).to_vec();
     assert_eq!(
-        provider_for(&request("claude-sonnet-5", catalogue)),
+        provider_for(&request("claude-sonnet-5-5", catalogue)),
         "anthropic",
         "a Claude turn never falls through to DeepSeek"
     );
 }
 
 #[test]
-fn every_go_id_lands_on_the_opencode_go_provider_for_its_wire() {
-    for (model, provider) in [
-        ("go-minimax-m3", "opencode-go-anthropic"),
-        ("go-qwen3.8-max", "opencode-go-anthropic"),
-        ("go-qwen3.8-flash", "opencode-go-anthropic"),
-        ("go-glm-5.3", "opencode-go"),
-        ("go-kimi-k3", "opencode-go"),
-        ("go-deepseek-v4-pro", "opencode-go"),
-        ("go-deepseek-v4.1-flash", "opencode-go"),
-        ("go-mimo-v2.6-pro", "opencode-go"),
+fn every_go_id_lands_on_the_opencode_go_endpoint_for_its_wire() {
+    for (model, endpoint) in [
+        ("go-minimax-m3", "opencode-go/messages"),
+        ("go-qwen3.8-max", "opencode-go/messages"),
+        ("go-qwen3.8-flash", "opencode-go/messages"),
+        ("go-glm-5.3", "opencode-go/chat"),
+        ("go-kimi-k3", "opencode-go/chat"),
+        ("go-deepseek-v4-pro", "opencode-go/chat"),
+        ("go-deepseek-v4.1-flash", "opencode-go/chat"),
+        ("go-mimo-v2.6-pro", "opencode-go/chat"),
     ] {
         assert_eq!(
-            provider_for(&request(model, Vec::new())),
-            provider,
+            endpoint_for(&request(model, Vec::new())),
+            endpoint,
             "{model}"
         );
     }
@@ -160,10 +152,11 @@ fn every_go_id_lands_on_the_opencode_go_provider_for_its_wire() {
 
 #[test]
 fn no_route_matches_on_a_client_tool_name() {
-    let offenders: Vec<String> = gateway()
-        .routes
+    let catalog = catalog();
+    let offenders: Vec<String> = catalog
+        .routes()
         .iter()
-        .filter_map(|route| route.when.as_ref().map(|when| (route.effective_id(), when)))
+        .filter_map(|route| route.when.as_ref().map(|when| (route.id.as_str(), when)))
         .flat_map(|(id, when)| {
             when.tool_names_any
                 .iter()

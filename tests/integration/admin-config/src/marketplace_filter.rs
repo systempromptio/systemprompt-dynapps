@@ -105,7 +105,7 @@ impl Harness {
 
     async fn entity(&self, kind: EntityKind, id: &str, default_included: bool) {
         self.repo
-            .upsert_entity(kind, id, default_included, "test")
+            .upsert_entity(kind, id, default_included, "code:test-fixture")
             .await
             .expect("upsert entity");
     }
@@ -119,7 +119,7 @@ impl Harness {
                 rule_value: role,
                 access,
                 justification: None,
-                source: systemprompt::governance::authz::DASHBOARD_SOURCE,
+                source: "console:marketplace-filter-admin",
             })
             .await
             .expect("upsert rule");
@@ -462,7 +462,7 @@ async fn a_group_rule_admits_only_members_of_that_group() {
             rule_value: &group,
             access: Access::Allow,
             justification: None,
-            source: systemprompt::governance::authz::DASHBOARD_SOURCE,
+            source: "console:marketplace-filter-admin",
         })
         .await
         .expect("upsert group rule");

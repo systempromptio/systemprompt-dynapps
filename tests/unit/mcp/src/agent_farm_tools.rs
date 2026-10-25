@@ -142,6 +142,7 @@ fn run_of(user: &str) -> AgentRunRow {
         exit_code: None,
         error: None,
         diff_summary: None,
+        harness_digest: None,
         cancel_requested_at: None,
         task_id: None,
         context_id: None,

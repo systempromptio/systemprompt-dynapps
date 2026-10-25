@@ -64,7 +64,7 @@ impl Harness {
             std::fs::copy(dynapps_test_common::repo_path(relative), destination).unwrap();
         }
         std::fs::write(&config, format!(
-            "mcp_servers:\n  rotation-mcp:\n    type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
+            "mcp_servers:\n  rotation-mcp:\n    server_type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
         )).unwrap();
         let profile = include_str!("../../../contract/admin/fixtures/profile.yaml")
             .replace(

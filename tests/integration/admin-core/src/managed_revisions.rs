@@ -424,6 +424,7 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
         ManagedResolution::NeverAdopted { .. }
     ));
     let initial_request = PublicationRequest {
+        cohort: None,
         resource_id: input.resource_id.clone(),
         revision_id: Some(baseline.clone()),
         action: PublicationAction::InitialAdoption,
@@ -464,6 +465,7 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
         .await
         .unwrap();
     let unevidenced = PublicationRequest {
+        cohort: None,
         resource_id: input.resource_id.clone(),
         revision_id: Some(candidate.clone()),
         action: PublicationAction::PublishImprovement,
@@ -482,6 +484,7 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
             &owner,
             &owner,
             &PublicationRequest {
+                cohort: None,
                 resource_id: input.resource_id.clone(),
                 revision_id: Some(candidate.clone()),
                 action: PublicationAction::PublishImprovement,
@@ -514,6 +517,7 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
     ));
 
     let stale = PublicationRequest {
+        cohort: None,
         resource_id: input.resource_id.clone(),
         revision_id: Some(candidate),
         action: PublicationAction::Rollback,
@@ -531,6 +535,7 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
             &owner,
             &owner,
             &PublicationRequest {
+                cohort: None,
                 resource_id: input.resource_id.clone(),
                 revision_id: None,
                 action: PublicationAction::Withdraw,
@@ -609,6 +614,7 @@ async fn publication_races_corruption_receipts_and_rollback_fail_closed() {
             &owner,
             &owner,
             &PublicationRequest {
+                cohort: None,
                 resource_id: input.resource_id.clone(),
                 revision_id: Some(baseline.clone()),
                 action: PublicationAction::InitialAdoption,
@@ -645,6 +651,7 @@ async fn publication_races_corruption_receipts_and_rollback_fail_closed() {
         .await
         .expect("candidate B");
     let request = |revision, key| PublicationRequest {
+        cohort: None,
         resource_id: input.resource_id.clone(),
         revision_id: Some(revision),
         action: PublicationAction::PublishImprovement,
@@ -741,6 +748,7 @@ async fn publication_races_corruption_receipts_and_rollback_fail_closed() {
             &owner,
             &owner,
             &PublicationRequest {
+                cohort: None,
                 resource_id: input.resource_id.clone(),
                 revision_id: Some(baseline),
                 action: PublicationAction::Rollback,

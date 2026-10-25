@@ -24,9 +24,10 @@ use systemprompt::governance::policy::types::AccessScope;
 use systemprompt::governance::policy::{
     AgentScope, AuditOrigin, AuditTarget, ChainEntryResult, DecisionAudit, Evaluation,
     GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput, PolicyContext,
-    PolicyMode, PrincipalSnapshot, RateCounts, record_decision,
+    PrincipalSnapshot, RateCounts, record_decision,
 };
 use systemprompt::identifiers::{CallId, McpToolName, PolicyId, SessionId, UserId};
+use systemprompt::manifest::services::EnforcementMode;
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
@@ -176,7 +177,7 @@ fn the_shipped_chain_has_every_stage_on_and_every_stage_warning() {
     assert!(config.enabled, "the master switch is on");
     assert_eq!(
         config.mode,
-        PolicyMode::Warn,
+        EnforcementMode::Warn,
         "the chain-wide default is warn"
     );
     let ids: Vec<&str> = config.policies.iter().map(|p| p.id.as_str()).collect();

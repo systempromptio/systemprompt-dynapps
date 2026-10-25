@@ -18,7 +18,8 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header, encode};
 use systemprompt::identifiers::SessionId;
 use systemprompt::models::auth::{
-    JwtAudience, JwtClaims, Permission, RateLimitTier, TokenType, UserType,
+    CustomClaims, JwtAudience, JwtClaims, Permission, RateLimitTier, RegisteredClaims, TokenType,
+    UserType,
 };
 use systemprompt::security::keys::authority;
 
@@ -86,7 +87,7 @@ impl PortalEnv {
     // credential core forwards to the broker on a user's behalf.
     pub fn mint(who: Principal<'_>) -> String {
         let now = Utc::now();
-        let claims = JwtClaims {
+        let registered = RegisteredClaims {
             sub: who.user_id.to_owned(),
             iat: now.timestamp(),
             exp: (now + Duration::hours(1)).timestamp(),
@@ -97,6 +98,8 @@ impl PortalEnv {
                 .clone(),
             aud: vec![JwtAudience::Api, JwtAudience::Mcp],
             jti: uuid::Uuid::new_v4().to_string(),
+        };
+        let custom = CustomClaims {
             scope: vec![Permission::User],
             username: who.email.to_owned(),
             email: who.email.to_owned(),
@@ -112,6 +115,7 @@ impl PortalEnv {
             purpose: None,
             act: None,
         };
+        let claims = JwtClaims { registered, custom };
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(authority::active_kid().expect("active kid").to_owned());
         let key = authority::encoding_key().expect("encoding key");
@@ -122,7 +126,7 @@ impl PortalEnv {
 fn services_yaml(portal: &FakePortal) -> String {
     let server = |id: &str, path: &str| {
         format!(
-            "  {id}:\n    type: external\n    endpoint: {}\n    enabled: true\n    \
+            "  {id}:\n    server_type: external\n    endpoint: {}\n    enabled: true\n    \
              display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, \
              client_id: null}}\n    connector: {{adapter: generic, display_name: {id}, scopes: \
              [odoo]}}\n",

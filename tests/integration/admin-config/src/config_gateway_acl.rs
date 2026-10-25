@@ -2,11 +2,15 @@
 //! access-control repository.
 
 use systemprompt::governance::authz::{Access, EntityKind, RuleType};
-use systemprompt::identifiers::RouteId;
+use systemprompt::identifiers::{RouteId, UserId};
 use systemprompt_web_admin_governance::repositories::config::gateway_acl;
 
 use crate::fixtures::{count_rows, insert_acl_entity, unique};
 use crate::tempdb::TempDb;
+
+fn actor() -> UserId {
+    UserId::new("gateway-acl-admin")
+}
 
 #[tokio::test]
 async fn list_rules_for_route_returns_nothing_for_an_unknown_route() {
@@ -37,6 +41,7 @@ async fn upsert_rule_then_list_rules_for_route_round_trips() {
         RuleType::ROLE,
         "admin",
         Access::Allow,
+        &actor(),
     )
     .await
     .expect("upsert rule");
@@ -66,6 +71,7 @@ async fn upsert_rule_updates_access_in_place_rather_than_duplicating() {
         RuleType::ROLE,
         "admin",
         Access::Allow,
+        &actor(),
     )
     .await
     .expect("first upsert");
@@ -75,6 +81,7 @@ async fn upsert_rule_updates_access_in_place_rather_than_duplicating() {
         RuleType::ROLE,
         "admin",
         Access::Deny,
+        &actor(),
     )
     .await
     .expect("second upsert");
@@ -101,6 +108,7 @@ async fn upsert_rule_fails_without_a_catalog_entity() {
         RuleType::ROLE,
         "admin",
         Access::Allow,
+        &actor(),
     )
     .await;
 
@@ -129,6 +137,7 @@ async fn list_rules_bulk_groups_rules_by_route() {
         RuleType::ROLE,
         "admin",
         Access::Allow,
+        &actor(),
     )
     .await
     .expect("rule on a");
@@ -138,6 +147,7 @@ async fn list_rules_bulk_groups_rules_by_route() {
         RuleType::ROLE,
         "user",
         Access::Deny,
+        &actor(),
     )
     .await
     .expect("second rule on a");
@@ -147,6 +157,7 @@ async fn list_rules_bulk_groups_rules_by_route() {
         RuleType::ROLE,
         "admin",
         Access::Allow,
+        &actor(),
     )
     .await
     .expect("rule on b");
@@ -180,6 +191,7 @@ async fn delete_rule_reports_whether_a_row_was_removed() {
         RuleType::ROLE,
         "admin",
         Access::Allow,
+        &actor(),
     )
     .await
     .expect("upsert rule");

@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use systemprompt::agent_runs::service::DbEventSink;
 use systemprompt::agent_runs::{
-    AgentRunRepository, HostKind, McpServerSpec, PermissionMode, RunRequest,
+    AgentRunRepository, HostKind, McpServerSpec, PermissionMode, RunRequest, TrafficClass,
 };
 use systemprompt::identifiers::AgentRunId;
 use systemprompt_web_admin_farm::config::{
@@ -60,6 +60,8 @@ fn request() -> RunRequest {
         attribution_scopes: Vec::new(),
         plugin_id: None,
         plugin_dirs: vec![root.join("plugin/kit")],
+        harness: None,
+        traffic: TrafficClass::default(),
     }
 }
 

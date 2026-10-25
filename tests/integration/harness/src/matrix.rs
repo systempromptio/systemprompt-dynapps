@@ -1,4 +1,5 @@
-//! Every harness fixture × every catalogue provider, each cell validated.
+//! Every harness fixture × every catalogue lane (`provider/endpoint`), each
+//! cell validated.
 
 use crate::dispatch::dispatch;
 use crate::fixtures::{HARNESSES, captured, load};
@@ -7,23 +8,19 @@ use crate::validate;
 
 #[tokio::test]
 async fn every_harness_reaches_every_provider_well_formed() {
-    let providers = catalogue();
+    let lanes = catalogue();
     let mut cells = 0;
     let mut failures: Vec<String> = Vec::new();
     for harness in HARNESSES {
         let fixture = load(harness);
-        for provider in &providers {
+        for lane in &lanes {
             cells += 1;
-            let outcome = match dispatch(&fixture, provider).await {
-                Ok(captured) => validate::all(&fixture, provider, &captured),
+            let outcome = match dispatch(&fixture, lane).await {
+                Ok(captured) => validate::all(&fixture, lane, &captured),
                 Err(e) => Err(e),
             };
             if let Err(e) = outcome {
-                failures.push(format!(
-                    "{} -> {}: {e}",
-                    fixture.name,
-                    provider.name.as_str()
-                ));
+                failures.push(format!("{} -> {}: {e}", fixture.name, lane.name));
             }
         }
     }
@@ -33,12 +30,12 @@ async fn every_harness_reaches_every_provider_well_formed() {
         failures.len(),
         failures.join("\n")
     );
-    assert_eq!(cells, HARNESSES.len() * providers.len());
+    assert_eq!(cells, HARNESSES.len() * lanes.len());
 }
 
 #[tokio::test]
 async fn every_captured_cli_request_reaches_every_provider_well_formed() {
-    let providers = catalogue();
+    let lanes = catalogue();
     let fixtures = captured();
     assert!(
         fixtures.len() >= 18,
@@ -46,17 +43,13 @@ async fn every_captured_cli_request_reaches_every_provider_well_formed() {
     );
     let mut failures: Vec<String> = Vec::new();
     for fixture in &fixtures {
-        for provider in &providers {
-            let outcome = match dispatch(fixture, provider).await {
-                Ok(captured) => validate::all(fixture, provider, &captured),
+        for lane in &lanes {
+            let outcome = match dispatch(fixture, lane).await {
+                Ok(captured) => validate::all(fixture, lane, &captured),
                 Err(e) => Err(e),
             };
             if let Err(e) = outcome {
-                failures.push(format!(
-                    "{} -> {}: {e}",
-                    fixture.name,
-                    provider.name.as_str()
-                ));
+                failures.push(format!("{} -> {}: {e}", fixture.name, lane.name));
             }
         }
     }
@@ -64,7 +57,7 @@ async fn every_captured_cli_request_reaches_every_provider_well_formed() {
         failures.is_empty(),
         "{} of {} cells failed:\n{}",
         failures.len(),
-        fixtures.len() * providers.len(),
+        fixtures.len() * lanes.len(),
         failures.join("\n")
     );
 }
@@ -72,7 +65,7 @@ async fn every_captured_cli_request_reaches_every_provider_well_formed() {
 #[test]
 fn catalogue_covers_every_wire() {
     use systemprompt::wire::WireProtocol;
-    let wires: Vec<WireProtocol> = catalogue().iter().map(|p| p.wire).collect();
+    let wires: Vec<WireProtocol> = catalogue().iter().map(|lane| lane.wire).collect();
     for wire in [
         WireProtocol::Anthropic,
         WireProtocol::OpenAiChat,

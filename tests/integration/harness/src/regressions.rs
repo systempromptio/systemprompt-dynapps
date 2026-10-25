@@ -51,7 +51,7 @@ async fn upstream_body(fixture: &Fixture, provider: &str, model: &str) -> Value 
 // must reach `DeepSeek` as ONE user turn holding both results.
 #[tokio::test]
 async fn ba6f9208_parallel_tool_results_reach_deepseek_as_one_turn() {
-    let body = upstream_body(&chat(&parallel_reads()), "deepseek", "deepseek-flash").await;
+    let body = upstream_body(&chat(&parallel_reads()), "deepseek/api", "deepseek-flash").await;
     let messages = body["messages"].as_array().unwrap();
     let last = messages.last().unwrap();
     assert_eq!(last["role"], "user");
@@ -63,8 +63,8 @@ async fn ba6f9208_parallel_tool_results_reach_deepseek_as_one_turn() {
         .collect();
     assert_eq!(answered, ["toolu_p1", "toolu_p2"]);
     for provider_model in [
-        ("opencode-go-anthropic", "go-minimax-m3"),
-        ("anthropic", "claude-haiku-5-5"),
+        ("opencode-go/messages", "go-minimax-m3"),
+        ("anthropic/api", "claude-haiku-5-5"),
     ] {
         upstream_body(&chat(&parallel_reads()), provider_model.0, provider_model.1).await;
     }
@@ -82,7 +82,7 @@ async fn interrupted_tool_call_is_answered_with_an_error_result() {
     let messages = history.as_array_mut().unwrap();
     messages.truncate(3);
     messages.push(json!({ "role": "user", "content": "Stop, do something else." }));
-    let body = upstream_body(&chat(&history), "deepseek", "deepseek-flash").await;
+    let body = upstream_body(&chat(&history), "deepseek/api", "deepseek-flash").await;
     let turn = &body["messages"].as_array().unwrap()[2];
     let results: Vec<&Value> = turn["content"]
         .as_array()
@@ -96,7 +96,7 @@ async fn interrupted_tool_call_is_answered_with_an_error_result() {
             .iter()
             .all(|r| r["is_error"] == true && interrupted_text(r))
     );
-    let chat_body = upstream_body(&chat(&history), "opencode-go", "go-kimi-k3").await;
+    let chat_body = upstream_body(&chat(&history), "opencode-go/chat", "go-kimi-k3").await;
     let tool_messages: Vec<&Value> = chat_body["messages"]
         .as_array()
         .unwrap()
@@ -122,7 +122,7 @@ async fn anthropic_passthrough_with_unanswered_tool_use_is_repaired() {
             { "role": "user", "content": [{ "type": "tool_result", "tool_use_id": "toolu_ghost", "content": "orphan" }] }
         ] }),
     );
-    let body = upstream_body(&fixture, "deepseek", "deepseek-flash").await;
+    let body = upstream_body(&fixture, "deepseek/api", "deepseek-flash").await;
     let text = body.to_string();
     assert!(text.contains("tool call interrupted"), "{body:#}");
     assert!(
@@ -136,11 +136,11 @@ async fn anthropic_passthrough_with_unanswered_tool_use_is_repaired() {
 #[tokio::test]
 async fn one_session_switching_providers_stays_well_formed() {
     let hops = [
-        ("anthropic", "claude-haiku-5-5"),
-        ("deepseek", "deepseek-flash"),
-        ("opencode-go", "go-kimi-k3"),
-        ("opencode-go-anthropic", "go-qwen3.8-flash"),
-        ("anthropic", "claude-sonnet-5-5"),
+        ("anthropic/api", "claude-haiku-5-5"),
+        ("deepseek/api", "deepseek-flash"),
+        ("opencode-go/chat", "go-kimi-k3"),
+        ("opencode-go/messages", "go-qwen3.8-flash"),
+        ("anthropic/api", "claude-sonnet-5-5"),
     ];
     let mut history = parallel_reads();
     for (turn, (provider, model)) in hops.iter().enumerate() {

@@ -3,44 +3,40 @@
 //! satisfy the configured no-train/no-retain contractual requirement."
 //!
 //! Mirrors the residency evidence for the `no_retain` flag, and additionally
-//! proves the model-level override: a model's own `governance:` block beats
-//! the provider default in `ProviderEntry::effective_governance`, which is
-//! what `validate()` and dispatch both consult.
+//! proves the model-level override: a model's own `governance:` block in
+//! `models.yaml` beats the provider default on every hop the catalog builds,
+//! which is what route validation and dispatch both consult.
 
-use systemprompt::manifest::services::{
-    GatewayProfileError, GatewayRoute, ModelGovernance, RouteRequirements,
-};
+use systemprompt::manifest::services::ModelGovernance;
+use systemprompt::manifest::services::catalog::CatalogError;
 
-use crate::support::{config, model, provider, registry, route};
-use systemprompt::wire::WireProtocol;
+use crate::support::{Fixture, governance};
 
-fn no_retain_route() -> GatewayRoute {
-    let mut r = route("no-retain", "classified-*", "retaining-provider");
-    r.requires = Some(RouteRequirements {
-        european: false,
-        no_retain: true,
-    });
-    r
+const NO_RETAIN_ROUTE: &str =
+    "  - id: no-retain\n    models: [\"classified-*\"]\n    requires: {no_retain: true}\n";
+
+fn classified(
+    provider_governance: ModelGovernance,
+    model_governance: Option<ModelGovernance>,
+) -> Fixture {
+    Fixture::default()
+        .provider("retaining-provider", "anthropic", provider_governance)
+        .model("classified-fast", model_governance)
+        .deploy("classified-fast", &["retaining-provider/api"])
+        .route(NO_RETAIN_ROUTE)
 }
 
 #[test]
 fn a_no_retain_route_over_a_retaining_provider_fails_validation() {
-    let reg = registry(vec![provider(
-        "retaining-provider",
-        WireProtocol::Anthropic,
-        ModelGovernance::default(),
-        vec![model("classified-fast")],
-    )]);
-    let cfg = config(vec![no_retain_route()]);
-
-    match cfg.validate(&reg) {
-        Err(GatewayProfileError::RouteGovernanceUnsatisfied {
+    match classified(ModelGovernance::default(), None).resolve() {
+        Err(CatalogError::RouteGovernanceUnsatisfied {
             route,
             model,
             requirements,
+            ..
         }) => {
-            assert_eq!(route, "no-retain");
-            assert_eq!(model, "classified-fast");
+            assert_eq!(route.as_str(), "no-retain");
+            assert_eq!(model.as_str(), "classified-fast");
             assert_eq!(requirements, "no_retain");
         },
         other => panic!("expected RouteGovernanceUnsatisfied, got {other:?}"),
@@ -49,68 +45,41 @@ fn a_no_retain_route_over_a_retaining_provider_fails_validation() {
 
 #[test]
 fn the_same_route_validates_once_the_provider_contract_declares_no_retain() {
-    let reg = registry(vec![provider(
-        "retaining-provider",
-        WireProtocol::Anthropic,
-        ModelGovernance {
-            european: false,
-            no_retain: true,
-        },
-        vec![model("classified-fast")],
-    )]);
-    let cfg = config(vec![no_retain_route()]);
-
     assert!(
-        cfg.validate(&reg).is_ok(),
+        classified(governance(false, true), None).resolve().is_ok(),
         "a no-retain provider satisfies the no-retain route requirement"
     );
 }
 
 #[test]
 fn a_model_level_governance_block_overrides_the_provider_default() {
-    let mut covered = model("covered-model");
-    covered.governance = Some(ModelGovernance {
-        european: false,
-        no_retain: true,
-    });
-    let entry = provider(
-        "mixed-provider",
-        WireProtocol::OpenAiChat,
-        ModelGovernance::default(),
-        vec![covered, model("uncovered-model")],
-    );
+    let catalog = Fixture::default()
+        .provider("mixed-provider", "openai-chat", ModelGovernance::default())
+        .model("covered-model", Some(governance(false, true)))
+        .model("uncovered-model", None)
+        .deploy("covered-model", &["mixed-provider/api"])
+        .deploy("uncovered-model", &["mixed-provider/api"])
+        .resolve()
+        .expect("the catalog resolves");
 
     assert!(
-        entry.effective_governance("covered-model").no_retain,
+        catalog.deployments("covered-model")[0].governance.no_retain,
         "the model's own declaration wins over the provider default"
     );
     assert!(
-        !entry.effective_governance("uncovered-model").no_retain,
+        !catalog.deployments("uncovered-model")[0]
+            .governance
+            .no_retain,
         "a model without its own block inherits the provider default"
-    );
-    assert!(
-        !entry.effective_governance("never-listed").no_retain,
-        "an unlisted model inherits the provider default too"
     );
 }
 
 #[test]
 fn validation_honours_the_model_level_override() {
-    let mut covered = model("classified-covered");
-    covered.governance = Some(ModelGovernance {
-        european: false,
-        no_retain: true,
-    });
-    let reg = registry(vec![provider(
-        "retaining-provider",
-        WireProtocol::OpenAiChat,
-        ModelGovernance::default(),
-        vec![covered],
-    )]);
-    let cfg = config(vec![no_retain_route()]);
-
     assert!(
-        cfg.validate(&reg).is_ok(),
+        classified(ModelGovernance::default(), Some(governance(false, true)))
+            .resolve()
+            .is_ok(),
         "the only reachable model declares no_retain itself, so the route validates \
          even though the provider default does not"
     );

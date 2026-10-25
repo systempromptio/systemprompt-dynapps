@@ -14,15 +14,13 @@ use systemprompt::gateway::protocol::inbound::openai_responses::OpenAiResponsesI
 use systemprompt::gateway::{
     CanonicalEvent, GatewayUpstreamRegistry, InboundAdapter, OutboundCtx, OutboundOutcome,
 };
-use systemprompt::identifiers::{ProviderId, RouteId, UserId};
-use systemprompt::manifest::services::{GatewayRoute, ProviderEntry, SelectionStrategy};
 use systemprompt::wire::WireProtocol;
 use systemprompt::wire::anthropic::is_forwardable_request_header;
 use wiremock::matchers::any;
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::fixtures::{Fixture, Inbound};
-use crate::providers::pointed_at;
+use crate::providers::{Lane, pointed_at};
 
 pub(crate) const KEY: &str = "sk-harness-fixture";
 pub(crate) const REPLY_TEXT: &str = "harness-ok";
@@ -79,26 +77,6 @@ fn upstream_reply(wire: WireProtocol) -> Value {
     }
 }
 
-fn route(provider: &ProviderEntry) -> GatewayRoute {
-    GatewayRoute {
-        id: Some(RouteId::new("harness")),
-        name: None,
-        description: None,
-        model_pattern: "*".to_owned(),
-        provider: ProviderId::new(provider.name.as_str()),
-        upstream_model: None,
-        extra_headers: std::collections::HashMap::new(),
-        pricing: None,
-        when: None,
-        requires: None,
-        fallbacks: Vec::new(),
-        by_scope: None,
-        strategy: SelectionStrategy::Ordered,
-        weight: None,
-        context_fallbacks: Vec::new(),
-    }
-}
-
 // The same one-line reply as `upstream_reply`, framed as the wire streams it.
 pub(crate) fn upstream_stream(wire: WireProtocol) -> String {
     let frame = |event: Option<&str>, data: Value| {
@@ -147,13 +125,9 @@ pub(crate) fn upstream_stream(wire: WireProtocol) -> String {
     }
 }
 
-// Sends `fixture` to `provider`'s first model, as the gateway would.
-pub(crate) async fn dispatch(
-    fixture: &Fixture,
-    provider: &ProviderEntry,
-) -> Result<Captured, String> {
-    let model = provider.models.first().ok_or("provider has no models")?;
-    dispatch_model(fixture, provider, model.id.as_str()).await
+// Sends `fixture` to the lane's model, as the gateway would.
+pub(crate) async fn dispatch(fixture: &Fixture, lane: &Lane) -> Result<Captured, String> {
+    dispatch_model(fixture, lane, lane.model.as_str()).await
 }
 
 // Why: reqwest is built without a default rustls provider; core installs ring
@@ -219,20 +193,20 @@ impl Reply {
 
 pub(crate) async fn dispatch_model(
     fixture: &Fixture,
-    provider: &ProviderEntry,
+    lane: &Lane,
     model_id: &str,
 ) -> Result<Captured, String> {
     let reply = if fixture.body["stream"] == Value::Bool(true) {
-        Reply::sse(&upstream_stream(provider.wire))
+        Reply::sse(&upstream_stream(lane.wire))
     } else {
-        Reply::json(&upstream_reply(provider.wire))
+        Reply::json(&upstream_reply(lane.wire))
     };
-    dispatch_reply(fixture, provider, model_id, &reply).await
+    dispatch_reply(fixture, lane, model_id, &reply).await
 }
 
 pub(crate) async fn dispatch_reply(
     fixture: &Fixture,
-    provider: &ProviderEntry,
+    lane: &Lane,
     model_id: &str,
     reply: &Reply,
 ) -> Result<Captured, String> {
@@ -244,16 +218,10 @@ pub(crate) async fn dispatch_reply(
         )
         .mount(&server)
         .await;
-    let target = pointed_at(provider, &server.uri());
-    let model = target
-        .models
-        .iter()
-        .find(|m| m.id.as_str() == model_id)
-        .ok_or_else(|| format!("{model_id} is not served by {}", target.name.as_str()))?;
-    let upstream_model = model
-        .upstream_model
-        .clone()
-        .unwrap_or_else(|| model_id.to_owned());
+    let (catalog, hop) = pointed_at(lane, &server.uri(), model_id)?;
+    let model = catalog
+        .model(model_id)
+        .ok_or_else(|| format!("{model_id} is not a catalog model"))?;
 
     let inbound = inbound_adapter(fixture.inbound);
     let raw = Bytes::from(serde_json::to_vec(&fixture.body).map_err(|e| e.to_string())?);
@@ -261,7 +229,7 @@ pub(crate) async fn dispatch_reply(
         .parse_request(&raw)
         .map_err(|e| format!("inbound parse: {e}"))?;
     request.model = model.id.clone();
-    let raw_body = (inbound.passthrough_wire() == Some(target.wire)).then_some(&raw);
+    let raw_body = (inbound.passthrough_wire() == Some(hop.wire)).then_some(&raw);
     let forward: Vec<(String, String)> = fixture
         .headers
         .iter()
@@ -269,24 +237,26 @@ pub(crate) async fn dispatch_reply(
         .cloned()
         .collect();
 
-    let call = UpstreamTarget::resolve_personal(&target, KEY, &UserId::new("harness-user"))
+    let call = UpstreamTarget::resolve(&catalog, &hop, KEY)
         .map_err(|e| format!("resolve: {e}"))?
         .call()
         .await
         .map_err(|e| format!("call: {e}"))?;
-    let route = route(&target);
+    let http = reqwest::Client::new();
     let ctx = OutboundCtx {
-        route: &route,
+        target: &hop,
         upstream: &call,
+        http: &http,
         request: &request,
-        upstream_model: &upstream_model,
+        upstream_model: &hop.upstream_model,
         model_limits: Some(model.limits),
         automatic_prompt_caching: true,
         forward_headers: &forward,
         raw_body,
     };
-    let adapter = GatewayUpstreamRegistry::global()
-        .get(target.wire.as_tag())
+    let registry = GatewayUpstreamRegistry::new();
+    let adapter = registry
+        .get(hop.wire.as_tag())
         .ok_or("no outbound adapter for the wire")?;
     let body = adapter
         .build_body(&ctx)

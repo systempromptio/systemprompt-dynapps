@@ -202,7 +202,7 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     let origin = origin.trim();
     assert!(origin.starts_with("https://localhost:"));
     let yaml = format!(
-        "mcp_servers:\n  fourth-mcp:\n    type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
+        "mcp_servers:\n  fourth-mcp:\n    server_type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
     );
     let config = root.path().join("config.yaml");
     std::fs::write(&config, yaml).unwrap();
@@ -314,7 +314,7 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
         .unwrap();
     let origin = origin.trim();
     let yaml = format!(
-        "mcp_servers:\n  google_rag:\n    type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector:\n      adapter: generic\n      display_name: Google Drive knowledge\n      scopes: [openid, email, tools:read]\n      authorization_params: {{access_type: offline, prompt: consent}}\n      identity: userinfo\n"
+        "mcp_servers:\n  google_rag:\n    server_type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector:\n      adapter: generic\n      display_name: Google Drive knowledge\n      scopes: [openid, email, tools:read]\n      authorization_params: {{access_type: offline, prompt: consent}}\n      identity: userinfo\n"
     );
     let config = root.path().join("config.yaml");
     std::fs::write(&config, yaml).unwrap();

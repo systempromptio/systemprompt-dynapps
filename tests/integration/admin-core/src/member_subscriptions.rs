@@ -7,14 +7,14 @@ use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
 #[tokio::test]
-async fn list_provider_credential_holders_returns_metadata_per_member_and_provider() {
+async fn list_provider_credential_holders_returns_metadata_per_member_and_credential() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let user = insert_user(&db.pool, &unique("byok"), &unclaimed_email("byok")).await;
     sqlx::query(
         "INSERT INTO user_provider_credentials \
-           (user_id, provider, ciphertext, nonce, label, verified_at) \
+           (user_id, credential, ciphertext, nonce, label, verified_at) \
          VALUES ($1, 'opencode-go', 'sealed-secret-ciphertext', 'nonce-hex', 'laptop', now())",
     )
     .bind(user.as_str())
@@ -30,7 +30,7 @@ async fn list_provider_credential_holders_returns_metadata_per_member_and_provid
         .iter()
         .find(|h| h.user_id == user)
         .expect("the member's key is listed");
-    assert_eq!(row.provider, "opencode-go");
+    assert_eq!(row.credential, "opencode-go");
     assert_eq!(row.label.as_deref(), Some("laptop"));
     assert!(row.verified_at.is_some());
     assert!(row.last_used_at.is_none());

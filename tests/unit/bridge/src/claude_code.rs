@@ -136,7 +136,7 @@ fn enrolment_and_disconnect_preserve_user_settings_and_standalone_profile() {
                 .starts_with("powershell.exe ")
         );
         for _ in 0..2 {
-            let reports = enrol::remove_host_profiles(&selection).unwrap();
+            let reports = enrol::remove_host_profiles(&selection, &[]).unwrap();
             assert!(!reports[0].is_failure());
         }
         let after: serde_json::Value =

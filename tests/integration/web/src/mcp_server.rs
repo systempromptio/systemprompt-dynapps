@@ -13,6 +13,8 @@ use sqlx::PgPool;
 use systemprompt::database::Database;
 use systemprompt::governance::authz::{DenyAllHook, SharedAuthzHook};
 use systemprompt::identifiers::McpServerId;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt::traits::ConfigWatch;
 use systemprompt_mcp_agent::{SystempromptServer, tools};
 
 use crate::tempdb::TempDb;
@@ -31,6 +33,7 @@ fn server(pool: &Arc<PgPool>) -> SystempromptServer {
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid fixture identifier"),
         hook(),
+        ConfigWatch::new(ServicesConfig::default()),
         ingest,
     )
 }
@@ -117,6 +120,7 @@ async fn a_different_service_id_only_changes_the_server_name() {
         db_pool,
         McpServerId::try_new("sp-staging").expect("valid fixture identifier"),
         hook(),
+        ConfigWatch::new(ServicesConfig::default()),
         ingest,
     );
 

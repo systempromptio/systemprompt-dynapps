@@ -49,6 +49,7 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         access_scope: AccessScope::Unknown,
         client_id: None,
         provider: "anthropic".into(),
+        hop: None,
         model: "test-model".into(),
         requested_model: None,
         max_tokens: Some(16),
@@ -92,15 +93,25 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
     ));
     let journal = systemprompt::gateway::audit::journal::GatewayJournal::open(
         profile.path(),
-        systemprompt::config::SecretsBootstrap::get().expect("secrets bootstrapped"),
+        systemprompt::config::SecretsBootstrap::encryption_master_key()
+            .expect("encryption master key"),
     )
     .expect("gateway journal opens");
     let repos = GatewayRepositories::new(
         &pool,
         journal,
         materializer,
-        systemprompt::traits::BackgroundTasks::new(),
-        systemprompt::traits::CacheEpochs::new(),
+        systemprompt::gateway::GatewayHandles {
+            background: systemprompt::traits::BackgroundTasks::new(),
+            cache_epochs: systemprompt::traits::CacheEpochs::new(),
+            logging: systemprompt::logging::LoggingRuntime::new(
+                systemprompt::logging::LogSink::default(),
+                Arc::new(systemprompt::manifest::services::SystemAdmin::new(
+                    user.clone(),
+                    "journal-owner".to_owned(),
+                )),
+            ),
+        },
     );
     let raw = Vec::from(
         br#"{"model":"test-model","max_tokens":16,"messages":[{"role":"user","content":"test"}]}"#

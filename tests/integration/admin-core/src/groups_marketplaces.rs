@@ -9,7 +9,7 @@ use systemprompt_web_admin_identity::repositories::groups::marketplaces::{
 };
 use systemprompt_web_shared::GroupId;
 
-use crate::fixtures::unique_group;
+use crate::fixtures::{actor, unique_group};
 use crate::tempdb::TempDb;
 
 async fn seed_group(pool: &sqlx::PgPool, id: &GroupId) {
@@ -41,6 +41,7 @@ async fn setting_the_set_adds_and_withdraws_in_one_call() {
             MarketplaceId::new("dynapps-developers"),
             MarketplaceId::new("dynapps-cowork"),
         ],
+        &actor(),
     )
     .await
     .expect("grant two");
@@ -56,9 +57,14 @@ async fn setting_the_set_adds_and_withdraws_in_one_call() {
         ]
     );
 
-    set_group_marketplaces(&db.pool, &group, &[MarketplaceId::new("dynapps-cowork")])
-        .await
-        .expect("narrow to one");
+    set_group_marketplaces(
+        &db.pool,
+        &group,
+        &[MarketplaceId::new("dynapps-cowork")],
+        &actor(),
+    )
+    .await
+    .expect("narrow to one");
     assert_eq!(
         list_group_marketplace_ids(&db.pool, &group)
             .await
@@ -85,6 +91,7 @@ async fn one_groups_entitlement_does_not_leak_into_another() {
         &db.pool,
         &first,
         &[MarketplaceId::new("dynapps-developers")],
+        &actor(),
     )
     .await
     .expect("grant");
@@ -92,6 +99,7 @@ async fn one_groups_entitlement_does_not_leak_into_another() {
         &db.pool,
         &second,
         &[MarketplaceId::new("dynapps-consultants")],
+        &actor(),
     )
     .await
     .expect("grant");
@@ -122,16 +130,21 @@ async fn setting_marketplaces_never_touches_the_entity_default() {
     seed_group(&db.pool, &group).await;
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source) \
-         VALUES ('marketplace', 'open-to-everyone', true, 'test') \
+         VALUES ('marketplace', 'open-to-everyone', true, 'code:test-fixture') \
          ON CONFLICT (entity_type, entity_id) DO UPDATE SET default_included = true",
     )
     .execute(&*db.pool)
     .await
     .expect("seed an open marketplace");
 
-    set_group_marketplaces(&db.pool, &group, &[MarketplaceId::new("open-to-everyone")])
-        .await
-        .expect("grant");
+    set_group_marketplaces(
+        &db.pool,
+        &group,
+        &[MarketplaceId::new("open-to-everyone")],
+        &actor(),
+    )
+    .await
+    .expect("grant");
 
     let default_included: bool = sqlx::query_scalar(
         "SELECT default_included FROM access_control_entities \

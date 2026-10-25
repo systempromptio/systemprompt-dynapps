@@ -78,6 +78,13 @@ pub(super) fn fixture_sql() -> String {
 // Why: restore the rung and upgrade it with the current installer; the
 // caller owns the database.
 async fn restore_and_upgrade(db: &TempDb, rung: &Rung) {
+    restore_seed_and_upgrade(db, rung, "").await;
+}
+
+/// [`restore_and_upgrade`] with `extra_seed` run against the restored
+/// release schema before the installer, for a test that needs rows the
+/// release wrote in its own shape.
+pub(super) async fn restore_seed_and_upgrade(db: &TempDb, rung: &Rung, extra_seed: &str) {
     sqlx::raw_sql(sqlx::AssertSqlSafe(rung.sql.clone()))
         .execute(&*db.pool)
         .await
@@ -86,6 +93,12 @@ async fn restore_and_upgrade(db: &TempDb, rung: &Rung) {
         .execute(&*db.pool)
         .await
         .unwrap_or_else(|e| panic!("seed the release {} hot tables: {e}", rung.version));
+    if !extra_seed.is_empty() {
+        sqlx::raw_sql(sqlx::AssertSqlSafe(extra_seed.to_owned()))
+            .execute(&*db.pool)
+            .await
+            .unwrap_or_else(|e| panic!("seed the release {} rows: {e}", rung.version));
+    }
     let registry = ExtensionRegistry::discover().expect("discover extension registrations");
     assert!(
         !registry.is_empty(),

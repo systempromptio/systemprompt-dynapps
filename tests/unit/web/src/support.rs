@@ -3,6 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use systemprompt::governance::policy::RateWindowRepository;
+use systemprompt::loader::ConfigLoader;
+use systemprompt::manifest::ServicesConfig;
+use systemprompt::manifest::services::{GatewayRoute, GatewayState};
 
 // The repository root, found by climbing from this crate until the directory
 // holding the front-end sources these gates read appears.
@@ -23,6 +26,26 @@ pub(crate) fn repo_root() -> PathBuf {
             "repository root not found above CARGO_MANIFEST_DIR"
         );
     }
+}
+
+// The committed `services/` tree, loaded exactly as the server boots it.
+pub(crate) fn committed_services() -> ServicesConfig {
+    ConfigLoader::load_from_path(&repo_root().join("services/config/config.yaml"))
+        .expect("services/ tree loads")
+}
+
+// The committed tree with `routes` declared ahead of its own gateway routes.
+pub(crate) fn services_with_routes(routes: Vec<GatewayRoute>) -> ServicesConfig {
+    let mut services = committed_services();
+    let mut gateway = services
+        .gateway
+        .take()
+        .expect("services/ declares a gateway")
+        .config()
+        .into_owned();
+    gateway.routes.splice(0..0, routes);
+    services.gateway = Some(GatewayState::Resolved(gateway));
+    services
 }
 
 // Why: returning quietly on an unreadable directory hands every caller an

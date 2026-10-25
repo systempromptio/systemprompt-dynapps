@@ -21,7 +21,7 @@ use sqlx::PgPool;
 use systemprompt::database::Database;
 use systemprompt::extension::prelude::{Extension, ExtensionContext};
 use systemprompt::storage::LocalFileStorage;
-use systemprompt::traits::{ConfigProvider, DatabaseHandle, FileStorage};
+use systemprompt::traits::{BackgroundTasks, ConfigProvider, DatabaseHandle, FileStorage};
 use systemprompt_web_extension::WebExtension;
 use tower::ServiceExt as _;
 
@@ -82,6 +82,9 @@ impl ExtensionContext for PoolCtx {
     fn instance_id(&self) -> systemprompt::identifiers::InstanceId {
         systemprompt::identifiers::InstanceId::new("router-test")
     }
+    fn background_tasks(&self) -> BackgroundTasks {
+        BackgroundTasks::new()
+    }
 }
 
 // A context whose database handle is not a core `Database`, which is the one
@@ -118,6 +121,9 @@ impl ExtensionContext for ForeignDbCtx {
     }
     fn instance_id(&self) -> systemprompt::identifiers::InstanceId {
         systemprompt::identifiers::InstanceId::new("router-test")
+    }
+    fn background_tasks(&self) -> BackgroundTasks {
+        BackgroundTasks::new()
     }
 }
 

@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime};
 
 use systemprompt_bridge::integration::agent_health::{AgentAction, AgentReason, AgentState};
 use systemprompt_bridge::integration::cowork_plugins::{
-    ResolveTargetError, dir_names_org, match_org, pick_target, pick_target_for_org,
+    ResolveTargetError, TargetSource, dir_names_org, match_org, pick_target,
 };
 
 const TENANT: &str = "e43527c1-cbb5-4944-b351-4e20e9a4bbc4";
@@ -57,8 +57,7 @@ fn the_tenant_session_wins_where_two_usable_sessions_were_ambiguous() {
         pick_target(&candidates),
         Err(ResolveTargetError::Ambiguous { .. })
     ));
-    let picked = pick_target_for_org(&candidates, Some(TENANT)).expect("resolves");
-    assert_eq!(picked, Some(tenant.1));
+    assert_eq!(match_org(&candidates, TENANT), Some(tenant.1));
 }
 
 #[test]
@@ -67,8 +66,8 @@ fn a_tenant_session_without_a_plugins_dir_is_not_chosen() {
     let candidates = vec![s.add("e43527c1", false), s.add("a1b2c3d4", true)];
     assert_eq!(match_org(&candidates, TENANT), None);
     assert_eq!(
-        pick_target_for_org(&candidates, Some(TENANT)).expect("resolves"),
-        Some(candidates[1].1.clone()),
+        pick_target(&candidates).expect("resolves"),
+        Some((candidates[1].1.clone(), TargetSource::OnlySession)),
         "the only usable session is still chosen"
     );
 }
@@ -81,7 +80,8 @@ fn an_ambiguous_set_carries_every_usable_candidate_for_the_picker() {
     let unusable = s.add("a1b2c3d4", false);
     let candidates = vec![a.clone(), b.clone(), unusable];
 
-    match pick_target_for_org(&candidates, Some(TENANT)) {
+    assert_eq!(match_org(&candidates, TENANT), None);
+    match pick_target(&candidates) {
         Err(ResolveTargetError::Ambiguous { candidates }) => {
             assert_eq!(candidates, vec![a.1, b.1]);
         },

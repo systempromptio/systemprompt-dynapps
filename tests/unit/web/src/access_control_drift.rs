@@ -1,6 +1,6 @@
 //! The drift engine: code versus database, classified.
 
-use systemprompt::governance::authz::{Access, DASHBOARD_SOURCE, RegisteredEntities};
+use systemprompt::governance::authz::{Access, RegisteredEntities, SERVICES_SOURCE};
 use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredSet, build_declared_set,
 };
@@ -8,6 +8,8 @@ use systemprompt_web_admin_core::repositories::access_rules::drift::{
     BandRuleRow, EntityDefaultRow, EntityState, OrphanOrigin, compute_drift,
 };
 use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
+
+const CONSOLE: &str = "console:ana";
 
 fn declared() -> DeclaredSet {
     let doc = parse_rules_doc(
@@ -55,7 +57,7 @@ fn entity(entity_id: &str, open: bool) -> EntityDefaultRow {
         entity_type: "mcp_server".to_owned(),
         entity_id: entity_id.to_owned(),
         default_included: open,
-        source: "yaml".to_owned(),
+        source: SERVICES_SOURCE.to_owned(),
     }
 }
 
@@ -64,14 +66,21 @@ fn identical_state_is_clean() {
     let drift = compute_drift(
         &declared(),
         &[
-            row("dynbrain", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row(
+                "dynbrain",
+                "role",
+                "admin",
+                Access::Allow,
+                "pilot",
+                SERVICES_SOURCE,
+            ),
             row(
                 "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
                 "pilot",
-                "yaml",
+                SERVICES_SOURCE,
             ),
         ],
         &[entity("dynbrain", false)],
@@ -84,31 +93,24 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
     let drift = compute_drift(
         &declared(),
         &[
-            row("dynbrain", "role", "admin", Access::Deny, "pilot", "yaml"),
             row(
                 "dynbrain",
-                "group",
-                "uk",
-                Access::Allow,
-                "hand",
-                DASHBOARD_SOURCE,
+                "role",
+                "admin",
+                Access::Deny,
+                "pilot",
+                SERVICES_SOURCE,
             ),
+            row("dynbrain", "group", "uk", Access::Allow, "hand", CONSOLE),
             row(
                 "dynbrain",
                 "project",
                 "storefront",
                 Access::Allow,
                 "old",
-                "yaml",
+                SERVICES_SOURCE,
             ),
-            row(
-                "github",
-                "group",
-                "uk",
-                Access::Allow,
-                "hand",
-                DASHBOARD_SOURCE,
-            ),
+            row("github", "group", "uk", Access::Allow, "hand", CONSOLE),
         ],
         &[entity("dynbrain", true)],
     );
@@ -150,16 +152,30 @@ fn code_written_rows_on_a_dropped_entity_are_retired_but_bundle_rows_are_kept() 
     let drift = compute_drift(
         &declared(),
         &[
-            row("dynbrain", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row(
+                "dynbrain",
+                "role",
+                "admin",
+                Access::Allow,
+                "pilot",
+                SERVICES_SOURCE,
+            ),
             row(
                 "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
                 "pilot",
-                "yaml",
+                SERVICES_SOURCE,
             ),
-            row("github", "group", "uk", Access::Allow, "gone", "yaml"),
+            row(
+                "github",
+                "group",
+                "uk",
+                Access::Allow,
+                "gone",
+                SERVICES_SOURCE,
+            ),
             row(
                 "github",
                 "role",
@@ -190,8 +206,8 @@ fn code_written_rows_on_a_dropped_entity_are_retired_but_bundle_rows_are_kept() 
             .find(|o| o.row.source == source)
             .expect("orphan")
     };
-    assert_eq!(by_source("yaml").origin, OrphanOrigin::Code);
-    assert!(by_source("yaml").retire);
+    assert_eq!(by_source(SERVICES_SOURCE).origin, OrphanOrigin::Code);
+    assert!(by_source(SERVICES_SOURCE).retire);
     assert_eq!(by_source("bundle:sfnext").origin, OrphanOrigin::Bundle);
     assert!(!by_source("bundle:sfnext").retire);
 }
@@ -207,7 +223,7 @@ fn a_different_justification_alone_is_drift_and_user_rows_are_invisible() {
                 "admin",
                 Access::Allow,
                 "something else",
-                "yaml",
+                SERVICES_SOURCE,
             ),
             row(
                 "dynbrain",
@@ -215,16 +231,9 @@ fn a_different_justification_alone_is_drift_and_user_rows_are_invisible() {
                 "india-devs",
                 Access::Allow,
                 "pilot",
-                "yaml",
+                SERVICES_SOURCE,
             ),
-            row(
-                "dynbrain",
-                "user",
-                "someone",
-                Access::Deny,
-                "",
-                DASHBOARD_SOURCE,
-            ),
+            row("dynbrain", "user", "someone", Access::Deny, "", CONSOLE),
         ],
         &[entity("dynbrain", false)],
     );
@@ -257,14 +266,21 @@ fn unknown_means_the_declaration_could_not_be_compared_and_nothing_else() {
     let in_step = compute_drift(
         &declared(),
         &[
-            row("dynbrain", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row(
+                "dynbrain",
+                "role",
+                "admin",
+                Access::Allow,
+                "pilot",
+                SERVICES_SOURCE,
+            ),
             row(
                 "dynbrain",
                 "group",
                 "india-devs",
                 Access::Allow,
                 "pilot",
-                "yaml",
+                SERVICES_SOURCE,
             ),
         ],
         &[entity("dynbrain", false)],
