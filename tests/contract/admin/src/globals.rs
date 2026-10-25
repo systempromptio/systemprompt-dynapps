@@ -107,10 +107,22 @@ fn write_fixture_profile() -> PathBuf {
     dir.join("profile.yaml")
 }
 
-// Two routes with fixed ids and no default provider, so an unrouted model
-// exists for the ACL detector cases; the rest of `services/` is copied as-is.
-const FIXTURE_PROVIDERS: &str = include_str!("../fixtures/providers.yaml");
-const FIXTURE_GATEWAY: &str = include_str!("../fixtures/gateway.yaml");
+// One Anthropic endpoint serving the fixture models, and two routes with fixed
+// ids and no default model, so an unrouted model exists for the ACL detector
+// cases; the rest of `services/` is copied as-is.
+const FIXTURE_CATALOG: [(&str, &str); 5] = [
+    (
+        "credentials.yaml",
+        include_str!("../fixtures/credentials.yaml"),
+    ),
+    ("providers.yaml", include_str!("../fixtures/providers.yaml")),
+    ("models.yaml", include_str!("../fixtures/models.yaml")),
+    (
+        "deployments.yaml",
+        include_str!("../fixtures/deployments.yaml"),
+    ),
+    ("gateway.yaml", include_str!("../fixtures/gateway.yaml")),
+];
 // The instance ships no identity-backed server; the accessor routes under
 // /api/public/identity/ are exercised against this fixture instead.
 const FIXTURE_IDENTITY_SERVER: &str = include_str!("../fixtures/sfcore_dev.yaml");
@@ -121,10 +133,9 @@ fn write_fixture_services(root: &std::path::Path, dest: &std::path::Path) {
         std::fs::remove_dir_all(dest).expect("clear the previous fixture services tree");
     }
     copy_tree(&root.join("services"), dest);
-    std::fs::write(dest.join("ai/providers.yaml"), FIXTURE_PROVIDERS)
-        .expect("write fixture providers.yaml");
-    std::fs::write(dest.join("ai/gateway.yaml"), FIXTURE_GATEWAY)
-        .expect("write fixture gateway.yaml");
+    for (file, yaml) in FIXTURE_CATALOG {
+        std::fs::write(dest.join("ai").join(file), yaml).expect("write fixture catalog file");
+    }
     add_identity_server(dest);
 }
 

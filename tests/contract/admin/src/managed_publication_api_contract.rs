@@ -78,6 +78,7 @@ async fn publication_history_and_bundle_expose_the_reviewed_generation() {
                     )]),
                 },
                 limitations: "Reviewed through the public API contract".to_owned(),
+                cohort: None,
             },
         )
         .await

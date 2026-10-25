@@ -90,6 +90,7 @@ async fn publish_skill(repo: &ManagedRepository, owner: &UserId, key: &str) -> S
                     )]),
                 },
                 limitations: "Contract distribution limitation".to_owned(),
+                cohort: None,
             },
         )
         .await
