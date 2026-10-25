@@ -1,7 +1,7 @@
 # Deployments: which model is served where; list order is failover order.
-# DeepSeek V4 Pro is one model with two deployments: DeepSeek's own API on the
-# platform key, then OpenCode Go's chat endpoint (cache reads priced at Go's
-# rate). Failover never crosses from the platform key to a member's key.
+# DeepSeek V4 Pro is two models: deepseek-v4-pro is served only by DeepSeek's
+# own API on the platform key, and go-deepseek-v4-pro only by OpenCode Go's chat
+# endpoint on the member's own Go key, so neither can be selected for the other.
 deployments:
   claude-haiku-5-5:
   - anthropic/api
@@ -13,11 +13,10 @@ deployments:
   - deepseek/api
   deepseek-v4-pro:
   - deepseek/api
-  - endpoint: opencode-go/chat
-    pricing:
-      cache_read_per_million: 0.132
   e2e-mock-sonnet:
   - e2e-mock/api
+  go-deepseek-v4-pro:
+  - opencode-go/chat
   go-deepseek-v4.1-flash:
   - opencode-go/chat
   go-glm-5.3:

@@ -40,16 +40,17 @@ models:
 # deployments.yaml: model -> ordered endpoints (routing and failover)
 deployments:
   claude-sonnet-5-5: [anthropic/api]
-  deepseek-v4-pro:   [deepseek/api, opencode-go/chat]
+  deepseek-v4-pro:   [deepseek/api]
+  go-deepseek-v4-pro: [opencode-go/chat]
 
 # gateway.yaml: one default model; routes are policy only
 gateway:
   enabled: true
   default_model: claude-sonnet-5-5
   routes:
-    - id: go-deepseek-v4-pro
-      alias: { requested: go-deepseek-v4-pro, model: deepseek-v4-pro }
-      deployments: [opencode-go/chat]
+    - id: claude-eu
+      models: [claude-*]
+      deployments: [anthropic/api]
 ```
 
 A credential is `platform` (a profile secret) or `personal` (each member stores their own key once, however many endpoints it serves). A model's id is unique across the catalog; `upstream_model` names it upstream when that differs. A deployment entry is `provider/endpoint` or an object with `endpoint:` plus per-deployment `upstream_model` and `pricing` overrides. Failover never crosses from a platform credential to a personal one.

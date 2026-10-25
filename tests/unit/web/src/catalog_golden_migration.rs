@@ -4,12 +4,10 @@
 //!
 //! Compared per requested id: whether it dispatches, `advertised_to`, and per
 //! hop of the plain chain the URL, wire, credential, upstream model, price and
-//! weight. The allowlist is exactly the intended changes: an alias route
-//! forwards its target model's `upstream_model`; DeepSeek V4 Pro is one model
-//! whose chain gains the OpenCode Go deployment after DeepSeek's own API; and
-//! `go-deepseek-v4-pro`, now an alias of that model, is no longer listed to
-//! clients. `{install}` user agents and endpoint-scoped betas are intended
-//! too but are not part of the snapshot schema.
+//! weight. The one intended difference is that an alias route forwards its
+//! target model's `upstream_model`. `{install}` user agents and
+//! endpoint-scoped betas are intended too but are not part of the snapshot
+//! schema.
 
 use std::path::{Path, PathBuf};
 
@@ -37,10 +35,6 @@ const CATALOG_FILES: [&str; 6] = [
     "deployments.yaml",
     "gateway.yaml",
 ];
-
-// Requested ids whose chain may differ from 0.72.1, and how.
-const ALLOWED_CHAIN_GROWTH: [(&str, usize); 1] = [("deepseek-v4-pro", 2)];
-const ALLOWED_UNADVERTISED: [&str; 1] = ["go-deepseek-v4-pro"];
 
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")
@@ -161,10 +155,7 @@ fn compare_chain(
     new: &[Value],
     out: &mut Vec<String>,
 ) {
-    let grown = ALLOWED_CHAIN_GROWTH
-        .iter()
-        .any(|(allowed, len)| *allowed == id && new.len() == *len);
-    if golden.len() != new.len() && !grown {
+    if golden.len() != new.len() {
         out.push(format!(
             "{id}: chain has {} hops, 0.72.1 had {}",
             new.len(),
@@ -206,14 +197,16 @@ fn findings() -> Vec<String> {
         };
         compare_chain(&catalog, id, golden_chain, &new_chain, &mut out);
         let listed = advertised(&catalog, id);
-        let unlisted_alias = ALLOWED_UNADVERTISED.contains(&id.as_str()) && listed == json!([]);
         if catalog.model(id).is_some() && entry["advertised_to"] != listed {
             out.push(format!(
                 "{id}: advertised to {listed} (0.72.1 {})",
                 entry["advertised_to"]
             ));
-        } else if catalog.model(id).is_none() && !unlisted_alias && !id.ends_with("[1m]") {
-            out.push(format!("{id}: not a catalog model and not an allowed alias"));
+        } else if catalog.model(id).is_none()
+            && alias_target_upstream(&catalog, id).is_none()
+            && !id.ends_with("[1m]")
+        {
+            out.push(format!("{id}: not a catalog model and not an alias"));
         }
     }
     out

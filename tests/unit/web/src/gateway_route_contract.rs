@@ -9,8 +9,11 @@
 //! on the `OpenCode` Go provider for its wire format, and no route may match
 //! on a client tool name.
 
+use systemprompt::gateway::service::failover::{DeploymentState, plan_selection};
 use systemprompt::identifiers::ModelId;
-use systemprompt::manifest::services::{CatalogContext, ModelRequest, ResolvedCatalog};
+use systemprompt::manifest::services::{
+    CatalogContext, ModelRequest, ResolvedCatalog, SelectionStrategy,
+};
 use systemprompt::wire::canonical::{CanonicalRequest, CanonicalTool};
 
 use crate::support::committed_services;
@@ -147,6 +150,70 @@ fn every_go_id_lands_on_the_opencode_go_endpoint_for_its_wire() {
         provider_for(&request("deepseek-v4-pro", Vec::new())),
         "deepseek",
         "the bare deepseek-* id stays on the platform key"
+    );
+}
+
+// Core attempts healthy deployments first, so a member's deployment on the
+// platform id's chain would become the first attempt whenever the platform
+// endpoint's breaker is open and bill the member's own plan.
+#[test]
+fn deepseek_v4_pro_never_lands_on_a_members_go_deployment_when_deepseek_is_down() {
+    let catalog = catalog();
+    let target = catalog
+        .resolve(&ModelRequest::new("deepseek-v4-pro"))
+        .expect("deepseek-v4-pro resolves");
+    let hops: Vec<_> = target
+        .chain
+        .iter()
+        .chain(&target.context_fallbacks)
+        .collect();
+    assert!(!hops.is_empty(), "deepseek-v4-pro has a deployment");
+    let states: Vec<DeploymentState> = target
+        .chain
+        .iter()
+        .map(|hop| DeploymentState {
+            tripped: hop.provider.as_str() == "deepseek",
+            weight: 1,
+            in_flight: 0,
+        })
+        .collect();
+    for strategy in [
+        target.strategy,
+        SelectionStrategy::Ordered,
+        SelectionStrategy::Weighted,
+        SelectionStrategy::LeastBusy,
+    ] {
+        for index in plan_selection(strategy, &states, 0) {
+            let hop = &target.chain[index];
+            assert!(
+                !hop.credential.is_personal() && hop.provider.as_str() != "opencode-go",
+                "{strategy:?} attempts {} for deepseek-v4-pro",
+                hop.endpoint_ref()
+            );
+        }
+    }
+    for hop in hops {
+        assert!(
+            !hop.credential.is_personal(),
+            "deepseek-v4-pro reaches {} on a member's key",
+            hop.endpoint_ref()
+        );
+    }
+
+    let go = catalog
+        .resolve(&ModelRequest::new("go-deepseek-v4-pro"))
+        .expect("go-deepseek-v4-pro resolves");
+    assert!(
+        go.chain
+            .iter()
+            .all(|hop| hop.credential.is_personal() && hop.provider.as_str() == "opencode-go"),
+        "go-deepseek-v4-pro is served only on the member's Go key"
+    );
+    assert!(
+        catalog
+            .model("go-deepseek-v4-pro")
+            .is_some_and(systemprompt::manifest::services::catalog::ResolvedModel::is_advertised),
+        "go-deepseek-v4-pro is listed to clients"
     );
 }
 

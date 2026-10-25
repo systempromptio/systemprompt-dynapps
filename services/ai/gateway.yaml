@@ -4,19 +4,8 @@
 # derived from limits.context_window and never written in config.
 gateway:
   enabled: true
-  routes:
-  - id: go-deepseek-v4-pro
-    label: DeepSeek V4 Pro on OpenCode Go (member key)
-    description: >-
-      The OpenCode Go id for DeepSeek V4 Pro: served as deepseek-v4-pro on
-      OpenCode Go's Chat Completions endpoint with the member's own Go key.
-    alias:
-      requested: go-deepseek-v4-pro
-      model: deepseek-v4-pro
-    deployments:
-    - opencode-go/chat
+  routes: []
   default_model: claude-sonnet-5-5
-  catalog_route_id: star-bf70e4
   quota_fault_mode: closed
   automatic_prompt_caching: true
   auth_scheme: bearer

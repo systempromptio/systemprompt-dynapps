@@ -133,8 +133,8 @@ a route alias; nothing else is forwarded.
 | Family | Ids a client can request | Served by |
 |---|---|---|
 | Claude | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` | Anthropic's API, platform key |
-| DeepSeek | `deepseek-v4-pro`, `deepseek-flash` | DeepSeek's API, platform key (`deepseek-v4-pro` fails over to OpenCode Go) |
-| OpenCode Go | `go-*` (and `go-deepseek-v4-pro`, an alias of `deepseek-v4-pro` pinned to OpenCode Go) | OpenCode Go, the member's own key; see [OpenCode Go](/documentation/opencode-go-subscription) |
+| DeepSeek | `deepseek-v4-pro`, `deepseek-flash` | DeepSeek's API, platform key |
+| OpenCode Go | `go-*`, including `go-deepseek-v4-pro` (DeepSeek V4 Pro on OpenCode Go) | OpenCode Go, the member's own key; see [OpenCode Go](/documentation/opencode-go-subscription) |
 
 Claude is served only by the customer's Anthropic key. Gemini and Vertex AI
 are not served.
