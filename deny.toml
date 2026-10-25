@@ -9,6 +9,13 @@ ignore = [
     # rsa crate Marvin Attack - no patch available yet, used transitively by oauth2/webauthn-rs
     # Tracked at: https://rustsec.org/advisories/RUSTSEC-2023-0071
     "RUSTSEC-2023-0071",
+    # crypto-bigint 0.5.5 timing variation, reached only through jsonwebtoken's
+    # rust_crypto backend (p256/p384 0.13); the fix needs elliptic-curve 0.14
+    # and jsonwebtoken pins the 0.13 line. Only ES256/ES384 keys run that
+    # arithmetic, and neither core nor this install builds one: keys are RSA
+    # or HMAC and every verifier pins RS256/HS256. Same reasoning as core's
+    # deny.toml. Drop when jsonwebtoken moves to elliptic-curve 0.14.
+    "RUSTSEC-2026-0387",
 ]
 
 [licenses]

@@ -30,4 +30,10 @@ ignore = [
     # 1.x line pins rkyv 0.7 (the patched 0.8.17 is a breaking bump upstream).
     # Drop the ignore when rust_decimal moves to rkyv 0.8.
     "RUSTSEC-2026-0235",
+    # RUSTSEC-2026-0387 — crypto-bigint 0.5.5 timing variation, reached only
+    # through jsonwebtoken's rust_crypto backend (p256/p384 0.13). Only ES256/ES384
+    # keys run that arithmetic and none is ever built: keys are RSA or HMAC and
+    # every verifier pins RS256/HS256. Drop when jsonwebtoken moves to
+    # elliptic-curve 0.14 (see deny.toml).
+    "RUSTSEC-2026-0387",
 ]
