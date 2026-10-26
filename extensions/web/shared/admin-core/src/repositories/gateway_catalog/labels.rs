@@ -11,7 +11,6 @@
 
 use std::collections::HashMap;
 
-use systemprompt::loader::ServicesBootstrap;
 use systemprompt::manifest::ServicesConfig;
 use systemprompt::manifest::services::ResolvedCatalog;
 use systemprompt::manifest::services::catalog::{ResolvedHop, ResolvedProvider};
@@ -101,10 +100,6 @@ pub fn get_route_labels(services: &ServicesConfig) -> Result<RouteLabels, Market
         routes,
         providers,
     })
-}
-
-pub fn get_route_labels_from_services() -> Result<RouteLabels, MarketplaceError> {
-    get_route_labels(ServicesBootstrap::get()?)
 }
 
 fn route_hops<'a>(catalog: &'a ResolvedCatalog, route: &GatewayRouteView) -> Vec<&'a ResolvedHop> {

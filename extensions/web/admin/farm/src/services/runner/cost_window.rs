@@ -52,11 +52,12 @@ pub fn cost_window_usd(budget_usd: f64, worst_case_usd: f64) -> f64 {
 }
 
 #[must_use]
-pub fn run_cost_window_usd(budget_usd: Option<f64>, model: Option<&str>) -> Option<f64> {
+pub fn run_cost_window_usd(
+    catalog: &ResolvedCatalog,
+    budget_usd: Option<f64>,
+    model: Option<&str>,
+) -> Option<f64> {
     let budget = budget_usd?;
-    let worst = systemprompt::loader::ServicesBootstrap::catalog()
-        .ok()
-        .and_then(|catalog| worst_case_request_usd(catalog, model))
-        .unwrap_or(FALLBACK_WORST_CASE_USD);
+    let worst = worst_case_request_usd(catalog, model).unwrap_or(FALLBACK_WORST_CASE_USD);
     Some(cost_window_usd(budget, worst))
 }

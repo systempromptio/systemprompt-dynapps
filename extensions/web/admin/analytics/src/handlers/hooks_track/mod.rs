@@ -34,6 +34,7 @@ pub(crate) struct TrackDeps {
     managed: systemprompt::marketplace::managed::ManagedRepository,
     event_hub: EventHub,
     artifact_ingest: Arc<systemprompt::mcp::ArtifactIngest>,
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
@@ -43,10 +44,12 @@ impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
         let Extension(managed) = Extension::from_request_parts(parts, state).await?;
         let Extension(event_hub) = Extension::from_request_parts(parts, state).await?;
         let Extension(artifact_ingest) = Extension::from_request_parts(parts, state).await?;
+        let Extension(services) = Extension::from_request_parts(parts, state).await?;
         Ok(Self {
             managed,
             event_hub,
             artifact_ingest,
+            services,
         })
     }
 }
@@ -56,6 +59,7 @@ pub(crate) async fn handle_hook_track(
         managed,
         event_hub,
         artifact_ingest,
+        services,
     }: TrackDeps,
     State(pool): State<Arc<PgPool>>,
     Extension(keys): Extension<SigningKeys>,
@@ -99,6 +103,7 @@ pub(crate) async fn handle_hook_track(
 
     artifact::ingest_tool_result(artifact::ToolResultIngestion {
         pool: &pool,
+        services: &services,
         ingest: &artifact_ingest,
         user_id: &user_id,
         payload: &payload,
@@ -109,6 +114,7 @@ pub(crate) async fn handle_hook_track(
     .await;
     dispatch_inserted_event(&DispatchContext {
         pool: &pool,
+        services: &services,
         user_id: &user_id,
         plugin_id: &plugin_id,
         payload: &payload,
@@ -130,6 +136,7 @@ fn log_payload_warnings(payload: &HookEventPayload, warnings: &[String]) {
 
 struct DispatchContext<'a> {
     pool: &'a PgPool,
+    services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
     user_id: &'a UserId,
     plugin_id: &'a PluginId,
     payload: &'a HookEventPayload,
@@ -140,6 +147,7 @@ async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
     let content_bytes = helpers::compute_content_bytes(ctx.payload);
     processing::process_inserted_event(&processing::ProcessInsertedEventParams {
         pool: ctx.pool,
+        services: ctx.services,
         user_id: ctx.user_id,
         plugin_id: ctx.plugin_id,
         session_id: &SessionId::new(ctx.payload.session_id()),

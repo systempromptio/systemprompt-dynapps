@@ -21,6 +21,9 @@ use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 pub(super) async fn marketplace_context_middleware(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     mut request: Request,
     next: Next,
 ) -> AdminResult<Response> {
@@ -28,6 +31,7 @@ pub(super) async fn marketplace_context_middleware(
         let path = systemprompt_web_admin_core::request::get_services_path()?;
         let plugins = systemprompt_web_admin_catalog::repositories::marketplace::plugins::list_plugins_for_user(
             &pool,
+            &services,
             &path,
             &user_ctx.user_id,
         )

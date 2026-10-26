@@ -20,6 +20,7 @@ use systemprompt::traits::RepositoryError;
 
 use crate::connections::Connection;
 use crate::connections::source::get_connections;
+use crate::extension_services::ExtensionServices;
 
 const CONNECTOR_RULE_TYPE: RuleType = RuleType::extension_static("connector");
 
@@ -42,12 +43,13 @@ pub const fn connector_dimension() -> SubjectDimension {
 #[derive(Debug)]
 pub struct ConnectorAttributeProvider {
     pool: Arc<PgPool>,
+    services: ExtensionServices,
 }
 
 impl ConnectorAttributeProvider {
     #[must_use]
-    pub const fn new(pool: Arc<PgPool>) -> Self {
-        Self { pool }
+    pub const fn new(pool: Arc<PgPool>, services: ExtensionServices) -> Self {
+        Self { pool, services }
     }
 }
 
@@ -58,7 +60,7 @@ impl SubjectAttributeProvider for ConnectorAttributeProvider {
     }
 
     async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
-        let snapshot = get_connections(&self.pool, user_id)
+        let snapshot = get_connections(&self.pool, &self.services, user_id)
             .await
             .map_err(connection_read_failed)?;
         Ok(snapshot
@@ -80,7 +82,9 @@ fn connection_read_failed(error: crate::error::AdminError) -> AuthzError {
 }
 
 systemprompt::governance::register_subject_attribute_provider!(|ctx| {
-    let provider: SharedSubjectAttributeProvider =
-        Arc::new(ConnectorAttributeProvider::new(Arc::clone(&ctx.pool)));
+    let provider: SharedSubjectAttributeProvider = Arc::new(ConnectorAttributeProvider::new(
+        Arc::clone(&ctx.pool),
+        ExtensionServices::from_hook(ctx),
+    ));
     provider
 });

@@ -48,7 +48,7 @@ pub(crate) async fn list_agents(
     let held = if ctx.is_console {
         marketplaces
     } else {
-        list_entitled_marketplaces(pool, &ctx, &marketplaces).await?
+        list_entitled_marketplaces(pool, &state.services, &ctx, &marketplaces).await?
     };
     let usable: BTreeSet<String> = all_farms
         .iter()

@@ -12,6 +12,7 @@ use systemprompt_web_admin_core::types::{ENTITY_PLUGIN, ENTITY_SKILL, UserContex
 
 pub(crate) async fn panel(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     user_ctx: &UserContext,
     entity: (&str, &str),
     why: Option<&str>,
@@ -23,6 +24,7 @@ pub(crate) async fn panel(
     };
     build_entity_panel(
         pool,
+        services,
         PanelRequest {
             entity_type: entity.0,
             entity_id: entity.1,

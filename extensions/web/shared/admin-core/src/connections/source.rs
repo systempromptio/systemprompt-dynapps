@@ -19,9 +19,18 @@ use crate::error::{AdminError, AdminResult};
 /// not object-safe.
 #[async_trait::async_trait]
 pub trait ConnectionSnapshotSource: Send + Sync {
-    async fn snapshot(&self, pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot>;
+    async fn snapshot(
+        &self,
+        pool: &PgPool,
+        services: &crate::extension_services::ExtensionServices,
+        user: &UserId,
+    ) -> AdminResult<ConnectionSnapshot>;
 
-    fn display_name(&self, provider: &str) -> String;
+    fn display_name(
+        &self,
+        services: &crate::extension_services::ExtensionServices,
+        provider: &str,
+    ) -> String;
 }
 
 #[derive(Clone, Copy)]
@@ -35,20 +44,27 @@ impl std::fmt::Debug for ConnectionSourceRegistration {
 
 inventory::collect!(ConnectionSourceRegistration);
 
-pub async fn get_connections(pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot> {
+pub async fn get_connections(
+    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
+    user: &UserId,
+) -> AdminResult<ConnectionSnapshot> {
     let source = inventory::iter::<ConnectionSourceRegistration>
         .into_iter()
         .next()
         .ok_or_else(|| AdminError::internal("no connection snapshot source is registered"))?;
-    source.0.snapshot(pool, user).await
+    source.0.snapshot(pool, services, user).await
 }
 
-pub fn connector_display_name(provider: &str) -> String {
+pub fn connector_display_name(
+    services: &crate::extension_services::ExtensionServices,
+    provider: &str,
+) -> String {
     inventory::iter::<ConnectionSourceRegistration>
         .into_iter()
         .next()
         .map_or_else(
             || provider.to_owned(),
-            |source| source.0.display_name(provider),
+            |source| source.0.display_name(services, provider),
         )
 }

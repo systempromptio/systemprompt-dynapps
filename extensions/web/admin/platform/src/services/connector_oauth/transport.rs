@@ -12,11 +12,15 @@ pub fn client() -> AdminResult<reqwest::Client> {
         .map_err(AdminError::internal)
 }
 
-pub async fn authorize(consent: Consent<'_>, provider: Provider) -> AdminResult<(String, Grant)> {
-    if !provider.configured() {
+pub async fn authorize(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    consent: Consent<'_>,
+    provider: Provider,
+) -> AdminResult<(String, Grant)> {
+    if !provider.configured(&services.config()) {
         return Err(AdminError::Unavailable("Connector not configured".into()));
     }
-    super::generic::authorize(consent, provider).await
+    super::generic::authorize(services, consent, provider).await
 }
 
 pub(super) use super::tokens::refresh;

@@ -147,6 +147,9 @@ struct ManifestResponse {
 }
 
 pub(crate) async fn public_manifest_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Path(token): Path<String>,
 ) -> AdminResult<Response> {
@@ -182,7 +185,7 @@ pub(crate) async fn public_manifest_handler(
         ));
     }
 
-    Ok(Json(build_user_manifest(&pool, &user_id).await?).into_response())
+    Ok(Json(build_user_manifest(&pool, &services, &user_id).await?).into_response())
 }
 
 fn opt_desc(desc: String) -> Option<String> {
@@ -230,12 +233,17 @@ fn collect_manifest_sections(
     sections_in
 }
 
-async fn build_user_manifest(pool: &PgPool, user_id: &UserId) -> AdminResult<ManifestResponse> {
+async fn build_user_manifest(
+    pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    user_id: &UserId,
+) -> AdminResult<ManifestResponse> {
     let services_path = shared::get_services_path()?;
     let sections_in = collect_manifest_sections(&services_path);
 
     let matrix = systemprompt_web_admin_core::repositories::entitlement::filter_catalog_for_user(
         pool,
+        services,
         user_id,
         sections_in,
     )

@@ -23,9 +23,7 @@ use systemprompt::governance::authz::{
     ParentChainIndex, ResolveBase,
 };
 use systemprompt::identifiers::{RouteId, UserId};
-use systemprompt::loader::ServicesBootstrap;
 
-use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 use crate::repositories::config::acl_detect;
@@ -49,6 +47,9 @@ pub(crate) struct CatalogResponse {
 
 pub(crate) async fn for_user_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Extension(user_ctx): Extension<UserContext>,
     Path(user_id): Path<String>,
 ) -> AdminResult<Response> {
@@ -56,8 +57,10 @@ pub(crate) async fn for_user_handler(
     if !user_ctx.is_console && user_ctx.user_id != user_id {
         return Err(AdminError::Forbidden("Forbidden".to_owned()));
     }
-    let routes = systemprompt_web_admin_core::repositories::gateway_catalog::client_facing_routes_from_services()
-        .map_err(AdminError::internal)?;
+    let config = services.config();
+    let routes =
+        systemprompt_web_admin_core::repositories::gateway_catalog::client_facing_routes(&config)
+            .map_err(AdminError::internal)?;
 
     let user_roles =
         systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
@@ -67,17 +70,18 @@ pub(crate) async fn for_user_handler(
         .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?
         .roles;
 
-    let routes = collect_allowed_routes(&pool, &routes, &user_id, &user_roles).await?;
+    let routes = collect_allowed_routes(&services, &pool, &routes, &user_id, &user_roles).await?;
     Ok(Json(CatalogResponse { user_id, routes }).into_response())
 }
 
 async fn collect_allowed_routes(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     routes: &[GatewayRouteView],
     user_id: &UserId,
     user_roles: &[String],
 ) -> AdminResult<Vec<CatalogEntry>> {
-    let attributes = subject_attributes_for(pool, user_id).await?;
+    let attributes = (services).subject_attributes(user_id).await?;
     let mut allowed = Vec::with_capacity(routes.len());
     for route in routes {
         let route_id = RouteId::new(route.id.clone());
@@ -98,7 +102,7 @@ async fn collect_allowed_routes(
             default_included,
             parents: &[],
             attributes: &attributes,
-            dimensions: dimensions(pool),
+            dimensions: (services).dimensions(),
         })
         .permits()
         {
@@ -135,15 +139,20 @@ pub(crate) struct DetectResponse {
 
 pub(crate) async fn detect_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Extension(user_ctx): Extension<UserContext>,
     axum::extract::Query(query): axum::extract::Query<DetectQuery>,
 ) -> AdminResult<Response> {
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin only".to_owned()));
     }
-    let routes = systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_routes_from_services()
-        .map_err(AdminError::internal)?;
-    let emitted = detect_after_the_fact(&pool, &routes, query.since_minutes).await?;
+    let config = services.config();
+    let routes =
+        systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_routes(&config)
+            .map_err(AdminError::internal)?;
+    let emitted = detect_after_the_fact(&pool, &services, &routes, query.since_minutes).await?;
     Ok(Json(DetectResponse {
         emitted,
         since_minutes: query.since_minutes,
@@ -161,6 +170,7 @@ struct AclDetectAudit<'a> {
 
 pub(crate) async fn detect_after_the_fact(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     routes: &[GatewayRouteView],
     since_minutes: i64,
 ) -> Result<usize, systemprompt_web_admin_core::authz::AuthzReadError> {
@@ -168,7 +178,7 @@ pub(crate) async fn detect_after_the_fact(
     let repo = AccessControlRepository::from_pool(Arc::new(pool.clone()));
     let chains = ParentChainIndex::load(
         &repo,
-        Arc::new(ChainSources::from_services(ServicesBootstrap::get()?)),
+        Arc::new(ChainSources::from_services(&services.config())),
     )
     .await?;
 
@@ -177,7 +187,18 @@ pub(crate) async fn detect_after_the_fact(
         let route = systemprompt_web_admin_core::repositories::gateway_catalog::find_matching_route(
             routes, &row.model,
         );
-        let Some(reason) = deny_reason(pool, &repo, &chains, route, &row).await? else {
+        let Some(reason) = deny_reason(
+            pool,
+            PolicyRead {
+                services,
+                repo: &repo,
+                chains: &chains,
+            },
+            route,
+            &row,
+        )
+        .await?
+        else {
             continue;
         };
         record_detected_denial(pool, &row, route, &reason).await?;
@@ -186,10 +207,19 @@ pub(crate) async fn detect_after_the_fact(
     Ok(emitted)
 }
 
+struct PolicyRead<'a> {
+    services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
+    repo: &'a AccessControlRepository,
+    chains: &'a ParentChainIndex,
+}
+
 async fn deny_reason(
     pool: &PgPool,
-    repo: &AccessControlRepository,
-    chains: &ParentChainIndex,
+    PolicyRead {
+        services,
+        repo,
+        chains,
+    }: PolicyRead<'_>,
     route: Option<&GatewayRouteView>,
     row: &acl_detect::RecentAiRequest,
 ) -> Result<Option<DenyReason>, systemprompt_web_admin_core::authz::AuthzReadError> {
@@ -202,7 +232,7 @@ async fn deny_reason(
     else {
         return Ok(None);
     };
-    let attributes = subject_attributes_for(pool, &row.user_id).await?;
+    let attributes = (services).subject_attributes(&row.user_id).await?;
     let (kind, entity_id) = route.map_or((EntityKind::Model, row.model.as_str()), |route| {
         (EntityKind::GatewayRoute, route.id.as_str())
     });
@@ -220,7 +250,7 @@ async fn deny_reason(
             user_roles: &profile.roles,
             default_included,
             attributes: &attributes,
-            dimensions: dimensions(pool),
+            dimensions: (services).dimensions(),
             facts: DecisionFacts {
                 model: Some(&row.model),
                 provider: None,

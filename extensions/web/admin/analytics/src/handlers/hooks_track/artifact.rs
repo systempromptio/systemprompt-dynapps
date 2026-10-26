@@ -29,6 +29,7 @@ use super::dedup;
 
 pub(super) struct ToolResultIngestion<'a> {
     pub pool: &'a PgPool,
+    pub services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
     pub ingest: &'a Arc<ArtifactIngest>,
     pub user_id: &'a UserId,
     pub payload: &'a HookEventPayload,
@@ -67,7 +68,10 @@ pub(super) async fn ingest_tool_result(params: ToolResultIngestion<'_>) {
         .map(|reference| (SkillId::new(reference.clone()), SkillName::new(reference)));
 
     let (tool_name, server_name) =
-        match systemprompt_web_admin_core::util::mcp_tool_name::parse_mcp_tool_name(&tool_name) {
+        match systemprompt_web_admin_core::util::mcp_tool_name::parse_mcp_tool_name(
+            &params.services.config(),
+            &tool_name,
+        ) {
             Some(mcp) => (mcp.tool, Some(mcp.server)),
             None => (tool_name, None),
         };

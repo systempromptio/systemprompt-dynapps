@@ -88,11 +88,14 @@ pub(super) fn parse_access(s: &str) -> Option<Access> {
     }
 }
 
-pub(super) fn collect_entity_ids(entity_type: &str) -> AdminResult<Vec<String>> {
+pub(super) fn collect_entity_ids(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    entity_type: &str,
+) -> AdminResult<Vec<String>> {
     match entity_type {
         "gateway_route" => Ok(
             systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_route_ids(
-                systemprompt::loader::ServicesBootstrap::get()?,
+                &services.config(),
             ),
         ),
         "mcp_server" => {

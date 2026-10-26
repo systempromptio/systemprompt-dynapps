@@ -17,6 +17,7 @@ pub(super) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
             &db.db,
             Arc::clone(session_service),
             Arc::new(config.clone()),
+            db.services.view().clone(),
         )),
         Err(e) => {
             tracing::warn!(error = %e, "Profile config unavailable; SSO routes answer unavailable");

@@ -54,6 +54,7 @@ pub struct FarmState {
     pub instance: InstanceId,
     pub runs: Arc<RemoteRuns>,
     pub tasks: BackgroundTasks,
+    pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
 }
 
 impl std::fmt::Debug for FarmState {
@@ -79,6 +80,7 @@ pub struct FarmHost {
     pub instance: InstanceId,
     pub runs: Arc<RemoteRuns>,
     pub tasks: BackgroundTasks,
+    pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
 }
 
 impl std::fmt::Debug for FarmHost {
@@ -95,6 +97,7 @@ pub fn build_farm_state(
     paths: FarmPaths,
     gateway: GatewayEndpoints,
     limits: RunnerLimits,
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
 ) -> Arc<FarmState> {
     let artefacts = build_file_storage(FileStorageBackend::Local {
         root: paths.data_root.clone(),
@@ -109,6 +112,7 @@ pub fn build_farm_state(
         instance: InstanceId::new("local"),
         runs: Arc::new(RemoteRuns::default()),
         tasks: BackgroundTasks::new(),
+        services,
     })
 }
 
@@ -143,6 +147,7 @@ pub fn build_farm_state_with_ai(
         instance: host.instance,
         runs: host.runs,
         tasks: host.tasks,
+        services: host.services,
     })
 }
 

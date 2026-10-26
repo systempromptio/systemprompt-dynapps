@@ -10,10 +10,10 @@
 
 use std::sync::Arc;
 
-use axum::Router;
 use axum::extract::{Request, State};
 use axum::middleware::{self as axum_middleware, Next};
 use axum::response::Response;
+use axum::{Extension, Router};
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
 use systemprompt::prelude::PgPool;
@@ -52,6 +52,9 @@ pub(crate) fn farm_worker_router(runs: Arc<RemoteRuns>) -> Router {
 }
 
 async fn farm_context_middleware(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     mut request: Request,
     next: Next,
@@ -60,7 +63,7 @@ async fn farm_context_middleware(
     let Some(session) = admin::resolve_session(&pool, inputs).await? else {
         return Ok(next.run(request).await);
     };
-    let (ctx, tz) = admin::resolve_user_context(&pool, session).await;
+    let (ctx, tz) = admin::resolve_user_context(&services, &pool, session).await;
     request.extensions_mut().insert(ctx);
     Ok(with_viewer_tz(tz, next.run(request)).await)
 }
@@ -124,6 +127,10 @@ impl RunnerService for FarmRunner {
                 instance: app.config().instance_id.clone(),
                 runs: Arc::clone(&self.runs),
                 tasks: app.background_tasks().clone(),
+                services:
+                    systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(
+                        app.as_ref(),
+                    ),
             },
         );
         FarmRunnerService::new(state).run(ctx, shutdown).await;

@@ -98,6 +98,7 @@ pub(super) async fn audience(pool: &PgPool, faults: &mut Faults) -> Audience {
 
 #[derive(Clone, Copy)]
 pub(super) struct GridRead<'a> {
+    pub(super) services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
     pub(super) query: &'a AcQuery,
     pub(super) ledger: &'a [LedgerRuleRow],
 }
@@ -109,13 +110,17 @@ pub(super) async fn grid(
     read: GridRead<'_>,
     faults: &mut Faults,
 ) -> AudienceGridView {
-    let GridRead { query, ledger } = read;
+    let GridRead {
+        services,
+        query,
+        ledger,
+    } = read;
     if audience.subjects.is_empty() || sections.is_empty() {
         return AudienceGridView::default();
     }
     let resolved = faults.take(
         "audience grid",
-        resolve_subject_matrices(pool, &audience.subjects, sections).await,
+        resolve_subject_matrices(pool, services, &audience.subjects, sections).await,
     );
     if resolved.len() != audience.subjects.len() {
         return AudienceGridView::default();

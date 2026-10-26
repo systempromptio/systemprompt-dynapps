@@ -4,6 +4,7 @@
 //! groups in place and keeps each card's static "about" block.
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use crate::services::connector_oauth::callback_notice::CallbackNotice;
 use axum::extract::{Extension, Query, State};
@@ -18,8 +19,6 @@ use systemprompt_web_admin_core::connections::source::get_connections;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 #[derive(Debug, Default, Serialize)]
 struct ConnectorsSummary {
@@ -130,14 +129,17 @@ fn summarise(connections: &[Connection]) -> ConnectorsSummary {
     summary
 }
 
-fn group(connections: &[Connection]) -> Vec<GroupView> {
+fn group(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    connections: &[Connection],
+) -> Vec<GroupView> {
     GROUPS
         .iter()
         .map(|(key, title, note)| {
             let cards: Vec<_> = connections
                 .iter()
                 .filter(|c| group_key(c) == *key)
-                .map(card)
+                .map(|c| card(services, c))
                 .collect();
             GroupView {
                 key,
@@ -152,23 +154,29 @@ fn group(connections: &[Connection]) -> Vec<GroupView> {
 }
 
 pub(crate) async fn connectors_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Query(notice): Query<CallbackNotice>,
 ) -> AdminHtmlResult<Response> {
-    let snapshot = get_connections(&pool, &user_ctx.user_id).await?;
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
+    let snapshot = get_connections(&pool, &services, &user_ctx.user_id).await?;
     let connections = snapshot.connections;
     let view = ConnectorsPageView {
         page: "connectors",
-        callback_notice: notice.message(),
+        callback_notice: notice.message(&services),
         title: "Connectors",
         user_email: user_ctx.email.as_str().to_owned(),
         user_id: user_ctx.user_id.clone(),
         summary: summarise(&connections),
         has_connectors: !connections.is_empty(),
-        groups: group(&connections),
+        groups: group(&services, &connections),
         breadcrumbs: vec![
             BreadcrumbView::link("Account", "/admin/profile"),
             BreadcrumbView::current("Connectors"),

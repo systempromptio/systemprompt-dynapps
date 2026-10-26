@@ -85,6 +85,9 @@ const fn unix(ts: DateTime<Utc>) -> i64 {
 }
 
 pub(crate) async fn bridge_whoami_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Extension(keys): Extension<SigningKeys>,
     headers: HeaderMap,
@@ -111,8 +114,10 @@ pub(crate) async fn bridge_whoami_handler(
 
     let is_admin = systemprompt_web_admin_core::types::roles_grant_manage(&envelope.roles);
 
-    let connections =
-        systemprompt_web_admin_core::connections::source::get_connections(&pool, &user_id).await?;
+    let connections = systemprompt_web_admin_core::connections::source::get_connections(
+        &pool, &services, &user_id,
+    )
+    .await?;
     Ok(Json(BridgeWhoamiResponse {
         connections,
         provider: envelope

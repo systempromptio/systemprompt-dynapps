@@ -10,6 +10,7 @@
 
 use std::sync::Arc;
 
+use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
@@ -41,6 +42,9 @@ pub(crate) struct TabQuery {
 }
 
 pub(crate) async fn group_detail_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(group_id): Path<GroupId>,
@@ -83,7 +87,7 @@ pub(crate) async fn group_detail_page(
         },
         overview: load_overview(&pool, &group_id, active, &mut faults).await,
         members: load_members(&pool, &group_id, active, &shell.user, &mut faults).await,
-        access: load_access(&pool, &group_id, active, &mut faults).await,
+        access: load_access(&services, &pool, &group_id, active, &mut faults).await,
         projects: load_projects(&pool, &group_id, active, &mut faults).await,
         mappings: load_mappings(&pool, &group_id, active, &shell.user, &mut faults).await,
         active_tab: active.to_owned(),
@@ -183,6 +187,7 @@ async fn assign_targets(pool: &PgPool, faults: &mut Faults) -> Vec<MemberSetChip
 }
 
 async fn load_access(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     group_id: &GroupId,
     active: &str,
@@ -191,7 +196,7 @@ async fn load_access(
     if active != tabs::ACCESS {
         return None;
     }
-    Some(data::load_access(pool, group_id, faults).await)
+    Some(data::load_access(services, pool, group_id, faults).await)
 }
 
 async fn load_projects(

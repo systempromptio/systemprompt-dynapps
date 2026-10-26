@@ -18,7 +18,7 @@ use super::shared::load_farm;
 use crate::repositories::evals;
 use crate::repositories::rows::EvalRunRow;
 use crate::services::entitlement::{is_farm_owner, require_farm_access};
-use crate::services::evals::{EvalHistoryPoint, list_visible_history, parse_since};
+use crate::services::evals::{EvalHistoryPoint, HistoryScope, list_visible_history, parse_since};
 use crate::state::FarmState;
 use crate::types::{EvalSuiteId, FarmAgentId, FarmId};
 
@@ -68,8 +68,17 @@ pub(crate) async fn eval_history(
     })?;
     let farm = present(query.farm).map(FarmId::new);
     let agent = present(query.agent).map(FarmAgentId::new);
-    let points =
-        list_visible_history(&state.pool, &ctx, farm.as_ref(), agent.as_ref(), since).await?;
+    let points = list_visible_history(
+        &state.pool,
+        &state.services,
+        &ctx,
+        HistoryScope {
+            farm: farm.as_ref(),
+            agent: agent.as_ref(),
+            since,
+        },
+    )
+    .await?;
     Ok(Json(HistoryResponse { since, points }).into_response())
 }
 
@@ -83,7 +92,7 @@ pub(crate) async fn list_suite_runs(
         .await?
         .ok_or_else(|| AdminError::NotFound(format!("eval suite {}", suite_id.as_str())))?;
     let farm = load_farm(&state.pool, &suite.farm_id).await?;
-    require_farm_access(&state.pool, &ctx, &farm).await?;
+    require_farm_access(&state.pool, &state.services, &ctx, &farm).await?;
     let sees_all = ctx.is_console || is_farm_owner(&ctx, &farm);
     let limit = query
         .limit

@@ -146,6 +146,9 @@ async fn scoped_cards(
 }
 
 pub(crate) async fn sync_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     page: Page,
     Extension(core_planes): Extension<CorePlanes>,
     State(pool): State<Arc<PgPool>>,
@@ -167,7 +170,7 @@ pub(crate) async fn sync_page(
     let (marketplaces, history) = scoped_cards(&pool, &core_planes, &user_ctx).await?;
     let tab = SyncTab::for_viewer(is_participant, query.tab.as_deref());
     let access_review = if tab == SyncTab::Access {
-        Some(access_review::access_review(&pool, &core_planes).await?)
+        Some(access_review::access_review(&services, &pool, &core_planes).await?)
     } else {
         None
     };

@@ -124,6 +124,7 @@ impl FarmRunHandler {
                 plugin_id: request.plugin_id.clone(),
                 limits: RunCredentialLimits {
                     max_budget_usd: cost_window::run_cost_window_usd(
+                        &self.state.services.catalog,
                         request.max_budget_usd,
                         request.model.as_deref(),
                     ),

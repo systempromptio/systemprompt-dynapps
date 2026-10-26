@@ -16,6 +16,7 @@ mod workspace_grant;
 
 use std::sync::Arc;
 
+use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
@@ -55,6 +56,9 @@ fn may_open_profile(viewer: &UserContext, user_id_raw: &str) -> bool {
 }
 
 pub(crate) async fn user_detail_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(user_id_raw): Path<String>,
@@ -83,6 +87,7 @@ pub(crate) async fn user_detail_page(
     });
 
     let data = Box::pin(fill_active_tab(
+        &services,
         ActiveTabRead {
             pool: &pool,
             user_id: &user_id,
@@ -117,6 +122,7 @@ struct ActiveTabRead<'a> {
 }
 
 async fn fill_active_tab(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     read: ActiveTabRead<'_>,
     mut data: UserDetailContext,
     faults: &mut Faults,
@@ -146,7 +152,7 @@ async fn fill_active_tab(
         },
         "access" => {
             data.access = Some(view::access_tab(
-                load::load_access(pool, user_id, faults).await,
+                load::load_access(services, pool, user_id, faults).await,
                 user_id,
             ));
         },

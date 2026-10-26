@@ -50,6 +50,9 @@ struct AuthMeResponse {
 }
 
 pub(super) async fn user_context_middleware(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     mut request: Request,
     next: Next,
@@ -60,7 +63,7 @@ pub(super) async fn user_context_middleware(
     else {
         return Ok(next.run(request).await);
     };
-    let (ctx, tz) = resolve_user_context(&pool, session).await;
+    let (ctx, tz) = resolve_user_context(&services, &pool, session).await;
     request.extensions_mut().insert(ctx);
     Ok(with_viewer_tz(tz, next.run(request)).await)
 }
@@ -104,6 +107,7 @@ pub(crate) async fn resolve_session(
 }
 
 pub(crate) async fn resolve_user_context(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     session: CookieSession,
 ) -> (UserContext, Tz) {
@@ -117,7 +121,7 @@ pub(crate) async fn resolve_user_context(
     let participation = if is_console {
         Participation::default()
     } else {
-        find_participation(pool, &session.user_id, &group_ids, &project_ids).await
+        find_participation(pool, services, &session.user_id, &group_ids, &project_ids).await
     };
 
     let ctx = UserContext {
@@ -167,12 +171,13 @@ async fn find_access_profile(
 
 async fn find_participation(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     user_id: &UserId,
     group_ids: &[String],
     project_ids: &[String],
 ) -> Participation {
     systemprompt_web_admin_core::repositories::scope::participation::get_participation(
-        pool, user_id, group_ids, project_ids,
+        pool, services, user_id, group_ids, project_ids,
     )
     .await
     // Why: fail-soft-ok: unresolved participation grants no scoped access, so

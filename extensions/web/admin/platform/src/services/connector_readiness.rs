@@ -17,15 +17,16 @@ use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(crate) async fn probe_session_connection(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     user: &UserId,
     provider: &Provider,
 ) -> AdminResult<VerificationReport> {
+    let config = services.config();
     let scopes = provider
-        .session_scopes()
+        .session_scopes(&config)
         .ok_or_else(|| AdminError::BadRequest("Not a session-attested connector".into()))?;
-    let server = systemprompt::loader::ServicesBootstrap::get()
-        .map_err(AdminError::internal)?
+    let server = config
         .mcp_servers
         .get(provider.slug())
         .filter(|server| server.enabled)

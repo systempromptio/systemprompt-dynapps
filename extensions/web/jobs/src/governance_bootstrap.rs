@@ -70,7 +70,10 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let services_path = composed_services_root()?;
 
     let governance = check_governance_config(&services_path)?;
-    check_judge_config()?;
+    check_judge_config(
+        &ctx.get::<systemprompt::manifest::services::ServicesView>()?
+            .config(),
+    )?;
 
     let pool = db_pool.write_pool();
     let planes = reconcile_all(&pool)
@@ -165,9 +168,8 @@ pub fn check_governance_config(
 }
 
 #[doc(hidden)]
-pub fn check_judge_config() -> Result<(), JobError> {
-    let services = systemprompt::loader::ServicesBootstrap::get()?;
-    let owner = services
+pub fn check_judge_config(config: &systemprompt::manifest::ServicesConfig) -> Result<(), JobError> {
+    let owner = config
         .plugins
         .values()
         .find(|p| p.enabled && p.hooks.judge)

@@ -48,15 +48,33 @@ pub(crate) async fn list_access_rules_handler(
     Ok(Json(RulesResponse { rules }).into_response())
 }
 
+pub(crate) struct RuleWriteDeps {
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    tasks: BackgroundTasks,
+}
+
+impl<S: Send + Sync> axum::extract::FromRequestParts<S> for RuleWriteDeps {
+    type Rejection = axum::extract::rejection::ExtensionRejection;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let Extension(services) = Extension::from_request_parts(parts, state).await?;
+        let Extension(tasks) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self { services, tasks })
+    }
+}
+
 pub(crate) async fn update_entity_rules_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
-    Extension(tasks): Extension<BackgroundTasks>,
+    RuleWriteDeps { services, tasks }: RuleWriteDeps,
     Path((entity_type, entity_id)): Path<(String, String)>,
     Json(body): Json<UpdateEntityRulesRequest>,
 ) -> AdminResult<Response> {
     let kind = editable_entity_kind(&entity_type)?;
-    registered_routes_from_services()?.require(kind, &entity_id)?;
+    registered_routes_from_services(&services.config()).require(kind, &entity_id)?;
     require_band_justification(&body.rules)?;
 
     let rules = systemprompt_web_admin_core::repositories::entitlement::set_entity_rules(
@@ -84,11 +102,14 @@ pub(crate) async fn update_entity_rules_handler(
 }
 
 pub(crate) async fn bulk_assign_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     Json(body): Json<BulkAssignRequest>,
 ) -> AdminResult<Response> {
-    let registered = registered_routes_from_services()?;
+    let registered = registered_routes_from_services(&services.config());
     let entities = body
         .entities
         .iter()
@@ -160,16 +181,19 @@ fn registered_entity(
 }
 
 pub(crate) async fn user_matrix_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Path(user_id): Path<String>,
 ) -> AdminResult<Response> {
     let services_path = shared::get_services_path()?;
 
-    let sections = build_matrix_sections(&services_path);
+    let sections = build_matrix_sections(&services, &services_path);
 
     let user_id = UserId::new(user_id);
     let matrix = systemprompt_web_admin_core::repositories::entitlement::resolve_user_matrix(
-        &pool, &user_id, sections,
+        &pool, &services, &user_id, sections,
     )
     .await?
     .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?;
@@ -177,6 +201,7 @@ pub(crate) async fn user_matrix_handler(
 }
 
 pub(crate) fn build_matrix_sections(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     services_path: &std::path::Path,
 ) -> Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput> {
     let mut sections: Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput> =
@@ -195,7 +220,8 @@ pub(crate) fn build_matrix_sections(
         ));
     }
 
-    match systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels_from_services(
+    match systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels(
+        &services.config(),
     ) {
         Err(e) => {
             tracing::error!(error = %e, "gateway routes unavailable for the access-control matrix");

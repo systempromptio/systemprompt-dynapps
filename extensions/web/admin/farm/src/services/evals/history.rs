@@ -72,16 +72,24 @@ pub fn parse_since(raw: &str, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
     Some(at.max(floor))
 }
 
+/// The farm, agent and window an eval-history read is narrowed to.
+#[derive(Debug, Clone, Copy)]
+pub struct HistoryScope<'a> {
+    pub farm: Option<&'a FarmId>,
+    pub agent: Option<&'a FarmAgentId>,
+    pub since: DateTime<Utc>,
+}
+
 pub async fn list_visible_history(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     ctx: &UserContext,
-    farm: Option<&FarmId>,
-    agent: Option<&FarmAgentId>,
-    since: DateTime<Utc>,
+    scope: HistoryScope<'_>,
 ) -> FarmResult<Vec<EvalHistoryPoint>> {
+    let HistoryScope { farm, agent, since } = scope;
     let mut usable: Vec<FarmId> = Vec::new();
     for row in farms::list_farms(pool).await? {
-        if farm.is_none_or(|f| *f == row.id) && may_use_farm(pool, ctx, &row).await? {
+        if farm.is_none_or(|f| *f == row.id) && may_use_farm(pool, services, ctx, &row).await? {
             usable.push(row.id);
         }
     }

@@ -22,22 +22,28 @@ struct Registration {
     client_secret: String,
 }
 
-pub fn binding(provider: &Provider) -> AdminResult<String> {
+pub fn binding(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    provider: &Provider,
+) -> AdminResult<String> {
     let settings = provider
-        .settings()
+        .settings(&services.config())
         .ok_or_else(|| AdminError::Unavailable("OAuth setup required".into()))?;
-    let bytes =
-        serde_json::to_vec(&(provider.endpoint(), settings)).map_err(AdminError::internal)?;
+    let bytes = serde_json::to_vec(&(provider.endpoint(&services.config()), settings))
+        .map_err(AdminError::internal)?;
     Ok(URL_SAFE_NO_PAD.encode(Sha256::digest(bytes)))
 }
 
-pub fn validate_grant(grant: &Grant) -> AdminResult<()> {
-    if grant.configuration_binding != binding(&grant.provider)? {
+pub fn validate_grant(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &Grant,
+) -> AdminResult<()> {
+    if grant.configuration_binding != binding(services, &grant.provider)? {
         return Err(AdminError::Unauthorized(
             "Connector configuration changed; reconnect required".into(),
         ));
     }
-    trusted_endpoint(&grant.provider, &grant.token_endpoint)?;
+    trusted_endpoint(services, &grant.provider, &grant.token_endpoint)?;
     Ok(())
 }
 
@@ -50,12 +56,17 @@ pub struct Consent<'a> {
     pub verifier: String,
 }
 
-pub async fn authorize(consent: Consent<'_>, provider: Provider) -> AdminResult<(String, Grant)> {
+pub async fn authorize(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    consent: Consent<'_>,
+    provider: Provider,
+) -> AdminResult<(String, Grant)> {
     let callback = provider.callback()?;
-    authorize_with_client(consent, provider, &callback, &client()?).await
+    authorize_with_client(services, consent, provider, &callback, &client()?).await
 }
 
 pub async fn authorize_with_client(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     consent: Consent<'_>,
     provider: Provider,
     callback: &str,
@@ -67,22 +78,23 @@ pub async fn authorize_with_client(
         verifier,
     } = consent;
     let settings = provider
-        .settings()
+        .settings(&services.config())
         .ok_or_else(|| AdminError::Unavailable("OAuth setup required".into()))?;
     if settings.adapter != "generic" {
         return Err(AdminError::Unavailable(
             "Unsupported connector adapter".into(),
         ));
     }
-    let meta = metadata(http, &provider).await?;
+    let meta = metadata(services, http, &provider).await?;
     let scope = settings.scopes.join(" ");
-    let (registration, method) = register_client(&provider, &meta, callback, http).await?;
+    let (registration, method) =
+        register_client(services, &provider, &meta, callback, http).await?;
     if registration.client_id.as_str().is_empty() {
         return Err(AdminError::Unavailable(
             "OAuth client registration has no identifier".into(),
         ));
     }
-    let mut url = trusted_endpoint(&provider, &meta.authorization_endpoint)?;
+    let mut url = trusted_endpoint(services, &provider, &meta.authorization_endpoint)?;
     url.query_pairs_mut().extend_pairs([
         ("response_type", "code"),
         ("client_id", registration.client_id.as_str()),
@@ -95,14 +107,14 @@ pub async fn authorize_with_client(
                 .encode(Sha256::digest(verifier.as_bytes()))
                 .as_str(),
         ),
-        ("resource", provider.endpoint().as_str()),
+        ("resource", provider.endpoint(&services.config()).as_str()),
         ("scope", scope.as_str()),
     ]);
     url.query_pairs_mut()
         .extend_pairs(settings.authorization_params.iter());
     let grant = Grant {
         user: user.into(),
-        configuration_binding: binding(&provider)?,
+        configuration_binding: binding(services, &provider)?,
         authorization_issuer: meta.issuer,
         token_auth_method: method.into(),
         provider,
@@ -125,9 +137,13 @@ pub async fn authorize_with_client(
     Ok((url.into(), grant))
 }
 
-pub async fn validate_refresh(grant: &Grant, http: &reqwest::Client) -> AdminResult<()> {
-    validate_grant(grant)?;
-    let metadata = metadata(http, &grant.provider).await?;
+pub async fn validate_refresh(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &Grant,
+    http: &reqwest::Client,
+) -> AdminResult<()> {
+    validate_grant(services, grant)?;
+    let metadata = metadata(services, http, &grant.provider).await?;
     if (metadata.issuer.as_str(), metadata.token_endpoint.as_str())
         != (
             grant.authorization_issuer.as_str(),
@@ -142,13 +158,14 @@ pub async fn validate_refresh(grant: &Grant, http: &reqwest::Client) -> AdminRes
 }
 
 async fn register_client(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     provider: &Provider,
     meta: &super::generic_discovery::AuthorizationMetadata,
     callback: &str,
     http: &reqwest::Client,
 ) -> AdminResult<(Registration, &'static str)> {
     let settings = provider
-        .settings()
+        .settings(&services.config())
         .ok_or_else(|| AdminError::Unavailable("OAuth setup required".into()))?;
     let scope = settings.scopes.join(" ");
     let registration = if let Some(key) = &settings.client_id_secret {
@@ -182,7 +199,7 @@ async fn register_client(
         })?;
         let response = http
             .post(validate_outbound_url(
-                trusted_endpoint(provider, endpoint)?.as_str(),
+                trusted_endpoint(services, provider, endpoint)?.as_str(),
             )?)
             .json(&serde_json::json!({
                 "client_name": "Dynapps systemprompt", "redirect_uris": [callback],

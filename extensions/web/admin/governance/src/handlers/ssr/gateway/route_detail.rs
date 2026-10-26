@@ -8,6 +8,7 @@
 
 use std::sync::Arc;
 
+use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Serialize;
@@ -15,7 +16,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::RouteId;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
-use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels_from_services;
+use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels;
 use systemprompt_web_admin_core::ssr::entity_panel::{
     EntityAccessView, PanelRequest, build_entity_panel,
 };
@@ -55,6 +56,9 @@ struct GatewayRoutePageData {
 pub(crate) async fn gateway_route_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Path(route_id): Path<RouteId>,
     Query(query): Query<RouteQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -62,7 +66,7 @@ pub(crate) async fn gateway_route_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
     let mut faults = Faults::new();
-    let labels = faults.take("route labels", get_route_labels_from_services());
+    let labels = faults.take("route labels", get_route_labels(&services.config()));
     let route = labels
         .routes
         .iter()
@@ -71,6 +75,7 @@ pub(crate) async fn gateway_route_page(
     let page_url = format!("{ROUTES_URL}/{}", urlencoding::encode(route_id.as_str()));
     let access = build_entity_panel(
         &pool,
+        &services,
         PanelRequest {
             entity_type: ENTITY_GATEWAY_ROUTE,
             entity_id: route_id.as_str(),

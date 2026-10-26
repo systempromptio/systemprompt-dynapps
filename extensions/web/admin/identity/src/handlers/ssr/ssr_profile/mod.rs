@@ -84,6 +84,9 @@ fn side_call_note(summary: &ConversationSummary) -> Option<String> {
 }
 
 pub(crate) async fn profile_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
@@ -103,7 +106,7 @@ pub(crate) async fn profile_page(
                 timezone: s.timezone,
             },
         );
-    let data = bridge_profile::build_bridge_profile_data(pool, &user_ctx).await?;
+    let data = bridge_profile::build_bridge_profile_data(&services, pool, &user_ctx).await?;
     let conversations = &data.usage.conversations;
     let recent_conversations: Vec<_> = conversations.recent.iter().map(conversation_view).collect();
     let view = ProfilePageView {

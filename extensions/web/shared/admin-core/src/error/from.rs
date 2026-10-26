@@ -77,3 +77,20 @@ impl From<systemprompt::analytics::AnalyticsError> for AdminError {
         }
     }
 }
+
+impl From<systemprompt::models::authz::RuleTypeError> for AdminError {
+    fn from(value: systemprompt::models::authz::RuleTypeError) -> Self {
+        Self::BadRequest(value.0)
+    }
+}
+
+impl From<systemprompt::models::authz::SubjectSourceError> for AdminError {
+    fn from(value: systemprompt::models::authz::SubjectSourceError) -> Self {
+        match value {
+            systemprompt::models::authz::SubjectSourceError::NotReady => {
+                Self::Unavailable("Authorization is not ready yet".into())
+            },
+            other => Self::Internal(Box::new(other)),
+        }
+    }
+}

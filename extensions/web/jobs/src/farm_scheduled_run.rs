@@ -57,6 +57,10 @@ impl FarmScheduledRunJob {
             instance: app.config().instance_id.clone(),
             runs: queue_only_runs(),
             tasks: app.background_tasks().clone(),
+            services:
+                systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(
+                    app.as_ref(),
+                ),
         };
         let state = build_farm_state_with_ai(
             db.write_pool(),

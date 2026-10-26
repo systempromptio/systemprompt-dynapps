@@ -176,13 +176,16 @@ pub(crate) async fn delete_entity_rule_handler(
 }
 
 pub(crate) async fn set_entity_default_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     Path((entity_type, entity_id)): Path<(String, String)>,
     Json(body): Json<DefaultIncludedBody>,
 ) -> AdminResult<Response> {
     let kind = validate_entity_type(&entity_type)?;
-    registered_routes_from_services()?.require(kind, &entity_id)?;
+    registered_routes_from_services(&services.config()).require(kind, &entity_id)?;
     let entity = EntityRef::from_kind_and_id(kind, &entity_id)
         .map_err(|error| AdminError::unprocessable("entity", error))?;
     repo(&pool)

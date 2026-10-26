@@ -26,6 +26,7 @@ pub(crate) struct DbHandles {
     pub db: DbPool,
     pub farm: Arc<FarmState>,
     pub files: Arc<dyn FileStorage>,
+    pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
 }
 
 impl DbHandles {
@@ -45,6 +46,8 @@ impl DbHandles {
         ));
         let paths = app_paths();
         let files = ctx.file_storage();
+        let services =
+            systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx);
         let farm = super::farm_public::build_state(
             Arc::clone(&write),
             paths.as_ref(),
@@ -53,6 +56,7 @@ impl DbHandles {
                 instance: ctx.instance_id(),
                 runs,
                 tasks: ctx.background_tasks(),
+                services: services.clone(),
             },
         );
         super::farm_public::start(&farm, paths.as_ref());
@@ -63,6 +67,7 @@ impl DbHandles {
             db,
             farm,
             files,
+            services,
         })
     }
 }

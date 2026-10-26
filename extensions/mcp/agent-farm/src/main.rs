@@ -91,6 +91,7 @@ fn build_env(ctx: &AppContext) -> Env {
                 ctx.ai_service_arc(),
                 systemprompt_web_admin_farm::state::FarmHost {
                     tasks: ctx.background_tasks().clone(),
+                    services: systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx),
                     artefacts: Arc::clone(ctx.file_storage()),
                     instance: ctx.config().instance_id.clone(),
                     runs: Arc::new(
@@ -101,6 +102,7 @@ fn build_env(ctx: &AppContext) -> Env {
         ),
         pool,
         services_path,
+        services: systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx),
     }
 }
 

@@ -17,6 +17,7 @@ mod views;
 
 use std::sync::Arc;
 
+use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use chrono::{Duration, Utc};
@@ -146,6 +147,9 @@ impl SkillDetailQuery {
 pub(crate) async fn skill_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Path(skill): Path<String>,
     Query(query): Query<SkillDetailQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -184,7 +188,7 @@ pub(crate) async fn skill_page(
             PAGE_SIZE,
             query.page() * PAGE_SIZE
         ),
-        get_marketplace_audience(&pool, &index.marketplaces),
+        get_marketplace_audience(&pool, &services, &index.marketplaces),
         list_skill_runs(&pool, &window, &run_filter, RUNS_READ_FOR_MEDIANS),
     );
     let (facts, daily, breakdown, (conversations, total), audience, runs) =

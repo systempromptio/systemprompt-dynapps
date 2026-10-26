@@ -25,18 +25,20 @@ pub(super) struct CallbackSession<'a> {
 }
 
 pub(super) async fn finish(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     session: CallbackSession<'_>,
     grant: Grant,
     code: &str,
 ) -> AdminResult<Response> {
     let reference = Uuid::new_v4();
     let span = tracing::info_span!("connector_callback", user_id = %session.user, provider = grant.provider.slug(), trace_id = %reference);
-    complete(session, grant, code, reference)
+    complete(services, session, grant, code, reference)
         .instrument(span)
         .await
 }
 
 async fn complete(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     session: CallbackSession<'_>,
     mut grant: Grant,
     code: &str,
@@ -50,11 +52,11 @@ async fn complete(
     } = session;
     let mut report = VerificationReport::for_provider(grant.provider.slug());
     let started = Instant::now();
-    let exchange = oauth::exchange_classified(&mut grant, code).await;
+    let exchange = oauth::exchange_classified(services, &mut grant, code).await;
     let outcome = match exchange {
         Ok(()) => {
             report.record("token", started, &Ok("Authorization exchanged".into()));
-            oauth::verify::verify_reporting(&mut grant, &oauth::client()?, &mut report)
+            oauth::verify::verify_reporting(services, &mut grant, &oauth::client()?, &mut report)
                 .await
                 .map_err(FlowFailure::verification)
         },

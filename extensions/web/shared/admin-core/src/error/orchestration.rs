@@ -7,8 +7,7 @@ impl From<systemprompt::system::managed::OrchestrationError> for AdminError {
         use systemprompt::system::managed::OrchestrationError;
         match error {
             OrchestrationError::Managed(error) => error.into(),
-            error @ (OrchestrationError::InventoryLoad(_)
-            | OrchestrationError::CredentialsUnavailable(_)
+            error @ (OrchestrationError::CredentialsUnavailable(_)
             | OrchestrationError::CredentialUnresolved
             | OrchestrationError::NotGitSource) => Self::ConflictingState {
                 context: "managed source",

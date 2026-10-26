@@ -106,11 +106,12 @@ async fn catalog(
     }
     let sections_in = sections_for(ctx, only)?;
     let viewer = &ctx.viewer;
-    let matrix = filter_catalog_for_user(ctx.pool()?, &viewer.user_id, sections_in)
-        .await?
-        .ok_or_else(|| {
-            ToolError::Failure("the signed-in user has no entitlement record".to_owned())
-        })?;
+    let matrix =
+        filter_catalog_for_user(ctx.pool()?, ctx.services()?, &viewer.user_id, sections_in)
+            .await?
+            .ok_or_else(|| {
+                ToolError::Failure("the signed-in user has no entitlement record".to_owned())
+            })?;
     let sections: Vec<CatalogSectionOutput> = matrix
         .sections
         .into_iter()

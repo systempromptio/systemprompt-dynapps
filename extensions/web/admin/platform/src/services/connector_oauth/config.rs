@@ -1,6 +1,7 @@
 //! Pinned provider resources and server-only application configuration.
 
 use serde::{Deserialize, Serialize};
+use systemprompt::manifest::ServicesConfig;
 use systemprompt::models::auth::Permission;
 use systemprompt::models::mcp::Deployment;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
@@ -37,10 +38,8 @@ impl Provider {
             Self::Generic(id) => id,
         }
     }
-    pub fn endpoint(&self) -> String {
-        systemprompt::loader::ServicesBootstrap::get()
-            .ok()
-            .and_then(|s| s.mcp_servers.get(self.slug()))
+    pub fn endpoint(&self, services: &ServicesConfig) -> String {
+        self.server(services)
             .and_then(|server| server.endpoint.clone())
             .unwrap_or_default()
     }
@@ -52,38 +51,33 @@ impl Provider {
             self.slug(),
         ))
     }
-    pub fn configured(&self) -> bool {
-        systemprompt::loader::ServicesBootstrap::get().is_ok_and(|services| {
-            services
-                .mcp_servers
-                .get(self.slug())
-                .is_some_and(|server| server.enabled)
-        })
+    pub fn configured(&self, services: &ServicesConfig) -> bool {
+        self.server(services).is_some_and(|server| server.enabled)
     }
-    pub fn requires_auth(&self) -> bool {
-        self.settings().is_some() || self.is_session_attested()
+    pub fn requires_auth(&self, services: &ServicesConfig) -> bool {
+        self.settings(services).is_some() || self.is_session_attested(services)
     }
-    fn server(&self) -> Option<&'static Deployment> {
-        systemprompt::loader::ServicesBootstrap::get()
-            .ok()?
-            .mcp_servers
-            .get(self.slug())
+    fn server<'a>(&self, services: &'a ServicesConfig) -> Option<&'a Deployment> {
+        services.mcp_servers.get(self.slug())
     }
-    pub fn settings(&self) -> Option<systemprompt::models::mcp::deployment::ConnectorConfig> {
-        self.server()?.connector.clone()
+    pub fn settings(
+        &self,
+        services: &ServicesConfig,
+    ) -> Option<systemprompt::models::mcp::deployment::ConnectorConfig> {
+        self.server(services)?.connector.clone()
     }
-    pub fn session_scopes(&self) -> Option<&'static [Permission]> {
-        if self.settings().is_some() {
+    pub fn session_scopes<'a>(&self, services: &'a ServicesConfig) -> Option<&'a [Permission]> {
+        if self.settings(services).is_some() {
             return None;
         }
-        let oauth = &self.server()?.oauth;
+        let oauth = &self.server(services)?.oauth;
         (oauth.required && !oauth.scopes.is_empty()).then_some(oauth.scopes.as_slice())
     }
-    pub fn is_session_attested(&self) -> bool {
-        self.session_scopes().is_some()
+    pub fn is_session_attested(&self, services: &ServicesConfig) -> bool {
+        self.session_scopes(services).is_some()
     }
-    pub fn display_name(&self) -> String {
-        self.settings()
+    pub fn display_name(&self, services: &ServicesConfig) -> String {
+        self.settings(services)
             .and_then(|settings| settings.display_name)
             .unwrap_or_else(|| self.slug().to_owned())
     }

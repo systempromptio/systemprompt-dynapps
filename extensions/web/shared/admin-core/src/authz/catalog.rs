@@ -1,6 +1,7 @@
 //! Current subject and parent policies reused across one catalog request.
 
 use crate::error::{AdminError, AdminResult};
+use crate::extension_services::ExtensionServices;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::governance::authz::{
@@ -11,11 +12,11 @@ use systemprompt::identifiers::UserId;
 
 pub struct CatalogAccess {
     repo: AccessControlRepository,
-    pool: PgPool,
     user: UserId,
     roles: Vec<String>,
     attributes: SubjectAttributes,
     chains: ParentChainIndex,
+    services: ExtensionServices,
 }
 
 impl std::fmt::Debug for CatalogAccess {
@@ -28,27 +29,32 @@ impl std::fmt::Debug for CatalogAccess {
 }
 
 impl CatalogAccess {
-    pub async fn load(pool: &PgPool, user: &UserId) -> AdminResult<Self> {
+    pub async fn load(
+        pool: &PgPool,
+        services: &ExtensionServices,
+        user: &UserId,
+    ) -> AdminResult<Self> {
         let identity = crate::repositories::principal::identity::find_identity_envelope(pool, user)
             .await?
             .ok_or_else(|| AdminError::Unauthorized("Account unavailable".into()))?;
         if identity.status != "active" {
             return Err(AdminError::Forbidden("Active account required".into()));
         }
-        let services =
-            systemprompt::loader::ServicesBootstrap::get().map_err(AdminError::internal)?;
         let repo = AccessControlRepository::from_pool(Arc::new(pool.clone()));
-        let attributes = crate::authz::subject_attributes_for(pool, user).await?;
-        let chains = ParentChainIndex::load(&repo, Arc::new(ChainSources::from_services(services)))
-            .await
-            .map_err(AdminError::internal)?;
+        let attributes = (services).subject_attributes(user).await?;
+        let chains = ParentChainIndex::load(
+            &repo,
+            Arc::new(ChainSources::from_services(&services.config())),
+        )
+        .await
+        .map_err(AdminError::internal)?;
         Ok(Self {
             repo,
-            pool: pool.clone(),
             user: user.clone(),
             roles: identity.roles,
             attributes,
             chains,
+            services: services.clone(),
         })
     }
 
@@ -66,7 +72,7 @@ impl CatalogAccess {
                 ids,
                 chains: &self.chains,
                 attributes: &self.attributes,
-                dimensions: crate::authz::dimensions(&self.pool),
+                dimensions: self.services.dimensions(),
             },
         )
         .await

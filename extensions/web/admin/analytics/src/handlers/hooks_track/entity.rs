@@ -2,7 +2,10 @@
 
 use systemprompt_web_admin_core::types::webhook::HookEventPayload;
 
-pub(super) fn detect_entity(payload: &HookEventPayload) -> Option<(&'static str, String)> {
+pub(super) fn detect_entity(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    payload: &HookEventPayload,
+) -> Option<(&'static str, String)> {
     let tool_name = payload.tool_name();
 
     if tool_name == Some("Skill") {
@@ -15,7 +18,7 @@ pub(super) fn detect_entity(payload: &HookEventPayload) -> Option<(&'static str,
     }
 
     if let Some(tn) = tool_name
-        && let Some(server) = detect_mcp_server(tn)
+        && let Some(server) = detect_mcp_server(services, tn)
     {
         return Some(("mcp_tool", server));
     }
@@ -43,9 +46,15 @@ fn detect_skill_entity(payload: &HookEventPayload, key: &str) -> Option<(&'stati
     (!skill.is_empty()).then(|| ("skill", skill.to_owned()))
 }
 
-fn detect_mcp_server(tool_name: &str) -> Option<String> {
-    systemprompt_web_admin_core::util::mcp_tool_name::parse_mcp_tool_name(tool_name)
-        .map(|name| name.server)
+fn detect_mcp_server(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    tool_name: &str,
+) -> Option<String> {
+    systemprompt_web_admin_core::util::mcp_tool_name::parse_mcp_tool_name(
+        &services.config(),
+        tool_name,
+    )
+    .map(|name| name.server)
 }
 
 fn detect_agent_entity(payload: &HookEventPayload) -> Option<(&'static str, String)> {

@@ -16,6 +16,7 @@ mod rows;
 mod view;
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
@@ -24,16 +25,15 @@ use sqlx::PgPool;
 use crate::handlers::access_control::build_matrix_sections;
 use crate::repositories::roles::{entitlements, members};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
-use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels_from_services;
+use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels;
 use systemprompt_web_admin_core::request as shared;
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::Role;
 use systemprompt_web_admin_core::types::role::{ROLES_PLATFORM, has_any};
-use systemprompt_web_admin_core::types::{MarketplaceContext, Role, UserContext};
 
 use data::RolesQuery;
 use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
@@ -85,12 +85,18 @@ fn member_page(
 }
 
 pub(crate) async fn roles_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<RolesQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
@@ -110,7 +116,8 @@ pub(crate) async fn roles_page(
     let (page_rows, total, window) = member_page(&member_rows, &query);
 
     let on_entitlements = query.on_entitlements();
-    let entitlement_groups = entitlement_groups(on_entitlements, &entitlement_rows, &mut faults);
+    let entitlement_groups =
+        entitlement_groups(&services, on_entitlements, &entitlement_rows, &mut faults);
 
     let page = RolesPageData {
         page: "roles",
@@ -153,6 +160,7 @@ pub(crate) async fn roles_page(
 }
 
 fn entitlement_groups(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     on_entitlements: bool,
     entitlement_rows: &[entitlements::RoleEntitlementRow],
     faults: &mut Faults,
@@ -160,10 +168,10 @@ fn entitlement_groups(
     if !on_entitlements {
         return Vec::new();
     }
-    let labels = faults.take("route labels", get_route_labels_from_services());
+    let labels = faults.take("route labels", get_route_labels(&services.config()));
     let sections = faults.take(
         "services catalog",
-        shared::get_services_path().map(|p| build_matrix_sections(&p)),
+        shared::get_services_path().map(|p| build_matrix_sections(services, &p)),
     );
     entitlements_view::groups(
         rows::entitlement_views(entitlement_rows, &labels),

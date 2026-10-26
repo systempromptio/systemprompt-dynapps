@@ -8,8 +8,8 @@
 
 use std::sync::Arc;
 
-use axum::Json;
 use axum::extract::State;
+use axum::{Extension, Json};
 use sqlx::PgPool;
 use systemprompt::governance::authz::{AuthzDecision, AuthzRequest};
 
@@ -17,7 +17,10 @@ use systemprompt::governance::authz::{AuthzDecision, AuthzRequest};
 // lets the call through, so every answer is 200, a failure a deny body.
 pub(crate) async fn govern_authz(
     State(pool): State<Arc<PgPool>>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Json(req): Json<AuthzRequest>,
 ) -> Json<AuthzDecision> {
-    Json(crate::authz_eval::evaluate(&pool, req).await)
+    Json(crate::authz_eval::evaluate(&pool, &services, req).await)
 }

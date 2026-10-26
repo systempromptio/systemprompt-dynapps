@@ -26,7 +26,6 @@ pub use config::Provider;
 pub use generic::Consent;
 #[doc(hidden)]
 pub use resolve::TokenResolver;
-use resolve::resolve_token;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
@@ -90,7 +89,12 @@ pub fn seal(grant: &Grant) -> AdminResult<EncryptedGrant> {
     })
 }
 
-pub fn open(row: &EncryptedGrant, user: &UserId, provider: &Provider) -> AdminResult<Grant> {
+pub fn open(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    row: &EncryptedGrant,
+    user: &UserId,
+    provider: &Provider,
+) -> AdminResult<Grant> {
     let key = secret_crypto::load_master_key()?;
     let nonce = row
         .nonce
@@ -104,7 +108,7 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: &Provider) -> AdminRe
             "Connector credential owner mismatch".into(),
         ));
     }
-    generic::validate_grant(&grant)?;
+    generic::validate_grant(services, &grant)?;
     Ok(grant)
 }
 
@@ -113,31 +117,42 @@ fn grant_bound_to(grant: &Grant, user: &UserId, provider: &Provider) -> bool {
 }
 
 pub async fn verified_token(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     user: &UserId,
     provider: Provider,
     probe: bool,
 ) -> AdminResult<String> {
     let mut report = VerificationReport::for_provider(provider.slug());
-    resolve_token(pool, user, provider, probe, &mut report).await
+    TokenResolver::new(pool, services, user, &client()?)
+        .resolve(provider, probe, &mut report)
+        .await
 }
 
 pub async fn probe_connection(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     user: &UserId,
     provider: Provider,
 ) -> AdminResult<VerificationReport> {
     let mut report = VerificationReport::for_provider(provider.slug());
-    match resolve_token(pool, user, provider, true, &mut report).await {
+    match TokenResolver::new(pool, services, user, &client()?)
+        .resolve(provider, true, &mut report)
+        .await
+    {
         Err(error) if report.steps.is_empty() => Err(error),
         Ok(_) | Err(_) => Ok(report.finish()),
     }
 }
 
 #[doc(hidden)]
-pub async fn refresh_at(grant: &mut Grant, endpoint: &str) -> AdminResult<()> {
+pub async fn refresh_at(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &mut Grant,
+    endpoint: &str,
+) -> AdminResult<()> {
     let previous = std::mem::replace(&mut grant.token_endpoint, endpoint.to_owned());
-    let result = transport::refresh(grant)
+    let result = transport::refresh(services, grant)
         .await
         .map_err(|failure| failure.error);
     grant.token_endpoint = previous;

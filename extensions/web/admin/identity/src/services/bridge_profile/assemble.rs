@@ -9,6 +9,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use systemprompt::manifest::services::ResolvedCatalog;
 
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
@@ -124,16 +125,18 @@ pub(super) fn read_tenant_id() -> Option<TenantId> {
         .and_then(|cloud| cloud.tenant_id.clone())
 }
 
-pub(super) fn build_bridge_profile_block() -> Option<BridgeProfileBlock> {
+pub(super) fn build_bridge_profile_block(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    catalog: &ResolvedCatalog,
+) -> Option<BridgeProfileBlock> {
     let profile = ProfileBootstrap::get().ok()?;
-    let services = systemprompt::loader::ServicesBootstrap::get().ok()?;
-    let gateway = services.gateway_config().filter(|g| g.enabled)?;
+    let config = services.config();
+    let gateway = config.gateway_config().filter(|g| g.enabled)?;
 
     let base = profile.server.api_external_url.trim_end_matches('/');
     let prefix = gateway.inference_path_prefix.trim_end_matches('/');
     let inference_gateway_base_url = format!("{base}{prefix}");
 
-    let catalog = systemprompt::loader::ServicesBootstrap::catalog().ok()?;
     let models: Vec<String> = catalog
         .advertised_models(None)
         .filter(|model| catalog.enabled_hops(model.id.as_str()).next().is_some())
@@ -199,6 +202,7 @@ pub(super) fn build_agents_block() -> AgentsBlock {
 }
 
 pub(super) async fn build_reachable_marketplaces(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     user_id: &UserId,
     roles: Vec<String>,
@@ -221,11 +225,12 @@ pub(super) async fn build_reachable_marketplaces(
         .collect();
     let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), rows)];
 
-    let subject =
-        systemprompt_web_admin_core::repositories::entitlement::user_subject(pool, user_id, roles)
-            .await?;
+    let subject = systemprompt_web_admin_core::repositories::entitlement::user_subject(
+        services, user_id, roles,
+    )
+    .await?;
     let resolved = systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrix(
-        pool, &subject, sections,
+        pool, services, &subject, sections,
     )
     .await?;
 

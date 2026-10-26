@@ -47,13 +47,17 @@ fn rows(list: Vec<ReviewedEntity>) -> Vec<ReviewRowView> {
         .collect()
 }
 
-async fn split(pool: &PgPool) -> AdminResult<ReviewSplit> {
-    let declared = declared_now().await?;
+async fn split(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pool: &PgPool,
+) -> AdminResult<ReviewSplit> {
+    let declared = declared_now(&services.config()).await?;
     let drift = drift_now(pool, &declared).await?;
     Ok(reviews_for(pool, &drift).await?)
 }
 
 pub(super) async fn access_review(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     core_planes: &CorePlanes,
 ) -> AdminResult<AccessReviewView> {
@@ -66,7 +70,7 @@ pub(super) async fn access_review(
         plane: core_plane_card(pool, core_planes, PLANE_ID, &opts).await?,
         ..AccessReviewView::default()
     };
-    match split(pool).await {
+    match split(services, pool).await {
         Ok(split) => {
             view.not_live_count = split.pending.iter().filter(|r| r.review.not_live).count();
             view.pending_count = split.pending.len();

@@ -22,6 +22,7 @@ mod views;
 
 use std::sync::Arc;
 
+use axum::Extension;
 use axum::extract::{Query, State};
 use axum::response::Response;
 use chrono::{Duration, Utc};
@@ -64,6 +65,9 @@ fn list_filter(query: &SkillsQuery, tab: SkillsTab) -> SkillListFilter {
 pub(crate) async fn page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Query(query): Query<SkillsQuery>,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
@@ -96,7 +100,7 @@ pub(crate) async fn page(
                 Ok(Vec::new())
             }
         },
-        get_marketplace_audience(&pool, &index.marketplaces),
+        get_marketplace_audience(&pool, &services, &index.marketplaces),
     );
     let (rows, adoption, audience) = (rows?, adoption?, audience?);
     let report_banner = crate::handlers::ssr::analysis::reports::banner::report_banner(

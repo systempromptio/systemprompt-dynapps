@@ -17,6 +17,9 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
 
 pub(crate) async fn token(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Extension(keys): Extension<SigningKeys>,
     Path(server): Path<String>,
@@ -24,10 +27,9 @@ pub(crate) async fn token(
 ) -> AdminResult<Response> {
     require_broker(&headers)?;
     let user = live_user(&pool, &keys, &headers, false).await?;
-    let services = systemprompt::loader::ServicesBootstrap::get().map_err(AdminError::internal)?;
-    let audience = identity_token::audience_for(services, &server)
+    let audience = identity_token::audience_for(&services.config(), &server)
         .ok_or_else(|| AdminError::NotFound("No identity-backed MCP server by that id".into()))?;
-    let permitted = CatalogAccess::load(&pool, &user.user_id)
+    let permitted = CatalogAccess::load(&pool, &services, &user.user_id)
         .await?
         .allowed(EntityKind::McpServer, std::slice::from_ref(&server))
         .await?;

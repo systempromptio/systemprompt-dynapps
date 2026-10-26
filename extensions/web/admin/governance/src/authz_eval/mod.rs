@@ -31,7 +31,7 @@ use systemprompt::governance::authz::{
     DenyReason, EntityKind, ParentChainIndex, ResolveBase, SubjectAttributes,
 };
 use systemprompt::identifiers::{ModelId, ProviderId, UserId};
-use systemprompt_web_admin_core::authz::{caches, dimensions, subject_attributes_for};
+use systemprompt_web_admin_core::authz::caches;
 use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
 
 pub(crate) use audit::POLICY_NAME;
@@ -92,27 +92,33 @@ pub async fn active_roles(pool: &PgPool, user_id: &UserId) -> Result<Vec<String>
     Ok(identity.roles)
 }
 
-async fn parent_chains(pool: &Arc<PgPool>) -> Result<ParentChainIndex, Unavailable> {
+async fn parent_chains(
+    pool: &Arc<PgPool>,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+) -> Result<ParentChainIndex, Unavailable> {
     let cache = &caches(pool).parent_chains;
     if let Some(chains) = cache.get(&()) {
         return Ok(chains);
     }
-    let services = systemprompt::loader::ServicesBootstrap::get().map_err(|error| {
-        tracing::error!(%error, "authorization_unavailable: services");
+    let repo = AccessControlRepository::from_pool(Arc::clone(pool));
+    let chains = ParentChainIndex::load(
+        &repo,
+        Arc::new(ChainSources::from_services(&services.config())),
+    )
+    .await
+    .map_err(|error| {
+        tracing::error!(%error, "authorization_unavailable: parent policies");
         Unavailable
     })?;
-    let repo = AccessControlRepository::from_pool(Arc::clone(pool));
-    let chains = ParentChainIndex::load(&repo, Arc::new(ChainSources::from_services(services)))
-        .await
-        .map_err(|error| {
-            tracing::error!(%error, "authorization_unavailable: parent policies");
-            Unavailable
-        })?;
     cache.insert((), chains.clone());
     Ok(chains)
 }
 
-async fn read_subject(pool: &Arc<PgPool>, req: &AuthzRequest) -> Result<Subject, Unavailable> {
+async fn read_subject(
+    pool: &Arc<PgPool>,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    req: &AuthzRequest,
+) -> Result<Subject, Unavailable> {
     let id = req.entity.id_str();
     let grant = entity_grant(pool, req.entity.kind(), id)
         .await
@@ -120,8 +126,8 @@ async fn read_subject(pool: &Arc<PgPool>, req: &AuthzRequest) -> Result<Subject,
             tracing::error!(%error, %id, "authorization_unavailable: entity rules");
             Unavailable
         })?;
-    let chains = parent_chains(pool).await?;
-    let attributes = subject_attributes_for(pool, &req.user_id)
+    let chains = parent_chains(pool, services).await?;
+    let attributes = (services).subject_attributes(&req.user_id)
         .await
         .map_err(|error| {
             tracing::error!(%error, user_id = %req.user_id, trace_id = %req.trace_id, "authorization_unavailable: attributes");
@@ -161,12 +167,20 @@ fn sync_verdict(decision: Decision) -> AuthzDecision {
     }
 }
 
-pub async fn evaluate(pool: &Arc<PgPool>, req: AuthzRequest) -> AuthzDecision {
-    decide(pool, req, Audit::Record).await
+pub async fn evaluate(
+    pool: &Arc<PgPool>,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    req: AuthzRequest,
+) -> AuthzDecision {
+    decide(pool, services, req, Audit::Record).await
 }
 
-pub async fn probe(pool: &Arc<PgPool>, req: AuthzRequest) -> AuthzDecision {
-    decide(pool, req, Audit::Skip).await
+pub async fn probe(
+    pool: &Arc<PgPool>,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    req: AuthzRequest,
+) -> AuthzDecision {
+    decide(pool, services, req, Audit::Skip).await
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -175,8 +189,13 @@ enum Audit {
     Skip,
 }
 
-async fn decide(pool: &Arc<PgPool>, mut req: AuthzRequest, audit: Audit) -> AuthzDecision {
-    let Ok(subject) = read_subject(pool, &req).await else {
+async fn decide(
+    pool: &Arc<PgPool>,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    mut req: AuthzRequest,
+    audit: Audit,
+) -> AuthzDecision {
+    let Ok(subject) = read_subject(pool, services, &req).await else {
         if audit == Audit::Record {
             audit::audit_unavailable(pool, &req).await;
         }
@@ -195,7 +214,7 @@ async fn decide(pool: &Arc<PgPool>, mut req: AuthzRequest, audit: Audit) -> Auth
             user_roles: &req.roles,
             default_included: entity.as_ref().map(|e| e.default_included),
             attributes: &subject.attributes,
-            dimensions: dimensions(pool),
+            dimensions: (services).dimensions(),
             facts: DecisionFacts {
                 model: model.as_ref().map(ModelId::as_str),
                 provider: provider.as_ref().map(ProviderId::as_str),

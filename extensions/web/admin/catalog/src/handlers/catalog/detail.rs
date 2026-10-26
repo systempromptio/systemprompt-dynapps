@@ -4,6 +4,7 @@
 use std::sync::Arc;
 use systemprompt::identifiers::PluginId;
 
+use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
@@ -17,6 +18,9 @@ use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::types::{ENTITY_PLUGIN, ENTITY_SKILL};
 
 pub(crate) async fn plugin_detail_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(plugin_id): Path<PluginId>,
@@ -38,6 +42,7 @@ pub(crate) async fn plugin_detail_page(
     page.access = Some(
         access::panel(
             &pool,
+            &services,
             &user_ctx,
             (ENTITY_PLUGIN, plugin_id.as_str()),
             query.why.as_deref(),
@@ -54,6 +59,9 @@ pub(crate) async fn plugin_detail_page(
 }
 
 pub(crate) async fn skill_detail_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(skill_id): Path<String>,
@@ -76,6 +84,7 @@ pub(crate) async fn skill_detail_page(
     page.access = Some(
         access::panel(
             &pool,
+            &services,
             &user_ctx,
             (ENTITY_SKILL, &skill_id),
             query.why.as_deref(),

@@ -13,6 +13,7 @@
 
 use sqlx::PgPool;
 use systemprompt::loader::services_root::ServicesRootBootstrap;
+use systemprompt::manifest::ServicesConfig;
 
 use super::state::AppliedFrom;
 use crate::error::{AdminError, AdminResult};
@@ -27,8 +28,8 @@ use crate::repositories::gateway_catalog::registered_routes_from_services;
 pub const PLANE_ID: &str = super::plane_ids::ACCESS_CONTROL;
 pub const REVIEW_URL: &str = "/admin/sync?tab=access";
 
-pub async fn declared_now() -> AdminResult<DeclaredSet> {
-    let registered = registered_routes_from_services()?;
+pub async fn declared_now(services: &ServicesConfig) -> AdminResult<DeclaredSet> {
+    let registered = registered_routes_from_services(services);
     let marketplace_ids = marketplace_ids_from_services()
         .map_err(|source| AdminError::invalid("services tree could not be composed", source))?;
     let services_path = ServicesRootBootstrap::require()?.path;

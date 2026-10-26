@@ -52,7 +52,7 @@ pub(crate) async fn run_eval_suite(
     Json(body): Json<EvalLaunchBody>,
 ) -> AdminResult<Response> {
     let farm = load_farm(&state.pool, &body.farm).await?;
-    require_farm_access(&state.pool, &ctx, &farm).await?;
+    require_farm_access(&state.pool, &state.services, &ctx, &farm).await?;
     let cases = body.cases.filter(|c| !c.is_empty());
     let judge = state
         .judge

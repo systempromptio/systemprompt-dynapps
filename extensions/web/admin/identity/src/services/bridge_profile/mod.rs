@@ -162,6 +162,7 @@ pub async fn issue_bridge_connect(
 }
 
 pub async fn build_bridge_profile_data(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: Arc<PgPool>,
     user_ctx: &UserContext,
 ) -> systemprompt_web_admin_core::error::AdminResult<BridgeProfilePageData> {
@@ -184,7 +185,7 @@ pub async fn build_bridge_profile_data(
         .and_then(|env| env.idp_issuer.map(|_| "adfs".to_owned()));
 
     let (jwt_issuer, gateway_url) = read_config_strings();
-    let bridge_profile = build_bridge_profile_block();
+    let bridge_profile = build_bridge_profile_block(services, &services.catalog);
     let bridge_connect_available = gateway_url.is_some();
 
     let identity = ProfileIdentity {
@@ -202,7 +203,8 @@ pub async fn build_bridge_profile_data(
     let usage = build_usage(sections);
     let mut agents = build_agents_block();
     let access =
-        systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(&pool, &user_id).await?;
+        systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(&pool, services, &user_id)
+            .await?;
     let ids = agents
         .items
         .iter()
@@ -218,7 +220,7 @@ pub async fn build_bridge_profile_data(
     agents.total = agents.items.len() as i64;
     agents.enabled = agents.total;
     let marketplaces =
-        build_reachable_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await?;
+        build_reachable_marketplaces(services, &pool, &user_id, user_ctx.roles.clone()).await?;
 
     Ok(BridgeProfilePageData {
         marketplaces_count: marketplaces.len(),

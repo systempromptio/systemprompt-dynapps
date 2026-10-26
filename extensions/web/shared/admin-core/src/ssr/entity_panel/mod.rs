@@ -99,8 +99,12 @@ fn subject_names(options: &SubjectOptions) -> HashMap<(String, String), String> 
     names
 }
 
-async fn review_for(pool: &PgPool, key: &str) -> AdminResult<Option<ReviewedEntity>> {
-    let declared = declared_now().await?;
+async fn review_for(
+    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
+    key: &str,
+) -> AdminResult<Option<ReviewedEntity>> {
+    let declared = declared_now(&services.config()).await?;
     let drift = drift_now(pool, &declared).await?;
     let split = reviews_for(pool, &drift).await?;
     Ok(split
@@ -110,7 +114,11 @@ async fn review_for(pool: &PgPool, key: &str) -> AdminResult<Option<ReviewedEnti
         .find(|r| r.review.key == key))
 }
 
-pub async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> EntityAccessView {
+pub async fn build_entity_panel(
+    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
+    req: PanelRequest<'_>,
+) -> EntityAccessView {
     let key = format!("{}/{}", req.entity_type, req.entity_id);
     let mut faults = Faults::new();
     let ledger = faults.take("access rules", list_ledger_rules(pool).await);
@@ -126,14 +134,14 @@ pub async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> EntityA
         });
     let subjects = subject_options(pool, &mut faults).await;
     let entity = (req.entity_type, req.entity_id);
-    let mut reaches = reach::resolved_reach(pool, entity, &subjects, &mut faults).await;
+    let mut reaches = reach::resolved_reach(pool, services, entity, &subjects, &mut faults).await;
     reaches.extend(reach::ruled_reach(&rows));
-    let (review, drift_unreadable) = match review_for(pool, &key).await {
+    let (review, drift_unreadable) = match review_for(pool, services, &key).await {
         Ok(review) => (review, None),
         Err(e) => (None, Some(e.to_string())),
     };
     let why = match req.why.map(str::trim).filter(|w| !w.is_empty()) {
-        Some(q) => Some(why::why(pool, q, entity, &mut faults).await),
+        Some(q) => Some(why::why(pool, services, q, entity, &mut faults).await),
         None => None,
     };
     let people = faults.take("people", list_pickable_users(pool, None).await);

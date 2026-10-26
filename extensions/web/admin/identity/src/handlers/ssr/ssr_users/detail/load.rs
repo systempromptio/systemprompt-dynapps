@@ -114,11 +114,12 @@ pub(super) struct AccessData {
 }
 
 pub(super) async fn load_access(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     user_id: &UserId,
     faults: &mut Faults,
 ) -> AccessData {
-    let overview = super::access_overview::load(pool, user_id).await;
+    let overview = super::access_overview::load(services, pool, user_id).await;
     let services_path = match systemprompt_web_admin_core::request::get_services_path() {
         Ok(path) => path,
         Err(error) => {
@@ -131,10 +132,10 @@ pub(super) async fn load_access(
             };
         },
     };
-    let sections = crate::handlers::access_control::build_matrix_sections(&services_path);
+    let sections = crate::handlers::access_control::build_matrix_sections(services, &services_path);
     let (matrix, rules) = tokio::join!(
         systemprompt_web_admin_core::repositories::entitlement::resolve_user_matrix(
-            pool, user_id, sections
+            pool, services, user_id, sections
         ),
         systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool),
     );

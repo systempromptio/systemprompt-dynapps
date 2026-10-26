@@ -23,8 +23,7 @@ use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::request as shared;
 use systemprompt_web_admin_core::ssr::entity_panel::{PanelRequest, build_entity_panel};
 use systemprompt_web_admin_core::ssr::page::Page;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, Role, UserContext};
+use systemprompt_web_admin_core::types::{Role, UserContext};
 
 use self::kpis::list_kpis;
 use self::view::{
@@ -67,16 +66,22 @@ fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
 }
 
 pub(crate) async fn marketplaces_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<super::CatalogListQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     console_only(&user_ctx)?;
     let path = shared::get_services_path()?;
     let manifests = data::load_manifests(&pool, &path).await;
-    let audience = data::audience_matrix(&pool, &manifests, &known_roles()).await;
+    let audience = data::audience_matrix(&pool, &services, &manifests, &known_roles()).await;
     let grants = data::group_grants(&pool).await;
     let plugin_catalog = crate::repositories::marketplace::plugins::list_plugin_catalog(&path)
         .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: plugin catalog failed"))
@@ -157,6 +162,9 @@ pub(super) fn skills_of(
 }
 
 pub(crate) async fn marketplace_detail_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(marketplace_id): Path<MarketplaceId>,
@@ -179,6 +187,7 @@ pub(crate) async fn marketplace_detail_page(
     let page_url = view::marketplace_url(marketplace_id.as_str());
     let access = build_entity_panel(
         &pool,
+        &services,
         PanelRequest {
             entity_type: data::MARKETPLACE_ENTITY,
             entity_id: marketplace_id.as_str(),

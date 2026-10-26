@@ -42,16 +42,23 @@ pub(super) async fn load_entitlement(pool: &PgPool, user: &UserId) -> AdminResul
 }
 
 impl Entitlement {
-    fn permits(&self, provider: &Provider) -> bool {
+    fn permits(
+        &self,
+        services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+        provider: &Provider,
+    ) -> bool {
         self.active
             && provider
-                .session_scopes()
+                .session_scopes(&services.config())
                 .is_none_or(|scopes| scopes_granted(&self.roles, scopes))
     }
 }
 
-fn not_entitled_message(provider: &Provider) -> &'static str {
-    if provider.is_session_attested() {
+fn not_entitled_message(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    provider: &Provider,
+) -> &'static str {
+    if provider.is_session_attested(&services.config()) {
         "This connector is not open to your account"
     } else {
         "An active account is required to connect providers"
@@ -59,6 +66,7 @@ fn not_entitled_message(provider: &Provider) -> &'static str {
 }
 
 pub(crate) async fn require_entitlement(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     user: &UserId,
     provider: Provider,
@@ -69,25 +77,36 @@ pub(crate) async fn require_entitlement(
             "An active account is required to connect providers".into(),
         ));
     }
-    if !entitlement.permits(&provider) {
+    if !entitlement.permits(services, &provider) {
         return Err(AdminError::Forbidden(
-            not_entitled_message(&provider).into(),
+            not_entitled_message(services, &provider).into(),
         ));
     }
     Ok(())
 }
 
-fn actions_for(
-    provider: &Provider,
-    row: Option<&repo::ProviderConnection>,
-    status: &str,
+struct ActionInputs<'a> {
+    row: Option<&'a repo::ProviderConnection>,
+    status: &'a str,
     configured: bool,
     entitled: bool,
-) -> Vec<String> {
+    session_attested: bool,
+    requires_auth: bool,
+}
+
+fn actions_for(inputs: &ActionInputs<'_>) -> Vec<String> {
+    let ActionInputs {
+        row,
+        status,
+        configured,
+        entitled,
+        session_attested,
+        requires_auth,
+    } = *inputs;
     let mut actions = Vec::new();
-    if configured && entitled && provider.is_session_attested() {
+    if configured && entitled && session_attested {
         actions.push("test".into());
-    } else if configured && entitled && provider.requires_auth() {
+    } else if configured && entitled && requires_auth {
         actions.push(
             if status == "connected" {
                 "reconnect"
@@ -107,15 +126,16 @@ fn actions_for(
 }
 
 fn describe(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     provider: &Provider,
     row: Option<&repo::ProviderConnection>,
     entitlement: &Entitlement,
 ) -> Connection {
-    let configured = provider.configured();
-    let entitled = entitlement.permits(provider);
-    let session_attested = provider.is_session_attested();
+    let configured = provider.configured(&services.config());
+    let entitled = entitlement.permits(services, provider);
+    let session_attested = provider.is_session_attested(&services.config());
     let attested_by_this_request = session_attested && entitled;
-    let status = if configured && !provider.requires_auth() {
+    let status = if configured && !provider.requires_auth(&services.config()) {
         "no_auth_required"
     } else if configured && session_attested {
         if entitled {
@@ -130,8 +150,8 @@ fn describe(
     };
     Connection {
         provider: provider.slug().into(),
-        display_name: provider.display_name(),
-        requires_auth: provider.requires_auth(),
+        display_name: provider.display_name(&services.config()),
+        requires_auth: provider.requires_auth(&services.config()),
         session_attested,
         configured,
         entitled,
@@ -151,7 +171,14 @@ fn describe(
         } else {
             row.and_then(|r| r.verified_at.map(|t| t.to_rfc3339()))
         },
-        actions: actions_for(provider, row, status, configured, entitled),
+        actions: actions_for(&ActionInputs {
+            row,
+            status,
+            configured,
+            entitled,
+            session_attested,
+            requires_auth: provider.requires_auth(&services.config()),
+        }),
     }
 }
 
@@ -159,23 +186,38 @@ struct AccountConnectionSource;
 
 #[async_trait::async_trait]
 impl ConnectionSnapshotSource for AccountConnectionSource {
-    async fn snapshot(&self, pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot> {
-        build_snapshot(pool, user).await
+    async fn snapshot(
+        &self,
+        pool: &PgPool,
+        services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+        user: &UserId,
+    ) -> AdminResult<ConnectionSnapshot> {
+        build_snapshot(pool, services, user).await
     }
 
-    fn display_name(&self, provider: &str) -> String {
-        Provider::try_from(provider.to_owned())
-            .map_or_else(|_| provider.to_owned(), |p| p.display_name())
+    fn display_name(
+        &self,
+        services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+        provider: &str,
+    ) -> String {
+        Provider::try_from(provider.to_owned()).map_or_else(
+            |_| provider.to_owned(),
+            |p| p.display_name(&services.config()),
+        )
     }
 }
 
 inventory::submit! { ConnectionSourceRegistration(&AccountConnectionSource) }
 
-async fn build_snapshot(pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot> {
+async fn build_snapshot(
+    pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    user: &UserId,
+) -> AdminResult<ConnectionSnapshot> {
     let rows = repo::list_accounts(pool, user).await?;
     let entitlement = load_entitlement(pool, user).await?;
-    let services = systemprompt::loader::ServicesBootstrap::get().map_err(AdminError::internal)?;
     let mut ids = services
+        .config()
         .mcp_servers
         .iter()
         .filter(|(_, s)| s.enabled)
@@ -190,7 +232,7 @@ async fn build_snapshot(pool: &PgPool, user: &UserId) -> AdminResult<ConnectionS
     for id in ids {
         let provider = Provider::try_from(id).map_err(AdminError::BadRequest)?;
         let row = rows.iter().find(|r| r.provider == provider.slug());
-        connections.push(describe(&provider, row, &entitlement));
+        connections.push(describe(services, &provider, row, &entitlement));
     }
     Ok(ConnectionSnapshot {
         version: 1,

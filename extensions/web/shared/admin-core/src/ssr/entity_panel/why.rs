@@ -68,7 +68,13 @@ fn bands_of(explanation: &Explanation) -> Vec<WhyBandView> {
         .collect()
 }
 
-pub async fn why(pool: &PgPool, query: &str, entity: (&str, &str), faults: &mut Faults) -> WhyView {
+pub async fn why(
+    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
+    query: &str,
+    entity: (&str, &str),
+    faults: &mut Faults,
+) -> WhyView {
     let mut view = WhyView {
         query: query.to_owned(),
         found: false,
@@ -83,7 +89,7 @@ pub async fn why(pool: &PgPool, query: &str, entity: (&str, &str), faults: &mut 
     };
     let explained = faults.take(
         "access explanation",
-        explain_for_user(pool, &user_id, entity.0, entity.1).await,
+        explain_for_user(pool, services, &user_id, entity.0, entity.1).await,
     );
     let Some(explanation) = explained else {
         return view;

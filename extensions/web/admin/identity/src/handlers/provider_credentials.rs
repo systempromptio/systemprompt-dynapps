@@ -9,10 +9,13 @@
 
 use std::sync::Arc;
 
+use systemprompt::traits::ProviderTokenCache;
+
 use axum::Json;
-use axum::extract::rejection::JsonRejection;
-use axum::extract::{Extension, Path};
+use axum::extract::rejection::{ExtensionRejection, JsonRejection};
+use axum::extract::{Extension, FromRequestParts, Path};
 use axum::http::StatusCode;
+use axum::http::request::Parts;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::json;
@@ -21,7 +24,6 @@ use systemprompt::ai::{
     PersonalKeyError, PersonalKeyRequest, personal_credential, personal_credentials,
     store_personal_key,
 };
-use systemprompt::loader::ServicesBootstrap;
 use systemprompt::manifest::services::catalog::{ResolvedCatalog, ResolvedCredential};
 use systemprompt::models::bridge::profile::ProviderCredentialStatus;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
@@ -63,10 +65,6 @@ fn refusal(status: StatusCode, code: &str, message: &str) -> Response {
         .into_response()
 }
 
-fn catalog() -> AdminResult<&'static ResolvedCatalog> {
-    ServicesBootstrap::catalog().map_err(|e| AdminError::Internal(Box::new(e)))
-}
-
 fn not_personal(credential: &str) -> Response {
     refusal(
         StatusCode::NOT_FOUND,
@@ -75,15 +73,36 @@ fn not_personal(credential: &str) -> Response {
     )
 }
 
+pub(crate) struct PersonalKeyDeps {
+    tokens: Arc<dyn ProviderTokenCache>,
+    keys: Arc<UserProviderCredentialRepository>,
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+}
+
+impl<S: Send + Sync> FromRequestParts<S> for PersonalKeyDeps {
+    type Rejection = ExtensionRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Extension(tokens) = Extension::from_request_parts(parts, state).await?;
+        let Extension(keys) = Extension::from_request_parts(parts, state).await?;
+        let Extension(services) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self {
+            tokens,
+            keys,
+            services,
+        })
+    }
+}
+
 pub(crate) async fn list_own_provider_credentials(
     Extension(user_ctx): Extension<UserContext>,
-    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
+    PersonalKeyDeps { keys, services, .. }: PersonalKeyDeps,
 ) -> AdminResult<Response> {
     let stored = keys
         .list_metadata(&user_ctx.user_id)
         .await
         .map_err(|e| AdminError::Internal(Box::new(e)))?;
-    let catalog = catalog()?;
+    let catalog = services.catalog.as_ref();
     let rows: Vec<ProviderCredentialStatus> = personal_credentials(catalog)
         .into_iter()
         .map(|credential| {
@@ -98,12 +117,16 @@ pub(crate) async fn list_own_provider_credentials(
 
 pub(crate) async fn put_own_provider_credential(
     Extension(user_ctx): Extension<UserContext>,
-    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
+    PersonalKeyDeps {
+        tokens,
+        keys,
+        services,
+    }: PersonalKeyDeps,
     Path(credential): Path<String>,
     body: Result<Json<SetKeyRequest>, JsonRejection>,
 ) -> AdminResult<Response> {
     let Json(request) = body.map_err(|e| AdminError::BadRequest(e.body_text()))?;
-    let catalog = catalog()?;
+    let catalog = services.catalog.as_ref();
     let Ok(resolved) = personal_credential(catalog, &credential) else {
         return Ok(not_personal(&credential));
     };
@@ -113,6 +136,7 @@ pub(crate) async fn put_own_provider_credential(
         .map(str::trim)
         .filter(|l| !l.is_empty());
     let stored = store_personal_key(
+        &tokens,
         &keys,
         catalog,
         PersonalKeyRequest {
@@ -142,10 +166,10 @@ pub(crate) async fn put_own_provider_credential(
 
 pub(crate) async fn delete_own_provider_credential(
     Extension(user_ctx): Extension<UserContext>,
-    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
+    PersonalKeyDeps { keys, services, .. }: PersonalKeyDeps,
     Path(credential): Path<String>,
 ) -> AdminResult<Response> {
-    let Ok(resolved) = personal_credential(catalog()?, &credential) else {
+    let Ok(resolved) = personal_credential(&services.catalog, &credential) else {
         return Ok(not_personal(&credential));
     };
     keys.delete_key(&user_ctx.user_id, &resolved.id)

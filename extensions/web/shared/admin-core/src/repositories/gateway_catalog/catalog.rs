@@ -7,12 +7,11 @@
 //! A request no declared route matches has no route id: core decides it on
 //! the `model/<id>` entity it asked for, so no synthetic route stands in for
 //! it here. The routes and the catalog they resolve against are services
-//! configuration (`services/ai/*.yaml`), read from the `ServicesBootstrap` cell
-//! the process booted with.
+//! configuration (`services/ai/*.yaml`), read from the services config the
+//! process booted with.
 
 use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
 use systemprompt::identifiers::RouteId;
-use systemprompt::loader::ServicesBootstrap;
 use systemprompt::manifest::ServicesConfig;
 use systemprompt::manifest::services::{CatalogContext, ResolvedCatalog};
 use systemprompt_web_shared::error::MarketplaceError;
@@ -43,10 +42,6 @@ pub fn dispatchable_routes(
         .cloned()
         .map(route_view)
         .collect())
-}
-
-pub fn dispatchable_routes_from_services() -> Result<Vec<GatewayRouteView>, MarketplaceError> {
-    dispatchable_routes(ServicesBootstrap::get()?)
 }
 
 pub fn client_facing_routes(
@@ -87,10 +82,6 @@ pub fn route_reaches(route: &GatewayRouteView, model: &str) -> bool {
             .any(|glob| super::matching::glob_match(glob, model))
 }
 
-pub fn client_facing_routes_from_services() -> Result<Vec<GatewayRouteView>, MarketplaceError> {
-    client_facing_routes(ServicesBootstrap::get()?)
-}
-
 #[must_use]
 pub fn registered_routes(route_ids: &[String]) -> RegisteredEntities {
     if route_ids.is_empty() {
@@ -100,7 +91,7 @@ pub fn registered_routes(route_ids: &[String]) -> RegisteredEntities {
     }
 }
 
-pub fn registered_routes_from_services() -> Result<RegisteredEntities, MarketplaceError> {
-    let services = ServicesBootstrap::get()?;
-    Ok(registered_routes(&dispatchable_route_ids(services)))
+#[must_use]
+pub fn registered_routes_from_services(services: &ServicesConfig) -> RegisteredEntities {
+    registered_routes(&dispatchable_route_ids(services))
 }

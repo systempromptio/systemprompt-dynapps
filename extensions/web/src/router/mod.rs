@@ -70,6 +70,8 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
         combined
             .layer(Extension(Arc::clone(&web.site)))
             .layer(Extension(ctx.background_tasks()))
+            .layer(Extension(db.services))
+            .layer(Extension(ctx.provider_tokens()))
             .layer(Extension(signing_keys)),
         "/",
     ))

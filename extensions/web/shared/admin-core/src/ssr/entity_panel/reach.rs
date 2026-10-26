@@ -22,6 +22,7 @@ const RESOLVED_BANDS: [&str; 3] = ["group", "project", "role"];
 
 pub async fn resolved_reach(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     entity: (&str, &str),
     subjects: &SubjectOptions,
     faults: &mut Faults,
@@ -44,7 +45,7 @@ pub async fn resolved_reach(
     );
     let resolved = faults.take(
         "resolved reach",
-        resolve_subject_matrices(pool, &only, &[section]).await,
+        resolve_subject_matrices(pool, services, &only, &[section]).await,
     );
     asked
         .iter()

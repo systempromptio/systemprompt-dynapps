@@ -19,7 +19,10 @@ pub struct CallbackNotice {
 }
 
 impl CallbackNotice {
-    pub fn message(&self) -> Option<String> {
+    pub fn message(
+        &self,
+        services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    ) -> Option<String> {
         let provider = Provider::try_from(self.provider.clone()?).ok()?;
         let stage = self.stage.as_deref()?;
         let title = match stage {
@@ -33,7 +36,7 @@ impl CallbackNotice {
         let reference = self.reference?;
         Some(format!(
             "{} failed during {title}. {} Reference: {reference}",
-            provider.display_name(),
+            provider.display_name(&services.config()),
             kind.guidance()
         ))
     }

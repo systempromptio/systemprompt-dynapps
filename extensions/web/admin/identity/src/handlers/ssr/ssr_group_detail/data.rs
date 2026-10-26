@@ -230,6 +230,7 @@ pub(super) async fn load_mappings(
 }
 
 pub(super) async fn load_access(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     group_id: &GroupId,
     faults: &mut Faults,
@@ -241,7 +242,8 @@ pub(super) async fn load_access(
             return Vec::new();
         },
     };
-    let mut sections = crate::handlers::access_control::build_matrix_sections(&services_path);
+    let mut sections =
+        crate::handlers::access_control::build_matrix_sections(services, &services_path);
     if !sections.iter().any(|(kind, _, _)| kind == "marketplace") {
         let rows: Vec<(String, String, Option<String>)> = load_marketplaces()
             .into_iter()
@@ -258,7 +260,7 @@ pub(super) async fn load_access(
     let resolved = faults.take(
         "access matrix",
         systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrix(
-            pool, &subject, sections,
+            pool, services, &subject, sections,
         )
         .await,
     );

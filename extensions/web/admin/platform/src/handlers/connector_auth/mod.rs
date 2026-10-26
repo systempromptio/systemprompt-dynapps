@@ -3,6 +3,7 @@
 pub(crate) mod account;
 mod completion;
 pub(crate) mod consent;
+mod deps;
 pub(crate) mod identity;
 
 use crate::repositories::connectors::{

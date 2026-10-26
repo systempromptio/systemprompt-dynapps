@@ -142,6 +142,9 @@ pub(crate) async fn mcp_servers_page(
 }
 
 pub(crate) async fn mcp_detail_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(mcp_id): Path<McpServerId>,
@@ -175,6 +178,7 @@ pub(crate) async fn mcp_detail_page(
 
     let access = super::access::panel(
         &pool,
+        &services,
         &shell.user,
         (ENTITY_MCP_SERVER, mcp_id.as_str()),
         query.why.as_deref(),

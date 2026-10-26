@@ -18,7 +18,7 @@ pub(crate) async fn entitled_farm(ctx: &ToolCtx<'_>, farm: &str) -> ToolResult<F
     let row = farms::find_farm(ctx.pool()?, &id)
         .await?
         .ok_or_else(|| ToolError::NotFound(format!("farm {id} does not exist")))?;
-    let allowed = may_use_farm(ctx.pool()?, ctx.viewer.context()?, &row).await?;
+    let allowed = may_use_farm(ctx.pool()?, ctx.services()?, ctx.viewer.context()?, &row).await?;
     if !allowed {
         return Err(ToolError::Forbidden(format!(
             "farm {} requires the workspace {}",

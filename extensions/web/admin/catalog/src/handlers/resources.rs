@@ -16,6 +16,9 @@ use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::types::responses::AgentsListResponse;
 
 pub(crate) async fn list_agents_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
 ) -> AdminResult<Response> {
@@ -24,9 +27,12 @@ pub(crate) async fn list_agents_handler(
     if user_ctx.is_admin {
         return Ok(Json(AgentsListResponse { agents }).into_response());
     }
-    let access =
-        systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(&pool, &user_ctx.user_id)
-            .await?;
+    let access = systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(
+        &pool,
+        &services,
+        &user_ctx.user_id,
+    )
+    .await?;
     let ids = agents
         .iter()
         .filter(|a| a.enabled)

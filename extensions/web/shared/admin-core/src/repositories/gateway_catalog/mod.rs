@@ -15,14 +15,13 @@ mod routes;
 mod yaml_io;
 
 pub use catalog::{
-    client_facing_routes, client_facing_routes_from_services, dispatchable_route_ids,
-    dispatchable_routes, dispatchable_routes_from_services, registered_routes,
+    client_facing_routes, dispatchable_route_ids, dispatchable_routes, registered_routes,
     registered_routes_from_services, resolved_catalog, retain_client_facing, route_reaches,
 };
 pub use config::{get_gateway_config, update_gateway_settings};
 pub use labels::{
     ProviderLabel, RouteLabel, RouteLabels, derive_provider_label, derive_route_label,
-    get_route_labels, get_route_labels_from_services,
+    get_route_labels,
 };
 pub use matching::{
     find_matching_route, find_matching_route_index, find_route_index_by_id, glob_match,

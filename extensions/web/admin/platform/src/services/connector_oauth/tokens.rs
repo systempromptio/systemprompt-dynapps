@@ -8,11 +8,12 @@ use systemprompt::models::net::validate_outbound_url;
 use systemprompt_web_admin_core::error::AdminResult;
 
 async fn request_with_client(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     grant: &mut Grant,
     fields: &[(&str, &str)],
     http: &reqwest::Client,
 ) -> FlowResult<()> {
-    super::generic::validate_grant(grant).map_err(|error| FlowFailure {
+    super::generic::validate_grant(services, grant).map_err(|error| FlowFailure {
         kind: FailureKind::Configuration,
         error,
     })?;
@@ -25,7 +26,7 @@ async fn request_with_client(
         {
             form.append_pair("client_secret", &grant.client_secret);
         }
-        form.append_pair("resource", &grant.provider.endpoint());
+        form.append_pair("resource", &grant.provider.endpoint(&services.config()));
         form.finish()
     };
     let token_endpoint = validate_outbound_url(&grant.token_endpoint).map_err(|error| {
@@ -138,18 +139,27 @@ fn token_validation_failure(grant: &Grant, kind: FailureKind, reason: &'static s
     FlowFailure::new(kind)
 }
 
-pub async fn exchange(grant: &mut Grant, code: &str) -> AdminResult<()> {
-    exchange_classified(grant, code)
+pub async fn exchange(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &mut Grant,
+    code: &str,
+) -> AdminResult<()> {
+    exchange_classified(services, grant, code)
         .await
         .map_err(|failure| failure.error)
 }
 
-pub(crate) async fn exchange_classified(grant: &mut Grant, code: &str) -> FlowResult<()> {
+pub(crate) async fn exchange_classified(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &mut Grant,
+    code: &str,
+) -> FlowResult<()> {
     let callback = grant
         .provider
         .callback()
         .map_err(FlowFailure::verification)?;
     exchange_request(
+        services,
         grant,
         code,
         &callback,
@@ -159,17 +169,19 @@ pub(crate) async fn exchange_classified(grant: &mut Grant, code: &str) -> FlowRe
 }
 
 pub async fn exchange_with_client(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     grant: &mut Grant,
     code: &str,
     callback: &str,
     http: &reqwest::Client,
 ) -> AdminResult<()> {
-    exchange_request(grant, code, callback, http)
+    exchange_request(services, grant, code, callback, http)
         .await
         .map_err(|failure| failure.error)
 }
 
 async fn exchange_request(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     grant: &mut Grant,
     code: &str,
     callback: &str,
@@ -177,6 +189,7 @@ async fn exchange_request(
 ) -> FlowResult<()> {
     let verifier = grant.verifier.clone();
     request_with_client(
+        services,
         grant,
         &[
             ("grant_type", "authorization_code"),
@@ -191,21 +204,34 @@ async fn exchange_request(
     Ok(())
 }
 
-pub(super) async fn refresh(grant: &mut Grant) -> FlowResult<()> {
-    refresh_classified(grant, &client().map_err(FlowFailure::verification)?).await
+pub(super) async fn refresh(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &mut Grant,
+) -> FlowResult<()> {
+    refresh_classified(
+        services,
+        grant,
+        &client().map_err(FlowFailure::verification)?,
+    )
+    .await
 }
 
-pub async fn refresh_with_client(grant: &mut Grant, http: &reqwest::Client) -> AdminResult<()> {
-    refresh_classified(grant, http)
+pub async fn refresh_with_client(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &mut Grant,
+    http: &reqwest::Client,
+) -> AdminResult<()> {
+    refresh_classified(services, grant, http)
         .await
         .map_err(|failure| failure.error)
 }
 
 pub(super) async fn refresh_classified(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     grant: &mut Grant,
     http: &reqwest::Client,
 ) -> FlowResult<()> {
-    super::generic::validate_refresh(grant, http)
+    super::generic::validate_refresh(services, grant, http)
         .await
         .map_err(|error| FlowFailure {
             kind: FailureKind::Configuration,
@@ -217,6 +243,7 @@ pub(super) async fn refresh_classified(
         .filter(|token| !token.trim().is_empty())
         .ok_or_else(|| FlowFailure::new(FailureKind::Permission))?;
     request_with_client(
+        services,
         grant,
         &[("grant_type", "refresh_token"), ("refresh_token", &token)],
         http,
