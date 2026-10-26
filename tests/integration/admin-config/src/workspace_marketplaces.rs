@@ -12,7 +12,6 @@ use systemprompt::governance::authz::{
 };
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
-use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
 use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
 
 use crate::fixtures::{insert_user_with_roles, unique};
@@ -63,10 +62,10 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
     let path = services_path();
     let services =
         ConfigLoader::load_from_path(&path.join("config/config.yaml")).expect("services");
-    // Why: the parent-chain index reads the shipped catalog from the
-    // process-wide services bootstrap, as in `executive_marketplace`.
-    systemprompt::loader::ServicesBootstrap::init_from_path(&path.join("config/config.yaml"))
-        .expect("install shipped services");
+    let view = dynapps_test_common::extension_services(
+        &db.pool,
+        dynapps_test_common::services_view(&path.join("config/config.yaml")),
+    );
     groups_yaml_loader::load_groups_from_yaml(&db.pool, &path)
         .await
         .expect("groups");
@@ -95,9 +94,7 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
             .await
             .expect("staff membership");
         }
-        let attributes = subject_attributes_for(&db.pool, &user)
-            .await
-            .expect("attributes");
+        let attributes = view.subject_attributes(&user).await.expect("attributes");
         let ids: Vec<String> = WORKSPACES.iter().map(|id| (*id).to_owned()).collect();
         let allowed = allowed_ids(
             &repo,
@@ -108,7 +105,7 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
                 ids: &ids,
                 chains: &chains,
                 attributes: &attributes,
-                dimensions: dimensions(&db.pool),
+                dimensions: view.dimensions(),
             },
         )
         .await

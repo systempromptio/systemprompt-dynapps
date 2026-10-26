@@ -7,10 +7,13 @@
 //! the `messages` endpoint's empty `accepted_betas` shape the call exactly so,
 //! and that a platform provider never sees the header.
 
+use std::sync::Arc;
+
 use systemprompt::ai::{EndpointBinding, UpstreamTarget};
 use systemprompt::identifiers::UserId;
 use systemprompt::manifest::services::catalog::EndpointRef;
 use systemprompt::manifest::services::{CatalogContext, ResolvedCatalog};
+use systemprompt::security::credential::TokenCache;
 use systemprompt::wire::WireProtocol;
 
 use crate::support::committed_services;
@@ -21,6 +24,10 @@ fn catalog() -> ResolvedCatalog {
     committed_services()
         .resolve_catalog(&CatalogContext::default())
         .expect("the AI catalog resolves")
+}
+
+fn tokens() -> Arc<TokenCache> {
+    Arc::new(TokenCache::default())
 }
 
 fn binding<'a>(catalog: &'a ResolvedCatalog, endpoint: &str) -> EndpointBinding<'a> {
@@ -50,6 +57,7 @@ fn value<'a>(headers: &'a [(String, String)], name: &str) -> Option<&'a str> {
 async fn personal_chat_endpoint_gets_session_user_agent_and_bearer_key() {
     let catalog = catalog();
     let call = UpstreamTarget::resolve_personal(
+        &tokens(),
         binding(&catalog, "opencode-go/chat"),
         "go-key-a",
         &UserId::new("user-a"),
@@ -70,6 +78,7 @@ async fn personal_chat_endpoint_gets_session_user_agent_and_bearer_key() {
 async fn anthropic_wire_personal_endpoint_drops_every_beta() {
     let catalog = catalog();
     let call = UpstreamTarget::resolve_personal(
+        &tokens(),
         binding(&catalog, "opencode-go/messages"),
         "go-key-a",
         &UserId::new("user-a"),
@@ -93,7 +102,7 @@ async fn platform_provider_never_receives_the_session_header() {
         .deployments("deepseek-flash")
         .first()
         .expect("deepseek-flash deployment");
-    let call = UpstreamTarget::resolve(&catalog, hop, "platform-key")
+    let call = UpstreamTarget::resolve(&tokens(), &catalog, hop, "platform-key")
         .expect("platform target")
         .call()
         .await
@@ -108,7 +117,7 @@ fn a_personal_endpoint_is_never_served_from_a_deployment_secret() {
     let catalog = catalog();
     let go = binding(&catalog, "opencode-go/chat");
     assert!(go.credential.platform_secret().is_none());
-    assert!(UpstreamTarget::from_secrets(go).is_err());
+    assert!(UpstreamTarget::from_secrets(&tokens(), go).is_err());
 }
 
 #[test]

@@ -8,7 +8,22 @@ fn callback_notices_name_the_stage_and_only_accept_bounded_fields() {
             "connection_provider": "dynbrain", "connection_stage": stage,
             "connection_failure": "configuration", "connection_ref": "00000000-0000-0000-0000-000000000001"
         })).unwrap();
-        let message = notice.message().unwrap();
+        let message = notice
+            .message(
+                &systemprompt_web_admin_core::extension_services::ExtensionServices::new(
+                    systemprompt::loader::ServicesState::from_config(
+                        systemprompt::manifest::ServicesConfig::default(),
+                    )
+                    .expect("empty services")
+                    .view(),
+                    std::sync::Arc::new(
+                        systemprompt::governance::authz::SubjectProviderSet::from_providers(
+                            Vec::new(),
+                        ),
+                    ),
+                ),
+            )
+            .unwrap();
         assert!(message.contains("failed during") && message.contains("Reference:"));
         assert!(message.contains("app configuration"));
     }
@@ -16,5 +31,22 @@ fn callback_notices_name_the_stage_and_only_accept_bounded_fields() {
         "connection_provider": "dynbrain", "connection_stage": "fixture-secret",
         "connection_failure": "configuration", "connection_ref": "00000000-0000-0000-0000-000000000001"
     })).unwrap();
-    assert!(notice.message().is_none());
+    assert!(
+        notice
+            .message(
+                &systemprompt_web_admin_core::extension_services::ExtensionServices::new(
+                    systemprompt::loader::ServicesState::from_config(
+                        systemprompt::manifest::ServicesConfig::default()
+                    )
+                    .expect("empty services")
+                    .view(),
+                    std::sync::Arc::new(
+                        systemprompt::governance::authz::SubjectProviderSet::from_providers(
+                            Vec::new()
+                        )
+                    )
+                )
+            )
+            .is_none()
+    );
 }

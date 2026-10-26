@@ -30,12 +30,13 @@ pub(crate) fn portal_account(user: &UserId) -> String {
 }
 
 // A connected grant for `user`, issued by the fake to `portal:<user>`.
-pub(crate) async fn connect(pool: &PgPool, portal: &FakePortal, user: &UserId) {
+pub(crate) async fn connect(pool: &PgPool, env: &PortalEnv, user: &UserId) {
+    let portal = &env.portal;
     let provider = Provider::try_from(PROVIDER.to_owned()).expect("provider");
     let tokens = portal.issue_tokens(&portal_account(user));
     let grant = Grant {
         user: user.as_str().to_owned(),
-        configuration_binding: oauth::generic::binding(&provider).expect("binding"),
+        configuration_binding: oauth::generic::binding(&env.services, &provider).expect("binding"),
         authorization_issuer: portal.base_url().to_owned(),
         token_auth_method: "none".into(),
         provider: provider.clone(),
@@ -75,6 +76,7 @@ pub(crate) async fn connect(pool: &PgPool, portal: &FakePortal, user: &UserId) {
 // user's headless JWT and the run's `farm:<run id>` purpose.
 pub(crate) async fn broker_bearer(
     pool: &Arc<PgPool>,
+    env: &PortalEnv,
     user: &UserId,
     caller: &str,
 ) -> (StatusCode, Option<String>) {
@@ -86,7 +88,11 @@ pub(crate) async fn broker_bearer(
         Arc::clone(pool),
         ServiceAccounts::new(UserRepository::new(&database)),
     )
-    .layer(axum::Extension(PortalEnv::signing_keys().clone()));
+    .layer(axum::Extension(PortalEnv::signing_keys().clone()))
+    .layer(axum::Extension(dynapps_test_common::extension_services(
+        pool,
+        env.services.view().clone(),
+    )));
     let jwt = PortalEnv::mint(Principal {
         user_id: user.as_str(),
         email: &format!("{user}@test.invalid"),
@@ -163,7 +169,7 @@ pub(crate) async fn assert_portal_sees(
     run_id: &str,
     expected: &UserId,
 ) {
-    let (status, bearer) = broker_bearer(pool, expected, &format!("farm:{run_id}")).await;
+    let (status, bearer) = broker_bearer(pool, env, expected, &format!("farm:{run_id}")).await;
     assert_eq!(status, StatusCode::OK);
     let bearer = bearer.expect("bearer");
     assert_eq!(

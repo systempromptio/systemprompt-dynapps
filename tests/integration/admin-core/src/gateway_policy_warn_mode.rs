@@ -158,6 +158,12 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     let providers = SubjectProviderSet::discover(&AuthzHookContext {
         pool: pool.pool(),
         sink: Arc::new(NullAuditSink),
+        services: systemprompt::loader::ServicesState::from_config(
+            systemprompt::manifest::ServicesConfig::default(),
+        )
+        .expect("empty services")
+        .view(),
+        subjects: systemprompt::models::authz::SubjectSourceHandle::default(),
     });
     let attribution = RequestAttribution::none();
     let params = ReserveParams {

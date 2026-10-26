@@ -33,12 +33,12 @@ async fn user_mode_reaches_the_portal_as_the_launcher() {
     };
     let seeded = seed(&db.pool).await;
     set_farm_run_as(&db.pool, &seeded.farm, Some(RunAsMode::User), None, None).await;
-    connect(&db.pool, &env.portal, &seeded.user).await;
+    connect(&db.pool, &env, &seeded.user).await;
     let run = launch_for(&seeded, None).await.expect("launch");
     assert_eq!(credential_user_of(&db.pool, &run).await, seeded.user);
     assert_portal_sees(&env, &db.pool, run.id.as_str(), &seeded.user).await;
 
-    let (status, bearer) = broker_bearer(&db.pool, &seeded.user, "farm:not-this-run").await;
+    let (status, bearer) = broker_bearer(&db.pool, &env, &seeded.user, "farm:not-this-run").await;
     assert_eq!(
         status,
         StatusCode::FORBIDDEN,
@@ -69,8 +69,8 @@ async fn client_mode_reaches_the_portal_as_the_clients_account() {
         Some(&client),
     )
     .await;
-    connect(&db.pool, &env.portal, &seeded.user).await;
-    connect(&db.pool, &env.portal, &svc).await;
+    connect(&db.pool, &env, &seeded.user).await;
+    connect(&db.pool, &env, &svc).await;
     let run = launch_for(&seeded, None).await.expect("launch");
     assert_eq!(credential_user_of(&db.pool, &run).await, svc);
     assert_eq!(run.user_id, seeded.user, "the launcher is still recorded");
@@ -94,13 +94,13 @@ async fn service_account_mode_reaches_the_portal_as_the_named_account() {
         None,
     )
     .await;
-    connect(&db.pool, &env.portal, &seeded.user).await;
-    connect(&db.pool, &env.portal, &svc).await;
+    connect(&db.pool, &env, &seeded.user).await;
+    connect(&db.pool, &env, &svc).await;
     let run = launch_for(&seeded, None).await.expect("launch");
     assert_eq!(credential_user_of(&db.pool, &run).await, svc);
     assert_portal_sees(&env, &db.pool, run.id.as_str(), &svc).await;
 
-    let (status, _) = broker_bearer(&db.pool, &svc, "interactive").await;
+    let (status, _) = broker_bearer(&db.pool, &env, &svc, "interactive").await;
     assert!(
         !status.is_success(),
         "a service account's grant needs a farm or workflow purpose"
@@ -135,7 +135,7 @@ async fn a_missing_grant_yields_no_bearer_in_every_mode() {
     set_farm_run_as(&db.pool, &seeded.farm, Some(RunAsMode::User), None, None).await;
     let run = launch_for(&seeded, None).await.expect("launch");
     let caller = format!("farm:{}", run.id.as_str());
-    let (status, bearer) = broker_bearer(&db.pool, &seeded.user, &caller).await;
+    let (status, bearer) = broker_bearer(&db.pool, &env, &seeded.user, &caller).await;
     assert!(
         !status.is_success(),
         "user mode, launcher never connected: {status}"
@@ -144,7 +144,7 @@ async fn a_missing_grant_yields_no_bearer_in_every_mode() {
 
     let svc = insert_service_account(&db.pool, "e2e-no-grant").await;
     let seeded = seed(&db.pool).await;
-    connect(&db.pool, &env.portal, &seeded.user).await;
+    connect(&db.pool, &env, &seeded.user).await;
     set_farm_run_as(
         &db.pool,
         &seeded.farm,
@@ -156,7 +156,7 @@ async fn a_missing_grant_yields_no_bearer_in_every_mode() {
     let run = launch_for(&seeded, None).await.expect("launch");
     assert_eq!(credential_user_of(&db.pool, &run).await, svc);
     let caller = format!("farm:{}", run.id.as_str());
-    let (status, bearer) = broker_bearer(&db.pool, &svc, &caller).await;
+    let (status, bearer) = broker_bearer(&db.pool, &env, &svc, &caller).await;
     assert!(
         !status.is_success(),
         "service account never connected: {status}"

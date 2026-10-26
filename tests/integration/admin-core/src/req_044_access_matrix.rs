@@ -34,10 +34,18 @@ async fn grade_entity(
     entity_type: &str,
     entity_id: &str,
 ) -> MatrixRow {
-    let matrix = resolve_user_matrix(pool, user, one_entity(entity_type, entity_id))
-        .await
-        .expect("resolve matrix")
-        .expect("user found");
+    let matrix = resolve_user_matrix(
+        pool,
+        &dynapps_test_common::extension_services(
+            &std::sync::Arc::new(pool.clone()),
+            dynapps_test_common::empty_services_view(),
+        ),
+        user,
+        one_entity(entity_type, entity_id),
+    )
+    .await
+    .expect("resolve matrix")
+    .expect("user found");
     let mut sections = matrix.sections;
     let section = sections.pop().expect("one section");
     section.rows.into_iter().next().expect("one row")

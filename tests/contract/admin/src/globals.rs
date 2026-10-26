@@ -1,8 +1,9 @@
 //! Process-wide globals the admin handlers read, installed once per test
 //! binary.
 //!
-//! Core's config, profile and secrets are `OnceLock`s, so they and the
-//! test's signing keys are installed behind a `Once` and every token minted in
+//! Core's config, profile and secrets are `OnceLock`s, so they, the services
+//! view the routers are handed and the test's signing keys are installed
+//! behind a `Once` and every token minted in
 //! [`crate::principal`] validates against the same issuer. The profile is a
 //! checked-in fixture: the developer's `.systemprompt` profile is git-ignored,
 //! so relying on it would pass locally and silently skip in CI.
@@ -10,11 +11,13 @@
 use std::path::PathBuf;
 use std::sync::{Once, OnceLock};
 
+use systemprompt::manifest::services::ServicesView;
 use systemprompt_security::keys::SigningKeys;
 
 static INIT: Once = Once::new();
 static READY: OnceLock<bool> = OnceLock::new();
 static KEYS: OnceLock<SigningKeys> = OnceLock::new();
+static SERVICES: OnceLock<ServicesView> = OnceLock::new();
 
 const ISSUER: &str = "http://localhost:8099";
 
@@ -51,12 +54,21 @@ fn try_init() -> bool {
             .expect("the secrets bootstrap thread did not panic");
     });
     systemprompt::config::try_init_config(None).expect("build config from the fixture profile");
-    systemprompt::loader::ServicesBootstrap::try_init()
+    let state = systemprompt::loader::ServicesState::load()
         .expect("load the services tree the fixture profile points at");
+    SERVICES
+        .set(state.view())
+        .expect("try_init runs once, so SERVICES is unset");
 
     KEYS.set(dynapps_test_common::ephemeral_signing_keys())
         .expect("try_init runs once, so KEYS is unset");
     true
+}
+
+pub(crate) fn services() -> &'static ServicesView {
+    SERVICES
+        .get()
+        .expect("globals::init installs the services view")
 }
 
 pub(crate) fn signing_keys() -> &'static SigningKeys {

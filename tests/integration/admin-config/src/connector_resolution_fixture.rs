@@ -27,6 +27,7 @@ pub(super) struct Harness {
     pub(super) provider: Provider,
     pub(super) http: reqwest::Client,
     origin: String,
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
     _server: Server,
     _directory: tempfile::TempDir,
 }
@@ -87,7 +88,10 @@ impl Harness {
             .await
             .unwrap();
         systemprompt::config::try_init_config(None).unwrap();
-        systemprompt::loader::ServicesBootstrap::init_from_path(&config).unwrap();
+        let view = dynapps_test_common::offline_extension_services(
+            dynapps_test_common::services_view(&config),
+        );
+        let services = &view;
         let ca = reqwest::Certificate::from_pem(
             &std::fs::read(directory.path().join("ca.pem")).unwrap(),
         )
@@ -105,6 +109,7 @@ impl Harness {
         let provider = Provider::try_from("rotation-mcp".to_owned()).unwrap();
         let callback = "https://dashboard.example.test/api/public/connectors/rotation-mcp/callback";
         let (_, mut grant) = oauth::generic::authorize_with_client(
+            services,
             oauth::Consent {
                 user: user.as_str(),
                 state: "test-state",
@@ -116,7 +121,7 @@ impl Harness {
         )
         .await
         .unwrap();
-        oauth::exchange_with_client(&mut grant, "test-code", callback, &http)
+        oauth::exchange_with_client(services, &mut grant, "test-code", callback, &http)
             .await
             .unwrap();
         grant.expires_at = 0;
@@ -145,6 +150,7 @@ impl Harness {
             provider,
             http,
             origin,
+            services: view,
             _server: server,
             _directory: directory,
         })
@@ -152,9 +158,10 @@ impl Harness {
 
     pub(super) async fn resolve(&self, probe: bool) -> (AdminResult<String>, VerificationReport) {
         let mut report = VerificationReport::for_provider(self.provider.slug());
-        let result = oauth::TokenResolver::new(&self.db.pool, &self.user, &self.http)
-            .resolve(self.provider.clone(), probe, &mut report)
-            .await;
+        let result =
+            oauth::TokenResolver::new(&self.db.pool, &self.services, &self.user, &self.http)
+                .resolve(self.provider.clone(), probe, &mut report)
+                .await;
         (result, report.finish())
     }
 
@@ -164,7 +171,7 @@ impl Harness {
             .await
             .unwrap();
         tx.commit().await.unwrap();
-        row.map(|row| oauth::open(&row.grant, &self.user, &self.provider).unwrap())
+        row.map(|row| oauth::open(&self.services, &row.grant, &self.user, &self.provider).unwrap())
     }
 
     pub(super) async fn account(&self) -> accounts::ProviderConnection {

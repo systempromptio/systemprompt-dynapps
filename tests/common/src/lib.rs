@@ -12,6 +12,7 @@ pub mod onepassword_fake_cli;
 pub mod orphans;
 pub mod paths;
 pub mod secrets_fixture;
+pub mod services;
 pub mod skip;
 pub mod sso;
 pub mod tempdb;
@@ -30,6 +31,9 @@ pub fn ephemeral_signing_keys() -> SigningKeys {
     SigningKeys::new(key, &[9; 32]).expect("build the signing keys")
 }
 pub use secrets_fixture::{bootstrap_master_key, bootstrap_signing_config};
+pub use services::{
+    empty_services_view, extension_services, offline_extension_services, services_view,
+};
 pub use skip::{ci, skip_or_panic};
 pub use sso::{FakeOidcIdp, HeaderSpec, IdTokenSpec, KidForm, TestIdpKeys, TokenForm};
 pub use tempdb::TempDb;

@@ -77,18 +77,6 @@ pub(crate) async fn insert_user_full(
     roles: &[String],
     status: &str,
 ) -> UserId {
-    static SERVICES: std::sync::Once = std::sync::Once::new();
-    SERVICES.call_once(|| {
-        if systemprompt::loader::ServicesBootstrap::is_initialized() {
-            return;
-        }
-        let directory = tempfile::tempdir().expect("services fixture");
-        let path = directory.path().join("config.yaml");
-        std::fs::write(&path, "{}").expect("write services fixture");
-        systemprompt::loader::ServicesBootstrap::init_from_path(&path)
-            .expect("install services fixture");
-    });
-
     sqlx::query(
         "INSERT INTO users (id, name, email, display_name, status, email_verified, roles)
          VALUES ($1, $2, $3, $4, $5, true, $6)",

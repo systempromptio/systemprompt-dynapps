@@ -111,6 +111,10 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
                     "journal-owner".to_owned(),
                 )),
             ),
+            services: dynapps_test_common::empty_services_view(),
+            subject_providers: systemprompt::governance::authz::SubjectProviderSet::from_providers(
+                Vec::new(),
+            ),
         },
     );
     let raw = Vec::from(

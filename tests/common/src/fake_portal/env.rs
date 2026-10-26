@@ -7,10 +7,9 @@
 //! [`PortalEnv::mint`] signs with, and `SSL_CERT_FILE` naming the fake's CA so
 //! every default `reqwest` client in the connector code trusts it.
 //!
-//! Core's profile, config and services are process-wide,
-//! so one test process holds one `PortalEnv`; nextest gives each test its own
-//! process. Call [`PortalEnv::start`] before anything else touches
-//! `ServicesBootstrap`.
+//! Core's profile and config are process-wide, so one test process holds one
+//! `PortalEnv`; nextest gives each test its own process. The services tree is
+//! not: [`PortalEnv::services`] is the view the code under test is handed.
 
 use std::collections::BTreeMap;
 
@@ -42,6 +41,7 @@ const COPIED: [&str; 3] = [
 #[derive(Debug)]
 pub struct PortalEnv {
     pub portal: FakePortal,
+    pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
     _dir: tempfile::TempDir,
 }
 
@@ -81,9 +81,13 @@ impl PortalEnv {
             .await
             .expect("init secrets");
         systemprompt::config::try_init_config(None).expect("init config");
-        systemprompt::loader::ServicesBootstrap::init_from_path(&config).expect("init services");
+        let services = crate::offline_extension_services(crate::services_view(&config));
         KEYS.get_or_init(crate::ephemeral_signing_keys);
-        Self { portal, _dir: dir }
+        Self {
+            portal,
+            services,
+            _dir: dir,
+        }
     }
 
     // The keys every minted JWT is signed with, and the routers under test

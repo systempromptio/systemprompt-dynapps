@@ -137,8 +137,9 @@ async fn personal_key_is_required_used_and_never_shared() {
     let hop = hop(&catalog);
     let credential = CredentialId::new(CREDENTIAL);
     let keys = UserProviderCredentialRepository::new(&pool);
+    let tokens = Arc::new(systemprompt::security::credential::TokenCache::default());
 
-    let refused = resolve(&catalog, &hop, &owner(&keys, &alice))
+    let refused = resolve(&catalog, &hop, &owner(&keys, &alice), &tokens)
         .await
         .expect_err("no key stored yet");
     let DispatchError::PreAudit(error) = refused else {
@@ -159,7 +160,7 @@ async fn personal_key_is_required_used_and_never_shared() {
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].label.as_deref(), Some("laptop"));
 
-    let (call, billing) = resolve(&catalog, &hop, &owner(&keys, &alice))
+    let (call, billing) = resolve(&catalog, &hop, &owner(&keys, &alice), &tokens)
         .await
         .expect("alice is served from her key");
     assert_eq!(billing, BillingSource::UserKey);
@@ -170,7 +171,7 @@ async fn personal_key_is_required_used_and_never_shared() {
     assert_eq!(headers["user-agent"], USER_AGENT);
     assert!(headers.get("anthropic-beta").is_none());
 
-    let bob_refused = resolve(&catalog, &hop, &owner(&keys, &bob)).await;
+    let bob_refused = resolve(&catalog, &hop, &owner(&keys, &bob), &tokens).await;
     assert!(
         matches!(bob_refused, Err(DispatchError::PreAudit(ref e)) if e.status().as_u16() == 403),
         "alice's key must never serve bob"
@@ -184,7 +185,7 @@ async fn personal_key_is_required_used_and_never_shared() {
 
     assert!(keys.delete_key(&alice, &credential).await.expect("delete"));
     assert!(
-        resolve(&catalog, &hop, &owner(&keys, &alice))
+        resolve(&catalog, &hop, &owner(&keys, &alice), &tokens)
             .await
             .is_err()
     );

@@ -98,6 +98,7 @@ pub(crate) async fn seed(pool: &Arc<PgPool>) -> Seeded {
             external_base: String::new(),
         },
         RunnerLimits::default(),
+        dynapps_test_common::extension_services(pool, dynapps_test_common::empty_services_view()),
     );
     Seeded {
         state,

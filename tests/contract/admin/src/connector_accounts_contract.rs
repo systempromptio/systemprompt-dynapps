@@ -94,9 +94,10 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
         user: admin_user.as_str().to_owned(),
         // Bound to the loaded dynbrain configuration, so the callback reaches
         // the denial rather than stopping at the stale-configuration check.
-        configuration_binding: connector_oauth::generic::binding(&Provider::Generic(
-            "dynbrain".to_owned(),
-        ))
+        configuration_binding: connector_oauth::generic::binding(
+            &dynapps_test_common::offline_extension_services(globals::services().clone()),
+            &Provider::Generic("dynbrain".to_owned()),
+        )
         .unwrap_or_default(),
         authorization_issuer: String::new(),
         token_auth_method: String::new(),

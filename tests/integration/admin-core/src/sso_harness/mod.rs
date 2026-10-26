@@ -141,6 +141,7 @@ impl SsoApp {
                 &database,
                 Arc::clone(&sessions),
                 Arc::new(config.clone()),
+                dynapps_test_common::empty_services_view(),
             )),
             write_pool: Arc::clone(pool),
             session_service: sessions,

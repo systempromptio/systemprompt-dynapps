@@ -84,6 +84,15 @@ impl ExtensionContext for PoolCtx {
     fn background_tasks(&self) -> BackgroundTasks {
         BackgroundTasks::new()
     }
+    fn services(&self) -> systemprompt::manifest::services::ServicesView {
+        dynapps_test_common::empty_services_view()
+    }
+    fn provider_tokens(&self) -> Arc<dyn systemprompt::traits::ProviderTokenCache> {
+        Arc::new(systemprompt::security::credential::TokenCache::default())
+    }
+    fn subject_attributes(&self) -> Arc<dyn systemprompt::models::authz::SubjectAttributeSource> {
+        Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()))
+    }
 }
 
 // A context whose database handle is not a core `Database`, which is the one
@@ -123,6 +132,15 @@ impl ExtensionContext for ForeignDbCtx {
     }
     fn background_tasks(&self) -> BackgroundTasks {
         BackgroundTasks::new()
+    }
+    fn services(&self) -> systemprompt::manifest::services::ServicesView {
+        dynapps_test_common::empty_services_view()
+    }
+    fn provider_tokens(&self) -> Arc<dyn systemprompt::traits::ProviderTokenCache> {
+        Arc::new(systemprompt::security::credential::TokenCache::default())
+    }
+    fn subject_attributes(&self) -> Arc<dyn systemprompt::models::authz::SubjectAttributeSource> {
+        Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()))
     }
 }
 

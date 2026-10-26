@@ -57,6 +57,7 @@ fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
             database,
             Arc::clone(&sessions),
             Arc::new(config.clone()),
+            globals::services().clone(),
         )),
         write_pool: Arc::clone(pool),
         session_service: sessions,
@@ -75,6 +76,7 @@ fn farm_state(pool: &Arc<PgPool>) -> Arc<farm::state::FarmState> {
             external_base: String::new(),
         },
         farm::state::RunnerLimits::default(),
+        dynapps_test_common::extension_services(pool, globals::services().clone()),
     )
 }
 
@@ -188,6 +190,15 @@ impl App {
             .merge(share)
             .layer(axum::Extension(core_planes(&database)))
             .layer(axum::Extension(systemprompt::traits::BackgroundTasks::new()))
+            .layer(axum::Extension(dynapps_test_common::extension_services(
+                pool,
+                globals::services().clone(),
+            )))
+            .layer(axum::Extension::<
+                Arc<dyn systemprompt::traits::ProviderTokenCache>,
+            >(Arc::new(
+                systemprompt::security::credential::TokenCache::default(),
+            )))
             .layer(axum::Extension(globals::signing_keys().clone()));
 
         Self {

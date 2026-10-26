@@ -152,7 +152,7 @@ async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailabl
         attribution: &attribution,
         api_key_id: None,
     };
-    let denial = RouteEntitlementGuard
+    let denial = RouteEntitlementGuard::new(offline_services())
         .check(&database, &request)
         .await
         .unwrap_err();
@@ -163,7 +163,7 @@ async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailabl
         ..request
     };
     assert!(
-        RouteEntitlementGuard
+        RouteEntitlementGuard::new(offline_services())
             .check(&database, &unresolved)
             .await
             .is_ok()
@@ -206,7 +206,8 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     );
     let config = root.path().join("config.yaml");
     std::fs::write(&config, yaml).unwrap();
-    systemprompt::loader::ServicesBootstrap::init_from_path(&config).unwrap();
+    let state = systemprompt::loader::ServicesState::load_from_path(&config).unwrap();
+    let services = &offline(state.view());
     let ca = reqwest::Certificate::from_pem(&std::fs::read(root.path().join("ca.pem")).unwrap())
         .unwrap();
     let http = reqwest::Client::builder()
@@ -216,9 +217,10 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
         .build()
         .unwrap();
     let provider = Provider::try_from("fourth-mcp".to_owned()).unwrap();
-    assert!(provider.configured() && provider.requires_auth());
+    assert!(provider.configured(&services.config()) && provider.requires_auth(&services.config()));
     let callback = "https://dashboard.example.test/api/public/connectors/fourth-mcp/callback";
     let (url, mut grant) = generic::authorize_with_client(
+        services,
         generic::Consent {
             user: "active-user",
             state: "test-state",
@@ -237,20 +239,24 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     assert_eq!(params["state"], "test-state");
     assert_eq!(params["code_challenge_method"], "S256");
     assert!(!url.as_str().contains("test-verifier"));
-    exchange_with_client(&mut grant, "test-code", callback, &http)
+    exchange_with_client(services, &mut grant, "test-code", callback, &http)
         .await
         .unwrap();
     assert_eq!(grant.access_token, "access-token");
     assert!(grant.verifier.is_empty());
-    systemprompt_web_admin_platform::connector_oauth::refresh_with_client(&mut grant, &http)
+    systemprompt_web_admin_platform::connector_oauth::refresh_with_client(
+        services, &mut grant, &http,
+    )
+    .await
+    .unwrap();
+    assert_eq!(grant.refresh_token.as_deref(), Some("refresh-token"));
+    verify::verify_with_client(services, &mut grant, &http)
         .await
         .unwrap();
-    assert_eq!(grant.refresh_token.as_deref(), Some("refresh-token"));
-    verify::verify_with_client(&mut grant, &http).await.unwrap();
     assert_eq!(grant.resource_name, format!("{origin}/mcp"));
     assert!(grant.account_id.is_empty());
     grant.configuration_binding = "changed-config".into();
-    assert!(generic::validate_grant(&grant).is_err());
+    assert!(generic::validate_grant(services, &grant).is_err());
 }
 
 #[test]
@@ -318,7 +324,8 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
     );
     let config = root.path().join("config.yaml");
     std::fs::write(&config, yaml).unwrap();
-    systemprompt::loader::ServicesBootstrap::init_from_path(&config).unwrap();
+    let state = systemprompt::loader::ServicesState::load_from_path(&config).unwrap();
+    let services = &offline(state.view());
     let ca = reqwest::Certificate::from_pem(&std::fs::read(root.path().join("ca.pem")).unwrap())
         .unwrap();
     let http = reqwest::Client::builder()
@@ -328,9 +335,13 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
         .build()
         .unwrap();
     let provider = Provider::try_from("google_rag".to_owned()).unwrap();
-    assert_eq!(provider.display_name(), "Google Drive knowledge");
+    assert_eq!(
+        provider.display_name(&services.config()),
+        "Google Drive knowledge"
+    );
     let callback = "https://dashboard.example.test/api/public/connectors/google_rag/callback";
     let (url, mut grant) = generic::authorize_with_client(
+        services,
         generic::Consent {
             user: "active-user",
             state: "test-state",
@@ -353,10 +364,12 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
         grant.authorization_issuer, origin,
         "the issuer is banked as the AS declares it"
     );
-    exchange_with_client(&mut grant, "test-code", callback, &http)
+    exchange_with_client(services, &mut grant, "test-code", callback, &http)
         .await
         .unwrap();
-    verify::verify_with_client(&mut grant, &http).await.unwrap();
+    verify::verify_with_client(services, &mut grant, &http)
+        .await
+        .unwrap();
     assert_eq!(grant.account_id, "1029384756");
     assert_eq!(grant.account_name, "sales.tester@dynapps.example");
     assert_eq!(grant.resource_name, format!("{origin}/mcp"));
@@ -364,15 +377,24 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
 
 #[tokio::test]
 async fn subject_attribute_failure_is_not_an_empty_membership() {
+    use systemprompt::models::authz::SubjectAttributeSource as _;
     let pool = sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://test:test@localhost:1/test")
         .unwrap();
     pool.close().await;
     let user = systemprompt::identifiers::UserId::new("00000000-0000-0000-0000-000000000001");
     assert!(
-        systemprompt_web_admin_core::authz::subject_attributes_for(&pool, &user)
-            .await
-            .is_err()
+        systemprompt::governance::authz::SubjectProviderSet::discover(
+            &systemprompt::governance::authz::AuthzHookContext {
+                pool: std::sync::Arc::new(pool),
+                sink: std::sync::Arc::new(systemprompt::governance::authz::NullAuditSink),
+                services: empty_view(),
+                subjects: systemprompt::models::authz::SubjectSourceHandle::default(),
+            }
+        )
+        .resolve_all(&user)
+        .await
+        .is_err()
     );
 }
 
@@ -407,10 +429,33 @@ async fn gateway_rejects_incompatible_database_handles_even_when_reported_connec
         attribution: &attribution,
         api_key_id: None,
     };
-    let denial = RouteEntitlementGuard
+    let denial = RouteEntitlementGuard::new(offline_services())
         .check(&ForeignDatabase, &request)
         .await
         .expect_err("unknown database implementations cannot authorize routes");
     assert!(matches!(denial.kind, GatewayDenyKind::Unavailable));
     assert_eq!(denial.retry_after_seconds, 5);
+}
+
+fn empty_view() -> systemprompt::manifest::services::ServicesView {
+    systemprompt::loader::ServicesState::from_config(
+        systemprompt::manifest::ServicesConfig::default(),
+    )
+    .expect("empty services")
+    .view()
+}
+
+fn offline(
+    view: systemprompt::manifest::services::ServicesView,
+) -> systemprompt_web_admin_core::extension_services::ExtensionServices {
+    systemprompt_web_admin_core::extension_services::ExtensionServices::new(
+        view,
+        std::sync::Arc::new(
+            systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()),
+        ),
+    )
+}
+
+fn offline_services() -> systemprompt_web_admin_core::extension_services::ExtensionServices {
+    offline(empty_view())
 }

@@ -237,11 +237,16 @@ pub(crate) async fn dispatch_reply(
         .cloned()
         .collect();
 
-    let call = UpstreamTarget::resolve(&catalog, &hop, KEY)
-        .map_err(|e| format!("resolve: {e}"))?
-        .call()
-        .await
-        .map_err(|e| format!("call: {e}"))?;
+    let call = UpstreamTarget::resolve(
+        &std::sync::Arc::new(systemprompt::security::credential::TokenCache::default()),
+        &catalog,
+        &hop,
+        KEY,
+    )
+    .map_err(|e| format!("resolve: {e}"))?
+    .call()
+    .await
+    .map_err(|e| format!("call: {e}"))?;
     let http = reqwest::Client::new();
     let ctx = OutboundCtx {
         target: &hop,

@@ -37,7 +37,7 @@ async fn stored_grant(h: &Harness, person: &Person, provider: &str) -> oauth::Gr
         .expect("lock grant")
         .expect("grant stored");
     tx.commit().await.expect("commit");
-    oauth::open(&row.grant, &person.id, &provider).expect("open grant")
+    oauth::open(&h.env.services, &row.grant, &person.id, &provider).expect("open grant")
 }
 
 #[tokio::test(flavor = "multi_thread")]

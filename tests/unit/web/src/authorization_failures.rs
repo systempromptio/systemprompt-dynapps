@@ -34,7 +34,19 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
         &database,
         Arc::clone(&pool),
         sessions,
-    );
+    )
+    .layer(axum::Extension(
+        systemprompt_web_admin_core::extension_services::ExtensionServices::new(
+            systemprompt::loader::ServicesState::from_config(
+                systemprompt::manifest::ServicesConfig::default(),
+            )
+            .expect("empty services")
+            .view(),
+            Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(
+                Vec::new(),
+            )),
+        ),
+    ));
     pool.close().await;
     let payload = serde_json::json!({
         "entity": systemprompt::governance::authz::EntityRef::McpServer(systemprompt::identifiers::McpServerId::try_new("dynbrain").expect("valid fixture identifier")),
