@@ -37,7 +37,14 @@ async fn stored_grant(h: &Harness, person: &Person, provider: &str) -> oauth::Gr
         .expect("lock grant")
         .expect("grant stored");
     tx.commit().await.expect("commit");
-    oauth::open(&row.grant, &person.id, &provider).expect("open grant")
+    oauth::open(
+        &h.env.services,
+        h.env.boot.secrets().as_ref(),
+        &row.grant,
+        &person.id,
+        &provider,
+    )
+    .expect("open grant")
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -160,7 +167,7 @@ async fn an_expired_token_is_refreshed_and_the_new_bearer_is_forwarded() {
         &mut tx,
         &erin.id,
         "dynapps-odoo",
-        &oauth::seal(&grant).expect("seal"),
+        &oauth::seal(h.env.boot.secrets().as_ref(), &grant).expect("seal"),
     )
     .await
     .expect("store expired grant");

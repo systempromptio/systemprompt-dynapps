@@ -16,18 +16,21 @@ use std::sync::Arc;
 use systemprompt::identifiers::UserId;
 use systemprompt::prelude::PgPool;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(super) async fn marketplace_context_middleware(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    BootServices { boot, services }: BootServices,
     mut request: Request,
     next: Next,
 ) -> AdminResult<Response> {
     let result = async {
-        let path = systemprompt_web_admin_core::request::get_services_path()?;
+        let path = systemprompt_web_admin_core::request::get_services_path(&boot);
         let plugins = systemprompt_web_admin_catalog::repositories::marketplace::plugins::list_plugins_for_user(
             &pool,
+            &services,
             &path,
             &user_ctx.user_id,
         )
@@ -41,10 +44,11 @@ pub(super) async fn marketplace_context_middleware(
         Ok(counts) => counts,
         Err(error) => return Err(classify_catalog_failure(error, &user_ctx.user_id)),
     };
-    let site_url = systemprompt::manifest::Config::get().map_or_else(
-        |_| String::new(),
-        |c| c.api_external_url.trim_end_matches('/').to_owned(),
-    );
+    let site_url = boot
+        .config()
+        .api_external_url
+        .trim_end_matches('/')
+        .to_owned();
 
     let ctx = MarketplaceContext {
         user_id: user_ctx.user_id.clone(),

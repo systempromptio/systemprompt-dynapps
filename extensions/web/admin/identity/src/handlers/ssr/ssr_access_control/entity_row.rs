@@ -6,7 +6,6 @@
 //! nothing, while every other kind is addressed by a name an operator chose.
 
 use chrono::Utc;
-use systemprompt::governance::authz::DASHBOARD_SOURCE;
 
 use super::bands::{band_label, band_rank, chips, resolution};
 use super::entities::SYNC_URL;
@@ -17,9 +16,10 @@ use systemprompt_web_admin_core::repositories::access_rules::rules::LedgerRuleRo
 use systemprompt_web_admin_core::repositories::gateway_catalog::RouteLabels;
 use systemprompt_web_admin_core::ssr::entity_kind::entity_kind_label;
 use systemprompt_web_admin_core::types::access_control::AccessDecision;
+use systemprompt_web_admin_core::util::change_source::is_console_source;
 
 fn rule_view(row: &LedgerRuleRow) -> AcRuleView {
-    let dashboard = row.source == DASHBOARD_SOURCE;
+    let dashboard = is_console_source(&row.source);
     AcRuleView {
         band: row.rule_type.clone(),
         band_label: band_label(&row.rule_type),

@@ -32,7 +32,7 @@ pub(crate) fn one_skill(entity_id: &str) -> Vec<SectionInput> {
 async fn set_default_included(pool: &PgPool, entity_type: &str, entity_id: &str, included: bool) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
-         VALUES ($1, $2, $3, 'fixture')
+         VALUES ($1, $2, $3, 'code:test-fixture')
          ON CONFLICT (entity_type, entity_id) DO UPDATE
             SET default_included = EXCLUDED.default_included",
     )
@@ -45,10 +45,18 @@ async fn set_default_included(pool: &PgPool, entity_type: &str, entity_id: &str,
 }
 
 pub(crate) async fn grade(pool: &PgPool, user: &UserId, entity_id: &str) -> MatrixRow {
-    let matrix = resolve_user_matrix(pool, user, one_skill(entity_id))
-        .await
-        .expect("resolve matrix")
-        .expect("user found");
+    let matrix = resolve_user_matrix(
+        pool,
+        &dynapps_test_common::extension_services(
+            &std::sync::Arc::new(pool.clone()),
+            dynapps_test_common::empty_services_view(),
+        ),
+        user,
+        one_skill(entity_id),
+    )
+    .await
+    .expect("resolve matrix")
+    .expect("user found");
     let mut sections = matrix.sections;
     let section = sections.pop().expect("one section");
     section.rows.into_iter().next().expect("one row")
@@ -60,9 +68,17 @@ async fn resolve_user_matrix_returns_none_for_an_unknown_user() {
         return;
     };
 
-    let matrix = resolve_user_matrix(&db.pool, &UserId::new(unique("nobody")), Vec::new())
-        .await
-        .expect("resolve matrix");
+    let matrix = resolve_user_matrix(
+        &db.pool,
+        &dynapps_test_common::extension_services(
+            &db.pool,
+            dynapps_test_common::empty_services_view(),
+        ),
+        &UserId::new(unique("nobody")),
+        Vec::new(),
+    )
+    .await
+    .expect("resolve matrix");
 
     assert!(matrix.is_none());
     db.cleanup().await;
@@ -77,10 +93,18 @@ async fn resolve_user_matrix_reports_the_users_identity_and_memberships() {
     let user = insert_user(&db.pool, &unique("user"), &email).await;
     set_project(&db.pool, &user, Some("commerce")).await;
 
-    let matrix = resolve_user_matrix(&db.pool, &user, Vec::new())
-        .await
-        .expect("resolve matrix")
-        .expect("user found");
+    let matrix = resolve_user_matrix(
+        &db.pool,
+        &dynapps_test_common::extension_services(
+            &db.pool,
+            dynapps_test_common::empty_services_view(),
+        ),
+        &user,
+        Vec::new(),
+    )
+    .await
+    .expect("resolve matrix")
+    .expect("user found");
 
     assert_eq!(matrix.user.id, user.as_str());
     assert_eq!(matrix.user.email.as_deref(), Some(email.as_str()));
@@ -101,10 +125,18 @@ async fn resolve_user_matrix_places_a_user_with_no_memberships_in_unassigned() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("nodept")).await;
 
-    let matrix = resolve_user_matrix(&db.pool, &user, Vec::new())
-        .await
-        .expect("resolve matrix")
-        .expect("user found");
+    let matrix = resolve_user_matrix(
+        &db.pool,
+        &dynapps_test_common::extension_services(
+            &db.pool,
+            dynapps_test_common::empty_services_view(),
+        ),
+        &user,
+        Vec::new(),
+    )
+    .await
+    .expect("resolve matrix")
+    .expect("user found");
 
     // Why: membership in `unassigned` is derived, not stored — a user with no
     // group row is in it by definition, so the card names it.

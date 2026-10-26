@@ -11,11 +11,7 @@ use crate::tempdb::TempDb;
 use crate::{globals, principal};
 
 fn origin() -> String {
-    systemprompt::config::ProfileBootstrap::get()
-        .expect("fixture profile")
-        .server
-        .api_external_url
-        .clone()
+    globals::boot().config().api_external_url.clone()
 }
 
 #[tokio::test(flavor = "multi_thread")]

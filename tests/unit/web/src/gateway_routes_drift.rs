@@ -4,7 +4,7 @@
 //! touching the settings above them.
 
 use chrono::Utc;
-use systemprompt_web_admin_core::types::RouteFallbackView;
+use systemprompt_web_admin_core::types::{GatewayRouteView, RouteDeploymentView};
 use systemprompt_web_admin_governance::repositories::gateway_routes::declared::{
     DeclaredRoutes, parse_declared_routes,
 };
@@ -19,25 +19,28 @@ gateway:
   enabled: true
   routes:
   - id: claude-star
-    model_pattern: claude-*
-    provider: anthropic
-    fallbacks:
-    - provider: vertex
-      upstream_model: claude-sonnet-5-5
-    by_scope:
-      dimension: project
-      unmapped: shared
-      chains:
-        storefront:
-          provider: vertex
-  - model_pattern: gemini-*
-    provider: gemini
+    label: Claude
+    models: claude-*
+    when:
+      scope:
+        project: storefront
+    deployments:
+    - anthropic/api
+    - endpoint: vertex/messages
+      weight: 2
+    strategy: weighted
+  - id: go-alias
+    alias:
+      requested: go-deepseek
+      model: deepseek-v4-pro
+    deployments:
+    - opencode-go/chat
   - id: gpt
-    model_pattern: gpt-4.1*
-    provider: openai
+    models:
+    - gpt-4.1*
     requires:
-      governance: [european]
-  default_provider: anthropic
+      european: true
+  default_model: claude-sonnet-5-5
   quota_fault_mode: closed
 ";
 
@@ -49,7 +52,6 @@ fn rows_from(declared: &DeclaredRoutes, source: &str) -> Vec<RouteRow> {
         .map(|(i, d)| RouteRow {
             route: d.route.clone(),
             position: i32::try_from(i).expect("small index"),
-            explicit_id: d.explicit_id,
             source: source.to_owned(),
             updated_at: Utc::now(),
         })
@@ -57,26 +59,35 @@ fn rows_from(declared: &DeclaredRoutes, source: &str) -> Vec<RouteRow> {
 }
 
 #[test]
-fn declaration_carries_every_route_field_and_synthesises_missing_ids() {
+fn declaration_carries_every_route_field() {
     let declared = parse_declared_routes(DECLARED).expect("parses");
     assert_eq!(declared.routes.len(), 3);
-    let claude = &declared.routes[0];
-    assert!(claude.explicit_id);
+    let claude = &declared.routes[0].route;
+    assert_eq!(claude.id, "claude-star");
+    assert_eq!(claude.name.as_deref(), Some("Claude"));
+    assert_eq!(claude.models, vec!["claude-*".to_owned()]);
     assert_eq!(
-        claude.route.fallbacks,
-        vec![RouteFallbackView {
-            provider: "vertex".to_owned(),
-            upstream_model: Some("claude-sonnet-5-5".to_owned()),
-            weight: None,
-        }]
+        claude.deployments,
+        vec![
+            RouteDeploymentView {
+                endpoint: "anthropic/api".to_owned(),
+                weight: None,
+            },
+            RouteDeploymentView {
+                endpoint: "vertex/messages".to_owned(),
+                weight: Some(2),
+            },
+        ]
     );
-    assert!(
-        claude.route.by_scope.is_some(),
-        "per-scope chains are carried"
-    );
-    let gemini = &declared.routes[1];
-    assert!(!gemini.explicit_id);
-    assert!(!gemini.route.id.is_empty(), "synthesised id");
+    assert_eq!(claude.strategy.as_deref(), Some("weighted"));
+    assert!(claude.when.is_some(), "scope predicates are carried");
+    let alias = declared.routes[1]
+        .route
+        .alias
+        .as_ref()
+        .expect("alias carried");
+    assert_eq!(alias.requested, "go-deepseek");
+    assert_eq!(alias.model, "deepseek-v4-pro");
     assert!(declared.routes[2].route.requires.is_some());
 }
 
@@ -92,17 +103,19 @@ fn declared_hash_is_blind_to_comments_and_sees_order() {
 }
 
 #[test]
-fn parse_refuses_a_repeated_id_and_a_route_without_a_provider() {
+fn parse_refuses_a_repeated_id_and_a_route_without_an_id() {
     let dup = DECLARED.replace("  - id: gpt\n", "  - id: claude-star\n");
     assert!(
         parse_declared_routes(&dup)
             .expect_err("refused")
+            .to_string()
             .contains("repeats id")
     );
-    let bare = "gateway:\n  routes:\n  - model_pattern: x-*\n";
+    let bare = "gateway:\n  routes:\n  - models: x-*\n";
     assert!(
         parse_declared_routes(bare)
             .expect_err("refused")
+            .to_string()
             .contains("routes[0]")
     );
 }
@@ -119,21 +132,18 @@ fn drift_names_missing_orphan_changed_fields_and_console_origin() {
     let declared = parse_declared_routes(DECLARED).expect("parses");
     let mut rows = rows_from(&declared, SOURCE_CODE);
     rows.remove(2);
-    rows[0].route.fallbacks = vec![RouteFallbackView {
-        provider: "cerebras".to_owned(),
-        upstream_model: None,
+    rows[0].route.deployments = vec![RouteDeploymentView {
+        endpoint: "cerebras/chat".to_owned(),
         weight: None,
     }];
     rows[0].source = SOURCE_DASHBOARD.to_owned();
     rows.push(RouteRow {
-        route: systemprompt_web_admin_core::types::GatewayRouteView {
+        route: GatewayRouteView {
             id: "console-only".to_owned(),
-            model_pattern: "o4-*".to_owned(),
-            provider: "openai".to_owned(),
+            models: vec!["o4-*".to_owned()],
             ..Default::default()
         },
         position: 9,
-        explicit_id: true,
         source: SOURCE_DASHBOARD.to_owned(),
         updated_at: Utc::now(),
     });
@@ -142,9 +152,9 @@ fn drift_names_missing_orphan_changed_fields_and_console_origin() {
     assert_eq!(drift.only_in_db.len(), 1);
     assert!(drift.only_in_db[0].dashboard);
     assert_eq!(drift.changed.len(), 1);
-    assert_eq!(drift.changed[0].fields, vec!["fallbacks".to_owned()]);
+    assert_eq!(drift.changed[0].fields, vec!["deployments".to_owned()]);
     assert!(drift.changed[0].dashboard);
-    assert!(drift.changed[0].in_db.contains("fallback cerebras"));
+    assert!(drift.changed[0].in_db.contains("→ cerebras/chat"));
     assert!(drift.reordered.is_none(), "shared routes keep their order");
 }
 
@@ -168,12 +178,12 @@ fn render_replaces_the_sequence_and_keeps_settings_and_header() {
     let out = render_routes_export(DECLARED, &rows).expect("renders");
     assert!(out.starts_with("# Gateway routes — header comment.\n"));
     assert!(out.contains("quota_fault_mode: closed"));
-    assert!(out.contains("default_provider: anthropic"));
-    assert!(out.contains("fallbacks:"));
-    assert!(out.contains("- provider: vertex"));
-    assert!(out.contains("by_scope:"));
-    assert!(!out.contains("fallback_provider"));
-    assert!(!out.contains("gemini-*"));
+    assert!(out.contains("default_model: claude-sonnet-5-5"));
+    assert!(out.contains("- anthropic/api"));
+    assert!(out.contains("endpoint: vertex/messages"));
+    assert!(out.contains("scope:"));
+    assert!(!out.contains("go-deepseek"));
+    assert!(!out.contains("gpt-4.1*"));
     let back = parse_declared_routes(&out).expect("round-trips");
     assert_eq!(back.routes.len(), 1);
     assert_eq!(back.declared_hash(), {
@@ -184,13 +194,13 @@ fn render_replaces_the_sequence_and_keeps_settings_and_header() {
 }
 
 #[test]
-fn render_omits_an_id_the_loader_would_synthesise() {
+fn render_writes_every_routes_declared_id() {
     let declared = parse_declared_routes(DECLARED).expect("parses");
     let rows = rows_from(&declared, SOURCE_CODE);
     let out = render_routes_export(DECLARED, &rows).expect("renders");
-    assert_eq!(
-        out.matches("id:").count(),
-        2,
-        "only the two explicit ids: {out}"
-    );
+    for id in ["claude-star", "go-alias", "gpt"] {
+        assert!(out.contains(&format!("id: {id}")), "{id} written: {out}");
+    }
+    let back = parse_declared_routes(&out).expect("round-trips");
+    assert_eq!(back.declared_hash(), declared.declared_hash());
 }

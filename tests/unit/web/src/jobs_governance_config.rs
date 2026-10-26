@@ -27,9 +27,10 @@ fn warning(dir: &Path) -> usize {
 }
 
 #[test]
-fn an_absent_file_falls_back_to_the_four_built_in_policies() {
+fn an_absent_file_falls_back_to_the_four_built_in_policies_in_warn_mode() {
     let dir = services_with(None);
     assert_eq!(active(dir.path()), 4);
+    assert_eq!(warning(dir.path()), 4);
 }
 
 #[test]

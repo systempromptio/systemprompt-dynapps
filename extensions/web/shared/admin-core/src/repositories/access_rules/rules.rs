@@ -108,13 +108,3 @@ pub async fn list_entity_defaults<'e, E: PgExecutor<'e>>(
     .fetch_all(exec)
     .await
 }
-
-pub async fn count_band_rules(pool: &PgPool) -> Result<i64, sqlx::Error> {
-    sqlx::query_scalar!(
-        r#"SELECT COUNT(*)::BIGINT AS "count!"
-           FROM access_control_rules
-           WHERE rule_type <> 'user'"#,
-    )
-    .fetch_one(pool)
-    .await
-}

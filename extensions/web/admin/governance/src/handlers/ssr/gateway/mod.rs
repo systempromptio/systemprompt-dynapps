@@ -29,6 +29,8 @@ mod view;
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
@@ -36,18 +38,13 @@ use sqlx::PgPool;
 
 use crate::repositories;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
-use systemprompt_web_admin_core::repositories::gateway_catalog::{
-    RouteLabels, get_route_labels_from_services,
-};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{RouteLabels, get_route_labels};
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::pickable_users::list_pickable_users;
 use systemprompt_web_admin_core::ssr::sync_plane::plane_card_by_id;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{
-    GatewayConfigView, GatewayRouteView, MarketplaceContext, UserContext,
-};
+use systemprompt_web_admin_core::types::{GatewayConfigView, GatewayRouteView, UserContext};
 
 pub(crate) use route_detail::gateway_route_page;
 use rows::{RouteRowInputs, Surfaces, kpis, load_surfaces, resolved_only, route_rows};
@@ -83,17 +80,24 @@ struct GatewayRead {
     grants_by_route: HashMap<String, i64>,
 }
 
-async fn load_gateway(pool: &PgPool, faults: &mut Faults) -> GatewayRead {
-    let (config, config_error) = match super::super::gateway_config_view(pool).await {
+async fn load_gateway(
+    pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &ExtensionBoot,
+    faults: &mut Faults,
+) -> GatewayRead {
+    let (config, config_error) = match super::super::gateway_config_view(pool, boot).await {
         Ok(config) => (config, String::new()),
         Err(e) => (GatewayConfigView::default(), e.to_string()),
     };
     let (resolved, catalog_error) =
-        match systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_routes_from_services() {
+        match systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_routes(
+            &services.config(),
+        ) {
             Ok(routes) => (routes, String::new()),
             Err(e) => (Vec::new(), e.to_string()),
         };
-    let labels: RouteLabels = faults.take("route labels", get_route_labels_from_services());
+    let labels: RouteLabels = faults.take("route labels", get_route_labels(&services.config()));
     let surfaces = load_surfaces(&labels);
     let grants_by_route = faults.take(
         "route grants",
@@ -188,20 +192,27 @@ async fn gateway_view(
 }
 
 pub(crate) async fn gateway_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<GatewayQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     console_only(&user_ctx)?;
     let mut faults = Faults::new();
-    let read = load_gateway(&pool, &mut faults).await;
+    let read = load_gateway(&pool, &services, &boot, &mut faults).await;
     let tab = GatewayTab::parse(query.tab.as_deref());
     let mut page = gateway_view(&pool, read, tab, &mut faults).await;
     if tab == GatewayTab::Sync {
         let plane = repositories::sync_planes::gateway_routes::PLANE_ID;
-        page.sync = plane_card_by_id(&pool, plane, "")
+        page.sync = plane_card_by_id(&pool, &boot, plane, "")
             .await?
             .map(|card| GatewaySyncView {
                 card,

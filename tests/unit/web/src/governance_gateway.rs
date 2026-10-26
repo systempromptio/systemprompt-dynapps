@@ -1,20 +1,32 @@
-use systemprompt::manifest::services::ProviderRegistry;
+//! Gateway route matching, validation and id stability, and the client-facing
+//! filter the console applies against the resolved catalog.
+
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     create_route, find_matching_route, find_matching_route_index, find_route_index_by_id,
-    get_gateway_config, glob_match, reorder_routes, retain_client_facing, slugify_pattern,
-    synthesize_route_id, update_route, validate_route,
+    get_gateway_config, glob_match, reorder_routes, resolved_catalog, retain_client_facing,
+    slugify_pattern, synthesize_route_id, update_route, validate_route,
 };
-use systemprompt_web_admin_core::types::GatewayRouteView;
+use systemprompt_web_admin_core::types::{GatewayRouteView, RouteAliasView, RouteDeploymentView};
 use systemprompt_web_shared::error::MarketplaceError;
+
+use crate::support::committed_services;
 
 const TWO_ROUTE_PROFILE: &str = r"gateway:
   enabled: true
   routes:
-    - model_pattern: claude-*
-      provider: anthropic
-    - model_pattern: '*'
-      provider: openai
+    - id: claude
+      models: claude-*
+    - id: everything
+      models: '*'
 ";
+
+fn route(id: &str, models: &[&str]) -> GatewayRouteView {
+    GatewayRouteView {
+        id: id.into(),
+        models: models.iter().map(|m| (*m).to_owned()).collect(),
+        ..Default::default()
+    }
+}
 
 #[test]
 fn glob_matches_exact_and_wildcard() {
@@ -26,43 +38,40 @@ fn glob_matches_exact_and_wildcard() {
 }
 
 #[test]
-fn first_match_wins() {
+fn first_match_wins_and_an_alias_matches_its_requested_id() {
+    let mut aliased = route("go-alias", &[]);
+    aliased.alias = Some(RouteAliasView {
+        requested: "go-deepseek".into(),
+        model: "deepseek-v4-pro".into(),
+    });
     let routes = vec![
-        GatewayRouteView {
-            id: "claude-abc123".into(),
-            model_pattern: "claude-*".into(),
-            provider: "a".into(),
-            ..Default::default()
-        },
-        GatewayRouteView {
-            id: "star-def456".into(),
-            model_pattern: "*".into(),
-            provider: "b".into(),
-            ..Default::default()
-        },
+        route("claude-abc123", &["claude-*"]),
+        aliased,
+        route("star-def456", &["*"]),
     ];
     assert_eq!(find_matching_route_index(&routes, "claude-3"), Some(0));
-    assert_eq!(find_matching_route_index(&routes, "gpt-4"), Some(1));
+    assert_eq!(find_matching_route_index(&routes, "go-deepseek"), Some(1));
+    assert_eq!(find_matching_route_index(&routes, "gpt-4"), Some(2));
     assert_eq!(
         find_matching_route(&routes, "claude-3").map(|r| r.id.as_str()),
         Some("claude-abc123"),
     );
-    assert_eq!(find_route_index_by_id(&routes, "star-def456"), Some(1));
+    assert_eq!(find_route_index_by_id(&routes, "star-def456"), Some(2));
 }
 
 #[test]
-fn validate_rejects_empty_required_fields() {
-    let no_pattern = GatewayRouteView {
-        provider: "anthropic".into(),
-        ..Default::default()
-    };
-    assert!(validate_route(&no_pattern).is_err());
+fn validate_rejects_a_route_with_no_models_and_a_bare_deployment() {
+    assert!(validate_route(&route("empty", &[])).is_err());
 
-    let no_provider = GatewayRouteView {
-        model_pattern: "*".into(),
-        ..Default::default()
-    };
-    assert!(validate_route(&no_provider).is_err());
+    let mut bare = route("bare", &["*"]);
+    bare.deployments = vec![RouteDeploymentView {
+        endpoint: "anthropic".into(),
+        weight: None,
+    }];
+    assert!(validate_route(&bare).is_err());
+
+    bare.deployments[0].endpoint = "anthropic/api".into();
+    assert!(validate_route(&bare).is_ok());
 }
 
 #[test]
@@ -105,19 +114,8 @@ fn ids_stable_across_reorder() -> anyhow::Result<()> {
 fn create_route_rejects_duplicate_id() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("profile.yaml");
-    std::fs::write(
-        &path,
-        r"gateway:
-  enabled: true
-  routes: []
-",
-    )?;
-    let route = GatewayRouteView {
-        id: "fixed-id".into(),
-        model_pattern: "claude-*".into(),
-        provider: "anthropic".into(),
-        ..Default::default()
-    };
+    std::fs::write(&path, "gateway:\n  enabled: true\n  routes: []\n")?;
+    let route = route("fixed-id", &["claude-*"]);
     create_route(&path, &route)?;
     assert!(matches!(
         create_route(&path, &route),
@@ -126,16 +124,19 @@ fn create_route_rejects_duplicate_id() -> anyhow::Result<()> {
     Ok(())
 }
 
-const COMMENTED_PROFILE: &str = r"# Gateway routes - which model patterns map onto which provider.
+const COMMENTED_PROFILE: &str = r"# Gateway routes - which models a policy route pins.
 # Edit by hand or with: systemprompt admin config gateway ...
 gateway:
   enabled: true
   routes:
-  - model_pattern: claude-*
-    provider: anthropic
+  - id: claude
+    models:
+    - claude-*
+    deployments:
+    - anthropic/api
   - id: hand-written
-    model_pattern: gpt-*
-    provider: openai
+    models:
+    - gpt-*
 ";
 
 #[test]
@@ -147,10 +148,6 @@ fn reading_the_config_never_writes_the_file() -> anyhow::Result<()> {
     let cfg = get_gateway_config(&path)?;
     assert_eq!(cfg.routes.len(), 2);
     assert_eq!(cfg.routes[1].id, "hand-written");
-    assert!(
-        !cfg.routes[0].id.is_empty(),
-        "a route without an id: key still reports a synthesized one"
-    );
 
     assert_eq!(
         std::fs::read_to_string(&path)?,
@@ -168,8 +165,7 @@ fn updating_one_route_changes_only_that_field() -> anyhow::Result<()> {
 
     let cfg = get_gateway_config(&path)?;
     let mut edited = cfg.routes[0].clone();
-    edited.provider = "vertex".into();
-    edited.id = synthesize_route_id("claude-*", "anthropic");
+    edited.deployments[0].endpoint = "vertex/messages".into();
     assert!(update_route(&path, 0, &edited)?);
 
     let after = std::fs::read_to_string(&path)?;
@@ -178,64 +174,32 @@ fn updating_one_route_changes_only_that_field() -> anyhow::Result<()> {
         "the comment header must survive the write: {after}"
     );
     assert!(
-        !after.contains("id: claude-star-"),
-        "a synthesized id must not be written into the file: {after}"
-    );
-    assert!(
         after.contains("id: hand-written"),
         "a hand-chosen id must survive: {after}"
     );
 
     let expected: Vec<String> = COMMENTED_PROFILE
         .lines()
-        .map(|line| line.replace("provider: anthropic", "provider: vertex"))
+        .map(|line| line.replace("- anthropic/api", "- vertex/messages"))
         .collect();
     let actual: Vec<String> = after.lines().map(str::to_owned).collect();
     assert_eq!(actual, expected, "only the edited field may differ");
     Ok(())
 }
 
-const TWO_SURFACE_CATALOG: &str = r"- name: anthropic
-  wire: anthropic
-  surface: anthropic
-  endpoint: https://api.anthropic.com/v1
-  api_key_secret: anthropic
-- name: e2e-mock
-  wire: anthropic
-  surface: backend
-  endpoint: https://mock.invalid/v1
-  api_key_secret: e2e_mock
-";
-
 #[test]
-fn a_backend_surface_provider_is_never_client_facing() -> anyhow::Result<()> {
-    let providers: ProviderRegistry = serde_yaml::from_str(TWO_SURFACE_CATALOG)?;
+fn a_route_reaching_no_advertised_model_is_never_client_facing() {
+    let catalog = resolved_catalog(&committed_services()).expect("catalog resolves");
     let routes = vec![
-        GatewayRouteView {
-            id: "claude".into(),
-            model_pattern: "claude-*".into(),
-            provider: "anthropic".into(),
-            ..Default::default()
-        },
-        GatewayRouteView {
-            id: "e2e-mock-route".into(),
-            model_pattern: "e2e-mock-*".into(),
-            provider: "e2e-mock".into(),
-            ..Default::default()
-        },
-        GatewayRouteView {
-            id: "unknown".into(),
-            model_pattern: "ghost-*".into(),
-            provider: "not-in-the-catalog".into(),
-            ..Default::default()
-        },
+        route("claude", &["claude-*"]),
+        route("e2e-mock-route", &["e2e-mock-*"]),
+        route("unknown", &["ghost-*"]),
     ];
 
-    let kept = retain_client_facing(routes, &providers);
+    let kept = retain_client_facing(routes, &catalog);
     assert_eq!(
-        kept.iter().map(|r| r.provider.as_str()).collect::<Vec<_>>(),
-        vec!["anthropic", "not-in-the-catalog"],
-        "only a provider that declares `surface: backend` is hidden; an unknown one passes through"
+        kept.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(),
+        vec!["claude"],
+        "the e2e mock lists to no client, and a glob over no catalog model reaches nothing"
     );
-    Ok(())
 }

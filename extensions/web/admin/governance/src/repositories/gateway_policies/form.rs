@@ -9,9 +9,10 @@
 //! a spec that saves is a spec the gateway will read.
 
 use systemprompt::gateway::{
-    GatewayPolicyConfig, GatewayPolicyEntry, GatewayPolicySpec, HeuristicConfig, QuotaMode,
-    QuotaWindow, SafetyConfig, SafetyHistoryMode, SafetyMode,
+    GatewayPolicyConfig, GatewayPolicyEntry, GatewayPolicySpec, HeuristicConfig, QuotaWindow,
+    SafetyConfig, SafetyHistoryMode,
 };
+use systemprompt::manifest::services::EnforcementMode;
 
 pub use super::form_error::FormError;
 use systemprompt::gateway::CalendarPeriod;
@@ -241,17 +242,17 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
     };
     let spec = GatewayPolicySpec {
         quota_mode: if parse_mode(first(fields, "quota_mode"), "quota_mode")? {
-            QuotaMode::Warn
+            EnforcementMode::Warn
         } else {
-            QuotaMode::Enforce
+            EnforcementMode::Enforce
         },
         quota_windows,
         rate_windows: Vec::new(),
         safety: SafetyConfig {
             mode: if parse_mode(first(fields, "safety_mode"), "safety_mode")? {
-                SafetyMode::Warn
+                EnforcementMode::Warn
             } else {
-                SafetyMode::Enforce
+                EnforcementMode::Enforce
             },
             scanners,
             heuristic,

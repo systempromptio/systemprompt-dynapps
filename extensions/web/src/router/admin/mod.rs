@@ -55,12 +55,16 @@ pub fn hooks_webhook_router(
 }
 
 #[must_use]
-pub fn service_accounts(read_pool: &Arc<PgPool>, write_pool: &Arc<PgPool>) -> ServiceAccounts {
+pub fn service_accounts(
+    read_pool: &Arc<PgPool>,
+    write_pool: &Arc<PgPool>,
+    secrets: Arc<dyn systemprompt::traits::SecretStore>,
+) -> ServiceAccounts {
     let db = Arc::new(systemprompt::database::Database::from_pools(
         Arc::clone(read_pool),
         Some(Arc::clone(write_pool)),
     ));
-    ServiceAccounts::new(systemprompt::users::UserRepository::new(&db))
+    ServiceAccounts::new(systemprompt::users::UserRepository::new(&db), secrets)
 }
 
 pub fn admin_router(
@@ -68,6 +72,7 @@ pub fn admin_router(
     write_pool: &Arc<PgPool>,
     managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
     farm: Arc<systemprompt_web_admin_farm::state::FarmState>,
+    secrets: Arc<dyn systemprompt::traits::SecretStore>,
 ) -> Router {
     let admin_only = api::build_admin_only_routes(&read_pool, write_pool, managed, farm);
     let auth_reads = api::build_auth_read_routes(&read_pool);
@@ -76,7 +81,7 @@ pub fn admin_router(
     admin_only
         .merge(auth_reads)
         .merge(self_service)
-        .layer(Extension(service_accounts(&read_pool, write_pool)))
+        .layer(Extension(service_accounts(&read_pool, write_pool, secrets)))
         .layer(axum_middleware::from_fn(
             systemprompt_web_admin_core::middleware::gates::require_auth_middleware,
         ))

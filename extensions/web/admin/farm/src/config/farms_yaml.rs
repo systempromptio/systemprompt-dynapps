@@ -173,9 +173,7 @@ impl FarmsDoc {
                 .iter()
                 .filter_map(|(id, o)| o.run_as.as_ref().map(|r| (id, r)))
             {
-                run_as
-                    .validate(&format!("farm {:?}: agent {agent:?}", farm.id))
-                    .map_err(|e| invalid(&e))?;
+                run_as.validate(&format!("farm {:?}: agent {agent:?}", farm.id))?;
             }
             if !is_slug(&farm.id) {
                 return Err(invalid(&format!("farm id {:?} is not a slug", farm.id)));
@@ -190,9 +188,7 @@ impl FarmsDoc {
                 )));
             }
             if let Some(run_as) = &farm.run_as {
-                run_as
-                    .validate(&format!("farm {:?}", farm.id))
-                    .map_err(|e| invalid(&e))?;
+                run_as.validate(&format!("farm {:?}", farm.id))?;
             }
             farm.source.validate(&farm.id)?;
             farm.defaults.validate(&farm.id)?;
@@ -264,7 +260,10 @@ pub fn parse_farms_doc(text: &str) -> FarmResult<FarmsDoc> {
     if text.trim().is_empty() {
         return Ok(FarmsDoc::default());
     }
-    serde_yaml::from_str::<FarmsDoc>(text).map_err(|e| invalid(&e.to_string()))
+    serde_yaml::from_str::<FarmsDoc>(text).map_err(|source| FarmError::Yaml {
+        file: FARMS_FILE,
+        source,
+    })
 }
 
 pub async fn read_farms_doc(services_path: &Path) -> FarmResult<Option<FarmsDoc>> {

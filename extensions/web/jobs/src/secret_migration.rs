@@ -1,8 +1,12 @@
 //! `secret_migration` job: re-encrypts plaintext secrets under the master key.
 
+use std::sync::Arc;
+
 use systemprompt::database::DbPool;
+use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::identifiers::UserId;
-use systemprompt::traits::{Job, JobContext, JobResult};
+use systemprompt::system::AppContext;
+use systemprompt::traits::{Job, JobContext, JobResult, SecretStore};
 
 use crate::error::JobError;
 use systemprompt_web_admin_core::crypto::secret_crypto;
@@ -38,9 +42,21 @@ impl Job for SecretMigrationJob {
 }
 
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
+    let app = ctx.get::<Arc<AppContext>>()?;
+    let secrets = ExtensionContext::secrets(app.as_ref());
+    SecretMigrationJob::run(ctx, secrets.as_ref()).await
+}
+
+impl SecretMigrationJob {
+    pub async fn run(ctx: &JobContext, secrets: &dyn SecretStore) -> Result<JobResult, JobError> {
+        run_with(ctx, secrets).await
+    }
+}
+
+async fn run_with(ctx: &JobContext, secrets: &dyn SecretStore) -> Result<JobResult, JobError> {
     let start = std::time::Instant::now();
 
-    let Ok(master_key) = secret_crypto::load_master_key() else {
+    let Ok(master_key) = secret_crypto::load_master_key(secrets) else {
         return Ok(JobResult::success().with_stats(0, 0).with_duration(0));
     };
 
@@ -79,7 +95,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 }
 
 async fn migrate_secrets(
-    pool: &std::sync::Arc<sqlx::PgPool>,
+    pool: &Arc<sqlx::PgPool>,
     rows: &[secret_migration::UnencryptedSecret],
     master_key: &[u8; 32],
     actor: &UserId,
@@ -106,7 +122,7 @@ async fn migrate_secrets(
 }
 
 async fn encrypt_and_store_secret(
-    pool: &std::sync::Arc<sqlx::PgPool>,
+    pool: &Arc<sqlx::PgPool>,
     row: &secret_migration::UnencryptedSecret,
     master_key: &[u8; 32],
     actor: &UserId,

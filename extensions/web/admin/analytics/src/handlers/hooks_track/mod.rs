@@ -25,6 +25,7 @@ use std::sync::Arc;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::event_hub::EventHub;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::ingestion::webhook;
 use systemprompt_web_admin_core::types::webhook::HookEventPayload;
 
@@ -33,6 +34,7 @@ pub(crate) struct TrackDeps {
     managed: systemprompt::marketplace::managed::ManagedRepository,
     event_hub: EventHub,
     artifact_ingest: Arc<systemprompt::mcp::ArtifactIngest>,
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
@@ -42,10 +44,12 @@ impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
         let Extension(managed) = Extension::from_request_parts(parts, state).await?;
         let Extension(event_hub) = Extension::from_request_parts(parts, state).await?;
         let Extension(artifact_ingest) = Extension::from_request_parts(parts, state).await?;
+        let Extension(services) = Extension::from_request_parts(parts, state).await?;
         Ok(Self {
             managed,
             event_hub,
             artifact_ingest,
+            services,
         })
     }
 }
@@ -55,14 +59,16 @@ pub(crate) async fn handle_hook_track(
         managed,
         event_hub,
         artifact_ingest,
+        services,
     }: TrackDeps,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
     // JSON: protocol boundary — the third-party hook envelope, parsed into typed
     // events by `HookEventPayload::from_value` after the raw copy is retained
     Json(mut raw): Json<serde_json::Value>,
 ) -> AdminResult<Response> {
-    let (user_id, plugin_id) = extract_and_validate_jwt(&headers)?;
+    let (user_id, plugin_id) = extract_and_validate_jwt(boot.token_authority().as_ref(), &headers)?;
     tracing::trace!(payload = %helpers::sanitize_metadata(&raw), "Hook track received payload");
     if let Some(event_id) = headers
         .get("x-ingestion-event-id")
@@ -77,8 +83,10 @@ pub(crate) async fn handle_hook_track(
     let (payload, warnings) = HookEventPayload::from_value(raw);
     payload
         .validate_ingestion()
-        .map_err(AdminError::BadRequest)?;
-    payload.delivery_id().map_err(AdminError::BadRequest)?;
+        .map_err(|e| AdminError::invalid("hook payload", e))?;
+    payload
+        .delivery_id()
+        .map_err(|e| AdminError::invalid("hook payload", e))?;
     log_payload_warnings(&payload, &warnings);
 
     let device = auth::authenticated_device(&managed, &headers, &user_id).await?;
@@ -95,6 +103,7 @@ pub(crate) async fn handle_hook_track(
 
     artifact::ingest_tool_result(artifact::ToolResultIngestion {
         pool: &pool,
+        services: &services,
         ingest: &artifact_ingest,
         user_id: &user_id,
         payload: &payload,
@@ -105,6 +114,7 @@ pub(crate) async fn handle_hook_track(
     .await;
     dispatch_inserted_event(&DispatchContext {
         pool: &pool,
+        services: &services,
         user_id: &user_id,
         plugin_id: &plugin_id,
         payload: &payload,
@@ -126,6 +136,7 @@ fn log_payload_warnings(payload: &HookEventPayload, warnings: &[String]) {
 
 struct DispatchContext<'a> {
     pool: &'a PgPool,
+    services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
     user_id: &'a UserId,
     plugin_id: &'a PluginId,
     payload: &'a HookEventPayload,
@@ -136,6 +147,7 @@ async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
     let content_bytes = helpers::compute_content_bytes(ctx.payload);
     processing::process_inserted_event(&processing::ProcessInsertedEventParams {
         pool: ctx.pool,
+        services: ctx.services,
         user_id: ctx.user_id,
         plugin_id: ctx.plugin_id,
         session_id: &SessionId::new(ctx.payload.session_id()),
@@ -183,8 +195,8 @@ async fn insert_hook_event(
     let session_id = SessionId::new(payload.session_id());
     let description = description::generate_description(payload);
     let prompt_preview = helpers::generate_prompt_preview(payload);
-    let dedup_key =
-        dedup::compute_dedup_key(user_id, &session_id, payload).map_err(AdminError::BadRequest)?;
+    let dedup_key = dedup::compute_dedup_key(user_id, &session_id, payload)
+        .map_err(|e| AdminError::invalid("hook payload", e))?;
     let content_bytes = helpers::compute_content_bytes(payload);
     let mut sanitized_metadata = helpers::sanitize_metadata(&payload.raw);
     let mut content = payload.raw.clone();

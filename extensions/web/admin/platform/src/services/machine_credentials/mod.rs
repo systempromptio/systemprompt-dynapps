@@ -20,6 +20,8 @@ use crate::repositories::connectors::machine_credentials::{
 };
 use crate::services::service_accounts::ServiceAccounts;
 use sqlx::PgPool;
+use systemprompt::traits::SecretStore;
+
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
@@ -68,7 +70,7 @@ pub async fn attach(
     let existed = find_machine_credential(pool, user, provider)
         .await?
         .is_some();
-    let sealed = seal::seal(user, provider, secret)?;
+    let sealed = seal::seal(accounts.secrets(), user, provider, secret)?;
     set_machine_credential(
         pool,
         &NewMachineCredential {
@@ -91,6 +93,7 @@ pub async fn attach(
 
 pub async fn broker_token(
     pool: &PgPool,
+    accounts: &ServiceAccounts,
     user: &UserId,
     provider: &str,
     caller: Option<&str>,
@@ -109,11 +112,18 @@ pub async fn broker_token(
         .ok_or_else(|| AdminError::NotFound("Service account holds no credential".into()))?;
     let stamp = row.rotated_at.unwrap_or(row.created_at).timestamp_micros();
     let kind = MachineKind::parse(&row.kind)?;
-    let grant = grant::grant(kind, &row.config, open(&row, user, provider)?)?;
+    let grant = grant::grant(
+        kind,
+        &row.config,
+        open(accounts.secrets(), &row, user, provider)?,
+    )?;
     // Why: core's token cache is keyed by string; the rotation stamp in the
     // key means a rotated credential never serves the previous token.
     let header_value = grant
-        .authorization(&format!("service-account:{user}:{provider}:{stamp}"))
+        .authorization(
+            accounts.tokens(),
+            &format!("service-account:{user}:{provider}:{stamp}"),
+        )
         .await
         .map_err(|error| {
             tracing::warn!(target: "connector_broker", user_id = %user, provider,
@@ -127,6 +137,17 @@ pub async fn broker_token(
     Ok(header_value)
 }
 
-fn open(row: &MachineCredentialRow, user: &UserId, provider: &str) -> AdminResult<String> {
-    seal::unseal(&row.secret_ciphertext, &row.secret_nonce, user, provider)
+fn open(
+    secrets: &dyn SecretStore,
+    row: &MachineCredentialRow,
+    user: &UserId,
+    provider: &str,
+) -> AdminResult<String> {
+    seal::unseal(
+        secrets,
+        &row.secret_ciphertext,
+        &row.secret_nonce,
+        user,
+        provider,
+    )
 }

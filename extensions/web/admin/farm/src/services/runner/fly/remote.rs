@@ -9,6 +9,7 @@
 //! `CANCEL_GRACE`. Every way stops the machine, so no runner bills past
 //! its run.
 
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 // JSON: `agent_runs.diff_summary` is a JSONB column core's `finish` takes as a
@@ -22,7 +23,7 @@ use super::api::MachineLaunch;
 use super::egress::EgressPolicy;
 use super::pool::{FlyTarget, RunnerPool, resolve_target, run_env};
 use super::protocol::{WorkerCredentials, WorkerResult, WorkerSpec};
-use super::registry::{Registration, register};
+use super::registry::Registration;
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::runs;
@@ -110,10 +111,15 @@ fn worker_token() -> String {
 
 pub async fn run_remote(fly: &FlyRunnerConfig, job: RemoteJob<'_>) -> FarmResult<()> {
     let target = resolve_target(fly)?;
-    let pool = RunnerPool::new(fly, &target)?;
+    let pool = RunnerPool::new(
+        fly,
+        &target,
+        Arc::clone(&job.state.runs),
+        job.state.boot.secrets().as_ref(),
+    )?;
     let id = &job.claimed.row.id;
     let token = worker_token();
-    let registration = register(
+    let registration = job.state.runs.register(
         worker_spec(&job, &target, &fly.egress_allow),
         job.layout.root.clone(),
         job.sink.clone(),
@@ -154,7 +160,7 @@ async fn wait_for_worker(
     job: &RemoteJob<'_>,
     mut registration: Registration,
 ) -> (RunOutcome, Option<Value>) {
-    let run = std::sync::Arc::clone(&registration.run);
+    let run = Arc::clone(&registration.run);
     let begun = Instant::now();
     let start_allowance = Duration::from_secs(fly.start_timeout_seconds);
     let silence = Duration::from_secs(fly.heartbeat_timeout_seconds);

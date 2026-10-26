@@ -14,7 +14,8 @@ pub struct JudgeVerdict {
     pub output_tokens: Option<i32>,
 }
 
-/// The AI inference boundary in a conversation-judge tick.
+/// The AI inference boundary in a conversation-judge tick. `#[async_trait]`
+/// because the tick holds the classifier as a `dyn ConversationClassifier`.
 #[async_trait::async_trait]
 #[doc(hidden)]
 pub trait ConversationClassifier: Send + Sync {

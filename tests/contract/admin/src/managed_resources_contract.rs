@@ -25,11 +25,7 @@ async fn baseline_capture_requires_origin_and_organizational_revisions_are_share
     let path = "/api/public/admin/managed/baselines/super-admin";
     let (status, _) = app.call(request("post", path, Principal::Admin)).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
-    let origin = systemprompt::config::ProfileBootstrap::get()
-        .unwrap()
-        .server
-        .api_external_url
-        .clone();
+    let origin = globals::boot().config().api_external_url.clone();
     for principal in [Principal::ProjectManager, Principal::NonAdmin] {
         let (status, _) = app
             .response_headers_with(request("post", path, principal), &[("origin", &origin)])

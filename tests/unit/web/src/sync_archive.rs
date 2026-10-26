@@ -35,6 +35,8 @@ fn refusal(entries: &[(&str, &[u8])]) -> String {
 
 #[test]
 fn a_good_archive_unpacks_and_classifies() {
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
     let manifest = ArchiveManifest {
         format: MANIFEST_FORMAT,
         release: "0.54.0".to_owned(),
@@ -43,8 +45,8 @@ fn a_good_archive_unpacks_and_classifies() {
         base_tree_hash: Some("abc".to_owned()),
         composed_hash: None,
         planes: vec![ManifestPlane {
-            id: "gateway_policies".to_owned(),
-            file: "gateway/policies.yaml".to_owned(),
+            id: "groups".to_owned(),
+            file: "web/config/groups.yaml".to_owned(),
             declared_hash: None,
             applied_hash: None,
             applied_mode: None,
@@ -54,25 +56,28 @@ fn a_good_archive_unpacks_and_classifies() {
     };
     let rendered = render_manifest(&manifest).expect("renders");
     let bytes = zip_of(&[
+        ("services/web/config/groups.yaml", b"groups: []\n"),
         ("services/gateway/policies.yaml", b"policies: []\n"),
         ("services/skills/who_am_i/config.yaml", b"id: who_am_i\n"),
         ("services/", b""),
         (MANIFEST_FILE, rendered.as_bytes()),
     ]);
     let unpacked = unpack_zip(&bytes).expect("accepted");
-    assert_eq!(unpacked.entries.len(), 2);
+    assert_eq!(unpacked.entries.len(), 3);
     let m = unpacked.manifest.as_ref().expect("manifest parsed");
     assert_eq!(m.release, "0.54.0");
-    assert_eq!(m.planes[0].id, "gateway_policies");
+    assert_eq!(m.planes[0].id, "groups");
 
-    let staged = classify(unpacked, &planes(), "ed").expect("classified");
+    let staged = classify(unpacked, &planes(&boot), "ed").expect("classified");
     assert_eq!(
-        staged.planes.get("gateway_policies").map(String::as_str),
-        Some("policies: []\n")
+        staged.planes.get("groups").map(String::as_str),
+        Some("groups: []\n")
     );
-    assert_eq!(staged.other.len(), 1);
-    assert_eq!(staged.other[0].kind_id, Some("skills"));
-    assert_eq!(staged.other[0].hash.len(), 12);
+    // Why: a core plane's file is core's to apply from the tree, so an
+    // archive's copy is listed for commit, never staged.
+    let kinds: Vec<Option<&str>> = staged.other.iter().map(|o| o.kind_id).collect();
+    assert_eq!(kinds, [Some("gateway_policies"), Some("skills")]);
+    assert_eq!(staged.other[1].hash.len(), 12);
 }
 
 #[test]
@@ -123,12 +128,14 @@ fn an_oversized_entry_is_refused_by_what_it_delivers() {
 
 #[test]
 fn a_plane_file_that_is_not_text_is_refused_at_classification() {
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
     let unpacked = unpack_zip(&zip_of(&[(
-        "services/gateway/policies.yaml",
+        "services/web/config/groups.yaml",
         &[0xff, 0xfe, 0x00],
     )]))
     .expect("bytes unpack");
-    let err = classify(unpacked, &planes(), "ed").expect_err("not text");
+    let err = classify(unpacked, &planes(&boot), "ed").expect_err("not text");
     assert!(err.to_string().contains("not UTF-8"), "{err}");
 }
 

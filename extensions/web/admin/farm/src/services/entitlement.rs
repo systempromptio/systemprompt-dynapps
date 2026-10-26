@@ -26,6 +26,7 @@ pub fn is_farm_owner(ctx: &UserContext, farm: &FarmRow) -> bool {
 
 pub async fn list_entitled_marketplaces(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     ctx: &UserContext,
     marketplace_ids: &BTreeSet<String>,
 ) -> FarmResult<BTreeSet<String>> {
@@ -40,7 +41,8 @@ pub async fn list_entitled_marketplaces(
             .map(|id| (id.clone(), id.clone(), None))
             .collect(),
     );
-    let Some(matrix) = resolve_user_matrix(pool, &ctx.user_id, vec![section]).await? else {
+    let Some(matrix) = resolve_user_matrix(pool, services, &ctx.user_id, vec![section]).await?
+    else {
         return Ok(BTreeSet::new());
     };
     Ok(matrix
@@ -52,22 +54,28 @@ pub async fn list_entitled_marketplaces(
         .collect())
 }
 
-pub async fn may_use_farm(pool: &PgPool, ctx: &UserContext, farm: &FarmRow) -> FarmResult<bool> {
+pub async fn may_use_farm(
+    pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    ctx: &UserContext,
+    farm: &FarmRow,
+) -> FarmResult<bool> {
     if ctx.is_console || is_farm_owner(ctx, farm) {
         return Ok(true);
     }
     let wanted = BTreeSet::from([farm.marketplace_id.as_str().to_owned()]);
-    Ok(!list_entitled_marketplaces(pool, ctx, &wanted)
+    Ok(!list_entitled_marketplaces(pool, services, ctx, &wanted)
         .await?
         .is_empty())
 }
 
 pub async fn require_farm_access(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     ctx: &UserContext,
     farm: &FarmRow,
 ) -> FarmResult<()> {
-    if may_use_farm(pool, ctx, farm).await? {
+    if may_use_farm(pool, services, ctx, farm).await? {
         return Ok(());
     }
     Err(FarmError::Forbidden(format!(

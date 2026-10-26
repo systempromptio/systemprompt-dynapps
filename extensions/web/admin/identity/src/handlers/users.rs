@@ -6,6 +6,7 @@
 //! `retention.archived_users_days`.
 
 use std::sync::Arc;
+use systemprompt::traits::BackgroundTasks;
 
 use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
@@ -13,7 +14,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
@@ -67,6 +67,7 @@ pub(crate) async fn user_usage_handler(
 pub(crate) async fn update_user_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(tasks): Extension<BackgroundTasks>,
     Path(user_id_raw): Path<String>,
     Json(body): Json<UpdateUserRequest>,
 ) -> AdminResult<Response> {
@@ -84,7 +85,7 @@ pub(crate) async fn update_user_handler(
         .display_name
         .clone()
         .unwrap_or_else(|| user.user_id.as_str().to_owned());
-    tokio::spawn(async move {
+    tasks.spawn("user_updated_activity", async move {
         activity::record(
             &p,
             NewActivity::entity_updated(&uid, ActivityEntity::User, target_user_id.as_str(), &name),
@@ -97,6 +98,7 @@ pub(crate) async fn update_user_handler(
 pub(crate) async fn delete_user_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(tasks): Extension<BackgroundTasks>,
     Path(user_id_raw): Path<String>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
@@ -117,7 +119,7 @@ pub(crate) async fn delete_user_handler(
     let p = Arc::clone(&pool);
     let uid = user_ctx.user_id.clone();
     let target = user_id.clone();
-    tokio::spawn(async move {
+    tasks.spawn("user_deleted_activity", async move {
         activity::record(
             &p,
             NewActivity::entity_deleted(
@@ -135,13 +137,15 @@ pub(crate) async fn delete_user_handler(
 pub(crate) async fn restore_user_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(tasks): Extension<BackgroundTasks>,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     Path(user_id_raw): Path<String>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }
-    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
+    let profile = boot.profile();
     let window_days = i32::try_from(profile.retention.archived_users_days).unwrap_or(i32::MAX);
     if !repositories::users::mutations::restore_user(&pool, &user_id, window_days).await? {
         return Err(AdminError::Conflict(format!(
@@ -151,7 +155,7 @@ pub(crate) async fn restore_user_handler(
     let p = Arc::clone(&pool);
     let uid = user_ctx.user_id.clone();
     let target = user_id.clone();
-    tokio::spawn(async move {
+    tasks.spawn("user_restored_activity", async move {
         activity::record(
             &p,
             NewActivity::entity_updated(

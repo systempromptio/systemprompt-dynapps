@@ -9,19 +9,22 @@
 
 use std::sync::Arc;
 
+use systemprompt::traits::ProviderTokenCache;
+
 use axum::Json;
-use axum::extract::rejection::JsonRejection;
-use axum::extract::{Extension, Path};
+use axum::extract::rejection::{ExtensionRejection, JsonRejection};
+use axum::extract::{Extension, FromRequestParts, Path};
 use axum::http::StatusCode;
+use axum::http::request::Parts;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::json;
 use systemprompt::ai::repository::{UserProviderCredentialMeta, UserProviderCredentialRepository};
 use systemprompt::ai::{
-    PersonalKeyError, PersonalKeyRequest, personal_providers, store_personal_key,
+    PersonalKeyError, PersonalKeyRequest, personal_credential, personal_credentials,
+    store_personal_key,
 };
-use systemprompt::loader::ServicesBootstrap;
-use systemprompt::manifest::services::{ProviderEntry, ProviderRegistry};
+use systemprompt::manifest::services::catalog::{ResolvedCatalog, ResolvedCredential};
 use systemprompt::models::bridge::profile::ProviderCredentialStatus;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::types::UserContext;
@@ -34,12 +37,18 @@ pub(crate) struct SetKeyRequest {
 }
 
 fn status_row(
-    entry: &ProviderEntry,
+    catalog: &ResolvedCatalog,
+    credential: &ResolvedCredential,
     meta: Option<&UserProviderCredentialMeta>,
 ) -> ProviderCredentialStatus {
+    let display_name = catalog
+        .providers()
+        .find(|provider| provider.credential == credential.id)
+        .and_then(|provider| provider.display_name.clone())
+        .or_else(|| credential.label.clone());
     ProviderCredentialStatus {
-        provider: entry.name.as_str().to_owned(),
-        display_name: entry.display_name.clone(),
+        credential: credential.id.as_str().to_owned(),
+        display_name,
         configured: meta.is_some(),
         label: meta.and_then(|m| m.label.clone()),
         created_at: meta.map(|m| m.created_at),
@@ -56,30 +65,51 @@ fn refusal(status: StatusCode, code: &str, message: &str) -> Response {
         .into_response()
 }
 
-fn registry() -> AdminResult<ProviderRegistry> {
-    let services = ServicesBootstrap::get().map_err(|e| AdminError::Internal(Box::new(e)))?;
-    Ok(services.providers.clone())
+fn not_personal(credential: &str) -> Response {
+    refusal(
+        StatusCode::NOT_FOUND,
+        "not_personal_provider",
+        &format!("{credential} does not take a personal key."),
+    )
 }
 
-fn personal_provider(registry: &ProviderRegistry, name: &str) -> Option<ProviderEntry> {
-    personal_providers(registry)
-        .into_iter()
-        .find(|entry| entry.name.as_str() == name)
+pub(crate) struct PersonalKeyDeps {
+    tokens: Arc<dyn ProviderTokenCache>,
+    keys: Arc<UserProviderCredentialRepository>,
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+}
+
+impl<S: Send + Sync> FromRequestParts<S> for PersonalKeyDeps {
+    type Rejection = ExtensionRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Extension(tokens) = Extension::from_request_parts(parts, state).await?;
+        let Extension(keys) = Extension::from_request_parts(parts, state).await?;
+        let Extension(services) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self {
+            tokens,
+            keys,
+            services,
+        })
+    }
 }
 
 pub(crate) async fn list_own_provider_credentials(
     Extension(user_ctx): Extension<UserContext>,
-    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
+    PersonalKeyDeps { keys, services, .. }: PersonalKeyDeps,
 ) -> AdminResult<Response> {
     let stored = keys
         .list_metadata(&user_ctx.user_id)
         .await
         .map_err(|e| AdminError::Internal(Box::new(e)))?;
-    let rows: Vec<ProviderCredentialStatus> = personal_providers(&registry()?)
-        .iter()
-        .map(|entry| {
-            let meta = stored.iter().find(|m| m.provider == entry.name.as_str());
-            status_row(entry, meta)
+    let catalog = services.catalog.as_ref();
+    let rows: Vec<ProviderCredentialStatus> = personal_credentials(catalog)
+        .into_iter()
+        .map(|credential| {
+            let meta = stored
+                .iter()
+                .find(|m| m.credential == credential.id.as_str());
+            status_row(catalog, credential, meta)
         })
         .collect();
     Ok(Json(rows).into_response())
@@ -87,18 +117,18 @@ pub(crate) async fn list_own_provider_credentials(
 
 pub(crate) async fn put_own_provider_credential(
     Extension(user_ctx): Extension<UserContext>,
-    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
-    Path(provider): Path<String>,
+    PersonalKeyDeps {
+        tokens,
+        keys,
+        services,
+    }: PersonalKeyDeps,
+    Path(credential): Path<String>,
     body: Result<Json<SetKeyRequest>, JsonRejection>,
 ) -> AdminResult<Response> {
     let Json(request) = body.map_err(|e| AdminError::BadRequest(e.body_text()))?;
-    let registry = registry()?;
-    let Some(entry) = personal_provider(&registry, &provider) else {
-        return Ok(refusal(
-            StatusCode::NOT_FOUND,
-            "not_personal_provider",
-            &format!("{provider} does not take a personal key."),
-        ));
+    let catalog = services.catalog.as_ref();
+    let Ok(resolved) = personal_credential(catalog, &credential) else {
+        return Ok(not_personal(&credential));
     };
     let label = request
         .label
@@ -106,32 +136,29 @@ pub(crate) async fn put_own_provider_credential(
         .map(str::trim)
         .filter(|l| !l.is_empty());
     let stored = store_personal_key(
+        &tokens,
         &keys,
-        &registry,
+        catalog,
         PersonalKeyRequest {
             user_id: &user_ctx.user_id,
-            provider: entry.name.as_str(),
+            credential: resolved.id.as_str(),
             key: request.api_key.trim(),
             label,
         },
     )
     .await;
     match stored {
-        Ok(meta) => Ok(Json(status_row(&entry, Some(&meta))).into_response()),
-        Err(PersonalKeyError::NotPersonalProvider(name)) => Ok(refusal(
-            StatusCode::NOT_FOUND,
-            "not_personal_provider",
-            &format!("{name} does not take a personal key."),
-        )),
+        Ok(meta) => Ok(Json(status_row(catalog, resolved, Some(&meta))).into_response()),
+        Err(PersonalKeyError::NotPersonalCredential(id)) => Ok(not_personal(&id)),
         Err(PersonalKeyError::Rejected(name)) => Ok(refusal(
             StatusCode::UNPROCESSABLE_ENTITY,
             "personal_key_rejected",
             &format!("{name} refused this key."),
         )),
-        Err(PersonalKeyError::Unverified { provider, status }) => Ok(refusal(
+        Err(PersonalKeyError::Unverified { credential, status }) => Ok(refusal(
             StatusCode::BAD_REQUEST,
             "personal_key_unverified",
-            &format!("{provider} could not verify the key ({status})."),
+            &format!("{credential} could not verify the key ({status})."),
         )),
         Err(other) => Err(AdminError::Internal(Box::new(other))),
     }
@@ -139,17 +166,13 @@ pub(crate) async fn put_own_provider_credential(
 
 pub(crate) async fn delete_own_provider_credential(
     Extension(user_ctx): Extension<UserContext>,
-    Extension(keys): Extension<Arc<UserProviderCredentialRepository>>,
-    Path(provider): Path<String>,
+    PersonalKeyDeps { keys, services, .. }: PersonalKeyDeps,
+    Path(credential): Path<String>,
 ) -> AdminResult<Response> {
-    if personal_provider(&registry()?, &provider).is_none() {
-        return Ok(refusal(
-            StatusCode::NOT_FOUND,
-            "not_personal_provider",
-            &format!("{provider} does not take a personal key."),
-        ));
-    }
-    keys.delete_key(&user_ctx.user_id, &provider)
+    let Ok(resolved) = personal_credential(&services.catalog, &credential) else {
+        return Ok(not_personal(&credential));
+    };
+    keys.delete_key(&user_ctx.user_id, &resolved.id)
         .await
         .map_err(|e| AdminError::Internal(Box::new(e)))?;
     Ok(StatusCode::NO_CONTENT.into_response())

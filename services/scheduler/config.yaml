@@ -240,7 +240,7 @@ scheduler:
       extension: web
       owner: admin
       schedule: "0 0 2 * * *"
-      enabled: true
+      enabled: false
       parameters:
         farm: dynapps-night-audit
         agent: accounting_night_audit

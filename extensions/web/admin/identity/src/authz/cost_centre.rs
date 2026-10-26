@@ -64,8 +64,6 @@ impl SubjectAttributeProvider for CostCentreAttributeProvider {
 
 systemprompt::governance::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
-        systemprompt_web_admin_core::authz::cached::cached_provider(
-            CostCentreAttributeProvider::new(Arc::clone(&ctx.pool)),
-        );
+        Arc::new(CostCentreAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });

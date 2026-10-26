@@ -407,20 +407,27 @@ fn dashboard_query_defaults_are_the_ranges_the_page_opens_on() {
 }
 
 #[test]
-fn gateway_route_view_omits_an_absent_upstream_model() {
+fn gateway_route_view_omits_absent_optional_fields() {
     let route = GatewayRouteView {
         id: "claude-abc".to_owned(),
-        model_pattern: "claude-*".to_owned(),
-        provider: "anthropic".to_owned(),
+        models: vec!["claude-*".to_owned()],
         ..Default::default()
     };
     let json = serde_json::to_value(&route).expect("serialize route");
-    assert!(json.get("upstream_model").is_none());
-    assert_eq!(json["extra_headers"], serde_json::json!({}));
+    for key in [
+        "deployments",
+        "alias",
+        "strategy",
+        "context_fallbacks",
+        "name",
+    ] {
+        assert!(json.get(key).is_none(), "{key} serialized: {json}");
+    }
 
     let back: GatewayRouteView = serde_json::from_value(json).expect("round-trips");
-    assert_eq!(back.model_pattern, "claude-*");
-    assert_eq!(back.upstream_model, None);
+    assert_eq!(back.id, route.id);
+    assert_eq!(back.models, route.models);
+    assert!(back.deployments.is_empty() && back.alias.is_none());
 }
 
 #[test]

@@ -34,28 +34,46 @@ pub struct GroupsDoc {
     pub projects: Vec<MemberSetDef>,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum GroupsDocError {
+    #[error(
+        "{set}: id '{id}' must be lowercase alphanumeric with '-' or '_', starting with a letter \
+         or digit, at most 64 characters"
+    )]
+    InvalidId { set: &'static str, id: String },
+    #[error("{set}: '{id}' must carry a name")]
+    MissingName { set: &'static str, id: String },
+    #[error("{set}: id '{id}' is declared twice")]
+    DuplicateId { set: &'static str, id: String },
+}
+
 impl GroupsDoc {
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), GroupsDocError> {
         validate_set("groups", &self.groups)?;
         validate_set("projects", &self.projects)
     }
 }
 
-fn validate_set(label: &str, defs: &[MemberSetDef]) -> Result<(), String> {
+fn validate_set(set: &'static str, defs: &[MemberSetDef]) -> Result<(), GroupsDocError> {
     let mut seen: Vec<&str> = Vec::new();
     for def in defs {
         if !is_valid_id(&def.id) {
-            return Err(format!(
-                "{label}: id '{}' must be lowercase alphanumeric with '-' or '_', starting with a \
-                 letter or digit, at most 64 characters",
-                def.id
-            ));
+            return Err(GroupsDocError::InvalidId {
+                set,
+                id: def.id.clone(),
+            });
         }
         if def.name.trim().is_empty() {
-            return Err(format!("{label}: '{}' must carry a name", def.id));
+            return Err(GroupsDocError::MissingName {
+                set,
+                id: def.id.clone(),
+            });
         }
         if seen.contains(&def.id.as_str()) {
-            return Err(format!("{label}: id '{}' is declared twice", def.id));
+            return Err(GroupsDocError::DuplicateId {
+                set,
+                id: def.id.clone(),
+            });
         }
         seen.push(&def.id);
     }

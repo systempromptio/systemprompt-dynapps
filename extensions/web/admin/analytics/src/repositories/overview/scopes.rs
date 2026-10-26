@@ -49,7 +49,7 @@ pub async fn list_top_scopes_by_cost(
            LEFT JOIN request_scope rs ON rs.request_id = r.id
            LEFT JOIN groups g ON g.id = rs.scope_id AND $1 = 'group'
            LEFT JOIN projects p ON p.id = rs.scope_id AND $1 = 'project'
-           WHERE NOT r.synthetic
+           WHERE r.traffic = 'production'
              AND r.created_at >= $4
              AND r.created_at < $5
            GROUP BY 1, 2

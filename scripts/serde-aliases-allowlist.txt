@@ -1,0 +1,3 @@
+# Serde aliases this install accepts for a vendor format it does not own, one
+# `path:field — reason` per line (core's lint-serde-aliases.sh). Empty: every
+# field here has one wire name.

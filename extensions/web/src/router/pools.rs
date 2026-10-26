@@ -3,16 +3,19 @@
 //! are staged under the profile's storage scratch root) and the agent farm
 //! state (run directories under the storage data root).
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt::config::AppPaths;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::state::FarmState;
 
+use systemprompt::ai::repository::AiRepositories;
 use systemprompt::database::{Database, DbPool};
 use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::oauth::SessionCreationService;
+use systemprompt::oauth::repository::OAuthRepositories;
 use systemprompt::prelude::PgPool;
 use systemprompt::traits::FileStorage;
 use systemprompt::users::{SessionRepository, UserService};
@@ -24,10 +27,14 @@ pub(crate) struct DbHandles {
     pub db: DbPool,
     pub farm: Arc<FarmState>,
     pub files: Arc<dyn FileStorage>,
+    pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pub boot: ExtensionBoot,
+    pub oauth: Arc<OAuthRepositories>,
+    pub ai: Arc<AiRepositories>,
 }
 
 impl DbHandles {
-    pub(crate) fn from_context(ctx: &dyn ExtensionContext) -> Option<Self> {
+    pub(crate) fn from_context(ctx: &dyn ExtensionContext, runs: Arc<RemoteRuns>) -> Option<Self> {
         let db_handle = ctx.database();
         let db = db_handle.as_any().downcast_ref::<Database>()?;
         let read = db.pool();
@@ -36,18 +43,41 @@ impl DbHandles {
             Arc::clone(&read),
             Some(Arc::clone(&write)),
         ));
+        let boot = ExtensionBoot::from_context(ctx);
+        let dependencies = ctx.dependencies();
+        let oauth = dependencies
+            .get::<Arc<OAuthRepositories>>()
+            .inspect_err(|error| tracing::error!(%error, "web routes not mounted"))
+            .ok()
+            .map(Arc::clone)?;
+        let ai = dependencies
+            .get::<Arc<AiRepositories>>()
+            .inspect_err(|error| tracing::error!(%error, "web routes not mounted"))
+            .ok()
+            .map(Arc::clone)?;
+        let paths = app_paths(&boot);
         let managed = Arc::new(ManagedState::new(
             &db,
             ctx.system_owner_id(),
-            scratch_root(),
+            paths
+                .as_ref()
+                .map(|paths| paths.storage().scratch().to_path_buf()),
+            boot.services_root(),
         ));
-        let paths = app_paths();
         let files = ctx.file_storage();
+        let services =
+            systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx);
         let farm = super::farm_public::build_state(
             Arc::clone(&write),
             paths.as_ref(),
-            Arc::clone(&files),
-            ctx.instance_id(),
+            systemprompt_web_admin_farm::state::FarmHost {
+                artefacts: Arc::clone(&files),
+                instance: ctx.instance_id(),
+                runs,
+                tasks: ctx.background_tasks(),
+                services: services.clone(),
+                boot: boot.clone(),
+            },
         );
         super::farm_public::start(&farm, paths.as_ref());
         Some(Self {
@@ -57,25 +87,23 @@ impl DbHandles {
             db,
             farm,
             files,
+            services,
+            boot,
+            oauth,
+            ai,
         })
     }
 }
 
-fn app_paths() -> Option<AppPaths> {
-    let profile = ProfileBootstrap::get()
-        .map_err(|e| tracing::error!(error = %e, "Profile unavailable for the storage paths"))
-        .ok()?;
+pub(crate) fn app_paths(boot: &ExtensionBoot) -> Option<AppPaths> {
+    let profile = boot.profile();
     AppPaths::from_profile(
         &profile.paths,
         profile.path_resolution(),
-        systemprompt::loader::ServicesRootBootstrap::get().map(|root| root.path.as_path()),
+        Some(boot.services_root()),
     )
     .map_err(|e| tracing::error!(error = %e, "App paths unavailable for the storage paths"))
     .ok()
-}
-
-fn scratch_root() -> Option<PathBuf> {
-    app_paths().map(|paths| paths.storage().scratch().to_path_buf())
 }
 
 pub(crate) fn build_session_service(db: &DbHandles) -> Arc<SessionCreationService> {
@@ -86,5 +114,7 @@ pub(crate) fn build_session_service(db: &DbHandles) -> Arc<SessionCreationServic
     Arc::new(SessionCreationService::new(
         Arc::new(sessions),
         Arc::new(user),
+        Arc::clone(db.boot.token_authority()),
+        Arc::clone(db.boot.config_arc()),
     ))
 }

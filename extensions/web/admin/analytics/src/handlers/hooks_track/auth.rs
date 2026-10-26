@@ -5,21 +5,32 @@
 
 use axum::http::HeaderMap;
 use systemprompt::identifiers::{PluginId, UserId};
-use systemprompt::manifest::Config;
-use systemprompt_security::HookTokenValidator;
+use systemprompt::models::auth::{Permission, TokenAuthority};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-pub(super) fn extract_and_validate_jwt(headers: &HeaderMap) -> AdminResult<(UserId, PluginId)> {
+pub(super) fn extract_and_validate_jwt(
+    authority: &dyn TokenAuthority,
+    headers: &HeaderMap,
+) -> AdminResult<(UserId, PluginId)> {
     let token = headers
         .get("authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
         .ok_or_else(|| AdminError::Unauthorized("Missing Authorization header".to_owned()))?;
-    let jwt_issuer = Config::get()?.jwt_issuer.clone();
-    let claims = HookTokenValidator::new(jwt_issuer)
-        .validate_track(token, None)
+    let claims = authority
+        .verify_hook_token(token)
         .map_err(AdminError::unauthenticated)?;
-    Ok((claims.subject, claims.plugin_id))
+    if !claims.custom.scope.contains(&Permission::HookTrack) {
+        return Err(AdminError::Unauthorized(
+            "Hook token lacks the hook:track scope".to_owned(),
+        ));
+    }
+    let plugin_id = claims
+        .custom
+        .plugin_id
+        .ok_or_else(|| AdminError::Unauthorized("Hook token carries no plugin_id".to_owned()))?;
+    let subject = UserId::try_new(claims.registered.sub).map_err(AdminError::unauthenticated)?;
+    Ok((subject, plugin_id))
 }
 
 pub(super) async fn authenticated_device(

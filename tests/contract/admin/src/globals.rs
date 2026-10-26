@@ -1,17 +1,28 @@
-//! Process-wide globals the admin handlers read, installed once per test
+//! The booted fixture the admin routers are built over, created once per test
 //! binary.
 //!
-//! Core's config, profile, secrets and signing authority are `OnceLock`s, so
-//! they are installed behind a `Once` and every token minted in
-//! [`crate::principal`] validates against the same issuer. The profile is a
+//! The profile, secrets, config, services view and the test's signing keys
+//! are built behind a `Once` and handed to the routers as the extension boot
+//! values, so every token minted in [`crate::principal`] validates against the
+//! same issuer and keys. The profile is a
 //! checked-in fixture: the developer's `.systemprompt` profile is git-ignored,
 //! so relying on it would pass locally and silently skip in CI.
 
 use std::path::PathBuf;
 use std::sync::{Once, OnceLock};
 
+use std::sync::Arc;
+use systemprompt::manifest::services::ServicesView;
+
+use systemprompt_security::keys::SigningKeys;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
+
 static INIT: Once = Once::new();
 static READY: OnceLock<bool> = OnceLock::new();
+static KEYS: OnceLock<SigningKeys> = OnceLock::new();
+static SERVICES: OnceLock<ServicesView> = OnceLock::new();
+static BOOT: OnceLock<ExtensionBoot> = OnceLock::new();
+static AT_REST: OnceLock<systemprompt::security::at_rest::AtRestCipher> = OnceLock::new();
 
 const ISSUER: &str = "http://localhost:8099";
 
@@ -28,33 +39,82 @@ pub(crate) fn init() -> bool {
 }
 
 fn try_init() -> bool {
-    let profile = write_fixture_profile();
-
-    systemprompt::config::ProfileBootstrap::init_from_path(&profile)
+    let profile_path = write_fixture_profile();
+    let profile = systemprompt::config::LoadedProfile::from_path(&profile_path)
         .expect("initialise the contract fixture profile");
     // Why: tokio panics on `block_on` inside a `#[tokio::test]` runtime, so the
-    // async secrets bootstrap runs on a throwaway runtime on its own thread.
-    std::thread::scope(|scope| {
+    // async secrets load runs on a throwaway runtime on its own thread.
+    let secrets = std::thread::scope(|scope| {
         scope
             .spawn(|| {
                 tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .expect("runtime for the secrets bootstrap")
-                    .block_on(systemprompt::config::SecretsBootstrap::try_init())
-                    .expect("load the fixture profile's secrets");
+                    .expect("runtime for the secrets load")
+                    .block_on(systemprompt::config::SecretsService::load(Arc::clone(
+                        &profile,
+                    )))
+                    .expect("load the fixture profile's secrets")
             })
             .join()
-            .expect("the secrets bootstrap thread did not panic");
+            .expect("the secrets load thread did not panic")
     });
-    systemprompt::config::try_init_config(None).expect("build config from the fixture profile");
-    systemprompt::loader::ServicesBootstrap::try_init()
+    let boot = systemprompt::loader::BootContext::new(profile, secrets);
+    let root = systemprompt::manifest::services::root::ActiveServicesRoot::baked(boot.profile());
+    let config = Arc::clone(
+        boot.try_init_config(Some(root.path.as_path()))
+            .expect("build config from the fixture profile"),
+    );
+    let state = systemprompt::loader::ServicesState::load(&boot)
         .expect("load the services tree the fixture profile points at");
+    SERVICES
+        .set(state.view())
+        .expect("try_init runs once, so SERVICES is unset");
 
-    let key = systemprompt_security::keys::RsaSigningKey::generate()
-        .expect("generate an ephemeral RSA signing key");
-    systemprompt_security::keys::authority::install(key).expect("install signing authority");
+    let keys = dynapps_test_common::ephemeral_signing_keys();
+    let authority = systemprompt::security::jwt::DeploymentTokenAuthority::new(
+        keys.clone(),
+        config.jwt_issuer.clone(),
+    );
+    AT_REST
+        .set(
+            systemprompt::security::at_rest::AtRestCipher::from_secrets(&boot.secrets().get())
+                .expect("the fixture secrets carry an encryption master key"),
+        )
+        .expect("try_init runs once, so AT_REST is unset");
+    let secrets: Arc<dyn systemprompt::traits::SecretStore> =
+        Arc::<systemprompt::config::SecretsService>::clone(boot.secrets());
+    BOOT.set(ExtensionBoot::new(
+        Arc::new(boot.profile().clone()),
+        config,
+        root,
+        Arc::new(authority),
+        secrets,
+    ))
+    .expect("try_init runs once, so BOOT is unset");
+    KEYS.set(keys)
+        .expect("try_init runs once, so KEYS is unset");
     true
+}
+
+pub(crate) fn boot() -> &'static ExtensionBoot {
+    BOOT.get().expect("globals::init installs the boot values")
+}
+
+pub(crate) fn at_rest_cipher() -> &'static systemprompt::security::at_rest::AtRestCipher {
+    AT_REST
+        .get()
+        .expect("globals::init installs the at-rest cipher")
+}
+
+pub(crate) fn services() -> &'static ServicesView {
+    SERVICES
+        .get()
+        .expect("globals::init installs the services view")
+}
+
+pub(crate) fn signing_keys() -> &'static SigningKeys {
+    KEYS.get().expect("globals::init installs the signing keys")
 }
 
 const FIXTURE_PROFILE: &str = include_str!("../fixtures/profile.yaml");
@@ -69,7 +129,7 @@ fn fixture_secrets() -> String {
     format!(
         r#"{{
   "database_url": "{database_url}",
-  "oauth_at_rest_pepper": "contract-suite-pepper-not-a-real-secret",
+  "oauth_at_rest_pepper": "{OAUTH_PEPPER}",
   "mcp_credential_broker_secret": "contract-suite-broker-not-a-real-secret",
   "manifest_signing_secret_seed": "Y29udHJhY3Qtc3VpdGUtc2VlZC1ub3QtcmVhbC0wMDA=",
   "encryption_master_key": "{MASTER_KEY_HEX}",
@@ -77,6 +137,8 @@ fn fixture_secrets() -> String {
 }}"#
     )
 }
+
+pub(crate) const OAUTH_PEPPER: &str = "contract-suite-pepper-not-a-real-secret";
 
 // `secret_crypto::load_master_key` refuses anything but exactly 32 bytes.
 const MASTER_KEY_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
@@ -107,10 +169,22 @@ fn write_fixture_profile() -> PathBuf {
     dir.join("profile.yaml")
 }
 
-// Two routes with fixed ids and no default provider, so an unrouted model
-// exists for the ACL detector cases; the rest of `services/` is copied as-is.
-const FIXTURE_PROVIDERS: &str = include_str!("../fixtures/providers.yaml");
-const FIXTURE_GATEWAY: &str = include_str!("../fixtures/gateway.yaml");
+// One Anthropic endpoint serving the fixture models, and two routes with fixed
+// ids and no default model, so an unrouted model exists for the ACL detector
+// cases; the rest of `services/` is copied as-is.
+const FIXTURE_CATALOG: [(&str, &str); 5] = [
+    (
+        "credentials.yaml",
+        include_str!("../fixtures/credentials.yaml"),
+    ),
+    ("providers.yaml", include_str!("../fixtures/providers.yaml")),
+    ("models.yaml", include_str!("../fixtures/models.yaml")),
+    (
+        "deployments.yaml",
+        include_str!("../fixtures/deployments.yaml"),
+    ),
+    ("gateway.yaml", include_str!("../fixtures/gateway.yaml")),
+];
 // The instance ships no identity-backed server; the accessor routes under
 // /api/public/identity/ are exercised against this fixture instead.
 const FIXTURE_IDENTITY_SERVER: &str = include_str!("../fixtures/sfcore_dev.yaml");
@@ -121,10 +195,9 @@ fn write_fixture_services(root: &std::path::Path, dest: &std::path::Path) {
         std::fs::remove_dir_all(dest).expect("clear the previous fixture services tree");
     }
     copy_tree(&root.join("services"), dest);
-    std::fs::write(dest.join("ai/providers.yaml"), FIXTURE_PROVIDERS)
-        .expect("write fixture providers.yaml");
-    std::fs::write(dest.join("ai/gateway.yaml"), FIXTURE_GATEWAY)
-        .expect("write fixture gateway.yaml");
+    for (file, yaml) in FIXTURE_CATALOG {
+        std::fs::write(dest.join("ai").join(file), yaml).expect("write fixture catalog file");
+    }
     add_identity_server(dest);
 }
 
@@ -159,8 +232,5 @@ fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
 }
 
 pub(crate) fn jwt_issuer() -> String {
-    systemprompt::manifest::Config::get()
-        .expect("config installed by init()")
-        .jwt_issuer
-        .clone()
+    boot().config().jwt_issuer.clone()
 }

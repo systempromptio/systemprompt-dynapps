@@ -20,7 +20,8 @@ VALUES="$CHART/values-kind.yaml"
 EXTRA_VALUES=()
 [ -z "${LOADTEST_VALUES:-}" ] || EXTRA_VALUES=(-f "$CHART/$LOADTEST_VALUES")
 IMAGE_REPO=ghcr.io/systempromptio/systemprompt-dynapps
-IMAGE_TAG="${LOADTEST_IMAGE_TAG:-0.65.0}"
+# Default to the workspace version so the load test exercises the image this tree releases.
+IMAGE_TAG="${LOADTEST_IMAGE_TAG:-$(sed -n 's/^version = "\([0-9.]*\)".*/\1/p' "$ROOT/Cargo.toml" | head -1)}"
 MOCK_IMAGE=dynapps-loadtest/mock-inference:local
 CORE="${CORE_DIR:-$ROOT/../systemprompt-core}"
 SECRETS="$HERE/.profile/secrets.json"
@@ -84,7 +85,10 @@ services_configmap() {
     local policies="$HERE/services/gateway/policies.yaml"
     [ "${1:-default}" = enforce ] && policies="$HERE/services/gateway/policies-enforce.yaml"
     k -n "$NS" create configmap loadtest-services \
+        --from-file=credentials.yaml="$HERE/services/ai/credentials.yaml" \
         --from-file=providers.yaml="$HERE/services/ai/providers.yaml" \
+        --from-file=models.yaml="$HERE/services/ai/models.yaml" \
+        --from-file=deployments.yaml="$HERE/services/ai/deployments.yaml" \
         --from-file=gateway.yaml="$HERE/services/ai/gateway.yaml" \
         --from-file=config.yaml="$HERE/services/ai/config.yaml" \
         --from-file=policies.yaml="$policies" \

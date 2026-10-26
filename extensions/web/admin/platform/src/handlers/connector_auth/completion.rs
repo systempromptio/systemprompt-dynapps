@@ -13,39 +13,32 @@ use std::time::Instant;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use tracing::Instrument;
 use uuid::Uuid;
 
-struct CallbackSession<'a> {
-    pool: &'a PgPool,
-    user: &'a UserId,
-    headers: &'a HeaderMap,
+pub(super) struct CallbackSession<'a> {
+    pub pool: &'a PgPool,
+    pub boot: &'a ExtensionBoot,
+    pub user: &'a UserId,
+    pub headers: &'a HeaderMap,
 }
 
 pub(super) async fn finish(
-    pool: &PgPool,
-    user: &UserId,
-    headers: &HeaderMap,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    session: CallbackSession<'_>,
     grant: Grant,
     code: &str,
 ) -> AdminResult<Response> {
     let reference = Uuid::new_v4();
-    let span = tracing::info_span!("connector_callback", user_id = %user, provider = grant.provider.slug(), trace_id = %reference);
-    complete(
-        CallbackSession {
-            pool,
-            user,
-            headers,
-        },
-        grant,
-        code,
-        reference,
-    )
-    .instrument(span)
-    .await
+    let span = tracing::info_span!("connector_callback", user_id = %session.user, provider = grant.provider.slug(), trace_id = %reference);
+    complete(services, session, grant, code, reference)
+        .instrument(span)
+        .await
 }
 
 async fn complete(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     session: CallbackSession<'_>,
     mut grant: Grant,
     code: &str,
@@ -53,16 +46,17 @@ async fn complete(
 ) -> AdminResult<Response> {
     let CallbackSession {
         pool,
+        boot,
         user,
         headers,
     } = session;
     let mut report = VerificationReport::for_provider(grant.provider.slug());
     let started = Instant::now();
-    let exchange = oauth::exchange_classified(&mut grant, code).await;
+    let exchange = oauth::exchange_classified(services, boot.config(), &mut grant, code).await;
     let outcome = match exchange {
         Ok(()) => {
             report.record("token", started, &Ok("Authorization exchanged".into()));
-            oauth::verify::verify_reporting(&mut grant, &oauth_client()?, &mut report)
+            oauth::verify::verify_reporting(services, &mut grant, &oauth::client()?, &mut report)
                 .await
                 .map_err(FlowFailure::verification)
         },
@@ -71,10 +65,10 @@ async fn complete(
             Err(failure)
         },
     };
-    let actor = live_user(pool, headers, false).await?;
+    let actor = live_user(pool, boot, headers, false).await?;
     if let Err(failure) = outcome {
         if failure.kind != FailureKind::GrantRejected && grant.refresh_token.is_some() {
-            store_pending_verification(pool, user, &grant).await?;
+            store_pending_verification(pool, boot.secrets().as_ref(), user, &grant).await?;
         }
         let stage = report
             .steps
@@ -87,7 +81,7 @@ async fn complete(
             callback_notice::redirect(&grant.provider, stage, failure.kind, reference);
         return Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&destination)).into_response());
     }
-    store_verified(pool, user, &grant).await?;
+    store_verified(pool, boot.secrets().as_ref(), user, &grant).await?;
     tracing::info!(user_id = %user, provider = grant.provider.slug(), trace_id = %reference, "connector_connected");
     let destination = if actor.user_id == *user {
         format!("/admin/connectors#connector-{}", grant.provider.slug())
@@ -95,12 +89,4 @@ async fn complete(
         format!("/admin/identity/service-accounts/{user}")
     };
     Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&destination)).into_response())
-}
-
-fn oauth_client() -> AdminResult<reqwest::Client> {
-    reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .map_err(systemprompt_web_admin_core::error::AdminError::internal)
 }

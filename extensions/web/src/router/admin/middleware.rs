@@ -26,6 +26,7 @@ use systemprompt_web_admin_identity::repositories::users::user_settings::find_us
 
 use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::scope::Participation;
 use systemprompt_web_admin_core::ssr::viewer_tz::{Tz, parse_tz, with_viewer_tz};
 use systemprompt_web_admin_core::types::{
@@ -49,6 +50,9 @@ struct AuthMeResponse {
 }
 
 pub(super) async fn user_context_middleware(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     mut request: Request,
     next: Next,
@@ -59,7 +63,7 @@ pub(super) async fn user_context_middleware(
     else {
         return Ok(next.run(request).await);
     };
-    let (ctx, tz) = resolve_user_context(&pool, session).await;
+    let (ctx, tz) = resolve_user_context(&services, &pool, session).await;
     request.extensions_mut().insert(ctx);
     Ok(with_viewer_tz(tz, next.run(request)).await)
 }
@@ -71,7 +75,13 @@ pub(crate) struct SessionInputs {
 
 impl SessionInputs {
     pub(crate) fn from_request(request: &Request, pat_allowed: bool) -> Self {
-        let cookie = extract_user_from_cookie(request.headers());
+        let cookie = request
+            .extensions()
+            .get::<ExtensionBoot>()
+            .ok_or_else(|| AdminError::internal("boot values are not layered on this router"))
+            .and_then(|boot| {
+                extract_user_from_cookie(boot.token_authority().as_ref(), request.headers())
+            });
         let pat = cookie
             .is_err()
             .then(|| pat::pat_request(request, pat_allowed))
@@ -99,6 +109,7 @@ pub(crate) async fn resolve_session(
 }
 
 pub(crate) async fn resolve_user_context(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     session: CookieSession,
 ) -> (UserContext, Tz) {
@@ -112,7 +123,7 @@ pub(crate) async fn resolve_user_context(
     let participation = if is_console {
         Participation::default()
     } else {
-        find_participation(pool, &session.user_id, &group_ids, &project_ids).await
+        find_participation(pool, services, &session.user_id, &group_ids, &project_ids).await
     };
 
     let ctx = UserContext {
@@ -162,12 +173,13 @@ async fn find_access_profile(
 
 async fn find_participation(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     user_id: &UserId,
     group_ids: &[String],
     project_ids: &[String],
 ) -> Participation {
     systemprompt_web_admin_core::repositories::scope::participation::get_participation(
-        pool, user_id, group_ids, project_ids,
+        pool, services, user_id, group_ids, project_ids,
     )
     .await
     // Why: fail-soft-ok: unresolved participation grants no scoped access, so

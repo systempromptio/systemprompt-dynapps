@@ -44,8 +44,16 @@ impl Harness {
             Arc::clone(&db.pool),
             Some(Arc::clone(&db.pool)),
         ));
-        let accounts = ServiceAccounts::new(UserRepository::new(&database));
-        let router = connector_api_router(Arc::clone(&db.pool), accounts);
+        let accounts = ServiceAccounts::new(
+            UserRepository::new(&database),
+            Arc::clone(env.boot.secrets()),
+        );
+        let router = connector_api_router(Arc::clone(&db.pool), accounts)
+            .layer(axum::Extension(env.boot.clone()))
+            .layer(axum::Extension(dynapps_test_common::extension_services(
+                &db.pool,
+                env.services.view().clone(),
+            )));
         let ca = reqwest::Certificate::from_pem(&env.portal.ca_pem()).expect("fake CA");
         let http = reqwest::Client::builder()
             .add_root_certificate(ca)
@@ -72,7 +80,7 @@ impl Harness {
             .await
             .expect("insert live session");
         let email = format!("{raw}@example.test");
-        let jwt = PortalEnv::mint(Principal {
+        let jwt = self.env.mint(Principal {
             user_id: &raw,
             email: &email,
             session_id: Some(&session),

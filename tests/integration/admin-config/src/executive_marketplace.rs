@@ -9,12 +9,6 @@ use systemprompt::governance::authz::{
 };
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
-use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
-use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
-use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
-use systemprompt_web_admin_core::repositories::gateway_catalog::{
-    dispatchable_route_ids, registered_routes,
-};
 use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
@@ -30,7 +24,7 @@ fn services_path() -> PathBuf {
 
 #[test]
 fn executive_services_load_with_resolvable_plugin_members() {
-    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
+    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"), None)
         .expect("shipped services load and validate");
     for id in ["dynapps-super-admin"] {
         let marketplace = services
@@ -57,31 +51,17 @@ async fn executive_access_grants_only_the_control_plane() {
     };
     let path = services_path();
     let services =
-        ConfigLoader::load_from_path(&path.join("config/config.yaml")).expect("services");
-    // Why: the parent-chain index reads the shipped catalog from the
-    // process-wide services bootstrap, so this test installs the shipped tree
-    // rather than the empty fixture the user helper falls back to.
-    systemprompt::loader::ServicesBootstrap::init_from_path(&path.join("config/config.yaml"))
-        .expect("install shipped services");
+        ConfigLoader::load_from_path(&path.join("config/config.yaml"), None).expect("services");
+    let view = dynapps_test_common::extension_services(
+        &db.pool,
+        dynapps_test_common::services_view(&path.join("config/config.yaml")),
+    );
     groups_yaml_loader::load_groups_from_yaml(&db.pool, &path)
         .await
         .expect("groups");
-    // Why: the shipped rules.yaml, projected the way boot seeds it, so the
-    // assertions below hold against the file the release actually carries.
-    let marketplace_ids: Vec<String> = services
-        .marketplaces
-        .keys()
-        .map(|id| id.as_str().to_owned())
-        .collect();
-    // Why: the file declares `gateway_route/*`, which expands over the live
-    // route catalog — the same one boot registers — never the database.
-    let registered = registered_routes(&dispatchable_route_ids(&services));
-    let declared = load_declared_set(&path, &marketplace_ids, &registered)
-        .await
-        .expect("rules.yaml");
-    apply_sync(&db.pool, &declared, SyncMode::Overwrite)
-        .await
-        .expect("seed");
+    // Why: the shipped rules.yaml, projected through core the way a deploy's
+    // `config apply` does, so the assertions hold against the released file.
+    crate::fixtures::apply_access_rules(&db.pool, &path).await;
     let project_exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM projects WHERE id = 'odoo-delivery')")
             .fetch_one(&*db.pool)
@@ -123,9 +103,7 @@ async fn executive_access_grants_only_the_control_plane() {
         if project {
             set_project(&db.pool, user.as_str(), Some("odoo-delivery")).await;
         }
-        let attributes = subject_attributes_for(&db.pool, &user)
-            .await
-            .expect("attributes");
+        let attributes = view.subject_attributes(&user).await.expect("attributes");
         for (kind, id, expected) in [
             (
                 EntityKind::Marketplace,
@@ -145,7 +123,7 @@ async fn executive_access_grants_only_the_control_plane() {
                     ids: &ids,
                     chains: &chains,
                     attributes: &attributes,
-                    dimensions: dimensions(&db.pool),
+                    dimensions: view.dimensions(),
                 },
             )
             .await

@@ -7,17 +7,17 @@
 use std::collections::BTreeSet;
 
 use serde_json::Value;
-use systemprompt::manifest::services::ProviderEntry;
 use systemprompt::wire::WireProtocol;
 
 use crate::dispatch::{Captured, KEY, REPLY_TEXT};
 use crate::fixtures::Fixture;
+use crate::providers::Lane;
 
 type Check = Result<(), String>;
 
-pub(crate) fn all(fixture: &Fixture, provider: &ProviderEntry, captured: &Captured) -> Check {
-    body(provider.wire, &captured.body)?;
-    headers(fixture, provider, captured)?;
+pub(crate) fn all(fixture: &Fixture, lane: &Lane, captured: &Captured) -> Check {
+    body(lane.wire, &captured.body)?;
+    headers(fixture, lane, captured)?;
     if !captured.client_reply.contains(REPLY_TEXT) {
         return Err(format!(
             "client reply lost the upstream text: {}",
@@ -234,7 +234,7 @@ fn gemini(body: &Value) -> Check {
     }
 }
 
-fn headers(fixture: &Fixture, provider: &ProviderEntry, captured: &Captured) -> Check {
+fn headers(fixture: &Fixture, lane: &Lane, captured: &Captured) -> Check {
     let bearer = format!("Bearer {KEY}");
     let authed = captured.header("x-api-key") == Some(KEY)
         || captured.header("authorization") == Some(bearer.as_str())
@@ -242,7 +242,7 @@ fn headers(fixture: &Fixture, provider: &ProviderEntry, captured: &Captured) -> 
     if !authed {
         return Err("upstream request carries no provider credential".to_owned());
     }
-    if let Some(ua) = &provider.user_agent
+    if let Some(ua) = &lane.user_agent
         && captured.header("user-agent") != Some(ua.as_str())
     {
         return Err(format!(
@@ -250,7 +250,7 @@ fn headers(fixture: &Fixture, provider: &ProviderEntry, captured: &Captured) -> 
             captured.header("user-agent")
         ));
     }
-    let session_expected = provider
+    let session_expected = lane
         .forward_headers
         .iter()
         .any(|h| h == "x-opencode-session")
@@ -269,7 +269,7 @@ fn headers(fixture: &Fixture, provider: &ProviderEntry, captured: &Captured) -> 
         return Err("client identity header leaked upstream".to_owned());
     }
     let beta = captured.header("anthropic-beta");
-    if provider.wire != WireProtocol::Anthropic {
+    if lane.wire != WireProtocol::Anthropic {
         if beta.is_some() || captured.header("anthropic-version").is_some() {
             return Err("anthropic headers sent to a non-anthropic wire".to_owned());
         }
@@ -278,7 +278,7 @@ fn headers(fixture: &Fixture, provider: &ProviderEntry, captured: &Captured) -> 
     if captured.header("anthropic-version").is_none() {
         return Err("anthropic wire without anthropic-version".to_owned());
     }
-    if let Some(accepted) = &provider.accepted_betas
+    if let Some(accepted) = &lane.accepted_betas
         && let Some(sent) = beta
     {
         let accepted: Vec<String> = accepted

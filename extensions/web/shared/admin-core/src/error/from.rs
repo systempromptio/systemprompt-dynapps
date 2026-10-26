@@ -40,14 +40,17 @@ impl From<systemprompt::governance::authz::AuthzError> for AdminError {
     }
 }
 
-impl From<systemprompt::models::errors::GlobalConfigError> for AdminError {
-    fn from(value: systemprompt::models::errors::GlobalConfigError) -> Self {
-        Self::Internal(Box::new(value))
+impl From<crate::authz::AuthzReadError> for AdminError {
+    fn from(value: crate::authz::AuthzReadError) -> Self {
+        match value {
+            crate::authz::AuthzReadError::Database(e) => Self::Database(e),
+            other => Self::Internal(Box::new(other)),
+        }
     }
 }
 
-impl From<systemprompt::config::ProfileBootstrapError> for AdminError {
-    fn from(value: systemprompt::config::ProfileBootstrapError) -> Self {
+impl From<systemprompt::models::errors::GlobalConfigError> for AdminError {
+    fn from(value: systemprompt::models::errors::GlobalConfigError) -> Self {
         Self::Internal(Box::new(value))
     }
 }
@@ -65,6 +68,23 @@ impl From<systemprompt::analytics::AnalyticsError> for AdminError {
                 Self::BadRequest(message)
             },
             error => Self::Internal(Box::new(error)),
+        }
+    }
+}
+
+impl From<systemprompt::models::authz::RuleTypeError> for AdminError {
+    fn from(value: systemprompt::models::authz::RuleTypeError) -> Self {
+        Self::BadRequest(value.0)
+    }
+}
+
+impl From<systemprompt::models::authz::SubjectSourceError> for AdminError {
+    fn from(value: systemprompt::models::authz::SubjectSourceError) -> Self {
+        match value {
+            systemprompt::models::authz::SubjectSourceError::NotReady => {
+                Self::Unavailable("Authorization is not ready yet".into())
+            },
+            other => Self::Internal(Box::new(other)),
         }
     }
 }

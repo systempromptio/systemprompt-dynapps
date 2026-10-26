@@ -10,7 +10,8 @@ use jsonwebtoken::{Algorithm, Header, encode};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::models::auth::{
-    JwtAudience, JwtClaims, Permission, RateLimitTier, TokenType, UserType,
+    CustomClaims, JwtAudience, JwtClaims, Permission, RateLimitTier, RegisteredClaims, TokenType,
+    UserType,
 };
 
 use crate::globals;
@@ -50,7 +51,7 @@ impl<'a> TokenSpec<'a> {
 
 pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
     let now = Utc::now();
-    let claims = JwtClaims {
+    let registered = RegisteredClaims {
         sub: spec.subject.to_owned(),
         iat: now.timestamp(),
         exp: (now + Duration::hours(1)).timestamp(),
@@ -58,6 +59,8 @@ pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
         iss: globals::jwt_issuer(),
         aud: spec.audiences.clone(),
         jti: uuid::Uuid::new_v4().to_string(),
+    };
+    let custom = CustomClaims {
         scope: spec.scopes.clone(),
         username: "hook@contract.test".to_owned(),
         email: "hook@contract.test".to_owned(),
@@ -73,13 +76,12 @@ pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
         purpose: None,
         act: None,
     };
+    let claims = JwtClaims { registered, custom };
 
-    let kid =
-        systemprompt_security::keys::authority::active_kid().expect("an installed signing key");
+    let keys = globals::signing_keys();
     let mut header = Header::new(Algorithm::RS256);
-    header.kid = Some(kid.to_owned());
-    let key = systemprompt_security::keys::authority::encoding_key().expect("an encoding key");
-    encode(&header, &claims, key).expect("sign the token")
+    header.kid = Some(keys.active_kid().to_owned());
+    encode(&header, &claims, keys.encoding_key()).expect("sign the token")
 }
 
 // `users.name` is unique, so the email doubles as the name.
@@ -288,7 +290,7 @@ pub(crate) async fn insert_acl_rule(
 ) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
-         VALUES ($1, $2, false, 'contract-fixture')
+         VALUES ($1, $2, false, 'code:contract-fixture')
          ON CONFLICT (entity_type, entity_id) DO NOTHING",
     )
     .bind(entity_type)
@@ -299,8 +301,8 @@ pub(crate) async fn insert_acl_rule(
 
     sqlx::query(
         "INSERT INTO access_control_rules
-             (id, entity_type, entity_id, rule_type, rule_value, access)
-         VALUES ($1, $2, $3, $4, $5, $6)",
+             (id, entity_type, entity_id, rule_type, rule_value, access, source)
+         VALUES ($1, $2, $3, $4, $5, $6, 'code:contract-fixture')",
     )
     .bind(unique("rule"))
     .bind(entity_type)

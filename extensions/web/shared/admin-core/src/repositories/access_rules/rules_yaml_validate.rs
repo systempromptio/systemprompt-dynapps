@@ -3,42 +3,82 @@
 //! band, and never both allows and denies the same subject.
 
 use super::rules_yaml_types::{
-    BandSpec, EntityDecl, EntityRef, GLOB_ONLY_KINDS, OWNER_BUNDLE_PREFIX, RulesDoc,
+    BandSpec, EntityDecl, EntityRef, EntityRefParseError, GLOB_KINDS, GLOB_ONLY_KINDS,
+    OWNER_BUNDLE_PREFIX, RulesDoc,
 };
 
+#[derive(Debug, thiserror::Error)]
+pub enum RulesValidationError {
+    #[error(transparent)]
+    Entity(#[from] EntityRefParseError),
+    #[error("{entity}: `why` is required")]
+    MissingWhy { entity: String },
+    #[error("{entity}: only gateway_route, hook and model take a glob; write the id")]
+    GlobNotAllowed { entity: String },
+    #[error("{entity}: {kind} ids are generated, never written — use {kind}/*")]
+    GlobRequired { entity: String, kind: String },
+    #[error("{entity}: declares no allow and no deny")]
+    NoBands { entity: String },
+    #[error("{entity}: owner '{owner}' must be written as {OWNER_BUNDLE_PREFIX}<name>")]
+    OwnerNotBundle { entity: String, owner: String },
+    #[error("{entity}: a glob cannot name an owner")]
+    GlobWithOwner { entity: String },
+    #[error("{entity}: {band} '{subject}' is both allowed and denied")]
+    Conflict {
+        entity: String,
+        band: &'static str,
+        subject: String,
+    },
+    #[error("{entity}: {band} {problem}")]
+    Subjects {
+        entity: String,
+        band: &'static str,
+        problem: &'static str,
+    },
+}
+
 impl EntityDecl {
-    fn validate(&self) -> Result<(), String> {
+    fn validate(&self) -> Result<(), RulesValidationError> {
         let entity: EntityRef = self.entity.parse()?;
         if self.why.trim().is_empty() {
-            return Err(format!("{entity}: `why` is required"));
+            return Err(RulesValidationError::MissingWhy {
+                entity: entity.to_string(),
+            });
         }
         check_glob_shape(&entity)?;
         if self.allow.is_empty() && self.deny.is_empty() {
-            return Err(format!("{entity}: declares no allow and no deny"));
+            return Err(RulesValidationError::NoBands {
+                entity: entity.to_string(),
+            });
         }
         self.check_owner(&entity)?;
         if let Some((band, subject)) = self.first_conflict() {
-            return Err(format!(
-                "{entity}: {band} '{subject}' is both allowed and denied"
-            ));
+            return Err(RulesValidationError::Conflict {
+                entity: entity.to_string(),
+                band,
+                subject: subject.to_owned(),
+            });
         }
         self.check_band_subjects(&entity)
     }
 
-    fn check_owner(&self, entity: &EntityRef) -> Result<(), String> {
+    fn check_owner(&self, entity: &EntityRef) -> Result<(), RulesValidationError> {
         let Some(owner) = self.owner.as_deref() else {
             return Ok(());
         };
         match self.owner_bundle() {
             Some(name) if !name.trim().is_empty() => {},
             _ => {
-                return Err(format!(
-                    "{entity}: owner '{owner}' must be written as {OWNER_BUNDLE_PREFIX}<name>"
-                ));
+                return Err(RulesValidationError::OwnerNotBundle {
+                    entity: entity.to_string(),
+                    owner: owner.to_owned(),
+                });
             },
         }
         if entity.is_glob() {
-            return Err(format!("{entity}: a glob cannot name an owner"));
+            return Err(RulesValidationError::GlobWithOwner {
+                entity: entity.to_string(),
+            });
         }
         Ok(())
     }
@@ -55,27 +95,34 @@ impl EntityDecl {
         })
     }
 
-    fn check_band_subjects(&self, entity: &EntityRef) -> Result<(), String> {
+    fn check_band_subjects(&self, entity: &EntityRef) -> Result<(), RulesValidationError> {
         let bands = self.allow.bands().into_iter().chain(self.deny.bands());
         for (band, spec) in bands {
             if let Some(problem) = subject_problem(spec) {
-                return Err(format!("{entity}: {band} {problem}"));
+                return Err(RulesValidationError::Subjects {
+                    entity: entity.to_string(),
+                    band,
+                    problem,
+                });
             }
         }
         Ok(())
     }
 }
-fn check_glob_shape(entity: &EntityRef) -> Result<(), String> {
-    let kind = entity.kind.as_str();
-    match (entity.is_glob(), GLOB_ONLY_KINDS.contains(&entity.kind)) {
-        (true, false) => Err(format!(
-            "{entity}: only gateway_route and hook take a glob; write the id"
-        )),
-        (false, true) => Err(format!(
-            "{entity}: {kind} ids are generated, never written — use {kind}/*"
-        )),
-        (true, true) | (false, false) => Ok(()),
+
+fn check_glob_shape(entity: &EntityRef) -> Result<(), RulesValidationError> {
+    if entity.is_glob() && !GLOB_KINDS.contains(&entity.kind) {
+        return Err(RulesValidationError::GlobNotAllowed {
+            entity: entity.to_string(),
+        });
     }
+    if !entity.is_glob() && GLOB_ONLY_KINDS.contains(&entity.kind) {
+        return Err(RulesValidationError::GlobRequired {
+            entity: entity.to_string(),
+            kind: entity.kind.as_str().to_owned(),
+        });
+    }
+    Ok(())
 }
 
 fn subject_problem(spec: &BandSpec) -> Option<&'static str> {
@@ -90,7 +137,7 @@ fn subject_problem(spec: &BandSpec) -> Option<&'static str> {
 }
 
 impl RulesDoc {
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), RulesValidationError> {
         self.entities.iter().try_for_each(EntityDecl::validate)
     }
 }

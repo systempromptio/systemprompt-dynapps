@@ -4,7 +4,7 @@
 # See docs/CONFIGURED-CONNECTORS.md.
 mcp_servers:
   systemprompt:
-    type: internal
+    server_type: internal
     binary: systemprompt-mcp-agent
     package: systemprompt
     port: 5010

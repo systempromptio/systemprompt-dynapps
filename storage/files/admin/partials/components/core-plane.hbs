@@ -1,0 +1,72 @@
+{{!--
+  One plane core owns (access control, governance, gateway policies), read
+  from core: declared hash, core's last apply, and each entity whose database
+  value differs from the declaration. Core is the only writer: the apply is
+  core's entity merge, which leaves an entity both sides changed as a
+  recorded conflict rather than overwriting it. The JS is
+  components/sp-sync-plane.js; the dialogs are components/sync-plane-dialogs.
+
+  Invoke as: {{> components/core-plane plane=core_plane can_write=can_write}}
+--}}
+<section class="sp-sync-plane" data-plane="{{plane.id}}" aria-labelledby="plane-{{plane.id}}">
+    <div class="sp-sync-plane__head">
+        <h2 id="plane-{{plane.id}}">{{plane.label}}</h2>
+        <div class="sp-sync-plane__meta">
+            <span><code class="sp-code-inline">services/{{plane.source_file}}</code> · enforced by core from the database</span>
+            {{#if plane.declared_hash}}<span>declared <span class="sp-sync-hash" title="{{plane.declared_hash.full}}">{{plane.declared_hash.short}}</span></span>{{/if}}
+            {{#if plane.applied}}
+            <span>last applied <span class="sp-sync-hash" title="{{plane.applied.hash.full}}">{{plane.applied.hash.short}}</span> by <strong>{{plane.applied.by}}</strong> {{relativeTime plane.applied.at}} ({{plane.applied.mode}})</span>
+            {{#if plane.applied.declared_changed}}{{> components/badge tone="warn" text="declaration changed since last apply"}}{{/if}}
+            {{else}}
+            <span class="sp-u-text-tertiary">never applied on this database</span>
+            {{/if}}
+        </div>
+    </div>
+
+    {{#if plane.is_clean}}
+    {{> components/notice tone="ok" title="In step" message="The declaration and this database hold the same entities."}}
+    {{/if}}
+
+    <div class="sp-sync-actions" aria-label="Synchronise {{plane.label}}">
+        <article class="sp-sync-card{{#unless plane.is_clean}} sp-sync-card--recommended{{/unless}}">
+            <h3>Apply from code</h3>
+            <p>Core merges the declaration into this database entity by entity: what only code changed is written, what only this database changed is kept, and an entity both sides changed is recorded as a conflict and left alone.</p>
+            <p class="sp-sync-card__count">{{plane.row_count}} entities differ</p>
+            {{#if can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="merge" data-count="{{plane.row_count}}">Apply from code</button>{{/if}}
+        </article>
+        {{#if plane.show_export}}
+        <article class="sp-sync-card">
+            <h3>Export to code</h3>
+            <p>Render this database as <code class="sp-code-inline">{{plane.source_file}}</code> and commit it. That is the only way an entity written here reaches the file.</p>
+            <button type="button" class="sp-btn sp-btn--outline" data-action="sync-export" data-export-url="{{plane.export_url}}" data-file="{{plane.source_file}}">Export</button>
+        </article>
+        {{/if}}
+    </div>
+
+    {{#> components/section title="Differences" count=plane.row_count note="One line per entity whose database value differs from the declaration."}}
+        {{#*inline "section_actions"}}
+        {{#if plane.entity_filter}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{plane.sync_url}}">Show all entities</a>{{/if}}
+        {{/inline}}
+    {{/components/section}}
+
+    {{#if plane.rows}}
+    {{#> components/table caption="Entities whose database value differs from the declaration" modifier="sp-p-ac__diff" table_mode="scroll"}}
+        <thead><tr>
+            <th>Difference</th>
+            <th>Entity</th>
+            <th>In code</th>
+            <th>In this database</th>
+        </tr></thead>
+        <tbody>
+        {{#each plane.rows}}
+        <tr data-diff="{{kind}}" data-entity="{{entity}}">
+            <td>{{> components/badge tone=kind_tone text=kind_label}}</td>
+            <td><span class="sp-u-mono">{{entity}}</span></td>
+            <td class="sp-u-text-secondary sp-u-mono">{{declared}}</td>
+            <td class="sp-u-text-secondary sp-u-mono">{{current}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{/if}}
+</section>

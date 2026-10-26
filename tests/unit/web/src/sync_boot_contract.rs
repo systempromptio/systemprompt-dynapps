@@ -158,9 +158,6 @@ async fn an_unreadable_declaration_fails_the_boot() {
 // Why: rules name group and project ids, so groups must exist before the
 // rules are seeded; planes added later go after these three.
 #[test]
-fn boot_order_starts_with_groups_then_access_control_then_gateway_policies() {
-    assert!(
-        BOOT_ORDER.starts_with(&["groups", "access_control", "gateway_policies"]),
-        "{BOOT_ORDER:?}"
-    );
+fn boot_runs_the_install_planes_alone_groups_first() {
+    assert_eq!(BOOT_ORDER, ["groups", "gateway_routes"]);
 }

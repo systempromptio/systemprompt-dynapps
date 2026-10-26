@@ -1,8 +1,8 @@
 //! The database-only rule rows of the access-control drift: where each came
 //! from, and whether an overwrite from code retires it.
 
+use crate::util::change_source::is_console_source;
 use serde::Serialize;
-use systemprompt::governance::authz::DASHBOARD_SOURCE;
 
 use super::drift::BandRuleRow;
 
@@ -22,7 +22,7 @@ pub enum OrphanOrigin {
 impl OrphanOrigin {
     #[must_use]
     pub fn of_source(source: &str) -> Self {
-        if source == DASHBOARD_SOURCE {
+        if is_console_source(source) {
             Self::Console
         } else if source.starts_with("bundle:") {
             Self::Bundle

@@ -12,7 +12,7 @@ pub mod transcript;
 mod triggers;
 
 pub use assertions::{AssertionContext, AssertionResult, evaluate_assertions};
-pub use history::{EvalHistoryPoint, list_visible_history, parse_since};
+pub use history::{EvalHistoryPoint, HistoryScope, list_visible_history, parse_since};
 pub use judge::{
     EvalJudge, GatewayJudge, JudgeFuture, JudgeInput, JudgeVerdict, StubJudge, gateway_judge,
 };

@@ -7,13 +7,12 @@
 //! through the admin subject matrix, not the manifest audience, so a per-user
 //! deny hides one that a group grants.
 
-use std::path::PathBuf;
 use std::sync::Arc;
+use systemprompt::manifest::services::ResolvedCatalog;
 
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::{TenantId, UserId};
-use uuid::Uuid;
+use systemprompt::manifest::Profile;
 
 use systemprompt_web_admin_core::repositories::bridge::{BridgeIdentityRow, find_bridge_user};
 use systemprompt_web_admin_core::repositories::user_usage as usage_repo;
@@ -117,27 +116,30 @@ pub(super) fn build_usage(sections: UsageSections) -> ProfileUsage {
     }
 }
 
-pub(super) fn read_tenant_id() -> Option<TenantId> {
-    let bootstrap = ProfileBootstrap::get().ok()?;
-    bootstrap
+pub(super) fn read_tenant_id(profile: &Profile) -> Option<TenantId> {
+    profile
         .cloud
         .as_ref()
         .and_then(|cloud| cloud.tenant_id.clone())
 }
 
-pub(super) fn build_bridge_profile_block() -> Option<BridgeProfileBlock> {
-    let profile = ProfileBootstrap::get().ok()?;
-    let services = systemprompt::loader::ServicesBootstrap::get().ok()?;
-    let gateway = services.gateway_config().filter(|g| g.enabled)?;
+pub(super) fn build_bridge_profile_block(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+    catalog: &ResolvedCatalog,
+) -> Option<BridgeProfileBlock> {
+    let profile = boot.profile();
+    let config = services.config();
+    let gateway = config.gateway_config().filter(|g| g.enabled)?;
 
-    let base = profile.server.api_external_url.trim_end_matches('/');
+    let base = boot.config().api_external_url.trim_end_matches('/');
     let prefix = gateway.inference_path_prefix.trim_end_matches('/');
     let inference_gateway_base_url = format!("{base}{prefix}");
 
-    let models: Vec<String> = services
-        .providers
-        .advertised_model_ids(&[])
-        .into_iter()
+    let models: Vec<String> = catalog
+        .advertised_models(None)
+        .filter(|model| catalog.enabled_hops(model.id.as_str()).next().is_some())
+        .map(|model| model.id.as_str().to_owned())
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect();
@@ -146,7 +148,7 @@ pub(super) fn build_bridge_profile_block() -> Option<BridgeProfileBlock> {
         .cloud
         .as_ref()
         .and_then(|cloud| cloud.tenant_id.as_ref())
-        .map(canonicalize_org_uuid);
+        .map(TenantId::organization_uuid);
 
     let models_count = models.len();
     Some(BridgeProfileBlock {
@@ -158,20 +160,10 @@ pub(super) fn build_bridge_profile_block() -> Option<BridgeProfileBlock> {
     })
 }
 
-fn canonicalize_org_uuid(tenant_id: &TenantId) -> String {
-    let s = tenant_id.as_str();
-    let suffix = s.strip_prefix("local_").unwrap_or(s);
-    if let Ok(parsed) = Uuid::parse_str(suffix) {
-        return parsed.to_string();
-    }
-    Uuid::new_v5(&Uuid::NAMESPACE_OID, s.as_bytes()).to_string()
-}
-
-pub(super) fn build_agents_block() -> AgentsBlock {
-    let services_path = match ProfileBootstrap::get() {
-        Ok(p) => PathBuf::from(&p.paths.services),
-        Err(_) => return AgentsBlock::default(),
-    };
+pub(super) fn build_agents_block(
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+) -> AgentsBlock {
+    let services_path = boot.baked_services_root();
 
     let agents = match systemprompt_web_admin_core::catalog_index::agents::list_configured_agents(
         &services_path,
@@ -208,13 +200,13 @@ pub(super) fn build_agents_block() -> AgentsBlock {
 }
 
 pub(super) async fn build_reachable_marketplaces(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     pool: &PgPool,
     user_id: &UserId,
     roles: Vec<String>,
 ) -> systemprompt_web_admin_core::error::AdminResult<Vec<ProfileMarketplaceView>> {
-    let Ok(services_path) = systemprompt_web_admin_core::request::get_services_path() else {
-        return Ok(Vec::new());
-    };
+    let services_path = systemprompt_web_admin_core::request::get_services_path(boot);
     let manifests =
         systemprompt_web_admin_core::catalog_index::manifests::list_marketplace_configs(
             &services_path,
@@ -230,11 +222,12 @@ pub(super) async fn build_reachable_marketplaces(
         .collect();
     let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), rows)];
 
-    let subject =
-        systemprompt_web_admin_core::repositories::entitlement::user_subject(pool, user_id, roles)
-            .await?;
+    let subject = systemprompt_web_admin_core::repositories::entitlement::user_subject(
+        services, user_id, roles,
+    )
+    .await?;
     let resolved = systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrix(
-        pool, &subject, sections,
+        pool, services, &subject, sections,
     )
     .await?;
 

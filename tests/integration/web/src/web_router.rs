@@ -7,10 +7,9 @@
 //! plane — and pins where each plane is mounted by driving requests through the
 //! returned `axum::Router`.
 //!
-//! No profile is bootstrapped in a test process, so the admin template
-//! directory cannot be resolved and the SSR nests are skipped. That is the
-//! documented degradation: the API plane must still mount at its normal prefix,
-//! which is what the last tests here assert.
+//! The router resolves its signing keys from the profile's config, so every
+//! test that builds it bootstraps the fixture profile with a signing key first;
+//! the same profile resolves the admin template directory the SSR nests read.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -18,11 +17,20 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use sqlx::PgPool;
+use systemprompt::ai::repository::AiRepositories;
 use systemprompt::database::Database;
 use systemprompt::extension::prelude::{Extension, ExtensionContext};
+use systemprompt::manifest::services::root::ActiveServicesRoot;
+use systemprompt::manifest::{Config, Profile};
+use systemprompt::models::auth::TokenAuthority;
+use systemprompt::oauth::repository::OAuthRepositories;
+use systemprompt::security::at_rest::AtRestCipher;
 use systemprompt::storage::LocalFileStorage;
-use systemprompt::traits::{ConfigProvider, DatabaseHandle, FileStorage};
+use systemprompt::traits::{
+    BackgroundTasks, ConfigProvider, DatabaseHandle, Dependencies, FileStorage, SecretStore,
+};
 use systemprompt_web_extension::WebExtension;
+use systemprompt_web_extension::admin::core::extension_boot::ExtensionBoot;
 use tower::ServiceExt as _;
 
 use crate::tempdb::TempDb;
@@ -50,20 +58,53 @@ impl ConfigProvider for StubConfig {
 
 struct PoolCtx {
     database: Arc<Database>,
+    boot: ExtensionBoot,
+    oauth: Arc<OAuthRepositories>,
+    ai: Arc<AiRepositories>,
 }
 
 impl PoolCtx {
-    fn new(pool: &Arc<PgPool>) -> Self {
+    fn new(pool: &Arc<PgPool>, fixture: &dynapps_test_common::BootFixture) -> Self {
+        let database = Arc::new(Database::from_pools(
+            Arc::clone(pool),
+            Some(Arc::clone(pool)),
+        ));
+        let secrets = fixture.boot().secrets().get();
+        let cipher = AtRestCipher::from_secrets(&secrets)
+            .expect("the fixture secrets carry an encryption master key");
         Self {
-            database: Arc::new(Database::from_pools(
-                Arc::clone(pool),
-                Some(Arc::clone(pool)),
+            oauth: Arc::new(OAuthRepositories::new(
+                &database,
+                Arc::from(secrets.oauth_at_rest_pepper.as_str()),
             )),
+            ai: Arc::new(AiRepositories::new(&database, cipher)),
+            database,
+            boot: fixture.extension_boot(),
         }
     }
 }
 
 impl ExtensionContext for PoolCtx {
+    fn profile(&self) -> Arc<Profile> {
+        Arc::new(self.boot.profile().clone())
+    }
+    fn app_config(&self) -> Arc<Config> {
+        Arc::clone(self.boot.config_arc())
+    }
+    fn services_root(&self) -> ActiveServicesRoot {
+        self.boot.active_services_root().clone()
+    }
+    fn token_authority(&self) -> Arc<dyn TokenAuthority> {
+        Arc::clone(self.boot.token_authority())
+    }
+    fn secrets(&self) -> Arc<dyn SecretStore> {
+        Arc::clone(self.boot.secrets())
+    }
+    fn dependencies(&self) -> Dependencies {
+        Dependencies::new()
+            .with(Arc::clone(&self.oauth))
+            .with(Arc::clone(&self.ai))
+    }
     fn system_owner_id(&self) -> systemprompt::identifiers::UserId {
         systemprompt::identifiers::UserId::new("router-test-owner")
     }
@@ -81,6 +122,18 @@ impl ExtensionContext for PoolCtx {
     }
     fn instance_id(&self) -> systemprompt::identifiers::InstanceId {
         systemprompt::identifiers::InstanceId::new("router-test")
+    }
+    fn background_tasks(&self) -> BackgroundTasks {
+        BackgroundTasks::new()
+    }
+    fn services(&self) -> systemprompt::manifest::services::ServicesView {
+        dynapps_test_common::empty_services_view()
+    }
+    fn provider_tokens(&self) -> Arc<dyn systemprompt::traits::ProviderTokenCache> {
+        Arc::new(systemprompt::security::credential::TokenCache::default())
+    }
+    fn subject_attributes(&self) -> Arc<dyn systemprompt::models::authz::SubjectAttributeSource> {
+        Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()))
     }
 }
 
@@ -101,6 +154,24 @@ impl DatabaseHandle for ForeignDb {
 }
 
 impl ExtensionContext for ForeignDbCtx {
+    fn profile(&self) -> Arc<Profile> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn app_config(&self) -> Arc<Config> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn services_root(&self) -> ActiveServicesRoot {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn token_authority(&self) -> Arc<dyn TokenAuthority> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn secrets(&self) -> Arc<dyn SecretStore> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn dependencies(&self) -> Dependencies {
+        Dependencies::new()
+    }
     fn system_owner_id(&self) -> systemprompt::identifiers::UserId {
         systemprompt::identifiers::UserId::new("router-test-owner")
     }
@@ -118,6 +189,18 @@ impl ExtensionContext for ForeignDbCtx {
     }
     fn instance_id(&self) -> systemprompt::identifiers::InstanceId {
         systemprompt::identifiers::InstanceId::new("router-test")
+    }
+    fn background_tasks(&self) -> BackgroundTasks {
+        BackgroundTasks::new()
+    }
+    fn services(&self) -> systemprompt::manifest::services::ServicesView {
+        dynapps_test_common::empty_services_view()
+    }
+    fn provider_tokens(&self) -> Arc<dyn systemprompt::traits::ProviderTokenCache> {
+        Arc::new(systemprompt::security::credential::TokenCache::default())
+    }
+    fn subject_attributes(&self) -> Arc<dyn systemprompt::models::authz::SubjectAttributeSource> {
+        Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()))
     }
 }
 
@@ -139,8 +222,9 @@ async fn the_router_assembles_from_a_context_carrying_a_real_database() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
 
-    let built = WebExtension::new().router(&PoolCtx::new(&db.pool));
+    let built = WebExtension::new().router(&PoolCtx::new(&db.pool, &profile));
 
     let mounted = built.expect("a context with a real database yields a router");
     assert_eq!(
@@ -168,8 +252,9 @@ async fn the_session_route_is_mounted_under_the_public_api_prefix() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds")
         .router;
 
@@ -189,8 +274,9 @@ async fn the_admin_json_api_is_nested_below_the_public_api_prefix() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds")
         .router;
 
@@ -210,8 +296,9 @@ async fn a_path_outside_every_mounted_plane_is_not_found() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds")
         .router;
 
@@ -222,25 +309,25 @@ async fn a_path_outside_every_mounted_plane_is_not_found() {
     db.cleanup().await;
 }
 
-// The SSR nests need the admin template directory, which is resolved from the
-// bootstrapped profile; a test process has none. The documented degradation is
-// that assembly still succeeds and only the SSR nests are skipped.
+// The SSR nests resolve the admin template directory from the bootstrapped
+// profile, which the signing keys already require.
 #[tokio::test]
-async fn the_ssr_dashboard_is_skipped_when_the_profile_cannot_be_resolved() {
+async fn the_ssr_dashboard_mounts_from_the_bootstrapped_profile() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
-        .expect("the API plane mounts even with no template engine")
+        .router(&PoolCtx::new(&db.pool, &profile))
+        .expect("router builds")
         .router;
 
     let status = status_of(router, "GET", "/admin/login").await;
 
     assert_eq!(
         status,
-        StatusCode::NOT_FOUND,
-        "with no template engine the dashboard is absent rather than erroring"
+        StatusCode::OK,
+        "the login page is served by the SSR nest"
     );
 
     db.cleanup().await;
@@ -251,12 +338,13 @@ async fn two_builds_from_the_same_pool_mount_the_same_surface() {
     let Some(db) = TempDb::create().await else {
         return;
     };
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
 
     let first = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds");
     let second = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds again from an independent context");
 
     assert_eq!(first.base_path, second.base_path);

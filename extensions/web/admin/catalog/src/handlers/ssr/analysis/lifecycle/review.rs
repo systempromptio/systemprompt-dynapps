@@ -9,6 +9,7 @@ use std::sync::Arc;
 use systemprompt::identifiers::{ManagedResourceId, ResourceRevisionId};
 use systemprompt::marketplace::managed::{PublicationAction, PublicationRequest};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::request::require_write_origin;
 use systemprompt_web_admin_core::state::ManagedState;
 use systemprompt_web_admin_core::types::UserContext;
@@ -21,6 +22,7 @@ pub(crate) struct WithdrawalForm {
 }
 
 pub(crate) async fn decide_withdrawal(
+    Extension(boot): Extension<ExtensionBoot>,
     Extension(user): Extension<UserContext>,
     Extension(managed): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
@@ -29,7 +31,7 @@ pub(crate) async fn decide_withdrawal(
     if !user.is_admin {
         return Err(AdminError::Forbidden("Administrator review required".to_owned()).into());
     }
-    require_write_origin(&headers)?;
+    require_write_origin(&boot, &headers)?;
     managed
         .repository
         .decide_withdrawal_proposal(
@@ -55,6 +57,7 @@ pub(crate) struct ReviewForm {
 }
 
 pub(crate) async fn review(
+    Extension(boot): Extension<ExtensionBoot>,
     Extension(user): Extension<UserContext>,
     Extension(managed): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
@@ -63,7 +66,7 @@ pub(crate) async fn review(
     if !user.is_admin {
         return Err(AdminError::Forbidden("Administrator review required".to_owned()).into());
     }
-    require_write_origin(&headers)?;
+    require_write_origin(&boot, &headers)?;
     let action = match form.action.as_str() {
         "initial_adoption" => PublicationAction::InitialAdoption,
         "withdraw" => PublicationAction::Withdraw,
@@ -85,6 +88,7 @@ pub(crate) async fn review(
                 operation_key: form.operation_key,
                 comparison_evidence,
                 limitations: form.limitations,
+                cohort: None,
             },
         )
         .await?;

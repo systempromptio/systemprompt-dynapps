@@ -94,9 +94,10 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
         user: admin_user.as_str().to_owned(),
         // Bound to the loaded dynbrain configuration, so the callback reaches
         // the denial rather than stopping at the stale-configuration check.
-        configuration_binding: connector_oauth::generic::binding(&Provider::Generic(
-            "dynbrain".to_owned(),
-        ))
+        configuration_binding: connector_oauth::generic::binding(
+            &dynapps_test_common::offline_extension_services(globals::services().clone()),
+            &Provider::Generic("dynbrain".to_owned()),
+        )
         .unwrap_or_default(),
         authorization_issuer: String::new(),
         token_auth_method: String::new(),
@@ -117,7 +118,8 @@ async fn connector_consent_callbacks_enforce_owner_binding_and_single_use() {
         resource_name: String::new(),
         authorization_scheme: "Bearer".to_owned(),
     };
-    let sealed = connector_oauth::seal(&grant).expect("seal consent state");
+    let sealed = connector_oauth::seal(globals::boot().secrets().as_ref(), &grant)
+        .expect("seal consent state");
     connector_credentials::save_state(&db.pool, &admin_user, "dynbrain", state, &sealed)
         .await
         .expect("save consent state");

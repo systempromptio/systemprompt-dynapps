@@ -54,13 +54,26 @@ pub async fn list_rules_bulk(
         .map_err(|e| map_err(&e))
 }
 
+/// One rule on a gateway route: who it names and what it grants.
+#[derive(Debug, Clone)]
+pub struct RouteRule<'a> {
+    pub rule_type: RuleType,
+    pub rule_value: &'a str,
+    pub access: Access,
+}
+
 pub async fn upsert_rule(
     pool: &PgPool,
     route_id: &RouteId,
-    rule_type: RuleType,
-    rule_value: &str,
-    access: Access,
+    rule: RouteRule<'_>,
+    actor: &systemprompt::identifiers::UserId,
 ) -> Result<AccessRule, sqlx::Error> {
+    let RouteRule {
+        rule_type,
+        rule_value,
+        access,
+    } = rule;
+    let source = systemprompt_web_admin_core::util::change_source::console_source(actor);
     repo(pool)
         .upsert_rule(UpsertRuleParams {
             entity_type: ENTITY_TYPE,
@@ -69,11 +82,11 @@ pub async fn upsert_rule(
             rule_value,
             access,
             justification: None,
-            source: systemprompt::governance::authz::DASHBOARD_SOURCE,
+            source: &source,
         })
         .await
         .map_err(|e| map_err(&e))
-        .inspect(|_| systemprompt_web_admin_core::ttl_cache::invalidate_all())
+        .inspect(|_| systemprompt_web_admin_core::authz::caches(pool).invalidate_all())
 }
 
 pub async fn delete_rule(pool: &PgPool, rule_id: &str) -> Result<bool, sqlx::Error> {
@@ -82,7 +95,7 @@ pub async fn delete_rule(pool: &PgPool, rule_id: &str) -> Result<bool, sqlx::Err
         .delete_rule(&id)
         .await
         .map_err(|e| map_err(&e))
-        .inspect(|_| systemprompt_web_admin_core::ttl_cache::invalidate_all())
+        .inspect(|_| systemprompt_web_admin_core::authz::caches(pool).invalidate_all())
 }
 
 pub async fn find_entity(

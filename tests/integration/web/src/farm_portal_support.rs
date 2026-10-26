@@ -30,12 +30,13 @@ pub(crate) fn portal_account(user: &UserId) -> String {
 }
 
 // A connected grant for `user`, issued by the fake to `portal:<user>`.
-pub(crate) async fn connect(pool: &PgPool, portal: &FakePortal, user: &UserId) {
+pub(crate) async fn connect(pool: &PgPool, env: &PortalEnv, user: &UserId) {
+    let portal = &env.portal;
     let provider = Provider::try_from(PROVIDER.to_owned()).expect("provider");
     let tokens = portal.issue_tokens(&portal_account(user));
     let grant = Grant {
         user: user.as_str().to_owned(),
-        configuration_binding: oauth::generic::binding(&provider).expect("binding"),
+        configuration_binding: oauth::generic::binding(&env.services, &provider).expect("binding"),
         authorization_issuer: portal.base_url().to_owned(),
         token_auth_method: "none".into(),
         provider: provider.clone(),
@@ -62,9 +63,14 @@ pub(crate) async fn connect(pool: &PgPool, portal: &FakePortal, user: &UserId) {
     account.status = "connected".into();
     account.auth_method = Some("oauth".into());
     account.verified_at = Some(chrono::Utc::now());
-    credentials::store(&mut tx, user, PROVIDER, &oauth::seal(&grant).expect("seal"))
-        .await
-        .expect("store grant");
+    credentials::store(
+        &mut tx,
+        user,
+        PROVIDER,
+        &oauth::seal(env.boot.secrets().as_ref(), &grant).expect("seal"),
+    )
+    .await
+    .expect("store grant");
     accounts::update_account(&mut tx, user, &account)
         .await
         .expect("update account");
@@ -75,6 +81,7 @@ pub(crate) async fn connect(pool: &PgPool, portal: &FakePortal, user: &UserId) {
 // user's headless JWT and the run's `farm:<run id>` purpose.
 pub(crate) async fn broker_bearer(
     pool: &Arc<PgPool>,
+    env: &PortalEnv,
     user: &UserId,
     caller: &str,
 ) -> (StatusCode, Option<String>) {
@@ -84,9 +91,17 @@ pub(crate) async fn broker_bearer(
     ));
     let router = connector_api_router(
         Arc::clone(pool),
-        ServiceAccounts::new(UserRepository::new(&database)),
-    );
-    let jwt = PortalEnv::mint(Principal {
+        ServiceAccounts::new(
+            UserRepository::new(&database),
+            Arc::clone(env.boot.secrets()),
+        ),
+    )
+    .layer(axum::Extension(env.boot.clone()))
+    .layer(axum::Extension(dynapps_test_common::extension_services(
+        pool,
+        env.services.view().clone(),
+    )));
+    let jwt = env.mint(Principal {
         user_id: user.as_str(),
         email: &format!("{user}@test.invalid"),
         session_id: None,
@@ -162,7 +177,7 @@ pub(crate) async fn assert_portal_sees(
     run_id: &str,
     expected: &UserId,
 ) {
-    let (status, bearer) = broker_bearer(pool, expected, &format!("farm:{run_id}")).await;
+    let (status, bearer) = broker_bearer(pool, env, expected, &format!("farm:{run_id}")).await;
     assert_eq!(status, StatusCode::OK);
     let bearer = bearer.expect("bearer");
     assert_eq!(

@@ -16,24 +16,6 @@ use systemprompt::governance::policy::types::AccessScope;
 use systemprompt::identifiers::{AiRequestId, AiToolCallId, ContextId, SessionId, TraceId, UserId};
 use systemprompt::wire::canonical::{CanonicalResponse, CanonicalUsage};
 
-async fn profile() -> tempfile::TempDir {
-    let dir = tempfile::tempdir().expect("profile directory");
-    let root = dynapps_test_common::repo_path("");
-    let yaml = include_str!("../../../contract/admin/fixtures/profile.yaml")
-        .replace("__PROFILE_DIR__", &dir.path().to_string_lossy())
-        .replace("__REPO__", &root.to_string_lossy());
-    std::fs::create_dir_all(dir.path().join("bin")).expect("bin directory");
-    std::fs::write(dir.path().join("profile.yaml"), yaml).expect("fixture profile");
-    let secrets = serde_json::json!({"database_url":"postgres://unused:unused@localhost:5432/postgres", "oauth_at_rest_pepper":"accounting-test-pepper-1234567890", "manifest_signing_secret_seed":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "encryption_master_key":"11".repeat(32)});
-    std::fs::write(dir.path().join("secrets.json"), secrets.to_string()).expect("fixture secrets");
-    systemprompt::config::ProfileBootstrap::init_from_path(&dir.path().join("profile.yaml"))
-        .expect("profile bootstrap");
-    systemprompt::config::SecretsBootstrap::init()
-        .await
-        .expect("secrets bootstrap");
-    dir
-}
-
 fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest) -> GatewayAudit {
     let conversation = request
         .derived_gateway_conversation_id()
@@ -49,6 +31,7 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         access_scope: AccessScope::Unknown,
         client_id: None,
         provider: "anthropic".into(),
+        hop: None,
         model: "test-model".into(),
         requested_model: None,
         max_tokens: Some(16),
@@ -76,7 +59,7 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let profile = profile().await;
+    let fixture = dynapps_test_common::bootstrap_master_key().await;
     let user = insert_user(
         &db.pool,
         &unique("journal-owner"),
@@ -91,16 +74,38 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
         systemprompt::agent::repository::ContextRepository::new(&pool),
     ));
     let journal = systemprompt::gateway::audit::journal::GatewayJournal::open(
-        profile.path(),
-        systemprompt::config::SecretsBootstrap::get().expect("secrets bootstrapped"),
+        fixture.path(),
+        fixture
+            .boot()
+            .secrets()
+            .encryption_master_key()
+            .expect("encryption master key"),
     )
     .expect("gateway journal opens");
     let repos = GatewayRepositories::new(
         &pool,
         journal,
         materializer,
-        systemprompt::traits::BackgroundTasks::new(),
-        systemprompt::traits::CacheEpochs::new(),
+        systemprompt::gateway::GatewayHandles {
+            background: systemprompt::traits::BackgroundTasks::new(),
+            cache_epochs: systemprompt::traits::CacheEpochs::new(),
+            logging: systemprompt::logging::LoggingRuntime::new(
+                systemprompt::logging::LogSink::default(),
+                Arc::new(systemprompt::manifest::services::SystemAdmin::new(
+                    user.clone(),
+                    "journal-owner".to_owned(),
+                )),
+            ),
+            services: dynapps_test_common::empty_services_view(),
+            subject_providers: systemprompt::governance::authz::SubjectProviderSet::from_providers(
+                Vec::new(),
+            ),
+            at_rest: systemprompt::security::at_rest::AtRestCipher::from_secrets(
+                &fixture.boot().secrets().get(),
+            )
+            .expect("at-rest cipher"),
+            unapplied_plane: systemprompt::manifest::profile::UnappliedPlaneMode::Warn,
+        },
     );
     let raw = Vec::from(
         br#"{"model":"test-model","max_tokens":16,"messages":[{"role":"user","content":"test"}]}"#
@@ -158,7 +163,7 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
             .await
             .is_err()
     );
-    let receipt = std::fs::read_dir(profile.path().join("gateway-journal"))
+    let receipt = std::fs::read_dir(fixture.path().join("gateway-journal"))
         .expect("journal")
         .map(|entry| entry.expect("entry").path())
         .find(|path| path.extension().is_some_and(|ext| ext == "receipt"))

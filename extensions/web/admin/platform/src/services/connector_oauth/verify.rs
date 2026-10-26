@@ -6,17 +6,21 @@ use super::response::{body, tool_error};
 use super::transport::client;
 use serde_json::{Value, json};
 use std::time::Instant;
+use systemprompt::models::net::validate_outbound_url;
 use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 async fn rpc(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     http: &reqwest::Client,
     grant: &Grant,
     session: &mut Option<String>,
     payload: Value,
 ) -> AdminResult<Value> {
     let mut request = http
-        .post(grant.provider.endpoint())
+        .post(validate_outbound_url(
+            &grant.provider.endpoint(&services.config()),
+        )?)
         .header(
             "Authorization",
             format!("{} {}", grant.authorization_scheme, grant.access_token),
@@ -65,30 +69,43 @@ async fn rpc(
         .ok_or_else(|| AdminError::Upstream("MCP response has no result".into()))
 }
 
-async fn identity(http: &reqwest::Client, grant: &mut Grant) -> AdminResult<()> {
-    grant.resource_name = grant.provider.endpoint();
-    super::userinfo::generic_identity(http, grant).await
+async fn identity(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    http: &reqwest::Client,
+    grant: &mut Grant,
+) -> AdminResult<()> {
+    grant.resource_name = grant.provider.endpoint(&services.config());
+    super::userinfo::generic_identity(services, http, grant).await
 }
 
-pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
-    verify_with_client(grant, &client()?).await
+pub async fn verify(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &mut Grant,
+) -> AdminResult<()> {
+    verify_with_client(services, grant, &client()?).await
 }
 
-pub async fn verify_with_client(grant: &mut Grant, http: &reqwest::Client) -> AdminResult<()> {
+pub async fn verify_with_client(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &mut Grant,
+    http: &reqwest::Client,
+) -> AdminResult<()> {
     let mut report = VerificationReport::for_provider(grant.provider.slug());
-    verify_reporting(grant, http, &mut report).await
+    verify_reporting(services, grant, http, &mut report).await
 }
 
 pub async fn verify_reporting(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     grant: &mut Grant,
     http: &reqwest::Client,
     report: &mut VerificationReport,
 ) -> AdminResult<()> {
     let mut probe_session = None;
-    let result = handshake(grant, http, &mut probe_session, report).await;
+    let result = handshake(services, grant, http, &mut probe_session, report).await;
     if let Some(session) = probe_session {
+        let endpoint = validate_outbound_url(&grant.provider.endpoint(&services.config()))?;
         let _cleanup_result = http
-            .delete(grant.provider.endpoint())
+            .delete(endpoint)
             .header("Mcp-Session-Id", session)
             .header(
                 "Authorization",
@@ -101,6 +118,7 @@ pub async fn verify_reporting(
 }
 
 async fn handshake(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     grant: &mut Grant,
     http: &reqwest::Client,
     session: &mut Option<String>,
@@ -109,6 +127,7 @@ async fn handshake(
     let started = Instant::now();
     let outcome = async {
         rpc(
+            services,
             http,
             grant,
             session,
@@ -118,6 +137,7 @@ async fn handshake(
         )
         .await?;
         rpc(
+            services,
             http,
             grant,
             session,
@@ -126,7 +146,7 @@ async fn handshake(
         .await?;
         Ok(format!(
             "MCP session open at {}",
-            host(&grant.provider.endpoint())
+            host(&grant.provider.endpoint(&services.config()))
         ))
     }
     .await;
@@ -136,6 +156,7 @@ async fn handshake(
     let started = Instant::now();
     let outcome = async {
         let tools = rpc(
+            services,
             http,
             grant,
             session,
@@ -159,7 +180,7 @@ async fn handshake(
 
     let started = Instant::now();
     let outcome = async {
-        identity(http, grant).await?;
+        identity(services, http, grant).await?;
         Ok(
             match (
                 grant.account_name.is_empty(),

@@ -33,7 +33,7 @@ pub fn list_plugins_for_roles_full(
     let agents_path = services_path.join("agents");
     let is_admin = crate::types::roles_grant_manage(roles);
     let mut overviews = Vec::new();
-    for (_id, plugin) in plugin_loader::load_all_plugins()? {
+    for (_id, plugin) in plugin_loader::load_all_plugins(services_path)? {
         if !plugin.base.enabled && !is_admin {
             continue;
         }
@@ -66,6 +66,7 @@ pub fn list_plugins_for_roles_full(
 
 pub async fn list_plugins_for_user(
     pool: &sqlx::PgPool,
+    services: &crate::extension_services::ExtensionServices,
     services_path: &Path,
     user: &systemprompt::identifiers::UserId,
 ) -> Result<Vec<PluginOverview>, crate::error::AdminError> {
@@ -73,7 +74,7 @@ pub async fn list_plugins_for_user(
     let mut plugins = list_plugins_for_roles_full(services_path, &["admin".to_owned()])
         .map_err(crate::error::AdminError::internal)?;
     plugins.retain(|p| p.enabled);
-    let access = crate::authz::catalog::CatalogAccess::load(pool, user).await?;
+    let access = crate::authz::catalog::CatalogAccess::load(pool, services, user).await?;
     let ids = plugins.iter().map(|p| p.id.clone()).collect::<Vec<_>>();
     let permitted = access.allowed(EntityKind::Plugin, &ids).await?;
     plugins.retain(|p| permitted.contains(&p.id));

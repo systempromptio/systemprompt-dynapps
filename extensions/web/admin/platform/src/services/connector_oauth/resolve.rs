@@ -10,14 +10,15 @@ use super::failure::{FailureKind, FlowFailure, FlowResult};
 use chrono::Utc;
 use sqlx::{PgPool, Postgres, Transaction};
 use systemprompt::identifiers::UserId;
+use systemprompt::traits::SecretStore;
 use tracing::Instrument;
 
 use super::account_state::{
-    apply_verification, in_outage_hold, open_or_flag, record_grant_failure, require_connection,
+    GrantOwner, apply_verification, in_outage_hold, record_grant_failure, require_connection,
     token_state,
 };
 use super::token_plan::{AccessMode, TokenPlan};
-use super::{Grant, Provider, seal, transport, verify};
+use super::{Grant, Provider, seal, verify};
 use crate::repositories::connectors::connector_accounts::{self as accounts, ProviderConnection};
 use crate::repositories::connectors::connector_credentials::{self as repo, EncryptedGrant};
 use systemprompt_web_admin_core::connections::report::VerificationReport;
@@ -29,32 +30,35 @@ type Tx = Transaction<'static, Postgres>;
 #[derive(Debug)]
 pub struct TokenResolver<'a> {
     pool: &'a PgPool,
+    services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: &'a dyn SecretStore,
     user: &'a UserId,
     http: &'a reqwest::Client,
 }
 
 struct Resolution<'a> {
+    services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: &'a dyn SecretStore,
     user: &'a UserId,
     provider: &'a Provider,
     mode: AccessMode,
     http: &'a reqwest::Client,
 }
 
-pub(super) async fn resolve_token(
-    pool: &PgPool,
-    user: &UserId,
-    provider: Provider,
-    probe: bool,
-    report: &mut VerificationReport,
-) -> AdminResult<String> {
-    TokenResolver::new(pool, user, &transport::client()?)
-        .resolve(provider, probe, report)
-        .await
-}
-
 impl<'a> TokenResolver<'a> {
-    pub const fn new(pool: &'a PgPool, user: &'a UserId, http: &'a reqwest::Client) -> Self {
-        Self { pool, user, http }
+    pub const fn new(
+        pool: &'a PgPool,
+        access: super::ConnectorAccess<'a>,
+        user: &'a UserId,
+        http: &'a reqwest::Client,
+    ) -> Self {
+        Self {
+            pool,
+            services: access.services,
+            secrets: access.secrets,
+            user,
+            http,
+        }
     }
 
     pub async fn resolve(
@@ -63,7 +67,7 @@ impl<'a> TokenResolver<'a> {
         probe: bool,
         report: &mut VerificationReport,
     ) -> AdminResult<String> {
-        if !provider.configured() {
+        if !provider.configured(&self.services.config()) {
             return Err(AdminError::Unavailable("Connector not configured".into()));
         }
         let span = tracing::info_span!("connector_oauth", user_id = %self.user, provider = provider.slug(), trace_id = %uuid::Uuid::new_v4());
@@ -78,7 +82,13 @@ impl<'a> TokenResolver<'a> {
         probe: bool,
         report: &mut VerificationReport,
     ) -> AdminResult<String> {
-        let Self { pool, user, http } = *self;
+        let Self {
+            pool,
+            services,
+            secrets,
+            user,
+            http,
+        } = *self;
         let mut tx = pool.begin().await?;
         let mut account = accounts::get_locked_account(&mut tx, user, provider.slug()).await?;
         if account.error_code.as_deref() == Some(FailureKind::RefreshUncertain.code()) {
@@ -91,6 +101,8 @@ impl<'a> TokenResolver<'a> {
         mode.admission(outage_hold, account.verified_at.is_some())
             .require()?;
         let resolution = Resolution {
+            services,
+            secrets,
             user,
             provider: &provider,
             mode,
@@ -104,6 +116,25 @@ impl<'a> TokenResolver<'a> {
 }
 
 impl Resolution<'_> {
+    async fn open_or_flag(
+        &self,
+        tx: &mut Tx,
+        row: &EncryptedGrant,
+        account: &mut ProviderConnection,
+    ) -> AdminResult<Grant> {
+        match super::open(self.services, self.secrets, row, self.user, self.provider) {
+            Ok(grant) => Ok(grant),
+            Err(error) => {
+                if matches!(error, AdminError::Unauthorized(_)) {
+                    account.status = "reconnect_required".into();
+                    account.error_code = Some("configuration_changed".into());
+                    accounts::update_account(tx, self.user, account).await?;
+                }
+                Err(error)
+            },
+        }
+    }
+
     async fn load_grant(
         &self,
         mut tx: Tx,
@@ -115,7 +146,7 @@ impl Resolution<'_> {
                 "Connect your provider account in Systemprompt".into(),
             ));
         };
-        match open_or_flag(&mut tx, self.user, self.provider, &sealed, account).await {
+        match self.open_or_flag(&mut tx, &sealed, account).await {
             Ok(grant) => Ok((tx, grant)),
             Err(error) => {
                 tx.commit().await?;
@@ -132,7 +163,9 @@ impl Resolution<'_> {
         report: &mut VerificationReport,
     ) -> AdminResult<String> {
         let plan = TokenPlan::for_grant(&grant, self.mode, Utc::now().timestamp());
-        if let Err(error) = refresh_and_verify(&mut grant, plan, report, self.http).await {
+        if let Err(error) =
+            refresh_and_verify(self.services, &mut grant, plan, report, self.http).await
+        {
             if report
                 .steps
                 .iter()
@@ -140,7 +173,17 @@ impl Resolution<'_> {
             {
                 account.verified_at = None;
             }
-            record_grant_failure(&mut tx, self.user, account, &grant, &error).await?;
+            record_grant_failure(
+                &mut tx,
+                GrantOwner {
+                    user: self.user,
+                    secrets: self.secrets,
+                },
+                account,
+                &grant,
+                &error,
+            )
+            .await?;
             tx.commit().await?;
             return Err(error.error);
         }
@@ -160,7 +203,13 @@ impl Resolution<'_> {
         plan: TokenPlan,
     ) -> AdminResult<()> {
         if plan.reseals() {
-            repo::store(tx, self.user, self.provider.slug(), &seal(grant)?).await?;
+            repo::store(
+                tx,
+                self.user,
+                self.provider.slug(),
+                &seal(self.secrets, grant)?,
+            )
+            .await?;
         }
         if plan.verify {
             apply_verification(account, grant);
@@ -171,6 +220,7 @@ impl Resolution<'_> {
 }
 
 async fn refresh_and_verify(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     grant: &mut Grant,
     plan: TokenPlan,
     report: &mut VerificationReport,
@@ -178,7 +228,7 @@ async fn refresh_and_verify(
 ) -> FlowResult<()> {
     let started = std::time::Instant::now();
     let outcome = if plan.refresh {
-        super::tokens::refresh_classified(grant, http)
+        super::tokens::refresh_classified(services, grant, http)
             .await
             .map(|()| "Access token refreshed".to_owned())
     } else {
@@ -192,7 +242,7 @@ async fn refresh_and_verify(
         },
     }
     if plan.verify {
-        verify::verify_reporting(grant, http, report)
+        verify::verify_reporting(services, grant, http, report)
             .await
             .map_err(FlowFailure::verification)?;
     }

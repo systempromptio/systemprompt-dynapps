@@ -1,13 +1,6 @@
 //! Helpers shared by the webhook handlers.
 
 use axum::http::HeaderMap;
-use systemprompt::manifest::Config;
-
-#[derive(Debug, thiserror::Error)]
-pub(super) enum JwtConfigError {
-    #[error("Failed to load config: {0}")]
-    Config(#[source] Box<dyn std::error::Error + Send + Sync>),
-}
 
 pub(super) fn extract_bearer_token(headers: &HeaderMap) -> Option<&str> {
     headers
@@ -18,12 +11,4 @@ pub(super) fn extract_bearer_token(headers: &HeaderMap) -> Option<&str> {
                 .ok()
         })
         .and_then(|v| v.strip_prefix("Bearer "))
-}
-
-pub(super) fn get_jwt_issuer() -> Result<String, JwtConfigError> {
-    let issuer = Config::get()
-        .map_err(|e| JwtConfigError::Config(e.into()))?
-        .jwt_issuer
-        .clone();
-    Ok(issuer)
 }

@@ -3,7 +3,7 @@ use super::view::DataPage;
 use super::{render, require_admin};
 use crate::repositories::data_console::browse::Selection;
 use crate::repositories::data_console::{clear, query};
-use axum::extract::{Form, State};
+use axum::extract::{Extension, Form, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
 use chrono::Utc;
@@ -11,6 +11,7 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::request::require_write_origin;
 use systemprompt_web_admin_core::ssr::page::Page;
 
@@ -34,12 +35,13 @@ pub(crate) struct ConfirmForm {
 
 pub(crate) async fn run_query(
     shell: Page,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
     Form(form): Form<QueryForm>,
 ) -> AdminHtmlResult<Response> {
     require_admin(&shell)?;
-    require_write_origin(&headers)?;
+    require_write_origin(&boot, &headers)?;
     let mut data = DataPage::new(false);
     data.query = form.query.clone();
     match query::get_query_result(&pool, &form.query).await {
@@ -61,12 +63,13 @@ pub(crate) async fn run_query(
 
 pub(crate) async fn clear_preview(
     shell: Page,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
     Form(form): Form<PreviewForm>,
 ) -> AdminHtmlResult<Response> {
     require_admin(&shell)?;
-    require_write_origin(&headers)?;
+    require_write_origin(&boot, &headers)?;
     if form.selection.len() > 16_384 {
         return Err(AdminError::BadRequest("Selection is too large.".into()).into());
     }
@@ -103,12 +106,13 @@ pub(crate) async fn clear_preview(
 
 pub(crate) async fn clear_confirm(
     shell: Page,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
     Form(form): Form<ConfirmForm>,
 ) -> AdminHtmlResult<Response> {
     require_admin(&shell)?;
-    require_write_origin(&headers)?;
+    require_write_origin(&boot, &headers)?;
     if form.acknowledge.as_deref() != Some("yes") {
         return Err(AdminError::BadRequest(
             "Acknowledge irreversible deletion and related-table effects.".into(),

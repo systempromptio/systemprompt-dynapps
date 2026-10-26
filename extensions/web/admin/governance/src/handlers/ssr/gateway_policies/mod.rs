@@ -12,7 +12,9 @@
 mod view;
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
+use axum::Extension;
 use axum::extract::{Form, Query, State};
 use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
@@ -28,10 +30,13 @@ use crate::repositories::gateway_policies::unedited::carry_unedited_safety;
 use systemprompt_web_admin_core::activity;
 use systemprompt_web_admin_core::activity::NewActivity;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
+use systemprompt_web_admin_core::repositories::sync::plane_ids::GATEWAY_POLICIES;
 use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::ssr::core_plane::{CorePlaneCardOpts, core_plane_card};
 use systemprompt_web_admin_core::ssr::flash::{FlashTone, redirect_with_flash};
 use systemprompt_web_admin_core::ssr::page::Page;
-use systemprompt_web_admin_core::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
+use systemprompt_web_admin_core::ssr::sync_plane::{is_sync_tab, sync_tab};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
@@ -62,13 +67,17 @@ fn require_console(page: &Page) -> Result<(), AdminError> {
     Err(AdminError::Forbidden("Admin access required.".to_owned()))
 }
 
-fn require_admin_write(page: &Page, headers: &HeaderMap) -> Result<(), AdminError> {
+fn require_admin_write(
+    page: &Page,
+    boot: &ExtensionBoot,
+    headers: &HeaderMap,
+) -> Result<(), AdminError> {
     if !page.user.is_admin {
         return Err(AdminError::Forbidden(
             "Editing gateway policies needs an administrator.".to_owned(),
         ));
     }
-    require_write_origin(headers)
+    require_write_origin(boot, headers)
 }
 
 fn winners(
@@ -94,16 +103,21 @@ fn winners(
 
 pub(crate) async fn gateway_policies_page(
     page: Page,
+    Extension(core_planes): Extension<CorePlanes>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<PoliciesQuery>,
 ) -> AdminHtmlResult<Response> {
     require_console(&page)?;
     let on_sync = is_sync_tab(query.tab.as_deref());
     let sync = if on_sync {
-        plane_card_by_id(
+        core_plane_card(
             &pool,
-            crate::repositories::sync_planes::gateway_policies::PLANE_ID,
-            "",
+            &core_planes,
+            GATEWAY_POLICIES,
+            &CorePlaneCardOpts {
+                entity_filter: "",
+                show_export: true,
+            },
         )
         .await?
     } else {
@@ -169,10 +183,11 @@ fn not_saved(reason: &str) -> Redirect {
 pub(crate) async fn save_gateway_policy(
     page: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
     Form(fields): Form<Vec<(String, String)>>,
 ) -> AdminHtmlResult<Redirect> {
-    require_admin_write(&page, &headers)?;
+    require_admin_write(&page, &boot, &headers)?;
     let mut parsed = match parse_policy_form(&fields) {
         Ok(p) => p,
         Err(e) => return Ok(not_saved(&e.to_string())),
@@ -209,10 +224,11 @@ pub(crate) struct DeleteForm {
 pub(crate) async fn delete_gateway_policy(
     page: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
     Form(form): Form<DeleteForm>,
 ) -> AdminHtmlResult<Redirect> {
-    require_admin_write(&page, &headers)?;
+    require_admin_write(&page, &boot, &headers)?;
     let name = form.name.trim();
     if name.is_empty() {
         return Ok(not_saved("a policy name is required to delete"));

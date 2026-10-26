@@ -20,9 +20,6 @@ pub enum JobError {
     #[error("Configuration error: {0}")]
     CoreConfig(#[from] systemprompt::models::errors::GlobalConfigError),
 
-    #[error("Profile error: {0}")]
-    Profile(#[from] systemprompt::config::ProfileBootstrapError),
-
     #[error("Services config error: {0}")]
     Services(#[from] systemprompt::loader::ConfigLoadError),
 
@@ -55,6 +52,15 @@ pub enum JobError {
 
     #[error("Identifier error: {0}")]
     Identifier(#[from] systemprompt::identifiers::error::IdValidationError),
+
+    #[error("Extension registry error: {0}")]
+    Extensions(#[from] systemprompt::extension::LoaderError),
+
+    #[error("Agent farm error: {0}")]
+    Farm(#[from] systemprompt_web_admin_farm::error::FarmError),
+
+    #[error("Count does not fit the report: {0}")]
+    Count(#[from] std::num::TryFromIntError),
 
     #[error("store {object}")]
     Store {

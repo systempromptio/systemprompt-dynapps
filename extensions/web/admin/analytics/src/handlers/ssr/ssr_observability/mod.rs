@@ -24,6 +24,7 @@ use systemprompt::manifest::profile::OtlpExportConfig;
 use crate::repositories::observability::view::{ObservabilityView, build_view};
 use crate::repositories::observability::{find_declared_export, list_export_states};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::request::require_write_origin;
 use systemprompt_web_admin_core::ssr::flash::{FlashTone, redirect_with_flash};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
@@ -55,11 +56,12 @@ pub(crate) async fn observability_page(
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(state): Extension<Arc<ManagedState>>,
+    Extension(boot): Extension<ExtensionBoot>,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
-    let config = find_declared_export()?;
+    let config = find_declared_export(boot.profile());
     let states = list_export_states(&state.otlp_export).await?;
     let page = ObservabilityPageData {
         page: "system-observability",
@@ -93,11 +95,15 @@ fn redirect(tone: FlashTone, title: &str, detail: &str) -> Redirect {
     redirect_with_flash(PAGE_URL, tone, &format!("{title}: {detail}"))
 }
 
-fn write_gate(user_ctx: &UserContext, headers: &HeaderMap) -> AdminHtmlResult<()> {
+fn write_gate(
+    boot: &ExtensionBoot,
+    user_ctx: &UserContext,
+    headers: &HeaderMap,
+) -> AdminHtmlResult<()> {
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Administrator access required".to_owned()).into());
     }
-    require_write_origin(headers)?;
+    require_write_origin(boot, headers)?;
     Ok(())
 }
 
@@ -114,17 +120,16 @@ fn configured_or_redirect(config: Option<OtlpExportConfig>) -> Result<OtlpExport
 pub(crate) async fn export_now(
     Extension(user_ctx): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
 ) -> AdminHtmlResult<Redirect> {
-    write_gate(&user_ctx, &headers)?;
-    let config = match configured_or_redirect(find_declared_export()?) {
+    write_gate(&boot, &user_ctx, &headers)?;
+    let config = match configured_or_redirect(find_declared_export(boot.profile())) {
         Ok(config) => config,
         Err(redirect) => return Ok(redirect),
     };
-    let instance_id = systemprompt::manifest::Config::get()
-        .ok()
-        .map(|c| c.instance_id.clone());
-    let report = systemprompt::scheduler::otlp_export_now(&pool, &config, instance_id.as_ref())
+    let instance_id = boot.config().instance_id.clone();
+    let report = systemprompt::scheduler::otlp_export_now(&pool, &config, Some(&instance_id))
         .await
         .map_err(AdminError::internal)?;
     tracing::info!(
@@ -155,10 +160,11 @@ pub(crate) async fn export_now(
 
 pub(crate) async fn test_connection(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
 ) -> AdminHtmlResult<Redirect> {
-    write_gate(&user_ctx, &headers)?;
-    let config = match configured_or_redirect(find_declared_export()?) {
+    write_gate(&boot, &user_ctx, &headers)?;
+    let config = match configured_or_redirect(find_declared_export(boot.profile())) {
         Ok(config) => config,
         Err(redirect) => return Ok(redirect),
     };

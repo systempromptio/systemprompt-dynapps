@@ -103,7 +103,8 @@ pub async fn start_case_eval(
         eval_run_id,
     };
     let launched = run.clone();
-    tokio::spawn(async move {
+    let tasks = state.tasks.clone();
+    tasks.spawn("farm_eval_settle", async move {
         let id = settling.eval_run_id.clone();
         if let Err(err) = settle(&state, judge, &settling, &launched).await {
             fail_eval_run(&state.pool, &id, &err).await;

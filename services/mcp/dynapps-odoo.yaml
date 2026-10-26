@@ -24,7 +24,7 @@
 # (`mcp_server/dynapps-odoo`). See docs/CONFIGURED-CONNECTORS.md.
 mcp_servers:
   dynapps-odoo:
-    type: external
+    server_type: external
     endpoint: https://portal.dynapps.es/mcp/uwX00RzEnfs5Yw_tVlx7aw
     enabled: true
     tool_policy: prompt

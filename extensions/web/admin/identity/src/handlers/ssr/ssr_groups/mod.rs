@@ -15,6 +15,7 @@
 //! a contradiction.
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
@@ -23,8 +24,6 @@ use sqlx::PgPool;
 
 use crate::repositories;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 use super::types::MemberSetChipView;
 use systemprompt_web_admin_core::ssr::faults::Faults;
@@ -62,12 +61,19 @@ fn tabs(on_sync: bool) -> Vec<TabLinkView> {
 }
 
 pub(crate) async fn groups_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<GroupsQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
@@ -79,14 +85,20 @@ pub(crate) async fn groups_page(
 
     let on_sync = is_sync_tab(query.tab.as_deref());
     let sync = if on_sync {
-        plane_card_by_id(&pool, repositories::sync_planes::groups::PLANE_ID, "").await?
+        plane_card_by_id(
+            &pool,
+            &boot,
+            repositories::sync_planes::groups::PLANE_ID,
+            "",
+        )
+        .await?
     } else {
         None
     };
 
     let source = sorting::source_filter(query.source.as_deref());
     let mut faults = Faults::new();
-    let mut listing = data::load_listing(&pool, window_days, &mut faults).await;
+    let mut listing = data::load_listing(&services, &pool, window_days, &mut faults).await;
     sorting::apply(&mut listing.rows, sort, dir);
 
     let data = view::page_data(view::GroupsPageInput {

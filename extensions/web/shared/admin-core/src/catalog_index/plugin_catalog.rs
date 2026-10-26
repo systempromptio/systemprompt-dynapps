@@ -151,13 +151,12 @@ pub fn list_plugin_catalog(
     let skills_path = services_path.join("skills");
     let agents_path = services_path.join("agents");
     let mut out: Vec<PluginDetail> = Vec::new();
-    for (_id, plugin, source_path) in plugin_loader::load_all_plugins_with_paths()? {
+    for (_id, plugin, source_path) in plugin_loader::load_all_plugins_with_paths(services_path)? {
         let skills: Vec<SkillId> =
             resolve_all_plugin_skill_ids(&plugin.base, &skills_path, &agents_path)
                 .into_iter()
                 .map(SkillId::try_new)
-                .collect::<Result<_, _>>()
-                .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
+                .collect::<Result<_, _>>()?;
         out.push(PluginDetail {
             id: plugin.base.id,
             name: plugin.base.name,

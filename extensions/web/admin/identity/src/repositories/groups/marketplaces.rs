@@ -20,10 +20,11 @@ use sqlx::PgPool;
 use systemprompt::governance::authz::{
     Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
-use systemprompt::identifiers::MarketplaceId;
+use systemprompt::identifiers::{MarketplaceId, UserId};
 use systemprompt_web_shared::GroupId;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::util::change_source::console_source;
 
 const GROUP_RULE_TYPE: &str = "group";
 const JUSTIFICATION: &str = "admin:groups";
@@ -53,14 +54,11 @@ pub async fn list_group_marketplace_ids(
 async fn anchor_marketplace_entity(
     repo: &AccessControlRepository,
     marketplace_id: &MarketplaceId,
+    source: &str,
 ) -> AdminResult<()> {
-    repo.ensure_entity(
-        EntityKind::Marketplace,
-        marketplace_id.as_str(),
-        JUSTIFICATION,
-    )
-    .await
-    .map_err(AdminError::internal)?;
+    repo.ensure_entity(EntityKind::Marketplace, marketplace_id.as_str(), source)
+        .await
+        .map_err(AdminError::internal)?;
     Ok(())
 }
 
@@ -68,12 +66,14 @@ pub async fn set_group_marketplaces(
     pool: &PgPool,
     group_id: &GroupId,
     marketplace_ids: &[MarketplaceId],
+    actor: &UserId,
 ) -> AdminResult<Vec<MarketplaceId>> {
+    let source = console_source(actor);
     let rule_type = group_rule_type()?;
     let repo = AccessControlRepository::from_pool(Arc::new(pool.clone()));
 
     for marketplace_id in marketplace_ids {
-        anchor_marketplace_entity(&repo, marketplace_id).await?;
+        anchor_marketplace_entity(&repo, marketplace_id, &source).await?;
         repo.upsert_rule(UpsertRuleParams {
             entity_type: EntityKind::Marketplace,
             entity_id: marketplace_id.as_str(),
@@ -81,7 +81,7 @@ pub async fn set_group_marketplaces(
             rule_value: group_id.as_str(),
             access: Access::Allow,
             justification: Some(JUSTIFICATION),
-            source: systemprompt::governance::authz::DASHBOARD_SOURCE,
+            source: &source,
         })
         .await
         .map_err(AdminError::internal)?;

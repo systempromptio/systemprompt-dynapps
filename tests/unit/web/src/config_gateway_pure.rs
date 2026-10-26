@@ -1,10 +1,14 @@
+//! Gateway route CRUD and settings against a `gateway.yaml` on disk.
+
 use std::path::{Path, PathBuf};
 
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     create_route, delete_route, get_gateway_config, glob_match, reorder_routes, slugify_pattern,
     synthesize_route_id, update_gateway_settings, update_route,
 };
-use systemprompt_web_admin_core::types::{GatewayRouteView, UpdateGatewaySettingsRequest};
+use systemprompt_web_admin_core::types::{
+    GatewayRouteView, RouteAliasView, RouteDeploymentView, UpdateGatewaySettingsRequest,
+};
 use systemprompt_web_shared::error::MarketplaceError;
 
 fn profile(dir: &Path, body: &str) -> PathBuf {
@@ -13,11 +17,18 @@ fn profile(dir: &Path, body: &str) -> PathBuf {
     path
 }
 
-fn route(id: &str, pattern: &str, provider: &str) -> GatewayRouteView {
+fn route(id: &str, pattern: &str, endpoint: &str) -> GatewayRouteView {
     GatewayRouteView {
         id: id.to_owned(),
-        model_pattern: pattern.to_owned(),
-        provider: provider.to_owned(),
+        models: Some(pattern)
+            .filter(|p| !p.is_empty())
+            .map(str::to_owned)
+            .into_iter()
+            .collect(),
+        deployments: vec![RouteDeploymentView {
+            endpoint: endpoint.to_owned(),
+            weight: None,
+        }],
         ..Default::default()
     }
 }
@@ -54,8 +65,8 @@ fn slugify_collapses_runs_and_trims_separators() {
 #[test]
 fn synthesized_ids_differ_per_pattern() {
     assert_ne!(
-        synthesize_route_id("claude-*", "anthropic"),
-        synthesize_route_id("gpt-*", "anthropic")
+        synthesize_route_id("claude-*", "anthropic/api"),
+        synthesize_route_id("gpt-*", "anthropic/api")
     );
 }
 
@@ -63,12 +74,15 @@ fn synthesized_ids_differ_per_pattern() {
 fn create_route_bootstraps_a_missing_gateway_block() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "name: local\n");
-    let index = create_route(&path, &route("", "claude-*", "anthropic"))?;
+    let index = create_route(&path, &route("", "claude-*", "anthropic/api"))?;
     assert_eq!(index, 0);
 
     let cfg = get_gateway_config(&path)?;
     assert_eq!(cfg.routes.len(), 1);
-    assert!(cfg.routes[0].id.starts_with("claude-star-"));
+    assert_eq!(
+        cfg.routes[0].id, "claude-star",
+        "a new route's id is its glob's slug"
+    );
     assert!(!cfg.enabled, "enabled defaults to false");
     assert_eq!(cfg.auth_scheme, "bearer");
     assert_eq!(cfg.inference_path_prefix, "/v1");
@@ -77,15 +91,15 @@ fn create_route_bootstraps_a_missing_gateway_block() -> anyhow::Result<()> {
 }
 
 #[test]
-fn create_route_rejects_blank_pattern_or_provider() -> anyhow::Result<()> {
+fn create_route_rejects_no_models_or_a_bare_deployment() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "gateway:\n  routes: []\n");
     assert!(matches!(
-        create_route(&path, &route("a", "   ", "anthropic")),
+        create_route(&path, &route("a", "", "anthropic/api")),
         Err(MarketplaceError::BadRequest(_))
     ));
     assert!(matches!(
-        create_route(&path, &route("a", "claude-*", "  ")),
+        create_route(&path, &route("a", "claude-*", "anthropic")),
         Err(MarketplaceError::BadRequest(_))
     ));
     assert!(get_gateway_config(&path)?.routes.is_empty());
@@ -93,40 +107,29 @@ fn create_route_rejects_blank_pattern_or_provider() -> anyhow::Result<()> {
 }
 
 #[test]
-fn upstream_model_and_extra_headers_survive_a_round_trip() -> anyhow::Result<()> {
+fn alias_and_weighted_deployments_survive_a_round_trip() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "gateway:\n  routes: []\n");
-    let mut r = route("cerebras", "claude-*", "cerebras");
-    r.upstream_model = Some("gpt-oss-120b".to_owned());
-    r.extra_headers
-        .insert("x-tenant".to_owned(), "acme".to_owned());
+    let mut r = route("go-alias", "", "opencode-go/chat");
+    let (requested, model) = ("go-deepseek".to_owned(), "deepseek-v4-pro".to_owned());
+    r.alias = Some(RouteAliasView { requested, model });
+    r.deployments[0].weight = Some(3);
     create_route(&path, &r)?;
-
-    let cfg = get_gateway_config(&path)?;
-    assert_eq!(
-        cfg.routes[0].upstream_model.as_deref(),
-        Some("gpt-oss-120b")
-    );
-    assert_eq!(
-        cfg.routes[0]
-            .extra_headers
-            .get("x-tenant")
-            .map(String::as_str),
-        Some("acme")
-    );
+    let back = &get_gateway_config(&path)?.routes[0];
+    assert_eq!((&back.alias, &back.deployments), (&r.alias, &r.deployments));
     Ok(())
 }
 
 #[test]
-fn routes_missing_provider_are_dropped_from_the_read_view() -> anyhow::Result<()> {
+fn routes_core_refuses_are_dropped_from_the_read_view() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(
         dir.path(),
-        "gateway:\n  routes:\n    - model_pattern: broken\n    - provider: alone\n    - model_pattern: ok\n      provider: anthropic\n",
+        "gateway:\n  routes:\n    - models: no-id\n    - id: alone\n      provider: anthropic\n    - id: ok\n      models: ok\n",
     );
     let cfg = get_gateway_config(&path)?;
     assert_eq!(cfg.routes.len(), 1);
-    assert_eq!(cfg.routes[0].model_pattern, "ok");
+    assert_eq!(cfg.routes[0].id, "ok");
     Ok(())
 }
 
@@ -134,18 +137,18 @@ fn routes_missing_provider_are_dropped_from_the_read_view() -> anyhow::Result<()
 fn update_route_replaces_in_place_and_reports_out_of_range() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "gateway:\n  routes: []\n");
-    create_route(&path, &route("first", "claude-*", "anthropic"))?;
+    create_route(&path, &route("first", "claude-*", "anthropic/api"))?;
 
     assert!(update_route(
         &path,
         0,
-        &route("first", "claude-*", "openai")
+        &route("first", "claude-*", "openai/chat")
     )?);
     let cfg = get_gateway_config(&path)?;
-    assert_eq!(cfg.routes[0].provider, "openai");
+    assert_eq!(cfg.routes[0].deployments[0].endpoint, "openai/chat");
 
     assert!(
-        !update_route(&path, 9, &route("first", "claude-*", "openai"))?,
+        !update_route(&path, 9, &route("first", "claude-*", "openai/chat"))?,
         "an out-of-range index is a miss, not an error"
     );
     Ok(())
@@ -155,12 +158,13 @@ fn update_route_replaces_in_place_and_reports_out_of_range() -> anyhow::Result<(
 fn update_route_validates_before_touching_disk() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "gateway:\n  routes: []\n");
-    create_route(&path, &route("first", "claude-*", "anthropic"))?;
+    create_route(&path, &route("first", "claude-*", "anthropic/api"))?;
     assert!(matches!(
-        update_route(&path, 0, &route("first", "", "openai")),
+        update_route(&path, 0, &route("first", "", "openai/chat")),
         Err(MarketplaceError::BadRequest(_))
     ));
-    assert_eq!(get_gateway_config(&path)?.routes[0].provider, "anthropic");
+    let kept = &get_gateway_config(&path)?.routes[0].deployments[0];
+    assert_eq!(kept.endpoint, "anthropic/api");
     Ok(())
 }
 
@@ -168,8 +172,8 @@ fn update_route_validates_before_touching_disk() -> anyhow::Result<()> {
 fn delete_route_removes_by_index() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "gateway:\n  routes: []\n");
-    create_route(&path, &route("a", "a-*", "anthropic"))?;
-    create_route(&path, &route("b", "b-*", "openai"))?;
+    create_route(&path, &route("a", "a-*", "anthropic/api"))?;
+    create_route(&path, &route("b", "b-*", "openai/chat"))?;
 
     assert!(delete_route(&path, 0)?);
     let cfg = get_gateway_config(&path)?;
@@ -184,8 +188,8 @@ fn delete_route_removes_by_index() -> anyhow::Result<()> {
 fn reorder_rejects_wrong_length_and_non_permutations() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "gateway:\n  routes: []\n");
-    create_route(&path, &route("a", "a-*", "anthropic"))?;
-    create_route(&path, &route("b", "b-*", "openai"))?;
+    create_route(&path, &route("a", "a-*", "anthropic/api"))?;
+    create_route(&path, &route("b", "b-*", "openai/chat"))?;
 
     assert!(matches!(
         reorder_routes(&path, &[0]),
@@ -262,7 +266,7 @@ fn a_non_mapping_profile_root_is_an_internal_error() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "- just\n- a list\n");
     assert!(matches!(
-        create_route(&path, &route("a", "a-*", "anthropic")),
+        create_route(&path, &route("a", "a-*", "anthropic/api")),
         Err(MarketplaceError::Internal(_))
     ));
     Ok(())
@@ -272,7 +276,7 @@ fn a_non_mapping_profile_root_is_an_internal_error() -> anyhow::Result<()> {
 fn name_and_description_round_trip_and_blank_ones_are_dropped() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = profile(dir.path(), "gateway:\n  routes: []\n");
-    let mut r = route("named", "claude-*", "anthropic");
+    let mut r = route("named", "claude-*", "anthropic/api");
     r.name = Some("Claude (Anthropic)".to_owned());
     r.description = Some("  Every claude-* request.  ".to_owned());
     create_route(&path, &r)?;
@@ -283,8 +287,8 @@ fn name_and_description_round_trip_and_blank_ones_are_dropped() -> anyhow::Resul
         Some("Every claude-* request.")
     );
     let text = std::fs::read_to_string(&path)?;
-    let name_at = text.find("name: Claude").expect("name written");
-    let pattern_at = text.find("model_pattern:").expect("pattern written");
+    let name_at = text.find("label: Claude").expect("label written");
+    let pattern_at = text.find("models:").expect("models written");
     assert!(name_at < pattern_at, "name is written before the pattern");
 
     let mut cleared = cfg.routes[0].clone();
@@ -294,6 +298,6 @@ fn name_and_description_round_trip_and_blank_ones_are_dropped() -> anyhow::Resul
     let cfg = get_gateway_config(&path)?;
     assert_eq!(cfg.routes[0].name, None);
     assert_eq!(cfg.routes[0].description, None);
-    assert!(!std::fs::read_to_string(&path)?.contains("name:"));
+    assert!(!std::fs::read_to_string(&path)?.contains("label:"));
     Ok(())
 }

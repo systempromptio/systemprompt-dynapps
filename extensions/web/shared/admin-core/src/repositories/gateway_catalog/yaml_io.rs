@@ -7,17 +7,17 @@
 //!
 //! `serde_yaml` round-trips values, not text, so a naive write drops every
 //! comment in the file. [`write_gateway_file`] carries the operator's header
-//! comment across, and [`route_to_yaml`] omits an `id` it could synthesize, so
-//! an admin edit changes the field it edited and nothing else.
+//! comment across, and [`route_to_yaml`] writes only the fields a route sets,
+//! so an admin edit changes the field it edited and nothing else.
 
 use std::path::Path;
 
 use serde_yaml::{Mapping, Value};
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::types::{GatewayRouteView, RouteFallbackView};
+use systemprompt::manifest::services::GatewayRoute;
 
-use super::matching::synthesize_route_id;
+use crate::types::{GatewayRouteView, RouteAliasView, RouteDeploymentView};
 
 pub fn read_gateway_file(gateway_path: &Path) -> Result<Value, MarketplaceError> {
     let content = std::fs::read_to_string(gateway_path)?;
@@ -48,91 +48,52 @@ fn leading_comment_header(gateway_path: &Path) -> String {
 }
 
 pub fn route_from_yaml(val: &Value) -> Option<GatewayRouteView> {
-    let map = val.as_mapping()?;
-    let model_pattern = map.get(Value::from("model_pattern"))?.as_str()?.to_owned();
-    let provider = map.get(Value::from("provider"))?.as_str()?.to_owned();
-    let upstream_model = map
-        .get(Value::from("upstream_model"))
-        .and_then(Value::as_str)
-        .map(str::to_owned);
-    let extra_headers = map
-        .get(Value::from("extra_headers"))
-        .and_then(Value::as_mapping)
-        .map(|m| {
-            m.iter()
-                .filter_map(|(k, v)| Some((k.as_str()?.to_owned(), v.as_str()?.to_owned())))
-                .collect()
-        })
-        .unwrap_or_default();
-    let id = map
-        .get(Value::from("id"))
-        .and_then(Value::as_str)
-        .map_or_else(
-            || synthesize_route_id(&model_pattern, &provider),
-            str::to_owned,
-        );
-    let text = |key: &str| {
-        map.get(Value::from(key))
-            .and_then(Value::as_str)
-            .map(str::to_owned)
-    };
-    Some(GatewayRouteView {
-        id,
-        name: text("name"),
-        description: text("description"),
-        model_pattern,
-        provider,
-        upstream_model,
-        extra_headers,
-        pricing: map.get(Value::from("pricing")).cloned(),
-        when: map.get(Value::from("when")).cloned(),
-        requires: map.get(Value::from("requires")).cloned(),
-        fallbacks: map
-            .get(Value::from("fallbacks"))
-            .map(fallbacks_from_yaml)
-            .unwrap_or_default(),
-        by_scope: map.get(Value::from("by_scope")).cloned(),
-        strategy: text("strategy"),
-        weight: map
-            .get(Value::from("weight"))
-            .and_then(Value::as_u64)
-            .and_then(|w| u32::try_from(w).ok()),
-        context_fallbacks: map
-            .get(Value::from("context_fallbacks"))
-            .map(fallbacks_from_yaml)
-            .unwrap_or_default(),
-    })
+    let route: GatewayRoute = serde_yaml::from_value(val.clone()).ok()?;
+    Some(route_view(route))
 }
 
-pub fn route_to_yaml(route: &GatewayRouteView) -> Value {
-    let mut map = Mapping::new();
-    let derived = synthesize_route_id(&route.model_pattern, &route.provider);
-    let id = route.id.trim();
-    if !id.is_empty() && id != derived {
-        map.insert(Value::from("id"), Value::from(id.to_owned()));
+#[must_use]
+pub fn route_view(route: GatewayRoute) -> GatewayRouteView {
+    GatewayRouteView {
+        id: route.id.as_str().to_owned(),
+        name: route.label,
+        description: route.description,
+        models: route.models.0,
+        deployments: route
+            .deployments
+            .iter()
+            .map(|deployment| RouteDeploymentView {
+                endpoint: deployment.endpoint().to_string(),
+                weight: deployment.weight(),
+            })
+            .collect(),
+        alias: route.alias.map(|alias| RouteAliasView {
+            requested: alias.requested.as_str().to_owned(),
+            model: alias.model.as_str().to_owned(),
+        }),
+        when: route.when.and_then(|when| serde_yaml::to_value(when).ok()),
+        requires: route
+            .requires
+            .and_then(|requires| serde_yaml::to_value(requires).ok()),
+        strategy: (!route.strategy.is_ordered()).then(|| route.strategy.to_string()),
+        context_fallbacks: route
+            .context_fallbacks
+            .iter()
+            .map(|model| model.as_str().to_owned())
+            .collect(),
     }
-    for (key, value) in [("name", &route.name), ("description", &route.description)] {
+}
+
+pub fn route_to_yaml(route: &GatewayRouteView) -> Result<Value, MarketplaceError> {
+    let mut map = Mapping::new();
+    map.insert(Value::from("id"), Value::from(route.id.trim().to_owned()));
+    for (key, value) in [("label", &route.name), ("description", &route.description)] {
         if let Some(value) = value.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
             map.insert(Value::from(key), Value::from(value.to_owned()));
         }
     }
-    map.insert(
-        Value::from("model_pattern"),
-        Value::from(route.model_pattern.clone()),
-    );
-    map.insert(Value::from("provider"), Value::from(route.provider.clone()));
-    if let Some(upstream) = &route.upstream_model {
-        map.insert(Value::from("upstream_model"), Value::from(upstream.clone()));
-    }
-    if !route.extra_headers.is_empty() {
-        let mut hdr = Mapping::new();
-        for (k, v) in &route.extra_headers {
-            hdr.insert(Value::from(k.clone()), Value::from(v.clone()));
-        }
-        map.insert(Value::from("extra_headers"), Value::Mapping(hdr));
-    }
-    if let Some(pricing) = &route.pricing {
-        map.insert(Value::from("pricing"), pricing.clone());
+    if !route.models.is_empty() {
+        map.insert(Value::from("models"), serde_yaml::to_value(&route.models)?);
     }
     if let Some(when) = &route.when {
         map.insert(Value::from("when"), when.clone());
@@ -140,77 +101,50 @@ pub fn route_to_yaml(route: &GatewayRouteView) -> Value {
     if let Some(requires) = &route.requires {
         map.insert(Value::from("requires"), requires.clone());
     }
-    if !route.fallbacks.is_empty() {
-        map.insert(
-            Value::from("fallbacks"),
-            fallbacks_to_yaml(&route.fallbacks),
-        );
-    }
-    if let Some(by_scope) = &route.by_scope {
-        map.insert(Value::from("by_scope"), by_scope.clone());
+    if !route.deployments.is_empty() {
+        let entries = route.deployments.iter().map(deployment_to_yaml).collect();
+        map.insert(Value::from("deployments"), Value::Sequence(entries));
     }
     if let Some(strategy) = route.strategy.as_deref().filter(|s| !s.trim().is_empty()) {
         map.insert(Value::from("strategy"), Value::from(strategy.to_owned()));
     }
-    if let Some(weight) = route.weight {
-        map.insert(Value::from("weight"), Value::from(weight));
-    }
     if !route.context_fallbacks.is_empty() {
         map.insert(
             Value::from("context_fallbacks"),
-            fallbacks_to_yaml(&route.context_fallbacks),
+            serde_yaml::to_value(&route.context_fallbacks)?,
         );
     }
-    Value::Mapping(map)
+    if let Some(alias) = &route.alias {
+        let mut entry = Mapping::new();
+        entry.insert(
+            Value::from("requested"),
+            Value::from(alias.requested.clone()),
+        );
+        entry.insert(Value::from("model"), Value::from(alias.model.clone()));
+        map.insert(Value::from("alias"), Value::Mapping(entry));
+    }
+    let value = Value::Mapping(map);
+    serde_yaml::from_value::<GatewayRoute>(value.clone()).map_err(|source| {
+        MarketplaceError::InvalidRoute {
+            route: route.id.clone(),
+            source,
+        }
+    })?;
+    Ok(value)
 }
 
-#[must_use]
-pub fn fallbacks_from_yaml(value: &Value) -> Vec<RouteFallbackView> {
-    value
-        .as_sequence()
-        .map(|entries| {
-            entries
-                .iter()
-                .filter_map(|entry| {
-                    let provider = entry.get("provider")?.as_str()?.to_owned();
-                    let upstream_model = entry
-                        .get("upstream_model")
-                        .and_then(Value::as_str)
-                        .map(str::to_owned);
-                    let weight = entry
-                        .get("weight")
-                        .and_then(Value::as_u64)
-                        .and_then(|w| u32::try_from(w).ok());
-                    Some(RouteFallbackView {
-                        provider,
-                        upstream_model,
-                        weight,
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn fallbacks_to_yaml(fallbacks: &[RouteFallbackView]) -> Value {
-    Value::Sequence(
-        fallbacks
-            .iter()
-            .map(|fallback| {
-                let mut entry = Mapping::new();
-                entry.insert(
-                    Value::from("provider"),
-                    Value::from(fallback.provider.clone()),
-                );
-                if let Some(model) = &fallback.upstream_model {
-                    entry.insert(Value::from("upstream_model"), Value::from(model.clone()));
-                }
-                if let Some(weight) = fallback.weight {
-                    entry.insert(Value::from("weight"), Value::from(weight));
-                }
-                Value::Mapping(entry)
-            })
-            .collect(),
+fn deployment_to_yaml(deployment: &RouteDeploymentView) -> Value {
+    deployment.weight.map_or_else(
+        || Value::from(deployment.endpoint.clone()),
+        |weight| {
+            let mut entry = Mapping::new();
+            entry.insert(
+                Value::from("endpoint"),
+                Value::from(deployment.endpoint.clone()),
+            );
+            entry.insert(Value::from("weight"), Value::from(weight));
+            Value::Mapping(entry)
+        },
     )
 }
 

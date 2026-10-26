@@ -5,6 +5,7 @@
 use sqlx::PgPool;
 
 use super::view;
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::ssr::entity_panel::{
     EntityAccessView, PanelRequest, build_entity_panel,
 };
@@ -12,6 +13,7 @@ use systemprompt_web_admin_core::types::{ENTITY_PLUGIN, ENTITY_SKILL, UserContex
 
 pub(crate) async fn panel(
     pool: &PgPool,
+    deps: &BootServices,
     user_ctx: &UserContext,
     entity: (&str, &str),
     why: Option<&str>,
@@ -23,7 +25,9 @@ pub(crate) async fn panel(
     };
     build_entity_panel(
         pool,
+        &deps.services,
         PanelRequest {
+            boot: &deps.boot,
             entity_type: entity.0,
             entity_id: entity.1,
             page_url: &page_url,

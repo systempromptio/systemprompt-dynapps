@@ -30,8 +30,11 @@ mod visibility;
 
 use std::cmp::Ordering;
 use std::sync::Arc;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt_web_admin_core::extension_boot::{BootServices, ExtensionBoot};
+use systemprompt_web_admin_core::ssr::page::Page;
 
-use axum::extract::{Extension, State};
+use axum::extract::State;
 use axum::response::Response;
 use sqlx::PgPool;
 
@@ -41,10 +44,7 @@ use systemprompt_web_admin_core::repositories::sync::provenance::{
 };
 use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
 use systemprompt_web_admin_core::request as shared;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{
-    ENTITY_PLUGIN, ENTITY_SKILL, MarketplaceContext, UserContext,
-};
+use systemprompt_web_admin_core::types::{ENTITY_PLUGIN, ENTITY_SKILL, UserContext};
 
 use entries::entry_columns;
 use sorting::{apply_direction, direction, matches, preserved_search, sort_headers};
@@ -62,14 +62,17 @@ pub(crate) struct CatalogListQuery {
 }
 
 pub(crate) async fn plugins_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    BootServices { boot, services }: BootServices,
+    Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    }: Page,
     State(pool): State<Arc<PgPool>>,
     axum::extract::Query(query): axum::extract::Query<CatalogListQuery>,
 ) -> AdminHtmlResult<Response> {
     admin_only(&user_ctx)?;
-    let path = shared::get_services_path()?;
+    let path = shared::get_services_path(&boot);
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_PLUGIN).await;
@@ -82,7 +85,7 @@ pub(crate) async fn plugins_page(
             rules: &rules,
         },
     );
-    stamp_sources(&mut plugins, OwnedKind::Plugin);
+    stamp_sources(&boot, &services.config(), &mut plugins, OwnedKind::Plugin);
     let search = query.q.unwrap_or_default();
     plugins.retain(|p| {
         matches(
@@ -125,14 +128,17 @@ pub(crate) async fn plugins_page(
 }
 
 pub(crate) async fn skills_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    BootServices { boot, services }: BootServices,
+    Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    }: Page,
     State(pool): State<Arc<PgPool>>,
     axum::extract::Query(query): axum::extract::Query<CatalogListQuery>,
 ) -> AdminHtmlResult<Response> {
     admin_only(&user_ctx)?;
-    let path = shared::get_services_path()?;
+    let path = shared::get_services_path(&boot);
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_SKILL).await;
@@ -145,7 +151,7 @@ pub(crate) async fn skills_page(
             rules: &rules,
         },
     );
-    stamp_sources(&mut skills, OwnedKind::Skill);
+    stamp_sources(&boot, &services.config(), &mut skills, OwnedKind::Skill);
     let search = query.q.unwrap_or_default();
     skills.retain(|s| matches(&[&s.id, &s.name, &s.description], &search));
     let sort_key = query.sort.unwrap_or_else(|| "name".to_owned());
@@ -228,19 +234,15 @@ impl SourceStamped for SkillListRow {
     }
 }
 
-fn stamp_sources<T: SourceStamped>(rows: &mut [T], kind: OwnedKind) {
-    let sources = match build_sources() {
-        Ok(sources) => Some(sources),
-        Err(error) => {
-            tracing::warn!(%error, "catalog sources unreadable; rows stay base");
-            None
-        },
-    };
+fn stamp_sources<T: SourceStamped>(
+    boot: &ExtensionBoot,
+    services: &ServicesConfig,
+    rows: &mut [T],
+    kind: OwnedKind,
+) {
+    let sources = build_sources(boot, services);
     for row in rows {
-        let provenance = sources
-            .as_ref()
-            .map_or_else(Provenance::base, |s| owned_by(s, kind, row.source_key()));
-        row.stamp(provenance);
+        row.stamp(owned_by(&sources, kind, row.source_key()));
     }
 }
 

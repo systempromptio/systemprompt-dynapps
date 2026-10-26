@@ -26,7 +26,7 @@ use systemprompt::models::artifacts::{
 };
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
 use systemprompt::traits::DynToolCallIntentClaims;
-use systemprompt_mcp_agent::{CliError, CliLocation, filter_hallucinated_args};
+use systemprompt_mcp_agent::{CliLocation, filter_hallucinated_args};
 
 use crate::tempdb::TempDb;
 
@@ -381,20 +381,6 @@ async fn the_process_runs_in_the_configured_workdir() {
     );
 
     db.cleanup().await;
-}
-
-// The location comes from the profile, and no profile is bootstrapped in a test
-// process, so resolving it is the failure the server must surface rather than
-// falling back to some guessed path.
-#[test]
-fn the_location_comes_from_the_profile_and_says_so_when_there_is_none() {
-    let error =
-        CliLocation::from_profile().expect_err("no profile is bootstrapped in a test process");
-
-    assert!(
-        matches!(error, CliError::Profile(_)),
-        "the missing profile is named as the reason the CLI could not be located: {error:?}"
-    );
 }
 
 fn table_json(rows: &[serde_json::Value]) -> String {

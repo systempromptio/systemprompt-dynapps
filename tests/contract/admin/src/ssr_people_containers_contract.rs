@@ -281,7 +281,7 @@ async fn user_access_tab_explains_a_group_grant_without_offering_a_personal_over
     let entity = "dynapps-commons";
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
-         VALUES ('marketplace', $1, false, 'dashboard')
+         VALUES ('marketplace', $1, false, 'console:contract')
          ON CONFLICT (entity_type, entity_id) DO UPDATE SET default_included = false",
     )
     .bind(entity)
@@ -293,7 +293,7 @@ async fn user_access_tab_explains_a_group_grant_without_offering_a_personal_over
         "INSERT INTO access_control_rules
              (id, entity_type, entity_id, rule_type, rule_value, access, justification, source)
          VALUES ($1, 'marketplace', $2, 'group', $3, 'allow',
-                 'the shared delivery team workspace', 'dashboard')",
+                 'the shared delivery team workspace', 'console:contract')",
     )
     .bind(&shared_rule_id)
     .bind(entity)
@@ -340,7 +340,7 @@ async fn group_detail_tabs_render_mapping_project_and_marketplace_relationships(
     };
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
-    let (_, _, _, group) = seed_member_with_group_and_project(&db.pool).await;
+    let (_, _, member, group) = seed_member_with_group_and_project(&db.pool).await;
     sqlx::query(
         "INSERT INTO group_ad_mappings (ad_group, group_id, source)
          VALUES ('AD-SSR-Delivery', $1, 'dashboard')",
@@ -353,6 +353,7 @@ async fn group_detail_tabs_render_mapping_project_and_marketplace_relationships(
         &db.pool,
         &systemprompt_web_shared::GroupId::new(group.clone()),
         &[MarketplaceId::new("dynapps-commons")],
+        &member,
     )
     .await
     .expect("grant marketplace");

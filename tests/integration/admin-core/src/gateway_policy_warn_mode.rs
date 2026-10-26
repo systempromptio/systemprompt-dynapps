@@ -1,10 +1,11 @@
 //! The shipped gateway policy under warn mode, through the real ingestion and
 //! resolution path: `services/gateway/policies.yaml` is parsed by the loader
-//! the boot job uses, written to `ai_gateway_policies` in a throwaway
-//! database, and read back through the gateway's `PolicyResolver` — the merge
-//! that decides what the dispatch path actually enforces. `safety.mode` has to
-//! come out the far side as `warn` and so does `quota_mode`, or the file says
-//! one thing and the gateway does another.
+//! the `gateway_policies` sync plane uses, written to `ai_gateway_policies`
+//! in a throwaway database by that plane's row writer, and read back through
+//! the gateway's `PolicyResolver` — the merge that decides what the dispatch
+//! path actually enforces. `safety.mode` has to come out the far side as `warn`
+//! and so does `quota_mode`, or the file says one thing and the gateway does
+//! another.
 //!
 //! The quota plane gets its own proof: the resolved windows are driven to
 //! exhaustion with the real reservation code, which must report the breach
@@ -18,13 +19,14 @@ use systemprompt::gateway::policies::PolicyResolver;
 use systemprompt::gateway::quota::{
     QuotaEstimate, QuotaSubjects, ReserveOutcome, ReserveParams, precheck_and_reserve,
 };
-use systemprompt::gateway::{
-    GatewayPolicyConfig, GatewayPolicyIngestOptions, GatewayPolicyIngestionService, QuotaMode,
-    QuotaWindow, SafetyMode,
-};
+use systemprompt::gateway::{GatewayPolicyConfig, QuotaWindow};
 use systemprompt::governance::authz::{AuthzHookContext, NullAuditSink, SubjectProviderSet};
 use systemprompt::identifiers::UserId;
+use systemprompt::manifest::services::EnforcementMode;
 use systemprompt::models::attribution::RequestAttribution;
+use systemprompt_web_admin_governance::repositories::gateway_policies::rows::{
+    PolicyWrite, upsert_policy,
+};
 
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;
@@ -45,21 +47,25 @@ fn db_pool(db: &TempDb) -> DbPool {
 
 async fn ingest_shipped(db: &TempDb) -> DbPool {
     let pool = db_pool(db);
-    let repo = AiGatewayPolicyRepository::new(&pool);
-    let report = GatewayPolicyIngestionService::from_repository(repo)
-        .ingest_config(
-            &shipped_policies(),
-            GatewayPolicyIngestOptions {
-                override_existing: true,
-                delete_orphans: false,
+    let shipped = shipped_policies();
+    shipped.validate().expect("the shipped file validates");
+    assert!(
+        !shipped.policies.is_empty(),
+        "at least the default-quotas policy is declared"
+    );
+    for entry in &shipped.policies {
+        upsert_policy(
+            &db.pool,
+            &PolicyWrite {
+                name: &entry.name,
+                spec: &entry.spec,
+                enabled: entry.enabled,
+                priority: entry.priority,
             },
         )
         .await
         .expect("the shipped policy ingests");
-    assert!(
-        report.inserted + report.updated >= 1,
-        "at least the default-quotas row landed: {report:?}"
-    );
+    }
     pool
 }
 
@@ -73,8 +79,8 @@ fn the_shipped_file_warns_on_quotas_and_safety() {
         .find(|p| p.enabled)
         .expect("an enabled policy")
         .spec;
-    assert_eq!(spec.quota_mode, QuotaMode::Warn);
-    assert_eq!(spec.safety.mode, SafetyMode::Warn);
+    assert_eq!(spec.quota_mode, EnforcementMode::Warn);
+    assert_eq!(spec.safety.mode, EnforcementMode::Warn);
     assert!(
         !spec.quota_windows.is_empty(),
         "the windows stay declared so warn has thresholds to report"
@@ -94,10 +100,14 @@ async fn the_resolver_keeps_both_mode_switches_after_ingestion() {
     let pool = ingest_shipped(&db).await;
 
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
-        .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
-        .await
-        .expect("policy row resolves");
+    let resolved = PolicyResolver::from_repository(
+        repo,
+        systemprompt::traits::CacheEpochs::new(),
+        systemprompt::manifest::profile::UnappliedPlaneMode::Warn,
+    )
+    .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
+    .await
+    .expect("policy row resolves");
 
     assert!(
         resolved.quota_mode.is_warn(),
@@ -126,10 +136,14 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     };
     let pool = ingest_shipped(&db).await;
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
-        .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
-        .await
-        .expect("policy row resolves");
+    let resolved = PolicyResolver::from_repository(
+        repo,
+        systemprompt::traits::CacheEpochs::new(),
+        systemprompt::manifest::profile::UnappliedPlaneMode::Warn,
+    )
+    .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
+    .await
+    .expect("policy row resolves");
     assert!(resolved.quota_mode.is_warn());
 
     let user_window = resolved
@@ -152,6 +166,9 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     let providers = SubjectProviderSet::discover(&AuthzHookContext {
         pool: pool.pool(),
         sink: Arc::new(NullAuditSink),
+        services: dynapps_test_common::empty_services_view(),
+        subjects: systemprompt::models::authz::SubjectSourceHandle::default(),
+        secrets: dynapps_test_common::fixture_secret_store(),
     });
     let attribution = RequestAttribution::none();
     let params = ReserveParams {

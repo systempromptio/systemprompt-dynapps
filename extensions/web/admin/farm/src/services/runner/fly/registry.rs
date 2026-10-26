@@ -1,17 +1,17 @@
 //! Runs this API process is waiting on a worker for, keyed by `agent_runs`
-//! id.
+//! id, and the runner machines those runs hold.
 //!
-//! The runner service and the HTTP router each build their own
-//! `FarmState`, so the registry is process-wide. A worker always reports to
-//! the API machine that launched it (see `pool::private_api_base`), so the
-//! entry it needs is in this process. An entry lives from launch until the
-//! handler takes the result; once removed, the run's worker token opens
-//! nothing.
+//! One [`RemoteRuns`] is built by the web extension and shared by every
+//! `FarmState` in the process — the runner service that launches a run and
+//! the HTTP router that its worker reports to. A worker always reports to the
+//! API machine that launched it (see `pool::private_api_base`), so the entry
+//! it needs is in this process. An entry lives from launch until the handler
+//! takes the result; once removed, the run's worker token opens nothing.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use systemprompt::agent_runs::service::DbEventSink;
@@ -19,8 +19,66 @@ use tokio::sync::oneshot;
 
 use super::protocol::{WorkerResult, WorkerSpec, token_hash};
 
-static RUNS: LazyLock<Mutex<HashMap<String, Arc<RemoteRun>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+/// In-flight remote runs and the pooled runner machines they occupy.
+#[derive(Debug, Default)]
+pub struct RemoteRuns {
+    runs: Mutex<HashMap<String, Arc<RemoteRun>>>,
+    taken_machines: Mutex<HashSet<String>>,
+}
+
+impl RemoteRuns {
+    fn runs(&self) -> MutexGuard<'_, HashMap<String, Arc<RemoteRun>>> {
+        self.runs.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn taken(&self) -> MutexGuard<'_, HashSet<String>> {
+        self.taken_machines
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    #[must_use]
+    pub fn register(
+        self: &Arc<Self>,
+        spec: WorkerSpec,
+        root: PathBuf,
+        sink: DbEventSink,
+        token: &str,
+    ) -> Registration {
+        let (tx, rx) = oneshot::channel();
+        let key = spec.agent_run_id.clone();
+        let run = Arc::new(RemoteRun {
+            token_hash: token_hash(token),
+            spec,
+            root,
+            sink,
+            last_seen: Mutex::new(None),
+            cancel: AtomicBool::new(false),
+            result: Mutex::new(Some(tx)),
+        });
+        self.runs().insert(key.clone(), Arc::clone(&run));
+        Registration {
+            run,
+            result: rx,
+            key,
+            owner: Arc::clone(self),
+        }
+    }
+
+    #[must_use]
+    pub fn authorise(&self, agent_run_id: &str, token: &str) -> Option<Arc<RemoteRun>> {
+        let run = self.runs().get(agent_run_id).cloned()?;
+        run.verifies(token).then_some(run)
+    }
+
+    pub(super) fn take_machine(&self, id: &str) -> bool {
+        self.taken().insert(id.to_owned())
+    }
+
+    pub(super) fn give_back_machine(&self, id: &str) {
+        self.taken().remove(id);
+    }
+}
 
 #[derive(Debug)]
 pub struct RemoteRun {
@@ -76,41 +134,11 @@ pub struct Registration {
     pub run: Arc<RemoteRun>,
     pub result: oneshot::Receiver<WorkerResult>,
     key: String,
+    owner: Arc<RemoteRuns>,
 }
 
 impl Drop for Registration {
     fn drop(&mut self) {
-        if let Ok(mut runs) = RUNS.lock() {
-            runs.remove(&self.key);
-        }
+        self.owner.runs().remove(&self.key);
     }
-}
-
-#[must_use]
-pub fn register(spec: WorkerSpec, root: PathBuf, sink: DbEventSink, token: &str) -> Registration {
-    let (tx, rx) = oneshot::channel();
-    let key = spec.agent_run_id.clone();
-    let run = Arc::new(RemoteRun {
-        token_hash: token_hash(token),
-        spec,
-        root,
-        sink,
-        last_seen: Mutex::new(None),
-        cancel: AtomicBool::new(false),
-        result: Mutex::new(Some(tx)),
-    });
-    if let Ok(mut runs) = RUNS.lock() {
-        runs.insert(key.clone(), Arc::clone(&run));
-    }
-    Registration {
-        run,
-        result: rx,
-        key,
-    }
-}
-
-#[must_use]
-pub fn authorise(agent_run_id: &str, token: &str) -> Option<Arc<RemoteRun>> {
-    let run = RUNS.lock().ok()?.get(agent_run_id).cloned()?;
-    run.verifies(token).then_some(run)
 }

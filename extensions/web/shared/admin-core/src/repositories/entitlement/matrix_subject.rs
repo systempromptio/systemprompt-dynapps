@@ -19,7 +19,6 @@ use systemprompt::identifiers::UserId;
 use super::matrix::{
     MatrixSection, SectionInput, resolution_inputs, resolve_sections_for, sections_with,
 };
-use crate::authz::subject_attributes_for;
 
 #[derive(Debug, Clone)]
 pub struct MatrixSubject {
@@ -60,32 +59,34 @@ pub fn role_subject(role: &str) -> MatrixSubject {
 }
 
 pub async fn user_subject(
-    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     user_id: &UserId,
     roles: Vec<String>,
-) -> Result<MatrixSubject, sqlx::Error> {
+) -> Result<MatrixSubject, crate::authz::AuthzReadError> {
     Ok(MatrixSubject {
         id: user_id.clone(),
         roles,
-        attributes: subject_attributes_for(pool, user_id).await?,
+        attributes: services.subject_attributes(user_id).await?,
     })
 }
 
 pub async fn resolve_subject_matrix(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     subject: &MatrixSubject,
     sections: Vec<SectionInput>,
-) -> Result<Vec<MatrixSection>, sqlx::Error> {
-    resolve_sections_for(pool, subject, sections).await
+) -> Result<Vec<MatrixSection>, crate::authz::AuthzReadError> {
+    resolve_sections_for(pool, services, subject, sections).await
 }
 
 pub async fn resolve_subject_matrices(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     subjects: &[MatrixSubject],
     sections: &[SectionInput],
-) -> Result<Vec<Vec<MatrixSection>>, sqlx::Error> {
-    let inputs = resolution_inputs(pool).await?;
-    let dimensions = crate::authz::dimensions(pool);
+) -> Result<Vec<Vec<MatrixSection>>, crate::authz::AuthzReadError> {
+    let inputs = resolution_inputs(pool, services).await?;
+    let dimensions = (services).dimensions();
     Ok(subjects
         .iter()
         .map(|subject| sections_with(&inputs, dimensions, subject, sections.to_vec()))

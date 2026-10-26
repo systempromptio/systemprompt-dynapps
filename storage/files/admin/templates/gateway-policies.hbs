@@ -1,7 +1,7 @@
 {{#> layout page_title=title page_id=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="The quota windows, safety scanners and block lists the gateway applies to every inference request. A save writes ai_gateway_policies and is live within a minute — no restart, no file edit. The Sync tab shows what this editor changed against services/gateway/policies.yaml."}}
+    {{#> components/page-header title=title subtitle="The quota windows, safety scanners and block lists the gateway applies to every inference request. A save writes ai_gateway_policies and is live within a minute — no restart, no file edit. The Sync tab shows this database against services/gateway/policies.yaml, through core."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{quotas_url}}">Usage vs ceiling</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How quotas work</a>
@@ -11,7 +11,7 @@
     {{> components/tabs tabs=tabs nav_label="Gateway policy views"}}
 
     {{#if sync}}
-    {{> components/sync-plane plane=sync can_write=can_write}}
+    {{> components/core-plane plane=sync can_write=can_write}}
     {{> components/sync-plane-dialogs}}
     {{else}}
     {{#unless can_write}}

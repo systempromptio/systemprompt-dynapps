@@ -31,8 +31,10 @@ impl HelperDef for JsonHelper {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct CssVersionHelper;
+#[derive(Debug, Clone)]
+pub(crate) struct CssVersionHelper {
+    pub(crate) dist: std::path::PathBuf,
+}
 impl HelperDef for CssVersionHelper {
     fn call<'reg: 'rc, 'rc>(
         &self,
@@ -42,11 +44,7 @@ impl HelperDef for CssVersionHelper {
         _: &mut RenderContext<'reg, 'rc>,
         out: &mut dyn Output,
     ) -> HelperResult {
-        let dist = systemprompt::manifest::Config::get().map_or_else(
-            |_| std::path::PathBuf::from("web/dist"),
-            |config| std::path::PathBuf::from(&config.web_path).join("dist"),
-        );
-        out.write(&super::super::published_asset_version(&dist))?;
+        out.write(&super::super::published_asset_version(&self.dist))?;
         Ok(())
     }
 }

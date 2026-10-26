@@ -16,9 +16,6 @@ use systemprompt_web_admin_core::repositories::access_rules::review::{
 use systemprompt_web_admin_core::repositories::access_rules::rules::{
     list_band_rules, list_entity_defaults,
 };
-use systemprompt_web_admin_core::repositories::access_rules::sync::{
-    EntityScope, SyncMode, apply_sync_scoped,
-};
 
 use crate::fixtures::{unique, write_services_file};
 use crate::tempdb::TempDb;
@@ -86,16 +83,16 @@ async fn a_scoped_apply_moves_one_entity_and_the_review_names_the_rest() {
     );
 
     let keys = [format!("mcp_server/{applied}")];
-    let outcome = apply_sync_scoped(
-        &db.pool,
-        &set,
-        SyncMode::Overwrite,
-        EntityScope::Entities(&keys),
-    )
-    .await
-    .expect("scoped apply");
-    assert_eq!(outcome.inserted, 1);
-    assert_eq!(outcome.entities_inserted, 1);
+    let outcome = crate::fixtures::access_planes(&db.pool, dir.path())
+        .apply_entities(
+            "access_control",
+            &keys,
+            &crate::fixtures::user_id("review-tester"),
+            "scoped review test",
+        )
+        .await
+        .expect("scoped apply");
+    assert_eq!(outcome.changes, 1);
     assert_eq!(rule_count(&db.pool, &applied).await, 1);
     assert_eq!(
         rule_count(&db.pool, &pending).await,

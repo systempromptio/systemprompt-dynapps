@@ -13,7 +13,9 @@
 //! knows (`user_id`, `email`, `display_name`, `provider`, `roles`) so they
 //! land in typed slots rather than the passthrough map.
 
+use axum::Extension;
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::Json;
 use axum::extract::State;
@@ -22,7 +24,6 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
-use systemprompt::manifest::Config;
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::validate_jwt_token;
 
@@ -83,17 +84,21 @@ const fn unix(ts: DateTime<Utc>) -> i64 {
 }
 
 pub(crate) async fn bridge_whoami_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
 ) -> AdminResult<Json<BridgeWhoamiResponse>> {
     let token = extract_token_from_headers(&headers)?;
-    let jwt_issuer = Config::get()?.jwt_issuer.clone();
-    let claims = validate_jwt_token(&token, &jwt_issuer, BRIDGE_AUDIENCES).map_err(|e| {
-        tracing::warn!(error = %e, "bridge whoami: token rejected");
-        AdminError::Unauthorized("Invalid or expired token".to_owned())
-    })?;
+    let claims = validate_jwt_token(boot.token_authority().as_ref(), &token, BRIDGE_AUDIENCES)
+        .map_err(|e| {
+            tracing::warn!(error = %e, "bridge whoami: token rejected");
+            AdminError::Unauthorized("Invalid or expired token".to_owned())
+        })?;
 
-    let user_id = UserId::new(claims.sub.clone());
+    let user_id = UserId::new(claims.registered.sub.clone());
     let envelope =
         systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope(
             &pool, &user_id,
@@ -108,8 +113,10 @@ pub(crate) async fn bridge_whoami_handler(
 
     let is_admin = systemprompt_web_admin_core::types::roles_grant_manage(&envelope.roles);
 
-    let connections =
-        systemprompt_web_admin_core::connections::source::get_connections(&pool, &user_id).await?;
+    let connections = systemprompt_web_admin_core::connections::source::get_connections(
+        &pool, &services, &user_id,
+    )
+    .await?;
     Ok(Json(BridgeWhoamiResponse {
         connections,
         provider: envelope
@@ -132,11 +139,21 @@ pub(crate) async fn bridge_whoami_handler(
         directory_linked_unix: envelope.linked_at.map(unix),
         directory_last_seen_unix: envelope.last_seen_at.map(unix),
         directory_groups: adfs_groups,
-        token_issuer: claims.iss,
-        token_audiences: claims.aud.iter().map(|a| a.as_str().to_owned()).collect(),
-        token_scope: claims.scope.iter().map(ToString::to_string).collect(),
-        token_issued_unix: claims.iat,
-        token_expires_unix: claims.exp,
-        login_session: claims.session_id,
+        token_issuer: claims.registered.iss,
+        token_audiences: claims
+            .registered
+            .aud
+            .iter()
+            .map(|a| a.as_str().to_owned())
+            .collect(),
+        token_scope: claims
+            .custom
+            .scope
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
+        token_issued_unix: claims.registered.iat,
+        token_expires_unix: claims.registered.exp,
+        login_session: claims.custom.session_id,
     }))
 }

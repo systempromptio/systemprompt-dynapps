@@ -41,6 +41,7 @@ fn blog_config() -> Arc<BlogConfigValidated> {
                 ..BlogConfigRaw::default()
             },
             std::path::Path::new("."),
+            std::path::Path::new("."),
         )
         .expect("a config with no content sources validates"),
     )
@@ -791,10 +792,8 @@ async fn getting_an_article_that_does_not_exist_is_a_404() {
 
 #[tokio::test]
 async fn setting_a_session_issues_an_access_cookie_and_a_refresh_cookie() {
-    crate::jobs_context::install_config();
-
     let (headers, _) = api::auth::set_session(
-        HeaderMap::new(),
+        axum::Extension(crate::jobs_context::test_config()),
         axum::Json(api::auth::SetSessionRequest {
             access_token: "access-abc".to_owned(),
             expires_in: Some(120),
@@ -819,10 +818,8 @@ async fn setting_a_session_issues_an_access_cookie_and_a_refresh_cookie() {
 
 #[tokio::test]
 async fn a_session_with_no_refresh_token_issues_only_the_access_cookie() {
-    crate::jobs_context::install_config();
-
     let (headers, body) = api::auth::set_session(
-        HeaderMap::new(),
+        axum::Extension(crate::jobs_context::test_config()),
         axum::Json(api::auth::SetSessionRequest {
             access_token: "access-only".to_owned(),
             expires_in: None,
@@ -843,9 +840,8 @@ async fn a_session_with_no_refresh_token_issues_only_the_access_cookie() {
 
 #[tokio::test]
 async fn clearing_a_session_expires_both_cookies() {
-    crate::jobs_context::install_config();
-
-    let (headers, body) = api::auth::clear_session().await;
+    let (headers, body) =
+        api::auth::clear_session(axum::Extension(crate::jobs_context::test_config())).await;
 
     assert!(body.ok);
     let cookies = set_cookies(&headers);

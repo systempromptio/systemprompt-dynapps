@@ -2,11 +2,15 @@
 //! access-control repository.
 
 use systemprompt::governance::authz::{Access, EntityKind, RuleType};
-use systemprompt::identifiers::RouteId;
+use systemprompt::identifiers::{RouteId, UserId};
 use systemprompt_web_admin_governance::repositories::config::gateway_acl;
 
 use crate::fixtures::{count_rows, insert_acl_entity, unique};
 use crate::tempdb::TempDb;
+
+fn actor() -> UserId {
+    UserId::new("gateway-acl-admin")
+}
 
 #[tokio::test]
 async fn list_rules_for_route_returns_nothing_for_an_unknown_route() {
@@ -34,9 +38,12 @@ async fn upsert_rule_then_list_rules_for_route_round_trips() {
     let created = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
+        &actor(),
     )
     .await
     .expect("upsert rule");
@@ -63,18 +70,24 @@ async fn upsert_rule_updates_access_in_place_rather_than_duplicating() {
     let first = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
+        &actor(),
     )
     .await
     .expect("first upsert");
     let second = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Deny,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Deny,
+        },
+        &actor(),
     )
     .await
     .expect("second upsert");
@@ -98,9 +111,12 @@ async fn upsert_rule_fails_without_a_catalog_entity() {
     let result = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(unique("route")),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
+        &actor(),
     )
     .await;
 
@@ -126,27 +142,36 @@ async fn list_rules_bulk_groups_rules_by_route() {
     gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route_a),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
+        &actor(),
     )
     .await
     .expect("rule on a");
     gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route_a),
-        RuleType::ROLE,
-        "user",
-        Access::Deny,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "user",
+            access: Access::Deny,
+        },
+        &actor(),
     )
     .await
     .expect("second rule on a");
     gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route_b),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
+        &actor(),
     )
     .await
     .expect("rule on b");
@@ -177,9 +202,12 @@ async fn delete_rule_reports_whether_a_row_was_removed() {
     let rule = gateway_acl::upsert_rule(
         &db.pool,
         &RouteId::new(&route),
-        RuleType::ROLE,
-        "admin",
-        Access::Allow,
+        gateway_acl::RouteRule {
+            rule_type: RuleType::ROLE,
+            rule_value: "admin",
+            access: Access::Allow,
+        },
+        &actor(),
     )
     .await
     .expect("upsert rule");

@@ -9,14 +9,15 @@
 
 pub mod view;
 
-use systemprompt::config::ProfileBootstrap;
+use systemprompt::manifest::Profile;
 use systemprompt::manifest::profile::OtlpExportConfig;
 use systemprompt::scheduler::{OtlpExportState, OtlpExportStateRepository};
 
 use systemprompt_web_admin_core::error::AdminError;
 
-pub fn find_declared_export() -> Result<Option<OtlpExportConfig>, AdminError> {
-    Ok(ProfileBootstrap::get()?.observability.otlp().cloned())
+#[must_use]
+pub fn find_declared_export(profile: &Profile) -> Option<OtlpExportConfig> {
+    profile.observability.otlp().cloned()
 }
 
 pub async fn list_export_states(

@@ -38,6 +38,8 @@
 //! - the two front-end gates that used to be shell scripts and then in-crate
 //!   tests: admin template/CSS agreement and the textual front-end standards,
 //!   plus the asset-manifest check, all sharing `support`
+//! - fixture runs of the shell gates (`gates_*`): each over a throwaway git
+//!   tree with one passing and one failing sample, via `support::GateFixture`
 //! - the observability page's pure mapping of the profile's OTLP block and the
 //!   `otlp_export_state` rows into its view
 
@@ -105,7 +107,8 @@ mod service_accounts_pages;
 #[cfg(test)]
 mod conversation_sort;
 #[cfg(test)]
-mod gateway_policies_drift;
+mod gates_outbound_urls;
+#[cfg(test)]
 #[cfg(test)]
 mod gateway_policies_form;
 #[cfg(test)]
@@ -121,7 +124,6 @@ mod gateway_routes_drift;
 #[cfg(test)]
 mod gateway_text_markers;
 #[cfg(test)]
-mod governance_chain_drift;
 #[cfg(test)]
 mod groups_sync_drift;
 #[cfg(test)]
@@ -163,6 +165,8 @@ mod migration_cost;
 mod month_range;
 #[cfg(test)]
 mod observability_view;
+#[cfg(test)]
+mod outbound_url_guard;
 #[cfg(test)]
 mod overview;
 #[cfg(test)]
@@ -234,7 +238,6 @@ mod web_schemas;
 #[cfg(test)]
 mod access_control_drift;
 #[cfg(test)]
-mod access_control_export;
 #[cfg(test)]
 mod access_control_review;
 #[cfg(test)]
@@ -258,15 +261,27 @@ mod asset_manifest;
 #[cfg(test)]
 mod audit_integrity_schema;
 #[cfg(test)]
+mod authz_caches;
+#[cfg(test)]
 mod authz_hook_mode;
 #[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
 mod authz_quota_subjects;
 #[cfg(test)]
+mod boot_fixture;
+#[cfg(test)]
 mod config_gateway_pure;
 #[cfg(test)]
 mod frontend_standards;
+#[cfg(test)]
+mod gates_check_claude_code_version;
+#[cfg(test)]
+mod gates_check_core_ref;
+#[cfg(test)]
+mod gates_check_gate_parity;
+#[cfg(test)]
+mod gates_lint_authoritative_reads;
 #[cfg(test)]
 mod gateway_catalog_pure;
 #[cfg(test)]
@@ -302,7 +317,6 @@ mod sync_boot_contract;
 #[cfg(test)]
 mod sync_declaration_text;
 #[cfg(test)]
-mod sync_drift_kpis;
 #[cfg(test)]
 mod sync_inventory;
 #[cfg(test)]
@@ -376,8 +390,6 @@ mod connector_recovery;
 #[cfg(test)]
 mod data_console;
 
-#[cfg(test)]
-mod route_catalog_plane_ownership;
 
 #[cfg(test)]
 mod farm_agent_host;

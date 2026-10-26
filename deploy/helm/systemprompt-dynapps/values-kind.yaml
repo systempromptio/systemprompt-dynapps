@@ -112,7 +112,10 @@ pod:
       configMap:
         name: loadtest-services
   extraVolumeMounts:
+    - {name: loadtest-services, mountPath: /app/services/ai/credentials.yaml, subPath: credentials.yaml, readOnly: true}
     - {name: loadtest-services, mountPath: /app/services/ai/providers.yaml, subPath: providers.yaml, readOnly: true}
+    - {name: loadtest-services, mountPath: /app/services/ai/models.yaml, subPath: models.yaml, readOnly: true}
+    - {name: loadtest-services, mountPath: /app/services/ai/deployments.yaml, subPath: deployments.yaml, readOnly: true}
     - {name: loadtest-services, mountPath: /app/services/ai/gateway.yaml, subPath: gateway.yaml, readOnly: true}
     - {name: loadtest-services, mountPath: /app/services/ai/config.yaml, subPath: config.yaml, readOnly: true}
     - {name: loadtest-services, mountPath: /app/services/gateway/policies.yaml, subPath: policies.yaml, readOnly: true}

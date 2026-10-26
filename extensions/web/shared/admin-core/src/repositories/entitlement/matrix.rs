@@ -17,7 +17,6 @@ use std::collections::HashMap;
 use super::matrix_resolution::{MatrixCell, resolve_effective_with};
 use super::matrix_subject::{MatrixSubject, user_subject};
 use super::rules::list_all_rules;
-use crate::authz::dimensions;
 use crate::types::access_control::AccessControlRule;
 use serde::Serialize;
 use sqlx::PgPool;
@@ -69,37 +68,40 @@ pub type SectionInput = (String, String, Vec<(String, String, Option<String>)>);
 
 pub async fn filter_catalog_for_user(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     user_id: &UserId,
     sections_in: Vec<SectionInput>,
-) -> Result<Option<UserMatrix>, sqlx::Error> {
-    resolve_user_matrix(pool, user_id, sections_in).await
+) -> Result<Option<UserMatrix>, crate::authz::AuthzReadError> {
+    resolve_user_matrix(pool, services, user_id, sections_in).await
 }
 
 pub async fn resolve_user_matrix(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     user_id: &UserId,
     sections_in: Vec<SectionInput>,
-) -> Result<Option<UserMatrix>, sqlx::Error> {
+) -> Result<Option<UserMatrix>, crate::authz::AuthzReadError> {
     let Some(user) = find_user_for_matrix(pool, user_id).await? else {
         return Ok(None);
     };
-    let subject = user_subject(pool, user_id, user.roles.clone()).await?;
-    let sections = resolve_sections_for(pool, &subject, sections_in).await?;
+    let subject = user_subject(services, user_id, user.roles.clone()).await?;
+    let sections = resolve_sections_for(pool, services, &subject, sections_in).await?;
     Ok(Some(UserMatrix { user, sections }))
 }
 
 pub(super) async fn resolve_sections_for(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     subject: &MatrixSubject,
     sections_in: Vec<SectionInput>,
-) -> Result<Vec<MatrixSection>, sqlx::Error> {
+) -> Result<Vec<MatrixSection>, crate::authz::AuthzReadError> {
     if sections_in.is_empty() {
         return Ok(Vec::new());
     }
-    let inputs = resolution_inputs(pool).await?;
+    let inputs = resolution_inputs(pool, services).await?;
     Ok(sections_with(
         &inputs,
-        dimensions(pool),
+        (services).dimensions(),
         subject,
         sections_in,
     ))
@@ -111,19 +113,19 @@ pub(super) struct ResolutionInputs {
     pub(super) chains: systemprompt::governance::authz::ParentChainIndex,
 }
 
-pub(super) async fn resolution_inputs(pool: &PgPool) -> Result<ResolutionInputs, sqlx::Error> {
+pub(super) async fn resolution_inputs(
+    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
+) -> Result<ResolutionInputs, crate::authz::AuthzReadError> {
     use systemprompt::governance::authz::{
         AccessControlRepository, ChainSources, ParentChainIndex,
     };
-    let services = systemprompt::loader::ServicesBootstrap::get()
-        .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
     let repo = AccessControlRepository::from_pool(std::sync::Arc::new(pool.clone()));
     let chains = ParentChainIndex::load(
         &repo,
-        std::sync::Arc::new(ChainSources::from_services(services)),
+        std::sync::Arc::new(ChainSources::from_services(&services.config())),
     )
-    .await
-    .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
+    .await?;
     Ok(ResolutionInputs {
         chains,
         rules: list_all_rules(pool).await?,
@@ -179,7 +181,7 @@ pub(super) fn sections_with(
 
 async fn load_entity_defaults(
     pool: &PgPool,
-) -> Result<HashMap<(String, String), bool>, sqlx::Error> {
+) -> Result<HashMap<(String, String), bool>, crate::authz::AuthzReadError> {
     let rows = sqlx::query!(
         r#"SELECT entity_type, entity_id, default_included
            FROM access_control_entities"#
@@ -196,7 +198,7 @@ async fn load_entity_defaults(
 pub(super) async fn find_user_for_matrix(
     pool: &PgPool,
     user_id: &UserId,
-) -> Result<Option<UserMatrixUser>, sqlx::Error> {
+) -> Result<Option<UserMatrixUser>, crate::authz::AuthzReadError> {
     let row = sqlx::query!(
         r#"SELECT u.id,
                   u.email,

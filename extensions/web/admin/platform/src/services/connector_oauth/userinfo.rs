@@ -7,22 +7,27 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // are read, and the body was already verified as JSON by `response::body`.
 use serde_json::Value;
 use systemprompt::models::mcp::deployment::ConnectorIdentity;
+use systemprompt::models::net::validate_outbound_url;
 
-pub(super) async fn generic_identity(http: &reqwest::Client, grant: &mut Grant) -> AdminResult<()> {
+pub(super) async fn generic_identity(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    http: &reqwest::Client,
+    grant: &mut Grant,
+) -> AdminResult<()> {
     let wants_userinfo = grant
         .provider
-        .settings()
+        .settings(&services.config())
         .is_some_and(|settings| settings.identity == Some(ConnectorIdentity::Userinfo));
     if !wants_userinfo {
         return Ok(());
     }
-    let metadata = super::generic_discovery::metadata(http, &grant.provider).await?;
+    let metadata = super::generic_discovery::metadata(services, http, &grant.provider).await?;
     let endpoint = metadata.userinfo_endpoint.as_deref().ok_or_else(|| {
         AdminError::Unavailable("OAuth issuer publishes no userinfo endpoint".into())
     })?;
-    let url = super::generic_discovery::trusted_endpoint(&grant.provider, endpoint)?;
+    let url = super::generic_discovery::trusted_endpoint(services, &grant.provider, endpoint)?;
     let response = http
-        .get(url)
+        .get(validate_outbound_url(url.as_str())?)
         .bearer_auth(&grant.access_token)
         .send()
         .await

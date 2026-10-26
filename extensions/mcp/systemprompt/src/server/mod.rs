@@ -21,7 +21,6 @@ use std::future::Future;
 use std::sync::Arc;
 use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
-use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
@@ -31,27 +30,43 @@ use systemprompt::mcp::{
     read_artifact_resource, read_artifact_viewer_resource,
 };
 use systemprompt::traits::DynToolCallIntentClaims;
-use systemprompt_mcp_shared::auth::authenticate_tool_request;
+use systemprompt_mcp_shared::auth::{ServerAccess, ToolAuth, authenticate_tool_request};
 use systemprompt_mcp_shared::record_mcp_access;
+
+use systemprompt::mcp::services::ui_renderer::UiRendererRegistry;
+use systemprompt::mcp::services::ui_renderer::registry::create_default_registry;
+
+use crate::cli::CliLocation;
 
 use systemprompt::mcp::client_profile_from_peer;
 use tool::dispatch_tool;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SystempromptServer {
     service_id: McpServerId,
     db_pool: DbPool,
     executor: McpToolExecutor,
-    authz_hook: SharedAuthzHook,
+    access: ServerAccess,
     artifact_ingest: Arc<ArtifactIngest>,
+    cli: CliLocation,
+    renderers: Arc<UiRendererRegistry>,
+}
+
+impl std::fmt::Debug for SystempromptServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SystempromptServer")
+            .field("service_id", &self.service_id)
+            .finish_non_exhaustive()
+    }
 }
 
 impl SystempromptServer {
     pub fn new(
         db_pool: DbPool,
         service_id: McpServerId,
-        authz_hook: SharedAuthzHook,
+        access: ServerAccess,
         artifact_ingest: Arc<ArtifactIngest>,
+        cli: CliLocation,
     ) -> Self {
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
@@ -66,8 +81,10 @@ impl SystempromptServer {
             service_id,
             db_pool,
             executor,
-            authz_hook,
+            access,
             artifact_ingest,
+            cli,
+            renderers: Arc::new(create_default_registry()),
         }
     }
 }
@@ -146,11 +163,15 @@ impl ServerHandler for SystempromptServer {
         let server_name = self.service_id.to_string();
 
         let (request_context, auth_token) = authenticate_tool_request(
-            &self.db_pool,
+            ToolAuth {
+                db_pool: &self.db_pool,
+                service_id: &self.service_id,
+                authz_hook: &self.access.authz_hook,
+                services_config: &self.access.services.get(),
+                verifier: self.access.verifier(),
+            },
             &tool_name,
-            &self.service_id,
             &ctx,
-            &self.authz_hook,
         )
         .await?;
 
@@ -164,7 +185,6 @@ impl ServerHandler for SystempromptServer {
         .await;
 
         let client = client_profile_from_peer(&ctx);
-        let cli = crate::cli::CliLocation::from_profile()?;
         dispatch_tool(
             &tool::Dispatch {
                 service_id: &self.service_id,
@@ -173,7 +193,7 @@ impl ServerHandler for SystempromptServer {
                 request: &request,
                 request_context: &request_context,
                 client: &client,
-                cli: &cli,
+                cli: &self.cli,
                 ingest: &self.artifact_ingest,
             },
             &tool_name,
@@ -210,9 +230,14 @@ impl ServerHandler for SystempromptServer {
     ) -> Result<ReadResourceResponse, McpError> {
         if parse_artifact_resource_uri(&request.uri).is_some() {
             let repo = McpArtifactRepository::new(&self.db_pool);
-            return read_artifact_resource(&request, &McpServerId::new(SERVER_NAME), &repo)
-                .await
-                .map(Into::into);
+            return read_artifact_resource(
+                &request,
+                &McpServerId::new(SERVER_NAME),
+                &repo,
+                &self.renderers,
+            )
+            .await
+            .map(Into::into);
         }
 
         read_artifact_viewer_resource(

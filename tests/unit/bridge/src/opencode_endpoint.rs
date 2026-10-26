@@ -43,16 +43,16 @@ fn with_gateway_config(f: impl FnOnce()) {
 fn base_url_for(loopback: &LoopbackEndpoint) -> String {
     let facts = ProfileFacts::load(loopback, &McpRegistry::new(), ModelProtocolOverrides::new())
         .expect("profile facts");
-    let inputs = facts.inputs_for(HostKind::OpenCode, &[]);
+    let inputs = facts.inputs_for(HostKind::OpenCode);
     let host = find_host_by_id(HostKind::OpenCode).expect("opencode host");
     let generated = host
         .generate_profile(&inputs)
         .expect("render opencode.json");
     let text = std::fs::read_to_string(&generated.path).expect("read rendered profile");
     let json: serde_json::Value = serde_json::from_str(&text).expect("rendered json");
-    json["provider"]["systemprompt"]["options"]["baseURL"]
+    json["config"]["providers"]["systemprompt"]["settings"]["baseURL"]
         .as_str()
-        .expect("baseURL")
+        .unwrap_or_else(|| panic!("no config.providers.systemprompt.settings.baseURL in {text}"))
         .to_owned()
 }
 

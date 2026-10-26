@@ -302,13 +302,12 @@
         </p>
         {{#if artifacts.files}}
         {{#> components/table caption="Files the run changed in its workspace" table_mode="scroll"}}
-          <thead><tr><th>Path</th><th class="sp-col-status">Change</th><th class="sp-table__cell--num">Size</th></tr></thead>
+          <thead><tr><th>Path</th><th class="sp-col-status">Change</th></tr></thead>
           <tbody>
           {{#each artifacts.files}}
             <tr>
               <td><code class="sp-code-inline">{{this.path}}</code></td>
               <td class="sp-col-status">{{> components/badge tone=this.tone text=this.kind}}</td>
-              <td class="sp-table__cell--num">{{this.bytes}}</td>
             </tr>
           {{/each}}
           </tbody>

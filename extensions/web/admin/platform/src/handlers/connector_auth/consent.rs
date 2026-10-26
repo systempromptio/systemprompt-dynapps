@@ -1,5 +1,4 @@
-//! Browser consent bound to the initiating login and connection generation,
-//! and the bearer accessor core calls for a person or a service account.
+//! Browser consent bound to the initiating login and connection generation.
 //!
 //! An admin may run the consent on behalf of a service account
 //! (`?service_account=<id>`): the grant is stored for that account, and its
@@ -7,19 +6,18 @@
 //! carries the account (`sa.<id>.<random>`) so the callback knows whose
 //! row to consume; the login check still binds it to the admin's session.
 
+use super::deps::ConsentDeps;
 use super::live_user;
-use crate::repositories::connectors::machine_credentials::find_machine_credential;
 use crate::repositories::connectors::{
-    connector_accounts as accounts, connector_credentials as credentials, farm_run_callers,
+    connector_accounts as accounts, connector_credentials as credentials,
 };
+use crate::services::connector_accounts as service;
 use crate::services::connector_oauth::{self as oauth, Consent, Provider};
 use crate::services::service_accounts::ServiceAccounts;
-use crate::services::{connector_accounts as service, machine_credentials};
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::header::CACHE_CONTROL;
 use axum::response::{IntoResponse, Redirect, Response};
-use axum::{Extension, Json};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::Rng;
@@ -27,13 +25,8 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin_core::auth::session::extract_mcp_accessor_user;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-// Why: core's external-MCP client forwards the run's declared purpose under
-// this header; a service account's credential is spent only for the purposes
-// `machine_credentials::caller` allows.
-const CALLER_HEADER: &str = "x-systemprompt-caller";
 const SERVICE_ACCOUNT_STATE: &str = "sa.";
 
 #[derive(Deserialize)]
@@ -45,12 +38,16 @@ pub(crate) struct Start {
 
 pub(crate) async fn start(
     State(pool): State<Arc<PgPool>>,
-    Extension(service_accounts): Extension<ServiceAccounts>,
+    ConsentDeps {
+        boot,
+        service_accounts,
+        services,
+    }: ConsentDeps,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
     Query(params): Query<Start>,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &headers, false).await?;
+    let user = live_user(&pool, &boot, &headers, false).await?;
     if params
         .expected_user
         .is_some_and(|id| id != user.user_id.as_str())
@@ -63,7 +60,7 @@ pub(crate) async fn start(
         require_acting_admin(&service_accounts, &user.user_id, &account).await?;
         account
     } else {
-        service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
+        service::require_entitlement(&services, &pool, &user.user_id, provider.clone()).await?;
         user.user_id.clone()
     };
     let mut tx = pool.begin().await?;
@@ -72,6 +69,8 @@ pub(crate) async fn start(
     let state = consent_state(&owner, &user.user_id);
     let verifier = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 32]>());
     let (url, mut grant) = oauth::authorize(
+        &services,
+        &boot,
         Consent {
             user: owner.as_str(),
             state: &state,
@@ -88,7 +87,7 @@ pub(crate) async fn start(
         &owner,
         provider.slug(),
         &state,
-        &oauth::seal(&grant)?,
+        &oauth::seal(boot.secrets().as_ref(), &grant)?,
     )
     .await?;
     Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&url)).into_response())
@@ -136,27 +135,31 @@ pub(crate) struct Callback {
 
 pub(crate) async fn callback(
     State(pool): State<Arc<PgPool>>,
-    Extension(service_accounts): Extension<ServiceAccounts>,
+    deps: ConsentDeps,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
     Query(params): Query<Callback>,
 ) -> AdminResult<Response> {
-    complete(&pool, &service_accounts, provider, &headers, params).await
+    complete(&pool, &deps, provider, &headers, params).await
 }
 
 async fn complete(
     pool: &PgPool,
-    service_accounts: &ServiceAccounts,
+    ConsentDeps {
+        boot,
+        service_accounts,
+        services,
+    }: &ConsentDeps,
     provider: Provider,
     headers: &HeaderMap,
     params: Callback,
 ) -> AdminResult<Response> {
-    let user = live_user(pool, headers, false).await?;
+    let user = live_user(pool, boot, headers, false).await?;
     let owner = if let Some(account) = service_account_of(&params.state) {
         require_acting_admin(service_accounts, &user.user_id, &account).await?;
         account
     } else {
-        service::require_entitlement(pool, &user.user_id, provider.clone()).await?;
+        service::require_entitlement(services, pool, &user.user_id, provider.clone()).await?;
         user.user_id.clone()
     };
     let row = credentials::consume_state(pool, &owner, provider.slug(), &params.state)
@@ -164,7 +167,7 @@ async fn complete(
         .ok_or_else(|| {
             AdminError::Unauthorized("Connector consent expired or already consumed".into())
         })?;
-    let grant = oauth::open(&row, &owner, &provider)?;
+    let grant = oauth::open(services, boot.secrets().as_ref(), &row, &owner, &provider)?;
     if grant.session != user.session_id.as_ref().map(ToString::to_string) {
         return Err(AdminError::Unauthorized(
             "Login changed during connector consent".into(),
@@ -184,65 +187,16 @@ async fn complete(
     let code = params
         .code
         .ok_or_else(|| AdminError::BadRequest("Consent code missing".into()))?;
-    super::completion::finish(pool, &owner, headers, grant, &code).await
-}
-
-pub(crate) async fn token(
-    State(pool): State<Arc<PgPool>>,
-    Extension(accounts): Extension<ServiceAccounts>,
-    Path(provider): Path<Provider>,
-    headers: HeaderMap,
-) -> AdminResult<Response> {
-    super::require_broker(&headers)?;
-    // Why: core's MCP client presents a service account's in-process JWT, which
-    // has no interactive session behind it; the purpose-bound caller check in
-    // `broker_token` is that account's trust anchor instead of `live_user`.
-    let claimed = extract_mcp_accessor_user(&headers)?;
-    let caller = headers.get(CALLER_HEADER).and_then(|v| v.to_str().ok());
-    if accounts.is_service_account(&claimed.user_id).await? {
-        let value = service_account_token(&pool, &claimed.user_id, provider, caller).await?;
-        return Ok(bearer_response(&value));
-    }
-    // Why: core runs a `run_as: {mode: user}` farm run headless, so its
-    // person's bearer has no live login; the active run its signed purpose
-    // names is the trust anchor instead, and entitlement is still checked.
-    if let Some(run) = machine_credentials::caller::farm_run(caller) {
-        if !farm_run_callers::get_farm_run_active(&pool, run, &claimed.user_id).await? {
-            return Err(AdminError::Forbidden(
-                "The farm run this bearer names is not active for its user".into(),
-            ));
-        }
-        service::require_entitlement(&pool, &claimed.user_id, provider.clone()).await?;
-        let access_token = oauth::verified_token(&pool, &claimed.user_id, provider, false).await?;
-        return Ok(bearer_response(&access_token));
-    }
-    let user = live_user(&pool, &headers, false).await?;
-    service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
-    let access_token = oauth::verified_token(&pool, &user.user_id, provider.clone(), false).await?;
-    Ok(bearer_response(&access_token))
-}
-
-async fn service_account_token(
-    pool: &PgPool,
-    user: &UserId,
-    provider: Provider,
-    caller: Option<&str>,
-) -> AdminResult<String> {
-    let holds_machine = find_machine_credential(pool, user, provider.slug())
-        .await?
-        .is_some();
-    if holds_machine || !machine_credentials::caller::allowed(caller) {
-        return machine_credentials::broker_token(pool, user, provider.slug(), caller).await;
-    }
-    oauth::verified_token(pool, user, provider, false).await
-}
-
-// Why: core's machine grants mint the complete Authorization header, so the
-// descriptor's scheme is empty and the trusted adapter supplies it whole.
-fn bearer_response(access_token: &str) -> Response {
-    (
-        [(CACHE_CONTROL, "no-store")],
-        Json(serde_json::json!({"access_token": access_token})),
+    super::completion::finish(
+        services,
+        super::completion::CallbackSession {
+            pool,
+            boot,
+            user: &owner,
+            headers,
+        },
+        grant,
+        &code,
     )
-        .into_response()
+    .await
 }

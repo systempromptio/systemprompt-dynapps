@@ -26,7 +26,7 @@ pub fn published_asset_version(dist: &std::path::Path) -> String {
     hex::encode(hash.finalize())
 }
 
-pub fn register_helpers(hbs: &mut handlebars::Handlebars<'static>) {
+pub fn register_helpers(hbs: &mut handlebars::Handlebars<'static>, web_dist: &std::path::Path) {
     hbs.register_helper("formatDate", Box::new(FormatDateHelper));
     hbs.register_helper("formatNumber", Box::new(FormatNumberHelper));
     hbs.register_helper("relativeTime", Box::new(RelativeTimeHelper));
@@ -39,7 +39,12 @@ pub fn register_helpers(hbs: &mut handlebars::Handlebars<'static>) {
     hbs.register_helper("toUpperCase", Box::new(ToUpperCaseHelper));
     hbs.register_helper("default", Box::new(DefaultHelper));
     hbs.register_helper("governanceColor", Box::new(GovernanceColorHelper));
-    hbs.register_helper("css_version", Box::new(CssVersionHelper));
+    hbs.register_helper(
+        "css_version",
+        Box::new(CssVersionHelper {
+            dist: web_dist.to_path_buf(),
+        }),
+    );
     hbs.register_helper("navState", Box::new(NavStateHelper));
     hbs.register_helper("eq", Box::new(EqHelper));
     hbs.register_helper("gt", Box::new(GtHelper));

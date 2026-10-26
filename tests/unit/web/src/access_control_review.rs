@@ -2,7 +2,7 @@
 //! "keep the database" decision that holds only for the diff it was taken on.
 
 use chrono::Utc;
-use systemprompt::governance::authz::{Access, DASHBOARD_SOURCE, RegisteredEntities};
+use systemprompt::governance::authz::{Access, RegisteredEntities, SERVICES_SOURCE};
 use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredSet, build_declared_set,
 };
@@ -16,6 +16,8 @@ use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::
 use systemprompt_web_admin_core::repositories::sync::attention::split_reviews;
 use systemprompt_web_admin_core::repositories::sync::history::KeptReview;
 
+const CONSOLE: &str = "console:ana";
+
 fn declared() -> DeclaredSet {
     let doc = parse_rules_doc(
         "entities:\n  - entity: mcp_server/dynbrain\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs]\n  - entity: mcp_server/dynapps-odoo\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n",
@@ -24,7 +26,6 @@ fn declared() -> DeclaredSet {
     build_declared_set(
         &doc,
         &DeclaredInputs {
-            gateway_routes: &[],
             marketplace_ids: &[],
             registered: &RegisteredEntities::default(),
         },
@@ -51,7 +52,7 @@ fn entity(entity_id: &str) -> EntityDefaultRow {
         entity_type: "mcp_server".to_owned(),
         entity_id: entity_id.to_owned(),
         default_included: false,
-        source: "yaml".to_owned(),
+        source: SERVICES_SOURCE.to_owned(),
     }
 }
 
@@ -74,7 +75,13 @@ fn an_entity_never_applied_is_new_in_code_and_not_live() {
 
 #[test]
 fn a_live_entity_missing_a_declared_rule_reads_as_removed_in_console() {
-    let rules = [row("dynbrain", "role", "admin", Access::Allow, "yaml")];
+    let rules = [row(
+        "dynbrain",
+        "role",
+        "admin",
+        Access::Allow,
+        SERVICES_SOURCE,
+    )];
     let entities = [entity("dynbrain"), entity("dynapps-odoo")];
     let reviews = review_entities(&compute_drift(&declared(), &rules, &entities));
     let dynbrain = find(&reviews, "dynbrain");
@@ -87,10 +94,22 @@ fn a_live_entity_missing_a_declared_rule_reads_as_removed_in_console() {
 #[test]
 fn a_disagreeing_row_is_changed_in_code_and_a_console_extra_is_only_in_console() {
     let rules = [
-        row("dynbrain", "role", "admin", Access::Deny, "yaml"),
-        row("dynbrain", "group", "india-devs", Access::Allow, "yaml"),
-        row("dynapps-odoo", "role", "admin", Access::Allow, "yaml"),
-        row("agent-farm", "group", "uk", Access::Allow, DASHBOARD_SOURCE),
+        row("dynbrain", "role", "admin", Access::Deny, SERVICES_SOURCE),
+        row(
+            "dynbrain",
+            "group",
+            "india-devs",
+            Access::Allow,
+            SERVICES_SOURCE,
+        ),
+        row(
+            "dynapps-odoo",
+            "role",
+            "admin",
+            Access::Allow,
+            SERVICES_SOURCE,
+        ),
+        row("agent-farm", "group", "uk", Access::Allow, CONSOLE),
     ];
     let entities = [
         entity("dynbrain"),
@@ -114,9 +133,21 @@ fn a_disagreeing_row_is_changed_in_code_and_a_console_extra_is_only_in_console()
 #[test]
 fn a_bundle_row_on_an_ungoverned_entity_is_never_reviewed() {
     let rules = [
-        row("dynbrain", "role", "admin", Access::Allow, "yaml"),
-        row("dynbrain", "group", "india-devs", Access::Allow, "yaml"),
-        row("dynapps-odoo", "role", "admin", Access::Allow, "yaml"),
+        row("dynbrain", "role", "admin", Access::Allow, SERVICES_SOURCE),
+        row(
+            "dynbrain",
+            "group",
+            "india-devs",
+            Access::Allow,
+            SERVICES_SOURCE,
+        ),
+        row(
+            "dynapps-odoo",
+            "role",
+            "admin",
+            Access::Allow,
+            SERVICES_SOURCE,
+        ),
         row("kitsrv", "group", "uk", Access::Allow, "bundle:sfnext"),
     ];
     let entities = [entity("dynbrain"), entity("dynapps-odoo")];
@@ -153,13 +184,7 @@ fn the_fingerprint_is_stable_and_moves_with_the_diff() {
         find(&a, "dynapps-odoo").fingerprint,
         find(&b, "dynapps-odoo").fingerprint
     );
-    let rules = [row(
-        "dynapps-odoo",
-        "group",
-        "uk",
-        Access::Allow,
-        DASHBOARD_SOURCE,
-    )];
+    let rules = [row("dynapps-odoo", "group", "uk", Access::Allow, CONSOLE)];
     let c = review_entities(&compute_drift(&declared(), &rules, &[]));
     assert_ne!(
         find(&a, "dynapps-odoo").fingerprint,

@@ -7,12 +7,14 @@ gateway:
   # a rule on one does not silently apply to the other.
   routes:
   - id: contract-claude
-    model_pattern: claude-*
-    provider: anthropic
+    models:
+    - claude-*
+    deployments:
+    - anthropic/api
   - id: contract-gpt
-    model_pattern: gpt-*
-    provider: anthropic
-  default_provider: null
-  allow_unlisted_models: false
+    models:
+    - gpt-*
+    deployments:
+    - anthropic/api
   auth_scheme: bearer
   inference_path_prefix: /v1

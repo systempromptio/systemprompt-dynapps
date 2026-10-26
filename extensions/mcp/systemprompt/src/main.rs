@@ -4,8 +4,9 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
+use systemprompt::config::{LoadedProfile, SecretsService};
 use systemprompt::identifiers::McpServerId;
+use systemprompt::loader::BootContext;
 use systemprompt::system::AppContext;
 use systemprompt_mcp_agent::SystempromptServer;
 // Why: core discovers the governance authz hook, the connection snapshot
@@ -49,13 +50,12 @@ fn startup_timeout() -> Duration {
 }
 
 async fn init_context() -> Result<Arc<AppContext>> {
-    ProfileBootstrap::init().context("Failed to initialize profile")?;
-    SecretsBootstrap::init()
+    let profile = LoadedProfile::from_env().context("Failed to initialize profile")?;
+    let secrets = SecretsService::load(Arc::clone(&profile))
         .await
         .context("Failed to initialize secrets")?;
-    try_init_config(None).context("Failed to initialize configuration")?;
     Ok(Arc::new(
-        AppContext::new()
+        AppContext::new(BootContext::new(profile, secrets))
             .await
             .context("Failed to initialize application context")?,
     ))
@@ -122,8 +122,14 @@ async fn main() -> Result<()> {
     let server = SystempromptServer::new(
         Arc::clone(ctx.db_pool()),
         service_id.clone(),
-        Arc::clone(ctx.authz_hook()),
+        systemprompt_mcp_shared::auth::ServerAccess {
+            authz_hook: Arc::clone(ctx.authz_hook()),
+            services: ctx.services_watch().clone(),
+            token_authority: ctx.token_authority(),
+            config: Arc::clone(ctx.config_arc()),
+        },
         ctx.artifact_ingest_arc(),
+        systemprompt_mcp_agent::CliLocation::from_profile(ctx.profile()),
     );
     let router = systemprompt::mcp::create_router(
         server,

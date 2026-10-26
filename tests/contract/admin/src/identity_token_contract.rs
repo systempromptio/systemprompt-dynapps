@@ -107,21 +107,15 @@ async fn identity_token_is_signed_for_an_entitled_caller() {
     assert_eq!(header.alg, Algorithm::RS256);
     assert_eq!(
         header.kid.as_deref(),
-        Some(systemprompt_security::keys::authority::active_kid().expect("kid"))
+        Some(globals::signing_keys().active_kid())
     );
     let mut validation = Validation::new(Algorithm::RS256);
     validation.set_audience(&[AUDIENCE]);
-    validation.set_issuer(&[systemprompt::manifest::Config::get()
-        .expect("config")
-        .jwt_issuer
-        .as_str()]);
-    let claims = decode::<IdentityClaims>(
-        &token,
-        systemprompt_security::keys::authority::decoding_key().expect("decoding key"),
-        &validation,
-    )
-    .expect("token verifies against the authority key")
-    .claims;
+    validation.set_issuer(&[globals::boot().config().jwt_issuer.as_str()]);
+    let claims =
+        decode::<IdentityClaims>(&token, globals::signing_keys().decoding_key(), &validation)
+            .expect("token verifies against the authority key")
+            .claims;
     assert_eq!(claims.sub, admin_id.as_str());
     assert!(!claims.email.is_empty(), "email claim is populated");
     assert!(!claims.name.is_empty(), "name claim is populated");

@@ -17,15 +17,16 @@ use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(crate) async fn probe_session_connection(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     pool: &PgPool,
     user: &UserId,
     provider: &Provider,
 ) -> AdminResult<VerificationReport> {
+    let config = services.config();
     let scopes = provider
-        .session_scopes()
+        .session_scopes(&config)
         .ok_or_else(|| AdminError::BadRequest("Not a session-attested connector".into()))?;
-    let server = systemprompt::loader::ServicesBootstrap::get()
-        .map_err(AdminError::internal)?
+    let server = config
         .mcp_servers
         .get(provider.slug())
         .filter(|server| server.enabled)
@@ -51,8 +52,9 @@ pub(crate) async fn probe_session_connection(
         return Ok(report.finish());
     }
     let started = Instant::now();
-    let upstream =
-        |error: systemprompt::mcp::McpDomainError| AdminError::Upstream(error.to_string());
+    let upstream = |error: systemprompt::mcp::McpDomainError| {
+        AdminError::upstream("mcp connection probe", error)
+    };
     let probe: AdminResult<McpConnectionResult> =
         match (server.server_type, server.port, server.endpoint.as_deref()) {
             (McpServerType::Internal, Some(port), _) => validate_connection_with_auth(
@@ -93,7 +95,7 @@ fn record_reachability(
                 .clone()
                 .unwrap_or_else(|| "Server did not answer".to_owned()),
         )),
-        Err(error) => Err(AdminError::Upstream(error.to_string())),
+        Err(error) => Err(AdminError::upstream("mcp initialize", error.to_string())),
     };
     report.record("initialize", started, &reachable);
     if let (Ok(()), Ok(result)) = (reachable.map(|_| ()), probe) {

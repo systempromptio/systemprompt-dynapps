@@ -3,12 +3,11 @@
 //! reach every client format with both calls and the reasoning intact.
 
 use serde_json::{Value, json};
-use systemprompt::manifest::services::ProviderEntry;
 use systemprompt::wire::WireProtocol;
 
 use crate::dispatch::{Reply, dispatch_reply};
 use crate::fixtures::{Fixture, Inbound, load};
-use crate::providers::catalogue;
+use crate::providers::{Lane, catalogue};
 
 const THOUGHT: &str = "pondering-both-files";
 const CLIENTS: &[&str] = &["claude_code", "opencode", "codex", "cursor"];
@@ -200,17 +199,16 @@ fn check(reply: &str) -> Result<(), String> {
     Ok(())
 }
 
-async fn cell(fixture: &Fixture, provider: &ProviderEntry, stream: bool) -> Result<(), String> {
-    let model = provider.models.first().ok_or("no models")?;
+async fn cell(fixture: &Fixture, lane: &Lane, stream: bool) -> Result<(), String> {
     let reply = if stream {
-        Reply::sse(&streamed(provider.wire))
+        Reply::sse(&streamed(lane.wire))
     } else {
-        Reply::json(&buffered(provider.wire))
+        Reply::json(&buffered(lane.wire))
     };
     let captured = dispatch_reply(
         &with_stream(fixture, stream),
-        provider,
-        model.id.as_str(),
+        lane,
+        lane.model.as_str(),
         &reply,
     )
     .await?;
@@ -232,21 +230,17 @@ async fn cell(fixture: &Fixture, provider: &ProviderEntry, stream: bool) -> Resu
 
 #[tokio::test]
 async fn parallel_calls_and_reasoning_reach_every_client_buffered_and_streamed() {
-    let providers = catalogue();
+    let lanes = catalogue();
     let mut failures = Vec::new();
     let mut cells = 0;
     for client in CLIENTS {
         let fixture = load(client);
-        for provider in &providers {
+        for lane in &lanes {
             for stream in [false, true] {
                 cells += 1;
-                if let Err(e) = cell(&fixture, provider, stream).await {
+                if let Err(e) = cell(&fixture, lane, stream).await {
                     let mode = if stream { "stream" } else { "buffered" };
-                    failures.push(format!(
-                        "{} <- {} ({mode}): {e}",
-                        fixture.name,
-                        provider.name.as_str()
-                    ));
+                    failures.push(format!("{} <- {} ({mode}): {e}", fixture.name, lane.name));
                 }
             }
         }

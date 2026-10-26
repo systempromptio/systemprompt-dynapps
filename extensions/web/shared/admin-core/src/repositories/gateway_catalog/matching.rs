@@ -1,15 +1,11 @@
 //! Route-id synthesis and glob matching.
 //!
-//! Route ids are stable, slug-based identifiers derived from the model pattern
-//! plus a short hash of `(model_pattern, provider)`. [`glob_match`] implements
-//! the same first-match-wins `*` semantics the gateway uses at request time.
-//!
-//! Synthesis itself belongs to core and lives in
-//! `systemprompt::manifest::profile`. A second implementation here would only
-//! ever agree with core's by accident — the id is a hash, and any drift in the
-//! algorithm mints ids the gateway cannot dispatch — so the functions below
-//! delegate. They exist only to keep the `String`-returning signature this
-//! crate's callers expect, rather than core's `RouteId`.
+//! Declared routes carry their own ids; the one synthesized id left is the
+//! catalog route's (`slug + fnv1a6`), which core mints. A second
+//! implementation here would only ever agree with core's by accident, so the
+//! functions below delegate and exist only to keep the `String`-returning
+//! signature this crate's callers expect. [`glob_match`] implements the same
+//! `*` semantics a route's `models` globs use at request time.
 
 use crate::types::GatewayRouteView;
 
@@ -19,17 +15,15 @@ pub fn slugify_pattern(pattern: &str) -> String {
 }
 
 #[must_use]
-pub fn synthesize_route_id(model_pattern: &str, provider: &str) -> String {
-    systemprompt::manifest::services::synthesize_route_id(model_pattern, provider)
+pub fn synthesize_route_id(glob: &str, provider: &str) -> String {
+    systemprompt::manifest::services::synthesize_route_id(glob, provider)
         .as_str()
         .to_owned()
 }
 
 #[must_use]
 pub fn find_matching_route_index(routes: &[GatewayRouteView], model: &str) -> Option<usize> {
-    routes
-        .iter()
-        .position(|r| glob_match(&r.model_pattern, model))
+    routes.iter().position(|r| route_matches(r, model))
 }
 
 #[must_use]
@@ -37,7 +31,15 @@ pub fn find_matching_route<'a>(
     routes: &'a [GatewayRouteView],
     model: &str,
 ) -> Option<&'a GatewayRouteView> {
-    routes.iter().find(|r| glob_match(&r.model_pattern, model))
+    routes.iter().find(|r| route_matches(r, model))
+}
+
+fn route_matches(route: &GatewayRouteView, model: &str) -> bool {
+    route
+        .alias
+        .as_ref()
+        .is_some_and(|alias| alias.requested == model)
+        || route.models.iter().any(|glob| glob_match(glob, model))
 }
 
 #[must_use]

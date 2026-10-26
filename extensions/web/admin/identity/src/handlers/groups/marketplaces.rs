@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Extension, Path, State};
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
@@ -18,6 +18,7 @@ use systemprompt_web_shared::GroupId;
 
 use crate::repositories::groups::marketplaces as repo;
 use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::types::groups::SetGroupMarketplacesRequest;
 
 #[derive(Debug, Serialize)]
@@ -40,12 +41,14 @@ pub(crate) async fn list_group_marketplaces_handler(
 
 pub(crate) async fn set_group_marketplaces_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
     Path(group_id): Path<GroupId>,
     Json(body): Json<SetGroupMarketplacesRequest>,
 ) -> AdminResult<Response> {
     super::refuse_missing_group(&pool, &group_id).await?;
     let marketplace_ids =
-        repo::set_group_marketplaces(&pool, &group_id, &body.marketplace_ids).await?;
+        repo::set_group_marketplaces(&pool, &group_id, &body.marketplace_ids, &user_ctx.user_id)
+            .await?;
     Ok(Json(GroupMarketplacesResponse {
         group_id,
         marketplace_ids,

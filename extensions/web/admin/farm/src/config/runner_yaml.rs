@@ -107,7 +107,7 @@ fn default_machines_api() -> String {
 }
 
 const fn default_api_port() -> u16 {
-    8080
+    systemprompt::models::defaults::DEFAULT_API_PORT
 }
 
 const fn default_pool_size() -> usize {

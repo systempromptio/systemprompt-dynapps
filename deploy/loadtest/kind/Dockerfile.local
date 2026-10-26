@@ -8,7 +8,9 @@ ARG BASE=ghcr.io/systempromptio/systemprompt-dynapps:0.64.0
 FROM ${BASE}
 USER root
 COPY deploy/loadtest/kind/.bin/ /app/bin/
+COPY docker/entrypoint.sh /app/entrypoint.sh
+COPY scripts/check-config-applied.sh /app/bin/check-config-applied.sh
 COPY services /app/services
 COPY extensions/mcp /app/extensions/mcp
-RUN chown -R app:app /app/services /app/extensions/mcp && chmod 0755 /app/bin/systemprompt*
+RUN chown -R app:app /app/services /app/extensions/mcp && chmod 0755 /app/bin/systemprompt* /app/bin/check-config-applied.sh /app/entrypoint.sh
 USER app

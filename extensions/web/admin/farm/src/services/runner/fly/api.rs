@@ -8,9 +8,11 @@
 
 use std::collections::BTreeMap;
 use std::time::Duration;
+use systemprompt::traits::SecretStore;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use systemprompt::models::net::validate_outbound_url;
 
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
@@ -49,13 +51,13 @@ pub struct MachinesClient {
 }
 
 #[must_use]
-pub fn api_token() -> Option<String> {
+pub fn api_token(secrets: &dyn SecretStore) -> Option<String> {
     std::env::var(TOKEN_ENV)
         .ok()
         .or_else(|| {
-            systemprompt::config::SecretsBootstrap::get()
-                .ok()
-                .and_then(|s| s.get(TOKEN_SECRET).cloned())
+            secrets
+                .secret(TOKEN_SECRET)
+                .map(|secret| secret.expose().to_owned())
         })
         .filter(|t| !t.trim().is_empty())
 }
@@ -96,12 +98,17 @@ impl MachinesClient {
                 at: "machines client".to_owned(),
                 source,
             })?;
+        let base = format!(
+            "{}/v1/apps/{app}",
+            config.machines_api.trim_end_matches('/')
+        );
+        validate_outbound_url(&base).map_err(|source| FarmError::OutboundUrl {
+            url: base.clone(),
+            source,
+        })?;
         Ok(Self {
             http,
-            base: format!(
-                "{}/v1/apps/{app}",
-                config.machines_api.trim_end_matches('/')
-            ),
+            base,
             app: app.to_owned(),
             auth: auth_header(token),
         })

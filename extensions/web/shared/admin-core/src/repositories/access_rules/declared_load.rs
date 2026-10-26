@@ -17,8 +17,8 @@
 
 use std::path::Path;
 
-use systemprompt::governance::authz::{EntityKind, RegisteredEntities};
-use systemprompt::loader::ConfigLoader;
+use systemprompt::governance::authz::RegisteredEntities;
+use systemprompt::manifest::ServicesConfig;
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::declared::{DeclaredInputs, DeclaredSet, build_declared_set};
@@ -41,15 +41,9 @@ pub fn build_declared_from_doc(
     marketplace_ids: &[String],
     registered: &RegisteredEntities,
 ) -> Result<DeclaredSet, MarketplaceError> {
-    let gateway_routes: Vec<String> = registered
-        .known_ids(EntityKind::GatewayRoute)
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
     let mut set = build_declared_set(
         doc,
         &DeclaredInputs {
-            gateway_routes: &gateway_routes,
             marketplace_ids,
             registered,
         },
@@ -59,11 +53,11 @@ pub fn build_declared_from_doc(
     Ok(set)
 }
 
-pub fn marketplace_ids_from_services() -> Result<Vec<String>, MarketplaceError> {
-    let services = ConfigLoader::load()?;
-    Ok(services
+#[must_use]
+pub fn marketplace_ids_from_services(services: &ServicesConfig) -> Vec<String> {
+    services
         .marketplaces
         .keys()
         .map(|id| id.as_str().to_owned())
-        .collect())
+        .collect()
 }

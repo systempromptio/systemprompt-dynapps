@@ -5,6 +5,7 @@
 //! than buried among identity CRUD.
 
 use std::sync::Arc;
+use systemprompt::traits::BackgroundTasks;
 
 use axum::Json;
 use axum::extract::{Extension, Path, State};
@@ -42,6 +43,7 @@ pub(crate) async fn list_user_sessions_handler(
 pub(crate) async fn revoke_user_session_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(tasks): Extension<BackgroundTasks>,
     Path((user_id_raw, session_id_raw)): Path<(String, String)>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
@@ -53,13 +55,14 @@ pub(crate) async fn revoke_user_session_handler(
             "No live session with that id for this user".to_owned(),
         ));
     }
-    record(&pool, &user_ctx, &user_id, 1);
+    record(&tasks, &pool, &user_ctx, &user_id, 1);
     Ok(Json(RevokedResponse { revoked: 1 }).into_response())
 }
 
 pub(crate) async fn revoke_all_user_sessions_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(tasks): Extension<BackgroundTasks>,
     Path(user_id_raw): Path<String>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
@@ -67,7 +70,7 @@ pub(crate) async fn revoke_all_user_sessions_handler(
 
     let revoked = sessions::revoke_all_signin_sessions(&pool, &user_id).await?;
     if revoked > 0 {
-        record(&pool, &user_ctx, &user_id, revoked);
+        record(&tasks, &pool, &user_ctx, &user_id, revoked);
     }
     Ok(Json(RevokedResponse { revoked }).into_response())
 }
@@ -79,11 +82,17 @@ fn guard(user_ctx: &UserContext) -> Result<(), AdminError> {
     Ok(())
 }
 
-fn record(pool: &Arc<PgPool>, user_ctx: &UserContext, target: &UserId, count: u64) {
+fn record(
+    tasks: &BackgroundTasks,
+    pool: &Arc<PgPool>,
+    user_ctx: &UserContext,
+    target: &UserId,
+    count: u64,
+) {
     let pool = Arc::clone(pool);
     let actor = user_ctx.user_id.clone();
     let target = target.clone();
-    tokio::spawn(async move {
+    tasks.spawn("session_revocation_activity", async move {
         activity::record(
             &pool,
             NewActivity::entity_updated(

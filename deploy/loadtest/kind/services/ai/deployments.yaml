@@ -1,0 +1,10 @@
+deployments:
+  claude-haiku-5-5:
+  - mock-anthropic/messages
+  - mock-anthropic/eu
+  claude-opus-5-5:
+  - mock-anthropic/messages
+  - mock-anthropic/eu
+  claude-sonnet-5-5:
+  - mock-anthropic/messages
+  - mock-anthropic/eu

@@ -39,7 +39,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.72.1"
+version = "0.73.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -49,9 +49,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.72.1", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.72.1" }
-systemprompt-extension = { version = "0.72.1" }
+systemprompt = { version = "0.73.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.73.0" }
+systemprompt-extension = { version = "0.73.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -89,7 +89,7 @@ serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 # Tool-schema meta-validation only: no HTTP/file resolution, so a `$ref` never
 # leaves the document (extensions/mcp/shared/src/tool_schema.rs).
-jsonschema = { version = "=0.56.0", default-features = false }
+jsonschema = { version = "=0.60.0", default-features = false }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 uuid = { version = "1.28", features = ["v4", "serde"] }
@@ -104,7 +104,7 @@ tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.7", features = ["cors", "trace", "fs", "normalize-path"] }
 
 # Utilities
-chacha20poly1305 = "0.10"
+chacha20poly1305 = { version = "0.10", features = ["std"] }
 schemars = { version = "1.2", features = ["derive"] }
 inventory = "0.3"
 walkdir = "2.0"
@@ -131,7 +131,7 @@ handlebars = "6"
 # Archive
 
 # MCP Protocol
-rmcp = { version = "=3.5.1", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
+rmcp = { version = "=3.7.0", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
 
 # The tests/ workspace deliberately relaxes a handful of these (unwrap/expect/
 # panic and the doc lints) in its own [workspace.lints.clippy] block — see
@@ -274,6 +274,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
+# INACTIVE: built against the published core 0.73.0 crates.
 # [patch.crates-io]
 # systemprompt = { path = "../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }

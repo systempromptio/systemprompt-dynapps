@@ -48,7 +48,7 @@ The gateway tests the key before saving it and rejects one that OpenCode Go refu
 
 ## 3. Pick a go-* model
 
-After the profile refresh, OpenCode lists the Go models with a `go-` prefix. The prefix keeps them separate from the organization's own `deepseek-*` route, which uses the platform key.
+After the profile refresh, OpenCode lists the Go models. OpenCode Go is one provider, `opencode-go`, with two endpoints: `chat` (Chat Completions) and `messages` (Anthropic Messages). Both use the one key you stored, so you add it once.
 
 | Model id | Upstream model | Endpoint |
 |----------|----------------|----------|
@@ -59,6 +59,8 @@ After the profile refresh, OpenCode lists the Go models with a `go-` prefix. The
 | `go-mimo-v2.6-pro`, `go-mimo-v2.6-flash` | `mimo-v2.6-*` | Chat Completions |
 | `go-minimax-m3` | `minimax-m3` | Anthropic Messages |
 | `go-qwen3.8-max`, `go-qwen3.8-flash` | `qwen3.8-*` | Anthropic Messages |
+
+`deepseek-v4-pro` and `go-deepseek-v4-pro` are separate models. `deepseek-v4-pro` is served only by DeepSeek's own API on the organization's key; `go-deepseek-v4-pro` is served only by OpenCode Go on your key. A request for one is never served as the other, so your Go plan is billed only when you ask for a `go-*` id.
 
 Pick one in OpenCode and send a prompt. If you have not added a key, the gateway refuses `go-*` requests with a 403 telling you to add one.
 

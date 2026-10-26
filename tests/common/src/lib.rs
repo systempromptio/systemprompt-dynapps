@@ -11,6 +11,8 @@ pub mod onepassword_fake;
 pub mod onepassword_fake_cli;
 pub mod orphans;
 pub mod paths;
+pub mod secrets_fixture;
+pub mod services;
 pub mod skip;
 pub mod sso;
 pub mod tempdb;
@@ -21,6 +23,20 @@ pub use fake_portal::{DYNBRAIN_PATH, FakePortal, ODOO_PATH, TokenPair};
 pub use onepassword_fake::FakeConnect;
 pub use onepassword_fake_cli::FakeOpCli;
 pub use paths::{repo_path, repo_root};
+
+use systemprompt::security::keys::{RsaSigningKey, SigningKeys};
+
+pub fn ephemeral_signing_keys() -> SigningKeys {
+    let key = RsaSigningKey::generate().expect("generate an ephemeral RSA signing key");
+    SigningKeys::new(key, &[9; 32]).expect("build the signing keys")
+}
+pub use secrets_fixture::{
+    BootFixture, bootstrap_master_key, bootstrap_signing_config, bootstrap_with_secrets,
+};
+pub use services::{
+    empty_services_view, extension_services, fixture_secret_store, offline_extension_services,
+    secret_store_without_master_key, services_view,
+};
 pub use skip::{ci, skip_or_panic};
 pub use sso::{FakeOidcIdp, HeaderSpec, IdTokenSpec, KidForm, TestIdpKeys, TokenForm};
 pub use tempdb::TempDb;

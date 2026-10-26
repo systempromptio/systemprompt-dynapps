@@ -13,7 +13,8 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
-use systemprompt::loader::ConfigLoader;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt::manifest::services::catalog::CatalogContext;
 use systemprompt::models::execution::context::RequestContext;
 
 use crate::repositories::analysis::reports::{
@@ -37,29 +38,31 @@ pub(crate) struct ReportModel {
 }
 
 impl ReportModel {
-    pub(crate) fn judge_model() -> AdminResult<Self> {
-        let services = ConfigLoader::load().map_err(AdminError::internal)?;
+    pub(crate) fn judge_model(services: &ServicesConfig) -> AdminResult<Self> {
         let judge = services
             .scheduler
             .as_ref()
             .and_then(|s| s.jobs.iter().find(|j| j.name == JUDGE_JOB_NAME));
-        let provider = judge
-            .and_then(|j| j.parameters.get("provider").cloned())
-            .filter(|p| !p.is_empty())
-            .unwrap_or_else(|| services.ai.default_provider.clone());
-        let model = judge
-            .and_then(|j| j.parameters.get("model").cloned())
-            .filter(|m| !m.is_empty())
+        let param = |name: &str| {
+            judge
+                .and_then(|j| j.parameters.get(name).cloned())
+                .filter(|v| !v.is_empty())
+        };
+        let catalog = services
+            .resolve_catalog(&CatalogContext::default())
+            .map_err(AdminError::internal)?;
+        let model = param("model")
+            .or_else(|| catalog.default_model().map(|m| m.as_str().to_owned()))
+            .ok_or_else(|| AdminError::internal("no judge model and no catalog default model"))?;
+        let provider = param("provider")
             .or_else(|| {
-                services
-                    .ai
-                    .providers
-                    .get(&provider)
-                    .map(|p| p.default_model.clone())
-                    .filter(|m| !m.is_empty())
+                catalog
+                    .enabled_hops(&model)
+                    .next()
+                    .map(|hop| hop.provider.as_str().to_owned())
             })
             .ok_or_else(|| {
-                AdminError::internal(format!("no model is configured for provider {provider}"))
+                AdminError::internal(format!("no enabled deployment serves model {model}"))
             })?;
         Ok(Self { provider, model })
     }
@@ -142,18 +145,28 @@ async fn call_model(
     Ok(())
 }
 
+pub(crate) struct ReportJob {
+    pub(crate) requested_by: UserId,
+    pub(crate) row: AnalysisReportRow,
+    pub(crate) lease: String,
+}
+
 pub(crate) async fn generate_report(
     pool: Arc<PgPool>,
     ai: Option<Arc<AiService>>,
-    requested_by: UserId,
-    row: AnalysisReportRow,
-    lease: String,
+    services: Arc<ServicesConfig>,
+    job: ReportJob,
 ) {
+    let ReportJob {
+        requested_by,
+        row,
+        lease,
+    } = job;
     let outcome = match ai {
         None => Err(AdminError::internal(
             "no AI provider is configured on this instance, so a report cannot be written",
         )),
-        Some(ai) => match ReportModel::judge_model() {
+        Some(ai) => match ReportModel::judge_model(&services) {
             Err(error) => Err(error),
             Ok(model) => {
                 let grant = Grant {

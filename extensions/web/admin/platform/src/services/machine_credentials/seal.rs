@@ -6,6 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::UserId;
+use systemprompt::traits::SecretStore;
 use systemprompt_web_admin_core::crypto::secret_crypto;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
@@ -28,8 +29,13 @@ pub(super) struct Sealed {
     pub nonce: Vec<u8>,
 }
 
-pub(super) fn seal(user: &UserId, provider: &str, secret: String) -> AdminResult<Sealed> {
-    let key = secret_crypto::load_master_key()?;
+pub(super) fn seal(
+    secrets: &dyn SecretStore,
+    user: &UserId,
+    provider: &str,
+    secret: String,
+) -> AdminResult<Sealed> {
+    let key = secret_crypto::load_master_key(secrets)?;
     let nonce = secret_crypto::generate_nonce();
     let envelope = serde_json::to_vec(&SealedSecret {
         user: user.as_str().to_owned(),
@@ -45,12 +51,13 @@ pub(super) fn seal(user: &UserId, provider: &str, secret: String) -> AdminResult
 }
 
 pub(super) fn unseal(
+    secrets: &dyn SecretStore,
     ciphertext: &[u8],
     nonce: &[u8],
     user: &UserId,
     provider: &str,
 ) -> AdminResult<String> {
-    let key = secret_crypto::load_master_key()?;
+    let key = secret_crypto::load_master_key(secrets)?;
     let nonce = nonce.try_into().map_err(AdminError::internal)?;
     let bytes = secret_crypto::decrypt(&key, &nonce, ciphertext)?;
     let sealed: SealedSecret = serde_json::from_slice(&bytes).map_err(AdminError::internal)?;

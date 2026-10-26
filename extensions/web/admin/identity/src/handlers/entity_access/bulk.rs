@@ -8,12 +8,14 @@
 use std::sync::Arc;
 
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::{Extension, Query, State};
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use systemprompt::governance::authz::{Access, AccessRule, EntityRef};
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::change_source::console_source;
 
 use super::support::{collect_entity_ids, parse_subject, repo, validate_entity_type};
 use super::template::{Tally, TemplateSubject, clear_subject_rules, upsert_subject_rule};
@@ -24,11 +26,15 @@ use super::types::{
 use super::{require_non_blank, shared_band_lacks_reason, trimmed_reason};
 
 pub(crate) async fn list_all_entity_access_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AllAccessQuery>,
 ) -> AdminResult<Response> {
     let kind = validate_entity_type(&query.entity_type)?;
-    let entity_ids = collect_entity_ids(&query.entity_type)?;
+    let entity_ids = collect_entity_ids(&services, &boot, &query.entity_type)?;
     let r = repo(&pool);
     let bulk = r
         .list_rules_bulk(kind, &entity_ids)
@@ -61,7 +67,12 @@ pub(crate) async fn list_all_entity_access_handler(
 }
 
 pub(crate) async fn apply_template_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
     Json(body): Json<ApplyTemplateBody>,
 ) -> AdminResult<Response> {
     let kind = validate_entity_type(&body.entity_type)?;
@@ -81,13 +92,15 @@ pub(crate) async fn apply_template_handler(
         ));
     }
 
-    let entity_ids = collect_entity_ids(&body.entity_type)?;
+    let entity_ids = collect_entity_ids(&services, &boot, &body.entity_type)?;
     let r = repo(&pool);
+    let source = console_source(&user_ctx.user_id);
     let subject = TemplateSubject {
         kind,
         rule_type: &rule_type,
         rule_value: &rule_value,
         justification,
+        source: &source,
     };
     let mut tally = Tally::default();
 

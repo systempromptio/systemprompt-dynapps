@@ -10,7 +10,7 @@ branding:
   description: "Governed AI for Dynapps teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools, with every action audited."
   copyright: "2026 Dynapps"
   tagline: "Odoo, shaped around how you work."
-  themeColor: "#01007C"
+  theme_color: "#01007C"
   platform_name: "Dynapps"
   support_email: "ed@systemprompt.io"
   logo_light: "/files/images/logo.svg"

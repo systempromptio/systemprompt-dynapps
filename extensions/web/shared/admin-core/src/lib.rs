@@ -14,6 +14,8 @@ pub mod crypto;
 pub mod error;
 pub mod event_hub;
 pub mod export;
+pub mod extension_boot;
+pub mod extension_services;
 pub mod marketplace_filter;
 pub mod middleware;
 pub mod numeric;

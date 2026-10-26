@@ -6,7 +6,8 @@ use std::sync::Arc;
 use systemprompt::analytics::ContentAnalyticsRepository;
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
-use systemprompt::generator::prerender_content;
+use systemprompt::generator::{PrerenderEnv, prerender_content};
+use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
@@ -46,6 +47,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let db_pool = ctx.get::<DbPool>()?;
     let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
+    let app = ctx.get::<Arc<AppContext>>()?;
 
     let content_repo = systemprompt::content::ContentRepository::new(db_pool);
 
@@ -55,7 +57,11 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         DbPool::clone(db_pool),
         content_repo,
         content_analytics,
-        paths,
+        PrerenderEnv {
+            config: app.config(),
+            paths,
+            extensions: app.as_ref(),
+        },
     )
     .await?;
 

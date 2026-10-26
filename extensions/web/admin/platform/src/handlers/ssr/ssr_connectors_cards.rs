@@ -102,11 +102,12 @@ fn blurb(glyph: &str) -> String {
     }
 }
 
-fn used_by(provider: &str) -> Vec<String> {
-    let Ok(services) = systemprompt::loader::ServicesBootstrap::get() else {
-        return Vec::new();
-    };
+fn used_by(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    provider: &str,
+) -> Vec<String> {
     let mut names: Vec<String> = services
+        .config()
         .plugins
         .values()
         .filter(|p| p.enabled)
@@ -192,7 +193,10 @@ fn actions(c: &Connection) -> Vec<ActionView> {
         .collect()
 }
 
-pub fn card(c: &Connection) -> ConnectorCardView {
+pub fn card(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    c: &Connection,
+) -> ConnectorCardView {
     let glyph = family(&c.provider);
     let verified_relative = c
         .verified_at
@@ -207,7 +211,7 @@ pub fn card(c: &Connection) -> ConnectorCardView {
         monogram: monogram(glyph, &c.display_name),
         kind: kind(glyph),
         blurb: blurb(glyph),
-        used_by: used_by(&c.provider),
+        used_by: used_by(services, &c.provider),
         status: c.status.clone(),
         status_label: status_label(&c.status),
         tone: tone(&c.status),

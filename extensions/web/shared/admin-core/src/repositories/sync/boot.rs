@@ -1,21 +1,17 @@
-//! What boot does with every plane: seed an empty projection, otherwise look
-//! and report.
+//! What boot does with the install's own planes (groups and the staging copy
+//! of the gateway routes): look and report, and seed an empty projection.
 //!
-//! The database is what is enforced and what the console edits; the file is
-//! what the database is expected to contain. Boot therefore writes exactly
-//! once per plane — when there is nothing yet to disagree with — and every
-//! later start computes the drift and says so in the log, leaving the
-//! decision to reconcile to an administrator on `/admin/sync`. Upserting on
-//! every start was how console edits vanished overnight and how rules for
-//! deleted entities lived on for months; one loop over the registry is what
-//! stops a plane from drifting back to that.
+//! The planes core owns are core's at boot too: nothing here touches them,
+//! and they reach the database through `systemprompt admin config apply` and
+//! `/admin/sync`. An install plane's file is what its table is expected to
+//! contain; every start computes the drift and says so in the log, and seeds
+//! the table once, when there is nothing yet to disagree with. Upserting on
+//! every start was how console edits vanished overnight; one loop over the
+//! two planes is what stops a plane from drifting back to that.
 //!
 //! A declaration that cannot be read fails the boot. The page turns the same
 //! condition into a card headline because an operator came to look; a server
 //! starting with half its declarations is a server nobody asked for.
-//!
-//! Groups seed before access control because the rules name group and
-//! project ids.
 
 use sqlx::PgPool;
 
@@ -23,14 +19,9 @@ use super::plane::{Actor, SyncMode, SyncPlane};
 use super::plane_ids;
 use super::registry::find_plane;
 use crate::error::{AdminError, AdminResult};
+use crate::extension_boot::ExtensionBoot;
 
-pub const BOOT_ORDER: [&str; 5] = [
-    plane_ids::GROUPS,
-    plane_ids::ACCESS_CONTROL,
-    plane_ids::GATEWAY_POLICIES,
-    plane_ids::GATEWAY_ROUTES,
-    plane_ids::GOVERNANCE,
-];
+pub const BOOT_ORDER: [&str; 2] = [plane_ids::GROUPS, plane_ids::GATEWAY_ROUTES];
 
 /// One plane's boot outcome, for the log line.
 #[derive(Debug, Clone, Copy, Default)]
@@ -45,10 +36,7 @@ pub struct PlaneBoot {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct BootReport {
     pub groups: PlaneBoot,
-    pub access_control: PlaneBoot,
-    pub gateway_policies: PlaneBoot,
     pub gateway_routes: PlaneBoot,
-    pub governance: PlaneBoot,
 }
 
 pub async fn reconcile_plane(pool: &PgPool, plane: &dyn SyncPlane) -> AdminResult<PlaneBoot> {
@@ -100,18 +88,16 @@ pub async fn reconcile_plane(pool: &PgPool, plane: &dyn SyncPlane) -> AdminResul
     Ok(boot)
 }
 
-pub async fn reconcile_all(pool: &PgPool) -> AdminResult<BootReport> {
+pub async fn reconcile_all(pool: &PgPool, boot: &ExtensionBoot) -> AdminResult<BootReport> {
     let mut report = BootReport::default();
     for id in BOOT_ORDER {
-        let plane = find_plane(id)
+        let plane = find_plane(boot, id)
             .ok_or_else(|| AdminError::internal(format!("sync plane '{id}' is not registered")))?;
-        let boot = reconcile_plane(pool, plane.as_ref()).await?;
-        match id {
-            plane_ids::GROUPS => report.groups = boot,
-            plane_ids::ACCESS_CONTROL => report.access_control = boot,
-            plane_ids::GATEWAY_POLICIES => report.gateway_policies = boot,
-            plane_ids::GATEWAY_ROUTES => report.gateway_routes = boot,
-            _ => report.governance = boot,
+        let seeded = reconcile_plane(pool, plane.as_ref()).await?;
+        if id == plane_ids::GROUPS {
+            report.groups = seeded;
+        } else {
+            report.gateway_routes = seeded;
         }
     }
     Ok(report)

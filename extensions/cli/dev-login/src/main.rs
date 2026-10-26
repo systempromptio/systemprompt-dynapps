@@ -7,9 +7,12 @@
 //! that decides whether the redeem route is mounted at all. The code is
 //! single-use and expires after ten minutes; only its hash is stored.
 
+use std::sync::Arc;
+
 use anyhow::{Context, Result, bail, ensure};
 use clap::Parser;
-use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
+use systemprompt::config::{LoadedProfile, SecretsService};
+use systemprompt::loader::BootContext;
 use systemprompt::logging::CliService;
 use systemprompt::system::AppContext;
 use systemprompt_secrets_onepassword as _;
@@ -55,7 +58,7 @@ async fn main() -> Result<()> {
     install_tls_crypto_provider();
     let cli = Cli::parse();
 
-    let profile = ProfileBootstrap::init()
+    let profile = LoadedProfile::from_env()
         .context("SYSTEMPROMPT_PROFILE must name a profile.yaml (run via `systemprompt plugins run dev-login`)")?;
     ensure!(
         dev_login_allowed(profile.runtime.environment, profile.target),
@@ -63,12 +66,11 @@ async fn main() -> Result<()> {
         profile.runtime.environment,
         profile.target
     );
-    SecretsBootstrap::init()
+    let secrets = SecretsService::load(Arc::clone(&profile))
         .await
         .context("Failed to initialize secrets")?;
-    try_init_config(None).context("Failed to initialize configuration")?;
 
-    let ctx = AppContext::new()
+    let ctx = AppContext::new(BootContext::new(profile, secrets))
         .await
         .context("Failed to initialize application context")?;
     let pool = ctx.db_pool().pool();
@@ -78,7 +80,7 @@ async fn main() -> Result<()> {
     };
     let issued = insert_dev_login_code(&pool, &user_id).await?;
 
-    let url = dev_login_url(&profile.server.api_external_url, &issued.code);
+    let url = dev_login_url(&ctx.config().api_external_url, &issued.code);
     CliService::info(&format!(
         "Single-use link for {} (valid {} minutes, expires {}):",
         cli.user,

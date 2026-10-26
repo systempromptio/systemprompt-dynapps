@@ -141,9 +141,9 @@ for decl in rules_doc.get("entities") or []:
             errors.append(
                 f"rules.yaml: {ref}: {etype} ids are generated, never written — use {etype}/*"
             )
-    elif "*" in eid:
-        errors.append(f"rules.yaml: {ref}: only gateway_route and hook take a glob")
-    else:
+    elif "*" in eid and etype != "model":
+        errors.append(f"rules.yaml: {ref}: only gateway_route, hook and model take a glob")
+    elif etype != "model":
         pool = known.get(etype)
         owner = decl.get("owner")
         # An entity a remote bundle owns (`owner: bundle:<name>`) may be absent

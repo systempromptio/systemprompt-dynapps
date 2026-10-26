@@ -25,7 +25,6 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use super::drift::{DriftReport, OrphanOrigin};
-use crate::repositories::sync::access_control_rows::band_label;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -234,4 +233,17 @@ pub fn review_entities(drift: &DriftReport) -> Vec<EntityReview> {
         .collect();
     out.sort_by(|a, b| (a.kind, &a.key).cmp(&(b.kind, &b.key)));
     out
+}
+
+#[must_use]
+pub fn band_label(rule_type: &str) -> &'static str {
+    match rule_type {
+        "user" => "person",
+        "project" => "project",
+        "group" => "group",
+        "connector" => "connected server",
+        "role" => "role",
+        "organization" => "organization",
+        _ => "band",
+    }
 }

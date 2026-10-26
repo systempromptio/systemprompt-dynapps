@@ -27,7 +27,7 @@ extensions/web/admin/analytics/src/repositories/dashboard/queries.rs#4daac6530c
 extensions/web/admin/analytics/src/repositories/dashboard/queries.rs#9e3dda5882
 extensions/web/admin/analytics/src/repositories/dashboard/queries.rs#b08399c3b9
 extensions/web/admin/analytics/src/repositories/dashboard/usage_aggregations/session_updates.rs#f7e73c3826
-extensions/web/admin/analytics/src/repositories/overview/series.sql#79e6d19ef3
+extensions/web/admin/analytics/src/repositories/overview/series.sql#f19af8ef79
 extensions/web/admin/analytics/src/repositories/traces/list.sql#af298c97d9
 extensions/web/admin/analytics/src/repositories/traces/stats.sql#25cf01d53d
 extensions/web/admin/catalog/src/repositories/analysis/plugin_eval.sql#366ac79b2d
@@ -58,7 +58,7 @@ extensions/web/admin/identity/src/repositories/projects/activity.rs#1ec43e7294
 extensions/web/admin/identity/src/repositories/projects/usage.rs#4838149f83
 extensions/web/admin/identity/src/repositories/users/queries/detail.rs#147a8d29d2
 extensions/web/admin/identity/src/repositories/users/roster/page.sql#c4cb2de7ca
-extensions/web/jobs/src/conversation_judge/discovery.rs#d15580a035
+extensions/web/jobs/src/conversation_judge/discovery.rs#a0499efeb0
 extensions/web/jobs/src/retention/daily_report.rs#635270f466
 extensions/web/jobs/src/retention/health.rs#2e46ca66e4
 extensions/web/shared/admin-core/src/repositories/agent_run_facts/facts.sql#b19e4497bc

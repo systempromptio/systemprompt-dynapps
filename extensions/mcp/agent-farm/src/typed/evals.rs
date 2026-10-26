@@ -134,10 +134,11 @@ async fn eval_results(
     let history = eval_history(ctx, &input).await?;
 
     let pool = ctx.pool()?;
+    let services = ctx.services()?;
     let mut usable: Vec<FarmId> = Vec::new();
     if input.farm.trim().is_empty() {
         for farm in farms::list_farms(pool).await? {
-            if may_use_farm(pool, ctx.viewer.context()?, &farm).await? {
+            if may_use_farm(pool, services, ctx.viewer.context()?, &farm).await? {
                 usable.push(farm.id);
             }
         }
@@ -195,7 +196,9 @@ async fn eval_history(
     ctx: &ToolCtx<'_>,
     input: &FarmEvalResultsInput,
 ) -> ToolResult<Vec<super::outputs::EvalDayOutput>> {
-    use systemprompt_web_admin_farm::services::evals::{list_visible_history, parse_since};
+    use systemprompt_web_admin_farm::services::evals::{
+        HistoryScope, list_visible_history, parse_since,
+    };
     use systemprompt_web_admin_farm::types::FarmId;
 
     use super::outputs::EvalDayOutput;
@@ -214,10 +217,13 @@ async fn eval_history(
         .map(FarmId::new);
     let points = list_visible_history(
         ctx.pool()?,
+        ctx.services()?,
         ctx.viewer.context()?,
-        farm.as_ref(),
-        None,
-        since,
+        HistoryScope {
+            farm: farm.as_ref(),
+            agent: None,
+            since,
+        },
     )
     .await?;
     Ok(points

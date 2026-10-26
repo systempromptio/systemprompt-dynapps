@@ -8,6 +8,8 @@ use crate::error::OnePasswordError;
 use crate::item::Item;
 use crate::reference::OpReference;
 
+/// Where 1Password items are read from. `#[async_trait]` because the
+/// resolver holds its backend as a `dyn Backend`.
 #[async_trait]
 pub trait Backend: Send + Sync {
     fn label(&self) -> &'static str;

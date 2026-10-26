@@ -33,7 +33,7 @@ fn every_portal_server_is_an_enabled_generic_oauth_connector() {
             "{name} ships enabled"
         );
         assert_eq!(
-            entry["type"].as_str(),
+            entry["server_type"].as_str(),
             Some("external"),
             "{name} is an external server"
         );

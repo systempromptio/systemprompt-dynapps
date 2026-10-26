@@ -1,0 +1,48 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Spend and requests per bucket, split by one dimension of `ai_requests`:\n-- the model that served the request or the client that made it. The top six\n-- keys by window cost keep their own series and the tail folds into 'Other',\n-- so the seven chart colours always suffice and a key's colour agrees with\n-- the model board's ranking. Rows are sparse — the view pivots them onto the\n-- same $3-bucket spine the overview series draws.\nWITH keyed AS (\n    SELECT LEAST($3::INT - 1,\n                 FLOOR(EXTRACT(EPOCH FROM (r.created_at - $1)) / $4::FLOAT8)::INT) AS bucket,\n           CASE WHEN $5::TEXT = 'model' THEN COALESCE(r.model, 'unrouted')\n                ELSE r.client_kind END AS key,\n           r.cost_microdollars\n    FROM ai_requests r\n    WHERE r.traffic = 'production'\n      AND r.created_at >= $1\n      AND r.created_at < $2\n), ranked AS (\n    SELECT key\n    FROM keyed\n    GROUP BY key\n    ORDER BY SUM(cost_microdollars) DESC, COUNT(*) DESC, key\n    LIMIT 6\n)\nSELECT k.bucket AS \"bucket!\",\n       CASE WHEN ranked.key IS NULL THEN 'Other' ELSE k.key END AS \"key!\",\n       COALESCE(SUM(k.cost_microdollars), 0)::BIGINT AS \"cost!\",\n       COUNT(*)::BIGINT AS \"requests!\"\nFROM keyed k\nLEFT JOIN ranked ON ranked.key = k.key\nGROUP BY 1, 2\nORDER BY 1, 2\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "bucket!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "key!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "cost!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "48869f04a179302f5b689e1f04a3e1fea6a01c052b118a51f101761dc0d26ea0"
+}

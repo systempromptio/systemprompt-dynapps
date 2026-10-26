@@ -14,6 +14,7 @@ use systemprompt_web_admin_farm::state::FarmState;
 pub struct Env {
     pub pool: Arc<PgPool>,
     pub services_path: PathBuf,
+    pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
     #[cfg(feature = "farm")]
     pub farm: Option<Arc<FarmState>>,
 }

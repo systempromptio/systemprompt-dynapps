@@ -4,16 +4,21 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::security_policy::{SecurityPolicy, bound_pat_expiry};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::bridge;
 use systemprompt_web_admin_core::repositories::bridge::{
     EnrollDeviceParams, EnrolledDevice, IssuedApiKey,
 };
+use systemprompt_web_admin_core::repositories::security_policy::{
+    SecurityPolicy, bound_pat_expiry,
+};
 
-fn policy_bounded(expires_at: Option<DateTime<Utc>>) -> AdminResult<DateTime<Utc>> {
-    bound_pat_expiry(expires_at, Utc::now(), SecurityPolicy::get())
-        .map_err(|e| AdminError::BadRequest(e.to_string()))
+fn policy_bounded(
+    policy: SecurityPolicy,
+    expires_at: Option<DateTime<Utc>>,
+) -> AdminResult<DateTime<Utc>> {
+    bound_pat_expiry(expires_at, Utc::now(), policy)
+        .map_err(|e| AdminError::invalid("expires_at", e))
 }
 
 pub(crate) struct EnrollDeviceInput<'a> {
@@ -25,10 +30,11 @@ pub(crate) struct EnrollDeviceInput<'a> {
 
 pub(crate) async fn enroll_device(
     pool: &PgPool,
+    policy: SecurityPolicy,
     user_id: &UserId,
     req: EnrollDeviceInput<'_>,
 ) -> AdminResult<EnrolledDevice> {
-    let expires_at = policy_bounded(req.expires_at)?;
+    let expires_at = policy_bounded(policy, req.expires_at)?;
     let enrolled = bridge::enroll_device(
         pool,
         user_id,
@@ -45,11 +51,12 @@ pub(crate) async fn enroll_device(
 
 pub(crate) async fn issue_pat(
     pool: &PgPool,
+    policy: SecurityPolicy,
     user_id: &UserId,
     name: &str,
     expires_at: Option<DateTime<Utc>>,
 ) -> AdminResult<IssuedApiKey> {
-    let expires_at = policy_bounded(expires_at)?;
+    let expires_at = policy_bounded(policy, expires_at)?;
     let issued = bridge::issue_api_key(pool, user_id, name, Some(expires_at)).await?;
     Ok(issued)
 }

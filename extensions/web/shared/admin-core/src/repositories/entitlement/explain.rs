@@ -182,15 +182,16 @@ pub fn explain(input: &ExplainInput<'_>) -> Explanation {
 
 pub async fn explain_for_user(
     pool: &sqlx::PgPool,
+    services: &crate::extension_services::ExtensionServices,
     user_id: &UserId,
     entity_type: &str,
     entity_id: &str,
-) -> Result<Option<Explanation>, sqlx::Error> {
+) -> Result<Option<Explanation>, crate::authz::AuthzReadError> {
     let Some(user) = super::matrix::find_user_for_matrix(pool, user_id).await? else {
         return Ok(None);
     };
-    let subject = super::matrix_subject::user_subject(pool, user_id, user.roles).await?;
-    let inputs = super::matrix::resolution_inputs(pool).await?;
+    let subject = super::matrix_subject::user_subject(services, user_id, user.roles).await?;
+    let inputs = super::matrix::resolution_inputs(pool, services).await?;
     let default_open = inputs
         .defaults
         .get(&(entity_type.to_owned(), entity_id.to_owned()))
@@ -201,7 +202,7 @@ pub async fn explain_for_user(
         entity_type,
         entity_id,
         subject: &subject,
-        dimensions: crate::authz::dimensions(pool),
+        dimensions: (services).dimensions(),
         default_open,
         chains: &inputs.chains,
     })))

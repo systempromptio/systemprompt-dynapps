@@ -52,6 +52,9 @@ struct ServiceAccountPage {
 }
 
 pub(crate) async fn service_account_page(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     shell: Page,
     Extension(accounts): Extension<ServiceAccounts>,
     State(pool): State<Arc<PgPool>>,
@@ -76,7 +79,7 @@ pub(crate) async fn service_account_page(
     let portal_grants = faults
         .take(
             "portal grants",
-            get_connections(&pool, &user_id)
+            get_connections(&pool, &services, &user_id)
                 .await
                 .map(|snapshot| snapshot.connections),
         )

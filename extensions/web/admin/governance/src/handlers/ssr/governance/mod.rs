@@ -16,6 +16,8 @@
 //! **Sync**, is the `governance` plane's card ([`sync_tab`]).
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
@@ -30,8 +32,7 @@ use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScop
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::{DEFAULT_PAGE_SIZE, scope_filter_view};
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 mod columns;
@@ -153,15 +154,19 @@ pub(crate) async fn export_findings(
 }
 
 pub(crate) async fn governance_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    page: Page,
+    Extension(core_planes): Extension<CorePlanes>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<GovernanceQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = page;
     require_console(&user_ctx)?;
     if systemprompt_web_admin_core::ssr::sync_plane::is_sync_tab(query.tab.as_deref()) {
-        return sync_tab::sync_page(&pool, &user_ctx, &mkt_ctx, &engine).await;
+        return sync_tab::sync_page(&pool, &core_planes, &user_ctx, &mkt_ctx, &engine).await;
     }
 
     let tab = GovernanceTab::parse(query.tab.as_deref());

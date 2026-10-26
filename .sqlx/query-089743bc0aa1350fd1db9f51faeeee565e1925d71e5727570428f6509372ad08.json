@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO gateway_routes (id, position, route, source, updated_at)\n          VALUES ($1, $2, $3, $4, NOW())\n          ON CONFLICT (id) DO UPDATE\n             SET position = EXCLUDED.position,\n                 route = EXCLUDED.route,\n                 source = EXCLUDED.source,\n                 updated_at = NOW()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "089743bc0aa1350fd1db9f51faeeee565e1925d71e5727570428f6509372ad08"
+}

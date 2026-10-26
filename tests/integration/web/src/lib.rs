@@ -56,6 +56,8 @@ mod link_analytics_repository;
 #[cfg(test)]
 mod link_repository;
 #[cfg(test)]
+mod mcp_access;
+#[cfg(test)]
 mod mcp_cli;
 #[cfg(test)]
 mod mcp_dispatch;

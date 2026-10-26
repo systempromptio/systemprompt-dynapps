@@ -15,6 +15,7 @@ use super::{entity, helpers};
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ProcessInsertedEventParams<'a> {
     pub pool: &'a PgPool,
+    pub services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
     pub user_id: &'a UserId,
     pub plugin_id: &'a PluginId,
     pub session_id: &'a SessionId,
@@ -51,7 +52,7 @@ pub(super) async fn process_inserted_event(params: &ProcessInsertedEventParams<'
 
     if has_session {
         update_session_tracking(params).await;
-        track_session_entity(pool, user_id, session_id, payload).await;
+        track_session_entity(pool, params.services, user_id, session_id, payload).await;
     }
 
     handle_prompt_title(pool, event_type, session_id, payload).await;
@@ -95,11 +96,12 @@ async fn update_session_tracking(params: &ProcessInsertedEventParams<'_>) {
 
 async fn track_session_entity(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     user_id: &UserId,
     session_id: &SessionId,
     payload: &HookEventPayload,
 ) {
-    let Some((entity_type, entity_name)) = entity::detect_entity(payload) else {
+    let Some((entity_type, entity_name)) = entity::detect_entity(services, payload) else {
         return;
     };
     let entity_id = if entity_type == ENTITY_SKILL {

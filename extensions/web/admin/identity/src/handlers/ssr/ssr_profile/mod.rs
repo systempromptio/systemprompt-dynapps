@@ -12,6 +12,7 @@ use systemprompt::identifiers::ContextId;
 use crate::repositories;
 use crate::services::bridge_profile::{self, BridgeProfilePageData};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::repositories::user_usage::{
     ConversationSummary, RecentConversation,
 };
@@ -84,6 +85,7 @@ fn side_call_note(summary: &ConversationSummary) -> Option<String> {
 }
 
 pub(crate) async fn profile_page(
+    BootServices { boot, services }: BootServices,
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
@@ -103,7 +105,7 @@ pub(crate) async fn profile_page(
                 timezone: s.timezone,
             },
         );
-    let data = bridge_profile::build_bridge_profile_data(pool, &user_ctx).await?;
+    let data = bridge_profile::build_bridge_profile_data(&services, &boot, pool, &user_ctx).await?;
     let conversations = &data.usage.conversations;
     let recent_conversations: Vec<_> = conversations.recent.iter().map(conversation_view).collect();
     let view = ProfilePageView {
@@ -128,9 +130,11 @@ pub(crate) async fn profile_page(
 
 pub(crate) async fn issue_bridge_code(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminResult<Response> {
-    let (_, gateway_url) = systemprompt_web_admin_core::bridge_client::read_config_strings();
+    let (_, gateway_url) =
+        systemprompt_web_admin_core::bridge_client::read_config_strings(boot.config());
     let block = bridge_profile::issue_bridge_connect(&pool, &user_ctx, gateway_url.as_deref())
         .await
         .ok_or_else(|| {

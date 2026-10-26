@@ -14,29 +14,26 @@ mod rows;
 mod secrets;
 mod view;
 
-use std::path::Path;
 use std::sync::Arc;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
-use systemprompt::loader::ServicesBootstrap;
 
 pub(crate) use self::secrets::secrets_reload;
 use self::view::{ConfigKpiView, ConfigRowView, ConfigurationPageData};
-use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL, empty_sources};
+use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::sync::provenance::active_bundle_files;
 use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
-use systemprompt_web_admin_core::request::get_services_path;
 use systemprompt_web_admin_core::ssr::retention::{self, RetentionView};
 use systemprompt_web_admin_core::ssr::sync_plane::HashView;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(crate) const BASE_URL: &str = "/admin/configuration";
 
@@ -105,32 +102,32 @@ fn kpis(all: &[ConfigRowView]) -> Vec<ConfigKpiView> {
 }
 
 pub(crate) async fn configuration_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<ConfigurationQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
-    let (sources, sources_unreadable) = match build_sources() {
-        Ok(s) => (s, None),
-        Err(e) => (empty_sources(), Some(e.to_string())),
-    };
-    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
-    let active_root = get_services_path()?;
-    let baked_root = Path::new(&profile.paths.services);
-    // Why: discard-ok: an unreadable cache means every row reads as base
-    let bundles = active_bundle_files().unwrap_or_default();
-    let all = rows::build_rows(&pool, &active_root, baked_root, &bundles).await?;
-    // Why: discard-ok: an unreadable services tree leaves the messages window at
-    // core's default
-    let ai_history_days = ServicesBootstrap::get().map_or(30, |s| s.ai.history.retention_days);
+    let sources = build_sources(&boot, &services.config());
+    let profile = boot.profile();
+    let bundles = active_bundle_files(profile);
+    let all = rows::build_rows(&pool, &boot, &bundles).await?;
+    let ai_history_days = services.config().ai.history.retention_days;
     let retention: RetentionView =
         retention::retention_view(&pool, &profile.retention, ai_history_days).await?;
 
     let kpis = kpis(&all);
+    let mut faults = Faults::new();
 
     let tab = query.tab.as_deref().unwrap_or("all");
     let rows = all
@@ -156,22 +153,21 @@ pub(crate) async fn configuration_page(
         composed_hash: sources.composed_hash.as_deref().and_then(HashView::of),
         provenance: sources.base.provenance,
         bundle_count: sources.bundles.len(),
-        sources_unreadable,
         kpis,
         rows,
         retention,
-        secrets: secrets::secrets_card(),
+        secrets: secrets::secrets_card(boot.secrets().as_ref(), &mut faults),
         sync_url: super::ssr_sync::BASE_URL,
         export_zip_url: EXPORT_ZIP_URL,
         docs_url: DOCS_URL,
     };
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &engine,
             "configuration",
             &page,
-            &user_ctx,
-            &mkt_ctx,
+            systemprompt_web_admin_core::ssr::helpers::Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }

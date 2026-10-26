@@ -50,7 +50,7 @@ pub mod branding {
         pub tagline: String,
         #[serde(default)]
         pub copyright: String,
-        #[serde(default, alias = "themeColor")]
+        #[serde(default)]
         pub theme_color: String,
         #[serde(default)]
         pub platform_name: String,

@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Deserialize;
+use systemprompt::models::net::validate_outbound_url;
 use systemprompt::sso::SsoError;
 
 use super::super::error::SsoProviderError;
@@ -39,14 +40,19 @@ async fn fetch_discovery(
     http: reqwest::Client,
     url: String,
 ) -> Result<OidcDiscovery, SsoProviderError> {
-    let response = http
-        .get(&url)
-        .send()
-        .await
-        .map_err(|source| SsoProviderError::Discovery {
+    let destination =
+        validate_outbound_url(&url).map_err(|source| SsoProviderError::OutboundUrl {
             url: url.clone(),
             source,
         })?;
+    let response =
+        http.get(destination)
+            .send()
+            .await
+            .map_err(|source| SsoProviderError::Discovery {
+                url: url.clone(),
+                source,
+            })?;
     let status = response.status();
     if !status.is_success() {
         return Err(SsoProviderError::DiscoveryStatus { url, status });

@@ -34,7 +34,7 @@ Edit `.env`:
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | one of them | the first set becomes the default provider |
 | `SYSTEMPROMPT_ADMIN_EMAIL` | yes, first boot | the administrator the container's first-boot `admin setup` creates; the entrypoint refuses to start without it |
 | `EXTERNAL_URL` | on a server | the public URL, e.g. `https://gateway.example.com` — sets `api_external_url` and CORS |
-| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.72.1` |
+| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.73.0` |
 | `POSTGRES_PASSWORD`, `HTTP_PORT`, `PG_PORT` | no | bundled Postgres and port mapping |
 | `DATABASE_URL` | remote DB only | see below |
 | `DATABASE_WRITE_URL` | read/write split only | primary for writes when `DATABASE_URL` is a read replica; core refuses a standby as write target |
@@ -70,7 +70,7 @@ Oracle Cloud specifics: `oracle-cloud.md`.
 
 ```bash
 docker compose pull && docker compose up -d                  # follow latest
-SYSTEMPROMPT_TAG=0.72.1 docker compose up -d                 # pin (or set it in .env)
+SYSTEMPROMPT_TAG=0.73.0 docker compose up -d                 # pin (or set it in .env)
 SYSTEMPROMPT_TAG=<previous-version> docker compose up -d     # roll back — tags are never rewritten
 ```
 
@@ -85,7 +85,14 @@ fails at "Running database migrations..." with `Profile initialization
 failed ... still carries a top-level providers: section`. Fix it before
 restarting: open the mounted `profile.yaml`, delete the entire `providers:`
 block (and `gateway:` if present), and restart — there's nothing to move
-those settings to, the catalog now ships baked into the image.
+those settings to, the catalog ships baked into the image.
+
+**The AI catalog is five files** in the image: `services/ai/credentials.yaml`,
+`providers.yaml`, `models.yaml`, `deployments.yaml` and `gateway.yaml`. After
+an upgrade, run `systemprompt admin config migrate` and the database
+migrations, then `systemprompt admin config apply --reason "<why>"`. Boot does
+not seed any plane: governance, gateway policies and access control are
+enforced only once `config apply` has written them.
 
 ### Changing configuration between releases
 
@@ -121,7 +128,7 @@ migrations match the database.
 cosign verify \
   --certificate-identity-regexp='https://github.com/systempromptio/systemprompt-dynapps/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/systempromptio/systemprompt-dynapps:0.72.1
+  ghcr.io/systempromptio/systemprompt-dynapps:0.73.0
 ```
 
 ## 4. The bridge (Claude Code client)

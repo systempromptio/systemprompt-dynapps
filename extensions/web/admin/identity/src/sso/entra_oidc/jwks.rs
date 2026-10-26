@@ -7,6 +7,7 @@
 //! token header, never taken from the key.
 
 use serde::Deserialize;
+use systemprompt::models::net::validate_outbound_url;
 use systemprompt::sso::SsoError;
 
 use super::super::error::SsoProviderError;
@@ -39,18 +40,18 @@ pub(super) async fn fetch_rsa_key(
     allowed_hosts: &[String],
     kid: &str,
 ) -> Result<RsaComponents, SsoError> {
-    let url = reqwest::Url::parse(jwks_uri).map_err(|source| SsoProviderError::JwksUri {
+    let url = validate_outbound_url(jwks_uri).map_err(|source| SsoProviderError::OutboundUrl {
         url: jwks_uri.to_owned(),
         source,
     })?;
-    let host_allowed = scheme_is_acceptable(&url)
-        && url
-            .host_str()
-            .is_some_and(|h| allowed_hosts.iter().any(|a| a.eq_ignore_ascii_case(h)));
+    let host_allowed = url
+        .host_str()
+        .is_some_and(|h| allowed_hosts.iter().any(|a| a.eq_ignore_ascii_case(h)));
     if !host_allowed {
-        return Err(SsoError::Unavailable(format!(
-            "JWKS uri {jwks_uri} is not on an allowed https host"
-        )));
+        return Err(SsoProviderError::JwksHost {
+            url: jwks_uri.to_owned(),
+        }
+        .into());
     }
     let set: KeySet = http
         .get(url)
@@ -72,19 +73,4 @@ pub(super) async fn fetch_rsa_key(
         .find(|k| k.kty == "RSA" && k.kid.as_deref() == Some(kid))
         .and_then(|k| Some(RsaComponents { n: k.n?, e: k.e? }))
         .ok_or_else(|| SsoError::InvalidAssertion("unknown kid".to_owned()))
-}
-
-// Why: matches core's `JwksClient` — plain http only to a loopback IdP, which
-// is what the integration harness's fake Entra serves.
-fn scheme_is_acceptable(url: &reqwest::Url) -> bool {
-    match url.scheme() {
-        "https" => true,
-        "http" => match url.host() {
-            Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
-            Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
-            Some(url::Host::Domain(d)) => d.eq_ignore_ascii_case("localhost"),
-            None => false,
-        },
-        _ => false,
-    }
 }

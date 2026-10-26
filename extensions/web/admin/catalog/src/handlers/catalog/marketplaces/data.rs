@@ -78,6 +78,7 @@ fn cells_of(sections: Vec<MatrixSection>) -> Vec<AudienceCellView> {
 
 pub(super) async fn audience_matrix(
     pool: &PgPool,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     manifests: &[MarketplaceConfigSummary],
     roles: &[String],
 ) -> AudienceMatrixView {
@@ -98,7 +99,7 @@ pub(super) async fn audience_matrix(
         labels.push((role.clone(), "role"));
     }
 
-    let resolved = resolve_subject_matrices(pool, &subjects, &section_input(manifests))
+    let resolved = resolve_subject_matrices(pool, services, &subjects, &section_input(manifests))
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "audience matrix failed to resolve"))
         .unwrap_or_default();

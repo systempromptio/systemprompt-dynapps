@@ -10,7 +10,7 @@ use systemprompt_web_admin_core::templates::helpers::register_helpers;
 fn engine() -> Handlebars<'static> {
     let mut hbs = Handlebars::new();
     hbs.set_strict_mode(false);
-    register_helpers(&mut hbs);
+    register_helpers(&mut hbs, std::path::Path::new("web/dist"));
     hbs
 }
 

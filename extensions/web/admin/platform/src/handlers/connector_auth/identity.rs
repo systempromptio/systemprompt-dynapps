@@ -3,29 +3,33 @@
 
 use super::{live_user, require_broker};
 use crate::services::identity_token;
-use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::http::header::CACHE_CONTROL;
 use axum::response::{IntoResponse, Response};
+use axum::{Extension, Json};
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::governance::authz::EntityKind;
 use systemprompt_web_admin_core::authz::catalog::CatalogAccess;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
 
 pub(crate) async fn token(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(server): Path<String>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    require_broker(&headers)?;
-    let user = live_user(&pool, &headers, false).await?;
-    let services = systemprompt::loader::ServicesBootstrap::get().map_err(AdminError::internal)?;
-    let audience = identity_token::audience_for(services, &server)
+    require_broker(boot.secrets().as_ref(), &headers)?;
+    let user = live_user(&pool, &boot, &headers, false).await?;
+    let audience = identity_token::audience_for(&services.config(), &server)
         .ok_or_else(|| AdminError::NotFound("No identity-backed MCP server by that id".into()))?;
-    let permitted = CatalogAccess::load(&pool, &user.user_id)
+    let permitted = CatalogAccess::load(&pool, &services, &user.user_id)
         .await?
         .allowed(EntityKind::McpServer, std::slice::from_ref(&server))
         .await?;
@@ -41,9 +45,14 @@ pub(crate) async fn token(
         .display_name
         .filter(|n| !n.trim().is_empty())
         .unwrap_or(identity.username);
-    let issuer = systemprompt::manifest::Config::get()?.jwt_issuer.clone();
-    let claims = identity_token::claims(&issuer, &audience, &user.user_id, &identity.email, &name);
-    let access_token = identity_token::sign(&claims)?;
+    let claims = identity_token::claims(
+        &boot.config().jwt_issuer,
+        &audience,
+        &user.user_id,
+        &identity.email,
+        &name,
+    );
+    let access_token = identity_token::sign(boot.token_authority().as_ref(), &claims)?;
     Ok((
         [(CACHE_CONTROL, "no-store")],
         Json(serde_json::json!({"access_token": access_token})),

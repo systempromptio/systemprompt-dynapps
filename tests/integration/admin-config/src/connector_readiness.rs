@@ -10,7 +10,6 @@ use systemprompt::identifiers::UserId;
 use systemprompt::marketplace::{MarketplaceCandidate, MarketplaceFilter};
 use systemprompt::models::bridge::manifest::ManagedMcpServer;
 use systemprompt_web_admin_core::authz::connector::connector_rule_type;
-use systemprompt_web_admin_core::authz::subject_attributes_for;
 use systemprompt_web_admin_core::connections::Connection;
 use systemprompt_web_admin_core::connections::readiness::NotReady;
 use systemprompt_web_admin_core::connections::source::get_connections;
@@ -23,20 +22,15 @@ use crate::tempdb::TempDb;
 const CRM: &str = "crm-mcp";
 const CONTROL_PLANE: &str = "systemprompt";
 
-// Why: one connector-backed external server and the session-attested control
-// plane, installed before the shared `{}` fixture can claim the process-wide
-// registry. nextest runs every test in its own process, so the order holds.
-fn install_services() {
-    if systemprompt::loader::ServicesBootstrap::is_initialized() {
-        return;
-    }
+// One connector-backed external server and the session-attested control plane.
+fn fixture_services() -> systemprompt::manifest::services::ServicesView {
     let directory = tempfile::tempdir().expect("services fixture");
     let path = directory.path().join("config.yaml");
     std::fs::write(
         &path,
         "mcp_servers:\n\
          \x20 crm-mcp:\n\
-         \x20   type: external\n\
+         \x20   server_type: external\n\
          \x20   endpoint: https://crm.example.test/mcp\n\
          \x20   enabled: true\n\
          \x20   display_in_web: false\n\
@@ -44,7 +38,7 @@ fn install_services() {
          \x20   oauth: {required: false, scopes: [user], audience: mcp, client_id: null}\n\
          \x20   connector: {adapter: generic, scopes: [tools:read]}\n\
          \x20 systemprompt:\n\
-         \x20   type: internal\n\
+         \x20   server_type: internal\n\
          \x20   binary: systemprompt-mcp-agent\n\
          \x20   port: 5010\n\
          \x20   enabled: true\n\
@@ -53,32 +47,35 @@ fn install_services() {
          \x20   oauth: {required: true, scopes: [admin], audience: mcp, client_id: null}\n",
     )
     .expect("write services fixture");
-    systemprompt::loader::ServicesBootstrap::init_from_path(&path).expect("install services");
-    // Why: the registry holds this path for the life of the process.
-    let _kept = directory.keep();
+    dynapps_test_common::services_view(&path)
 }
 
 struct Harness {
     db: TempDb,
+    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
     filter: Arc<dyn MarketplaceFilter>,
 }
 
 impl Harness {
     async fn create_or_skip() -> Option<Self> {
-        install_services();
         let db = TempDb::create().await?;
+        let services = dynapps_test_common::extension_services(&db.pool, fixture_services());
         let database: systemprompt::database::DbPool = Arc::new(Database::from_pools(
             Arc::clone(&db.pool),
             Some(Arc::clone(&db.pool)),
         ));
-        let filter = TemplateMarketplaceFilter::from_db(&database);
+        let filter = TemplateMarketplaceFilter::from_db(&database, services.clone());
         let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
         for id in [CRM, CONTROL_PLANE] {
-            repo.upsert_entity(EntityKind::McpServer, id, true, "test")
+            repo.upsert_entity(EntityKind::McpServer, id, true, "code:test-fixture")
                 .await
                 .expect("upsert entity");
         }
-        Some(Self { db, filter })
+        Some(Self {
+            db,
+            services,
+            filter,
+        })
     }
 
     async fn user(&self, roles: &[&str]) -> UserId {
@@ -123,7 +120,7 @@ impl Harness {
     }
 
     async fn connection(&self, user: &UserId, provider: &str) -> Connection {
-        get_connections(&self.db.pool, user)
+        get_connections(&self.db.pool, &self.services, user)
             .await
             .expect("connections")
             .connections
@@ -133,7 +130,8 @@ impl Harness {
     }
 
     async fn connector_band(&self, user: &UserId) -> Vec<String> {
-        subject_attributes_for(&self.db.pool, user)
+        self.services
+            .subject_attributes(user)
             .await
             .expect("subject attributes")
             .values(&connector_rule_type())

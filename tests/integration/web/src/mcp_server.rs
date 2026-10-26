@@ -13,6 +13,8 @@ use sqlx::PgPool;
 use systemprompt::database::Database;
 use systemprompt::governance::authz::{DenyAllHook, SharedAuthzHook};
 use systemprompt::identifiers::McpServerId;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt::traits::ConfigWatch;
 use systemprompt_mcp_agent::{SystempromptServer, tools};
 
 use crate::tempdb::TempDb;
@@ -30,8 +32,14 @@ fn server(pool: &Arc<PgPool>) -> SystempromptServer {
     SystempromptServer::new(
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid fixture identifier"),
-        hook(),
+        systemprompt_mcp_shared::auth::ServerAccess {
+            authz_hook: hook(),
+            services: ConfigWatch::new(ServicesConfig::default()),
+            token_authority: crate::mcp_access::token_authority(),
+            config: crate::jobs_context::test_config(),
+        },
         ingest,
+        crate::mcp_access::cli(),
     )
 }
 
@@ -116,8 +124,14 @@ async fn a_different_service_id_only_changes_the_server_name() {
     let renamed = SystempromptServer::new(
         db_pool,
         McpServerId::try_new("sp-staging").expect("valid fixture identifier"),
-        hook(),
+        systemprompt_mcp_shared::auth::ServerAccess {
+            authz_hook: hook(),
+            services: ConfigWatch::new(ServicesConfig::default()),
+            token_authority: crate::mcp_access::token_authority(),
+            config: crate::jobs_context::test_config(),
+        },
         ingest,
+        crate::mcp_access::cli(),
     );
 
     let info = renamed.get_info();

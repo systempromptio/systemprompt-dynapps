@@ -3,66 +3,88 @@
 `POST /v1/messages` at the Anthropic wire format. Every inference request flows through the same governance pipeline as every tool call, on infrastructure you operate.
 
 - **SDK- and Claude-Desktop-compatible.** Authenticated with a systemprompt JWT in `x-api-key` (falls back to `Authorization: Bearer`). No new credential type — existing user JWTs serve as the gateway credential.
-- **Routes by `model_pattern`.** Built-in tags: `anthropic`, `openai`, `moonshot` (Kimi), `qwen`, `gemini`, `minimax`. Anthropic is a transparent byte proxy (extended thinking, cache-control headers, SSE events preserved verbatim). OpenAI-compatible providers get full Anthropic↔OpenAI request/response/SSE conversion. Upstream API keys resolve from the secrets file by name.
+- **Routes by declared model.** A requested model resolves to its deployments, each a `provider/endpoint`, with no pattern matching. Endpoint wires: `anthropic`, `openai-chat`, `openai-responses`, `gemini`. An `anthropic` endpoint is a transparent byte proxy (extended thinking, cache-control headers, SSE events preserved verbatim); other wires get full request/response/SSE conversion. Platform keys resolve from the secrets file by name; personal keys are stored per member.
 - **Zero overhead when disabled.** The `/v1` router mounts only if `gateway.enabled: true` in `services/ai/gateway.yaml`.
 
 ## Services YAML
 
-The catalog and the routes are services configuration, shipped in the image beside the agents and MCP servers — `services/ai/providers.yaml` and `services/ai/gateway.yaml`, both listed in `services/config/config.yaml` `includes:`. They are not profile sections: a profile that still carries `providers:` or `gateway:` fails to load with a message naming these files. Nothing in either file varies per environment; the credentials they name by `api_key_secret` live in each environment's secret store.
+The AI catalog is services configuration, shipped in the image beside the agents and MCP servers, as five files under `services/ai/`, all listed in `services/config/config.yaml` `includes:`. They are not profile sections: a profile that carries `providers:` or `gateway:` fails to load with a message naming these files. Nothing in them varies per environment; the platform secrets they name live in each environment's secret store.
 
 ```yaml
+# credentials.yaml: who authenticates and who pays
+credentials:
+  anthropic:   { kind: platform, secret: anthropic }
+  deepseek:    { kind: platform, secret: deepseek }
+  opencode-go: { kind: personal, label: OpenCode Go }
+
+# providers.yaml: the vendor account and its endpoints (one wire + one URL each)
 providers:
-  - name: anthropic
-    protocol: anthropic
-    endpoint: https://api.anthropic.com/v1
-    api_key_secret: anthropic
-    models:
-      - id: claude-sonnet-5-5
-  - name: minimax
-    protocol: anthropic
-    endpoint: https://api.minimax.io/anthropic/v1
-    api_key_secret: minimax
-    models:
-      - id: MiniMax-M2
+  anthropic:
+    credential: anthropic
+    endpoints:
+      api: { wire: anthropic, url: https://api.anthropic.com/v1 }
+  opencode-go:
+    credential: opencode-go
+    endpoints:
+      chat:     { wire: openai-chat, url: https://opencode.ai/inference/go/openai/v1 }
+      messages: { wire: anthropic,   url: https://opencode.ai/inference/go/anthropic/v1 }
+
+# models.yaml: each model once; `clients` replaces any per-surface listing
+models:
+  claude-sonnet-5-5:
+    limits: { context_window: 1000000, max_output_tokens: 128000 }
+    clients: [claude]
+  deepseek-v4-pro:
+    clients: [openai]
+
+# deployments.yaml: model -> ordered endpoints (routing and failover)
+deployments:
+  claude-sonnet-5-5: [anthropic/api]
+  deepseek-v4-pro:   [deepseek/api]
+  go-deepseek-v4-pro: [opencode-go/chat]
+
+# gateway.yaml: one default model; routes are policy only
 gateway:
   enabled: true
-  default_provider: anthropic
+  default_model: claude-sonnet-5-5
   routes:
-    - model_pattern: "claude-*"
-      provider: anthropic
-    - model_pattern: "MiniMax-*"
-      provider: minimax
+    - id: claude-eu
+      models: [claude-*]
+      deployments: [anthropic/api]
 ```
 
-Each provider is declared once under `providers:` — its wire `protocol`, `endpoint`, `api_key_secret`, and the `models` it serves (each with optional `aliases` and `upstream_model`). Gateway `routes` carry no connectivity; they only map a requested `model_pattern` to a provider by name, and `default_provider` forwards any model no route matches.
+A credential is `platform` (a profile secret) or `personal` (each member stores their own key once, however many endpoints it serves). A model's id is unique across the catalog; `upstream_model` names it upstream when that differs. A deployment entry is `provider/endpoint` or an object with `endpoint:` plus per-deployment `upstream_model` and `pricing` overrides. Failover never crosses from a platform credential to a personal one.
 
-Routes evaluate in order; first `model_pattern` match wins. On a model entry, `upstream_model` aliases a client-requested model to a different upstream name without the client knowing.
+A route carries a declared, stable `id` and only does policy: an `alias` (a requested id resolves to a catalog model), a pin (`deployments:` narrows the chain), or a narrowing by `models:` glob and `when:` scope. `default_model` is the bare catalog id; Claude Code's `[1m]` marker is derived from `limits.context_window` and stripped by the gateway, never written in config.
 
-**Hosting is read from the endpoint.** A provider on `aiplatform.googleapis.com` is Vertex AI. For those providers the secret is a Google service account, which is exchanged for an OAuth token and fills `{project}` in the endpoint. The request envelope follows the platform: Claude on Vertex (`wire: anthropic`, `…/publishers/anthropic`) is posted to `/models/<id>:rawPredict` or `:streamRawPredict`, with `anthropic_version` in the body. The gateway and the in-process AI service share this resolution, so any provider one of them can reach, the other can too. Since 2026-10-14 this installation serves `claude-*` from Anthropic's API only; the `vertex-anthropic` entry is parked with hidden `vertex-claude-*` ids.
+**Hosting is read from the endpoint URL.** An endpoint on `aiplatform.googleapis.com` is Vertex AI. For those, the credential's secret is a Google service account, which is exchanged for an OAuth token and fills `{project}` in the URL. The request envelope follows the platform: Claude on Vertex (`wire: anthropic`, `…/publishers/anthropic`) is posted to `/models/<id>:rawPredict` or `:streamRawPredict`, with `anthropic_version` in the body. The gateway and the in-process AI service share this resolution. This installation serves `claude-*` from Anthropic's API only.
 
-## Configuring routes from the CLI
+## Configuring the catalog from the CLI
 
-Worked example: proxy every Anthropic model to Gemini Flash. Instead of hand-editing the services files, use `admin config`, which edits them, validates against the merged catalog, and reconciles access control. To make a client that asks for `claude-*` actually serve Google Gemini Flash:
+Worked example: serve a new model from a new provider. Instead of hand-editing the services files, use `admin config`, which edits them and validates against the merged catalog:
 
 ```bash
-# 1. Store the upstream key and register the provider + model in services/ai/providers.yaml
+# 1. Store the platform key and declare the credential, provider and endpoint
 systemprompt admin config secret set gemini <GEMINI_API_KEY>
-systemprompt admin config catalog provider add --name gemini --protocol gemini \
-  --endpoint https://generativelanguage.googleapis.com/v1beta --api-key-secret gemini
-systemprompt admin config catalog model add --provider gemini --id gemini-3.8-flash
+systemprompt admin config credential add --id gemini --kind platform --secret gemini
+systemprompt admin config provider add --id gemini --credential gemini \
+  --endpoint api --wire gemini --url https://generativelanguage.googleapis.com/v1beta
 
-# 2. Point the claude-* route at gemini and rewrite the upstream model name
-systemprompt admin config gateway route add --model-pattern 'claude-*' \
-  --provider gemini --upstream-model gemini-3.8-flash
+# 2. Declare the model with its deployment
+systemprompt admin config model add --id gemini-3.8-flash --deployment gemini/api
+
+# 3. Optionally alias a requested id to it
+systemprompt admin config gateway route add --id flash-alias \
+  --alias fast=gemini-3.8-flash
 ```
 
-A client `POST /v1/messages` with `model: claude-haiku-5-5` then returns `model: gemini-3.8-flash`.
+`admin config deployment set --model <id> --endpoint <provider/endpoint> …` replaces a model's chain in failover order, and `admin config gateway default-model set --model <id>` sets the default. Then run `systemprompt admin config apply --reason "<why>"` so access control and gateway policies are written to the database.
 
 ## Client attribution
 
 Every `/v1/messages` row names the client that sent it (`ai_requests.client_kind`) and how
 strongly that is evidenced (`ai_requests.client_attestation`). Hosts the bridge provisions —
-Claude Code, Claude Desktop, Codex, OpenCode, Hermes — are attested by the bridge's per-host
+`claude-code`, `claude-desktop`, `codex` (desktop app), `codex-cli`, `opencode` (desktop app), `opencode-cli` and `hermes` — are attested by the bridge's per-host
 token with nothing to configure; a direct client (Pi, a raw SDK, curl) declares itself with
 `x-systemprompt-client: <kind>` from the closed vocabulary, or is recorded as `other` with its
 User-Agent and SDK headers kept as evidence. The full tier table, the header names, the 400
@@ -73,10 +95,9 @@ On this instance the tier is the tone of the client chip on every conversation p
 
 ## Routes are access-controlled
 
-Each route is gated by an `access_control_entities` row keyed on its id, which is content-addressed (`hash(model_pattern, provider)`). Changing a route's provider mints a *new* id, so a freshly-edited route is denied (`unknown to access control`) until the catalog is reconciled. Reconciliation makes the catalog equal to the live gateway.yaml's routes — new ids are registered, and rows no route produces any more are deleted along with their grants — and it happens in two places:
+Each route is gated by an `access_control_entities` row keyed on its declared id. Renaming a route's id is therefore a new entity, denied (`unknown to access control`) until the access-control plane is applied. Boot never seeds or reconciles any plane; it happens in one place:
 
-- **At boot** — the `governance_bootstrap` job reconciles the catalog from the loaded services config, then reads `services/access-control/rules.yaml` against it (seeding an empty database, otherwise reporting drift for `/admin/sync`).
-- **After a CLI edit** — `systemprompt admin config gateway route …` reconciles immediately, so the edit takes effect without a restart.
+- **`systemprompt admin config apply --reason <why>`** — reconciles the catalog from the loaded services config, then writes `services/access-control/rules.yaml`, governance and gateway policies to the database. Run it after `admin config migrate` and the migrations, and after any route edit. `/admin/sync` reports drift between code and the database.
 
 Routes are granted by `entity_match`, never by a literal `entity_id`:
 
@@ -88,7 +109,7 @@ Routes are granted by `entity_match`, never by a literal `entity_id`:
   roles: [user]
 ```
 
-Route ids are generated, so there is no id to write out — a literal `gateway_route` `entity_id` fails the boot by name, and `scripts/validate-services.sh` rejects it in CI. A route that needs a narrower grant gets a narrower glob over its slug (`entity_match: "claude-star-*"`), not a pinned hash.
+A route that needs a narrower grant gets a glob over its declared id (`entity_match: "go-*"`).
 
 ## Extensible provider registry
 

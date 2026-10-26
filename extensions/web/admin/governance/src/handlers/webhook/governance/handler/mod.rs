@@ -25,6 +25,7 @@ use systemprompt::governance::policy::{
 use systemprompt::identifiers::{CallId, ClientId, PluginId, SessionId, UserId};
 use systemprompt::oauth::SessionCreationService;
 
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::ingestion::usage as ingestion;
 use systemprompt_web_admin_core::types::webhook::{GovernQuery, HookEventPayload};
 
@@ -150,6 +151,8 @@ async fn evaluate_and_record(
 pub(crate) struct GovernDeps {
     engine: Arc<GovernanceEngine>,
     session_service: Arc<SessionCreationService>,
+    tasks: systemprompt::traits::BackgroundTasks,
+    boot: ExtensionBoot,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for GovernDeps {
@@ -158,9 +161,13 @@ impl<S: Send + Sync> FromRequestParts<S> for GovernDeps {
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Extension(engine) = Extension::from_request_parts(parts, state).await?;
         let Extension(session_service) = Extension::from_request_parts(parts, state).await?;
+        let Extension(tasks) = Extension::from_request_parts(parts, state).await?;
+        let Extension(boot) = Extension::from_request_parts(parts, state).await?;
         Ok(Self {
             engine,
             session_service,
+            tasks,
+            boot,
         })
     }
 }
@@ -170,6 +177,8 @@ pub(crate) async fn govern_tool_use(
     GovernDeps {
         engine,
         session_service,
+        tasks,
+        boot,
     }: GovernDeps,
     headers: HeaderMap,
     Query(query): Query<GovernQuery>,
@@ -197,14 +206,15 @@ pub(crate) async fn govern_tool_use(
         plugin_id,
         session_service: &session_service,
         headers: &headers,
+        tasks: &tasks,
     };
 
-    let principal = match authenticate_request(&headers, &denial_params) {
+    let principal = match authenticate_request(&boot, &headers, &denial_params) {
         Ok(principal) => principal,
         Err(verdict) => return *verdict,
     };
     if let Err(reason) = payload.validate_ingestion() {
-        return HookVerdict::new(deny_for_auth_failure(&reason), response_event);
+        return HookVerdict::new(deny_for_auth_failure(&reason.to_string()), response_event);
     }
     if let Err(error) =
         ingestion::assert_ingestion_owner(&pool, &session_id, &principal.user_id).await

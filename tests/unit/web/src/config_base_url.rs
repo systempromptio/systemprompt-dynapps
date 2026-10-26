@@ -19,6 +19,7 @@ fn accepts_https_and_exposes_parsed_url() {
     let cfg = BlogConfigValidated::validate(
         raw_with_base_url("https://demo.systemprompt.io"),
         Path::new("."),
+        Path::new("."),
     )
     .expect("https base_url validates");
     assert_eq!(cfg.base_url().as_str(), "https://demo.systemprompt.io/");
@@ -27,17 +28,23 @@ fn accepts_https_and_exposes_parsed_url() {
 
 #[test]
 fn accepts_http() {
-    let cfg =
-        BlogConfigValidated::validate(raw_with_base_url("http://localhost:8080"), Path::new("."))
-            .expect("http base_url validates");
+    let cfg = BlogConfigValidated::validate(
+        raw_with_base_url("http://localhost:8080"),
+        Path::new("."),
+        Path::new("."),
+    )
+    .expect("http base_url validates");
     assert_eq!(cfg.base_url().scheme(), "http");
 }
 
 #[test]
 fn rejects_non_http_scheme() {
-    let err =
-        BlogConfigValidated::validate(raw_with_base_url("ftp://files.example.com"), Path::new("."))
-            .expect_err("ftp scheme is rejected");
+    let err = BlogConfigValidated::validate(
+        raw_with_base_url("ftp://files.example.com"),
+        Path::new("."),
+        Path::new("."),
+    )
+    .expect_err("ftp scheme is rejected");
     // The scheme error is recorded against the base_url field.
     assert!(
         format!("{err:?}").contains("base_url"),
@@ -47,8 +54,12 @@ fn rejects_non_http_scheme() {
 
 #[test]
 fn rejects_unparseable_url() {
-    let err = BlogConfigValidated::validate(raw_with_base_url("not a url"), Path::new("."))
-        .expect_err("garbage base_url is rejected");
+    let err = BlogConfigValidated::validate(
+        raw_with_base_url("not a url"),
+        Path::new("."),
+        Path::new("."),
+    )
+    .expect_err("garbage base_url is rejected");
     assert!(
         format!("{err:?}").contains("base_url"),
         "expected a base_url error, got: {err:?}"
@@ -63,6 +74,7 @@ fn link_tracking_flag_is_carried_through() {
             base_url: "https://example.com".to_owned(),
             enable_link_tracking: false,
         },
+        Path::new("."),
         Path::new("."),
     )
     .expect("validates");

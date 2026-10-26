@@ -21,40 +21,50 @@
 //! | 300 | `organization` | [`organization`] |
 //!
 //! `role`, `cost_centre`, `practice` and `organization` change no access
-//! decision; they
-//! exist because the gateway's quota resolver finds subjects only through this
-//! registry, so without them a `subject: role` or `subject: organization`
-//! window has nothing to key on. Which providers exist is decided by the crates
-//! linked into the binary: the registry discovers them once per database and
-//! caches the result, so every resolve call site reads the same provider list
-//! and ladder through [`subject_attributes_for`] and [`dimensions`].
-//! [`account`], [`catalog`] and [`primary`] are the helpers those call sites
-//! share. Every database-backed provider registers through [`cached`], so a
-//! user's values are read once per 30 s rather than once per request.
+//! decision; they exist because the gateway's quota resolver finds subjects
+//! only through the registered providers, so without them a `subject: role`
+//! or `subject: organization` window has nothing to key on. Core discovers the
+//! providers once at boot and serves their values through one
+//! `SubjectAttributeSource`, which every call site reads through
+//! [`crate::extension_services::ExtensionServices`]. [`account`], [`catalog`]
+//! and [`primary`] are the helpers those call sites share.
+//!
+//! [`AuthzCaches`] holds the rule reads (entity grants, user roles, parent
+//! chains) for 30 s. Core's hook, guard and router factories share no state an
+//! extension can hand between them, so the caches are one process-wide slot
+//! per database, keyed by database and built once per key, and one
+//! `invalidate_all` drops every entry whichever factory's code issued it.
 
 pub mod account;
-pub mod cached;
+pub mod caches;
 pub mod catalog;
 pub mod connector;
 pub mod organization;
 pub mod primary;
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock};
 
 use sqlx::PgPool;
-use systemprompt::governance::authz::{
-    AuthzHookContext, NullAuditSink, SharedSubjectAttributeProvider, SubjectAttributes,
-    SubjectDimension, dimensions_of, discover_subject_providers, gather_subject_attributes,
-};
-use systemprompt::identifiers::UserId;
 
-struct Registry {
-    providers: Vec<SharedSubjectAttributeProvider>,
-    dimensions: Vec<SubjectDimension>,
+pub use caches::{AuthzCaches, EntityGrant};
+
+/// Why an authorization read could not be answered from this database.
+#[derive(Debug, thiserror::Error)]
+pub enum AuthzReadError {
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
+    #[error("services configuration unavailable: {0}")]
+    Services(#[from] systemprompt::loader::ConfigLoadError),
+    #[error("subject attributes unavailable: {0}")]
+    Subjects(#[from] systemprompt::governance::authz::AuthzError),
+    #[error("subject attributes unavailable: {0}")]
+    SubjectSource(#[from] systemprompt::models::authz::SubjectSourceError),
+    #[error("subject lookup task failed: {0}")]
+    Join(#[from] tokio::task::JoinError),
 }
 
-static REGISTRIES: OnceLock<Mutex<HashMap<String, &'static Registry>>> = OnceLock::new();
+static CACHES: OnceLock<Mutex<HashMap<String, &'static AuthzCaches>>> = OnceLock::new();
 
 #[must_use]
 pub fn database_key(pool: &PgPool) -> String {
@@ -67,36 +77,13 @@ pub fn database_key(pool: &PgPool) -> String {
     )
 }
 
-fn registry(pool: &PgPool) -> &'static Registry {
+pub fn caches(pool: &PgPool) -> &'static AuthzCaches {
     let key = database_key(pool);
-    let map = REGISTRIES.get_or_init(|| Mutex::new(HashMap::new()));
+    let map = CACHES.get_or_init(|| Mutex::new(HashMap::new()));
     let mut guard = map
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    if let Some(existing) = guard.get(&key) {
-        return existing;
-    }
-    let providers = discover_subject_providers(&AuthzHookContext {
-        pool: Arc::new(pool.clone()),
-        sink: Arc::new(NullAuditSink),
-    });
-    let built: &'static Registry = Box::leak(Box::new(Registry {
-        dimensions: dimensions_of(&providers),
-        providers,
-    }));
-    guard.insert(key, built);
-    built
-}
-
-pub fn dimensions(pool: &PgPool) -> &'static [SubjectDimension] {
-    &registry(pool).dimensions
-}
-
-pub async fn subject_attributes_for(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<SubjectAttributes, sqlx::Error> {
-    gather_subject_attributes(&registry(pool).providers, user_id)
-        .await
-        .map_err(|e| sqlx::Error::Protocol(e.to_string()))
+    guard
+        .entry(key)
+        .or_insert_with(|| Box::leak(Box::new(AuthzCaches::new())))
 }

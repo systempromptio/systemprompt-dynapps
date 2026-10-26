@@ -57,7 +57,7 @@ struct SeededRequest<'a> {
     id: &'a str,
     context_id: &'a str,
     actor_kind: &'a str,
-    synthetic: bool,
+    evaluation: bool,
     request_kind: &'a str,
 }
 
@@ -86,13 +86,13 @@ async fn seed_request(pool: &sqlx::PgPool, row: SeededRequest<'_>) {
         id,
         context_id,
         actor_kind,
-        synthetic,
+        evaluation,
         request_kind,
     } = row;
     sqlx::query(
         "INSERT INTO ai_requests
              (id, request_id, user_id, context_id, provider, model, status, actor_kind, actor_id,
-              synthetic, request_kind, created_at, updated_at)
+              traffic, request_kind, created_at, updated_at)
          VALUES ($1, $1, 'judge-user', $2, 'fixture', 'fixture-model', 'completed', $3,
                  'judge-user', $4, $5, clock_timestamp() - interval '2 hours',
                  clock_timestamp() - interval '2 hours')",
@@ -100,7 +100,11 @@ async fn seed_request(pool: &sqlx::PgPool, row: SeededRequest<'_>) {
     .bind(id)
     .bind(context_id)
     .bind(actor_kind)
-    .bind(synthetic)
+    .bind(if evaluation {
+        "evaluation"
+    } else {
+        "production"
+    })
     .bind(request_kind)
     .execute(pool)
     .await
@@ -115,7 +119,7 @@ async fn seed_turn(pool: &sqlx::PgPool, id: &str, with_message: bool) -> String 
             id,
             context_id: &context_id,
             actor_kind: "user",
-            synthetic: false,
+            evaluation: false,
             request_kind: "turn",
         },
     )
@@ -149,7 +153,7 @@ async fn cap_releases_every_claimed_eligible_conversation_without_inference() {
             id: "judge-synthetic",
             context_id: &synthetic,
             actor_kind: "user",
-            synthetic: true,
+            evaluation: true,
             request_kind: "turn",
         },
     )
@@ -161,7 +165,7 @@ async fn cap_releases_every_claimed_eligible_conversation_without_inference() {
             id: "judge-job",
             context_id: &job,
             actor_kind: "job",
-            synthetic: false,
+            evaluation: false,
             request_kind: "turn",
         },
     )
@@ -173,7 +177,7 @@ async fn cap_releases_every_claimed_eligible_conversation_without_inference() {
             id: "judge-utility",
             context_id: &utility,
             actor_kind: "user",
-            synthetic: false,
+            evaluation: false,
             request_kind: "utility",
         },
     )
@@ -568,7 +572,7 @@ async fn idle_tick_backfills_late_settled_judge_spend() {
             id: "judge-late-cost-request",
             context_id: &request_context,
             actor_kind: "job",
-            synthetic: false,
+            evaluation: false,
             request_kind: "utility",
         },
     )

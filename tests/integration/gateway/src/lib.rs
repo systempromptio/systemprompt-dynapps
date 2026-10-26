@@ -2,10 +2,10 @@
 //! requirements register that are not provable through the browser.
 //!
 //! Each `req_0nn_*` module opens with the register acceptance criterion it
-//! evidences and exercises the real profile types (`GatewayConfig`,
-//! `GatewayRoute`, `RouteRequirements`, `ProviderRegistry`,
-//! `ModelGovernance`) — the same structs the production loader deserializes
-//! from `profile.yaml` — so a passing test is proof about the shipped
+//! evidences and exercises the real catalog types (`CatalogDocument`,
+//! `ResolvedCatalog`, `GatewayRoute`, `RouteRequirements`, `ModelGovernance`)
+//! — the same structs the production loader deserializes from
+//! `services/ai/*.yaml` — so a passing test is proof about the shipped
 //! enforcement code, not about a re-implementation. No database is needed:
 //! routing, residency validation, and exposure posture are all decided from
 //! configuration alone.

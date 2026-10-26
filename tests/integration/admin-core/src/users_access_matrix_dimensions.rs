@@ -113,10 +113,18 @@ async fn resolve_user_matrix_falls_back_to_the_default_for_an_unrecognised_entit
         vec![(unique("entity"), "A Drive".to_owned(), None)],
     )];
 
-    let matrix = resolve_user_matrix(&db.pool, &user, sections)
-        .await
-        .expect("resolve matrix")
-        .expect("user found");
+    let matrix = resolve_user_matrix(
+        &db.pool,
+        &dynapps_test_common::extension_services(
+            &db.pool,
+            dynapps_test_common::empty_services_view(),
+        ),
+        &user,
+        sections,
+    )
+    .await
+    .expect("resolve matrix")
+    .expect("user found");
 
     let row = &matrix.sections[0].rows[0];
     assert_eq!(row.effective, "deny");
@@ -154,10 +162,18 @@ async fn resolve_user_matrix_grades_every_row_of_every_section() {
         ),
     ];
 
-    let matrix = resolve_user_matrix(&db.pool, &user, sections)
-        .await
-        .expect("resolve matrix")
-        .expect("user found");
+    let matrix = resolve_user_matrix(
+        &db.pool,
+        &dynapps_test_common::extension_services(
+            &db.pool,
+            dynapps_test_common::empty_services_view(),
+        ),
+        &user,
+        sections,
+    )
+    .await
+    .expect("resolve matrix")
+    .expect("user found");
 
     assert_eq!(matrix.sections.len(), 2);
     assert_eq!(matrix.sections[0].label, "Skills");
@@ -182,10 +198,18 @@ async fn filter_catalog_for_user_is_the_same_grading_as_resolve_user_matrix() {
     let skill = unique("skill");
     insert_acl_rule(&db.pool, "skill", &skill, "user", user.as_str(), "allow").await;
 
-    let matrix = filter_catalog_for_user(&db.pool, &user, one_skill(&skill))
-        .await
-        .expect("filter catalog")
-        .expect("user found");
+    let matrix = filter_catalog_for_user(
+        &db.pool,
+        &dynapps_test_common::extension_services(
+            &db.pool,
+            dynapps_test_common::empty_services_view(),
+        ),
+        &user,
+        one_skill(&skill),
+    )
+    .await
+    .expect("filter catalog")
+    .expect("user found");
 
     assert_eq!(matrix.sections[0].rows[0].effective, "allow");
     assert_eq!(matrix.sections[0].rows[0].source.layer, "user");

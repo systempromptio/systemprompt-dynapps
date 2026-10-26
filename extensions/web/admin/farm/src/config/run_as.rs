@@ -12,6 +12,14 @@
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum RunAsError {
+    #[error("{owner}: run_as is empty")]
+    Empty { owner: String },
+    #[error("{owner}: run_as.service_account is only read in mode service_account")]
+    AccountOutsideMode { owner: String },
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RunAsMode {
@@ -100,7 +108,7 @@ impl RunAs {
         }
     }
 
-    pub(super) fn validate(&self, owner: &str) -> Result<(), String> {
+    pub(super) fn validate(&self, owner: &str) -> Result<(), RunAsError> {
         let named = self
             .service_account
             .as_deref()
@@ -108,10 +116,12 @@ impl RunAs {
             .filter(|s| !s.is_empty());
         match (self.mode, named, self.service_account.is_some()) {
             (RunAsMode::ServiceAccount, Some(_), _) => Ok(()),
-            (RunAsMode::ServiceAccount, None, _) => Err(format!("{owner}: run_as is empty")),
-            (_, _, true) => Err(format!(
-                "{owner}: run_as.service_account is only read in mode service_account"
-            )),
+            (RunAsMode::ServiceAccount, None, _) => Err(RunAsError::Empty {
+                owner: owner.to_owned(),
+            }),
+            (_, _, true) => Err(RunAsError::AccountOutsideMode {
+                owner: owner.to_owned(),
+            }),
             _ => Ok(()),
         }
     }

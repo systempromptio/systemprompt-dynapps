@@ -12,7 +12,7 @@ use axum::{Extension, Router};
 use sqlx::PgPool;
 
 use crate::handlers;
-use crate::handlers::connector_auth::{account, consent, identity};
+use crate::handlers::connector_auth::{account, consent, identity, token};
 use crate::services::service_accounts::ServiceAccounts;
 
 // Why: the desktop bridge has no cookie jar, so this route authenticates the
@@ -36,7 +36,7 @@ pub fn connector_api_router(pool: Arc<PgPool>, accounts: ServiceAccounts) -> Rou
         .route("/account/connections/{provider}/test", post(account::test))
         .route("/connectors/{provider}/start", get(consent::start))
         .route("/connectors/{provider}/callback", get(consent::callback))
-        .route("/connectors/{provider}/token", get(consent::token))
+        .route("/connectors/{provider}/token", get(token::token))
         .route("/identity/{server}/token", get(identity::token))
         .layer(axum::extract::DefaultBodyLimit::max(32768))
         .layer(Extension(accounts))

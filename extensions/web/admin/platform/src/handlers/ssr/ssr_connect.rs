@@ -7,6 +7,7 @@ use axum::extract::Extension;
 use axum::http::HeaderMap;
 use axum::response::Response;
 use serde::Serialize;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use systemprompt_web_admin_core::bridge_client;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
@@ -41,9 +42,10 @@ pub(crate) async fn connect_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
 ) -> AdminHtmlResult<Response> {
-    let (_, gateway) = bridge_client::read_config_strings();
+    let (_, gateway) = bridge_client::read_config_strings(boot.config());
     let phases = setup_phases(&mkt_ctx);
     let view = ConnectPageView {
         page: "connect",
@@ -71,9 +73,11 @@ fn request_origin(headers: &HeaderMap) -> String {
         .get("x-forwarded-proto")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("http");
-    let host = headers
+    headers
         .get("host")
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("localhost:8080");
-    format!("{scheme}://{host}")
+        .map_or_else(
+            || systemprompt::models::defaults::DEFAULT_API_URL.to_owned(),
+            |host| format!("{scheme}://{host}"),
+        )
 }

@@ -285,14 +285,14 @@ async fn list_traces_filters_by_agent_and_scope() {
         agent_id: Some(&agent),
         ..TraceFilter::default()
     };
-    let by_scope = TraceFilter {
+    let scope_filter = TraceFilter {
         agent_scope: Some("subagent"),
         ..TraceFilter::default()
     };
     let (agent_traces, _) = list_traces(&db.pool, by_agent, narrow_window(), page())
         .await
         .expect("query succeeds");
-    let (scope_traces, _) = list_traces(&db.pool, by_scope, narrow_window(), page())
+    let (scope_traces, _) = list_traces(&db.pool, scope_filter, narrow_window(), page())
         .await
         .expect("query succeeds");
 

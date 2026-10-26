@@ -68,8 +68,7 @@ async fn insert_report(
 }
 
 fn request_origin() -> String {
-    let profile = systemprompt::config::ProfileBootstrap::get().expect("fixture profile");
-    url::Url::parse(&profile.server.api_external_url)
+    url::Url::parse(&globals::boot().config().api_external_url)
         .expect("fixture origin")
         .origin()
         .ascii_serialization()

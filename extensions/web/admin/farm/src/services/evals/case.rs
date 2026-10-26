@@ -123,7 +123,7 @@ pub(crate) async fn settle_case(job: &CaseJob<'_>, launched: &RunRow) -> FarmRes
     })
 }
 
-type Verdict = Option<Result<(i32, bool, String), String>>;
+type Verdict = Option<Result<(i32, bool, String), FarmError>>;
 
 fn settle(
     (run, agent_run): (&RunRow, &AgentRunRow),
@@ -192,8 +192,7 @@ async fn judge_case(
         judge
             .judge(&input)
             .await
-            .map(|v| (v.score, v.passed, v.rationale))
-            .map_err(|e| e.to_string()),
+            .map(|v| (v.score, v.passed, v.rationale)),
     )
 }
 

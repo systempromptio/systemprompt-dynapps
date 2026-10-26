@@ -36,14 +36,17 @@ async fn is_revoked(pool: &PgPool, session_id: &SessionId) -> bool {
 }
 
 fn cookie_for(user_id: &UserId, session_id: &SessionId) -> HeaderMap {
-    let token = JwtService::generate_admin_token(&AdminTokenParams {
-        user_id,
-        session_id,
-        email: "signout@contract.test",
-        issuer: &globals::jwt_issuer(),
-        duration: chrono::Duration::hours(1),
-        client_id: None,
-    })
+    let token = JwtService::generate_admin_token(
+        globals::signing_keys(),
+        &AdminTokenParams {
+            user_id,
+            session_id,
+            email: "signout@contract.test",
+            issuer: &globals::jwt_issuer(),
+            duration: chrono::Duration::hours(1),
+            client_id: None,
+        },
+    )
     .expect("mint a session token");
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -70,7 +73,14 @@ async fn sign_out_revokes_only_the_session_the_cookie_names() {
     let my_other_device = insert_session(&db.pool, &me).await;
     let someone_else = insert_session(&db.pool, &other).await;
 
-    assert!(revoke_cookie_session(&db.pool, &cookie_for(&me, &current)).await);
+    assert!(
+        revoke_cookie_session(
+            &db.pool,
+            globals::boot().token_authority().as_ref(),
+            &cookie_for(&me, &current)
+        )
+        .await
+    );
     assert!(is_revoked(&db.pool, &current).await);
     assert!(
         !is_revoked(&db.pool, &my_other_device).await,
@@ -78,12 +88,22 @@ async fn sign_out_revokes_only_the_session_the_cookie_names() {
     );
 
     assert!(
-        !revoke_cookie_session(&db.pool, &cookie_for(&me, &current)).await,
+        !revoke_cookie_session(
+            &db.pool,
+            globals::boot().token_authority().as_ref(),
+            &cookie_for(&me, &current)
+        )
+        .await,
         "a second sign-out with the same cookie is a no-op"
     );
 
     assert!(
-        !revoke_cookie_session(&db.pool, &cookie_for(&me, &someone_else)).await,
+        !revoke_cookie_session(
+            &db.pool,
+            globals::boot().token_authority().as_ref(),
+            &cookie_for(&me, &someone_else)
+        )
+        .await,
         "a token cannot end a session that belongs to another user"
     );
     assert!(!is_revoked(&db.pool, &someone_else).await);
@@ -101,14 +121,28 @@ async fn sign_out_without_a_valid_token_revokes_nothing() {
         return;
     };
 
-    assert!(!revoke_cookie_session(&db.pool, &HeaderMap::new()).await);
+    assert!(
+        !revoke_cookie_session(
+            &db.pool,
+            globals::boot().token_authority().as_ref(),
+            &HeaderMap::new()
+        )
+        .await
+    );
 
     let mut garbage = HeaderMap::new();
     garbage.insert(
         header::COOKIE,
         HeaderValue::from_static("access_token=not-a-jwt"),
     );
-    assert!(!revoke_cookie_session(&db.pool, &garbage).await);
+    assert!(
+        !revoke_cookie_session(
+            &db.pool,
+            globals::boot().token_authority().as_ref(),
+            &garbage
+        )
+        .await
+    );
 
     db.cleanup().await;
 }

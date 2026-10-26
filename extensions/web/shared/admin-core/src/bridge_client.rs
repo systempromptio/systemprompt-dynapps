@@ -8,11 +8,10 @@ use systemprompt::manifest::Config;
 
 pub const BRIDGE_BINARY: &str = "dynapps-bridge";
 
-pub fn read_config_strings() -> (Option<String>, Option<String>) {
-    Config::get().map_or((None, None), |c| {
-        (
-            Some(c.jwt_issuer.clone()),
-            Some(c.api_external_url.trim_end_matches('/').to_owned()),
-        )
-    })
+#[must_use]
+pub fn read_config_strings(config: &Config) -> (Option<String>, Option<String>) {
+    (
+        Some(config.jwt_issuer.clone()),
+        Some(config.api_external_url.trim_end_matches('/').to_owned()),
+    )
 }

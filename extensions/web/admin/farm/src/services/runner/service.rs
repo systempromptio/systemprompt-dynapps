@@ -18,6 +18,7 @@ use systemprompt::agent_runs::governance::HookBases;
 use systemprompt::agent_runs::repository::RunCredentialRepositories;
 use systemprompt::agent_runs::service::{ClaimLoop, RunHandler, claimer_id};
 use systemprompt::database::DbPool;
+use systemprompt::oauth::repository::{OAuthRepositories, OAuthRepository};
 use systemprompt::traits::{JobContext, RunnerService};
 use systemprompt::users::ApiKeyLifetime;
 use tokio_util::sync::CancellationToken;
@@ -44,7 +45,8 @@ impl FarmRunnerService {
         Self { state }
     }
 
-    fn handler(&self, db: &DbPool, issuer: RunIssuer) -> Arc<dyn RunHandler> {
+    fn handler(&self, db: &DbPool, oauth: OAuthRepository) -> Arc<dyn RunHandler> {
+        let boot = &self.state.boot;
         let gateway = &self.state.gateway;
         let runner = read_runner_config(&self.state.paths.composed_services_root);
         let fly = (runner.mode == RunnerMode::FlyMachine).then(|| runner.fly.unwrap_or_default());
@@ -52,9 +54,10 @@ impl FarmRunnerService {
         Arc::new(FarmRunHandler {
             state: Arc::clone(&self.state),
             credentials: RunCredentialService::new(
-                RunCredentialRepositories::new(db),
-                issuer.jwt_issuer,
-                issuer.key_lifetime,
+                RunCredentialRepositories::new(db, oauth),
+                ApiKeyLifetime::from_max_days(boot.config().api_key_max_lifetime_days),
+                Arc::clone(boot.token_authority()),
+                Arc::clone(boot.config_arc()),
             ),
             hooks: HookBases {
                 govern_url: gateway.govern_url(),
@@ -72,24 +75,6 @@ fn hostname() -> String {
         .unwrap_or_else(|| FALLBACK_HOSTNAME.to_owned())
 }
 
-struct RunIssuer {
-    jwt_issuer: String,
-    key_lifetime: ApiKeyLifetime,
-}
-
-fn run_issuer() -> Option<RunIssuer> {
-    match systemprompt::manifest::Config::get() {
-        Ok(config) => Some(RunIssuer {
-            jwt_issuer: config.jwt_issuer.clone(),
-            key_lifetime: ApiKeyLifetime::from_max_days(config.api_key_max_lifetime_days),
-        }),
-        Err(error) => {
-            tracing::error!(%error, "config unavailable; no farm run will be claimed");
-            None
-        },
-    }
-}
-
 #[async_trait]
 impl RunnerService for FarmRunnerService {
     fn name(&self) -> &'static str {
@@ -101,9 +86,11 @@ impl RunnerService for FarmRunnerService {
             tracing::error!("farm runner has no DbPool; no farm run will be claimed");
             return;
         };
-        let Some(issuer) = run_issuer() else {
+        let Ok(oauth) = ctx.get::<Arc<OAuthRepositories>>() else {
+            tracing::error!("farm runner has no OAuth repositories; no farm run will be claimed");
             return;
         };
+        let oauth = oauth.oauth.clone();
         let mut claim = ClaimLoop::new(
             AgentRunRepository::from_pool(Arc::clone(&self.state.pool)),
             ORIGIN_KIND,
@@ -111,7 +98,7 @@ impl RunnerService for FarmRunnerService {
         );
         claim.max_concurrent = self.state.limits.max_concurrent.max(1);
         let sweep = reconcile_loop(Arc::clone(&self.state), shutdown.clone());
-        tokio::join!(claim.run(shutdown, self.handler(&db, issuer)), sweep);
+        tokio::join!(claim.run(shutdown, self.handler(&db, oauth)), sweep);
     }
 }
 

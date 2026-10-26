@@ -114,27 +114,18 @@ pub(super) struct AccessData {
 }
 
 pub(super) async fn load_access(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     pool: &PgPool,
     user_id: &UserId,
     faults: &mut Faults,
 ) -> AccessData {
-    let overview = super::access_overview::load(pool, user_id).await;
-    let services_path = match systemprompt_web_admin_core::request::get_services_path() {
-        Ok(path) => path,
-        Err(error) => {
-            faults.record("access matrix", &error);
-            return AccessData {
-                overview,
-                rules_available: false,
-                matrix: None,
-                rules: Vec::new(),
-            };
-        },
-    };
-    let sections = crate::handlers::access_control::build_matrix_sections(&services_path);
+    let overview = super::access_overview::load(services, boot, pool, user_id).await;
+    let services_path = systemprompt_web_admin_core::request::get_services_path(boot);
+    let sections = crate::handlers::access_control::build_matrix_sections(services, &services_path);
     let (matrix, rules) = tokio::join!(
         systemprompt_web_admin_core::repositories::entitlement::resolve_user_matrix(
-            pool, user_id, sections
+            pool, services, user_id, sections
         ),
         systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool),
     );

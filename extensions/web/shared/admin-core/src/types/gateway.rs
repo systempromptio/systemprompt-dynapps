@@ -1,6 +1,11 @@
 //! Gateway route and settings value types.
-
-use std::collections::BTreeMap;
+//!
+//! A route is policy only: it aliases a requested id onto a catalog model,
+//! pins or narrows the deployments a model is served from, or carries an
+//! audit label and an access-control address. Routing itself is the
+//! catalog's `deployments.yaml`. The view mirrors core's `GatewayRoute`
+//! field for field, so a console round-trip never drops a block it does not
+//! edit.
 
 use serde::{Deserialize, Serialize};
 
@@ -12,55 +17,58 @@ pub struct GatewayRouteView {
     pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    pub model_pattern: String,
-    pub provider: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub models: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deployments: Vec<RouteDeploymentView>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub upstream_model: Option<String>,
-    #[serde(default)]
-    pub extra_headers: BTreeMap<String, String>,
-    // Why: core owns the typed pricing/when/requires route blocks; dropping them
-    // on a console round-trip would silently rewrite routing policy.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pricing: Option<serde_yaml::Value>,
+    pub alias: Option<RouteAliasView>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub when: Option<serde_yaml::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requires: Option<serde_yaml::Value>,
-    // Why: core's failover chain and per-scope routing read these two, so the
-    // editor must carry them or a console save silently removes a route's
-    // failover or a project's dedicated deployment.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub fallbacks: Vec<RouteFallbackView>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub by_scope: Option<serde_yaml::Value>,
-    // Why: core's deployment selection and context-window check read these
-    // three; the editor carries them untouched so a console save keeps them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strategy: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub weight: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub context_fallbacks: Vec<RouteFallbackView>,
+    pub context_fallbacks: Vec<String>,
 }
 
-/// One deployment a route fails over to, in the order core tries them.
+impl GatewayRouteView {
+    #[must_use]
+    pub fn models_line(&self) -> String {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(alias) = &self.alias {
+            parts.push(format!("{} → {}", alias.requested, alias.model));
+        }
+        if !self.models.is_empty() {
+            parts.push(self.models.join(", "));
+        }
+        parts.join("; ")
+    }
+}
+
+/// One `provider/endpoint` a route pins, with its weight under
+/// `strategy: weighted`.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct RouteFallbackView {
-    pub provider: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub upstream_model: Option<String>,
+pub struct RouteDeploymentView {
+    pub endpoint: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub weight: Option<u32>,
 }
 
-impl RouteFallbackView {
+impl RouteDeploymentView {
     #[must_use]
-    pub fn describe(&self) -> String {
-        self.upstream_model.as_ref().map_or_else(
-            || self.provider.clone(),
-            |model| format!("{} as {model}", self.provider),
-        )
+    pub fn provider(&self) -> &str {
+        self.endpoint
+            .split_once('/')
+            .map_or(self.endpoint.as_str(), |(provider, _)| provider)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct RouteAliasView {
+    pub requested: String,
+    pub model: String,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]

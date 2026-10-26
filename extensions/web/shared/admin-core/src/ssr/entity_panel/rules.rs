@@ -5,11 +5,11 @@
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 
-use systemprompt::governance::authz::{DASHBOARD_SOURCE, YAML_SOURCE};
+use crate::util::change_source::{is_code_source, is_console_source};
 
 use super::view::{BandRulesView, PanelRuleView};
+use crate::repositories::access_rules::review::band_label;
 use crate::repositories::access_rules::rules::LedgerRuleRow;
-use crate::repositories::sync::access_control_rows::band_label;
 use crate::types::access_control::AccessDecision;
 
 const BAND_ORDER: [&str; 6] = [
@@ -30,14 +30,16 @@ fn rank(band: &str) -> usize {
 
 #[must_use]
 pub fn source_words(source: &str) -> (String, &'static str) {
-    match source {
-        YAML_SOURCE => ("code".to_owned(), "muted"),
-        DASHBOARD_SOURCE => ("console".to_owned(), "info"),
-        s => s.strip_prefix("bundle:").map_or_else(
-            || (s.to_owned(), "muted"),
-            |kit| (format!("kit {kit}"), "muted"),
-        ),
+    if is_code_source(source) {
+        return ("code".to_owned(), "muted");
     }
+    if is_console_source(source) {
+        return ("console".to_owned(), "info");
+    }
+    source.strip_prefix("bundle:").map_or_else(
+        || (source.to_owned(), "muted"),
+        |kit| (format!("kit {kit}"), "muted"),
+    )
 }
 
 pub fn band_rules<S: BuildHasher>(

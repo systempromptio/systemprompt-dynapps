@@ -1,9 +1,7 @@
 //! Dashboard route edits are durable only when the database and boot YAML
 //! agree; partial form saves must retain policy blocks that the form omits.
 
-use std::collections::BTreeMap;
-
-use systemprompt_web_admin_core::types::{GatewayRouteView, RouteFallbackView};
+use systemprompt_web_admin_core::types::{GatewayRouteView, RouteDeploymentView};
 use systemprompt_web_admin_governance::repositories::gateway_routes::editor::{
     create_route_entry, delete_route_at, reorder_route_positions, update_route_at,
 };
@@ -16,24 +14,23 @@ fn route(id: &str, pattern: &str) -> GatewayRouteView {
         id: id.into(),
         name: Some(format!("Route {id}")),
         description: Some("initial description".into()),
-        model_pattern: pattern.into(),
-        provider: "anthropic".into(),
-        upstream_model: Some("claude-fixture".into()),
-        extra_headers: BTreeMap::from([("x-tenant".into(), "acme".into())]),
-        pricing: Some(serde_yaml::from_str("input: 3").expect("pricing yaml")),
-        when: Some(serde_yaml::from_str("region: eu").expect("when yaml")),
-        requires: Some(serde_yaml::from_str("tier: enterprise").expect("requires yaml")),
-        fallbacks: vec![RouteFallbackView {
-            provider: "openai".into(),
-            upstream_model: Some("gpt-fixture".into()),
-            weight: None,
-        }],
-        by_scope: Some(
-            serde_yaml::from_str(
-                "dimension: project\nchains:\n  storefront:\n    provider: openai",
-            )
-            .expect("by_scope yaml"),
+        models: vec![pattern.into()],
+        deployments: vec![
+            RouteDeploymentView {
+                endpoint: "anthropic/direct".into(),
+                weight: Some(3),
+            },
+            RouteDeploymentView {
+                endpoint: "openai/direct".into(),
+                weight: Some(1),
+            },
+        ],
+        when: Some(serde_yaml::from_str("stream: true").expect("when yaml")),
+        requires: Some(
+            serde_yaml::from_str("european: true\nno_retain: false").expect("requires yaml"),
         ),
+        strategy: Some("weighted".into()),
+        context_fallbacks: vec!["claude-long-context".into()],
         ..GatewayRouteView::default()
     }
 }
@@ -61,12 +58,10 @@ async fn route_editor_preserves_hidden_policy_blocks_and_regenerates_dispatch_or
     );
     let mut partial = route("", "claude-updated-*");
     partial.description = Some("edited from dashboard".into());
-    partial.pricing = None;
     partial.when = None;
     partial.requires = None;
-    partial.fallbacks.clear();
-    partial.by_scope = None;
-    partial.extra_headers.clear();
+    partial.strategy = None;
+    partial.context_fallbacks.clear();
     update_route_at(&db.pool, &gateway, 0, &partial)
         .await
         .expect("save partial form route");
@@ -90,12 +85,15 @@ async fn route_editor_preserves_hidden_policy_blocks_and_regenerates_dispatch_or
         primary.route.description.as_deref(),
         Some("edited from dashboard")
     );
-    assert_eq!(primary.route.pricing, route("x", "x").pricing);
+    assert_eq!(primary.route.models, ["claude-updated-*"]);
+    assert_eq!(primary.route.deployments, route("x", "x").deployments);
     assert_eq!(primary.route.when, route("x", "x").when);
     assert_eq!(primary.route.requires, route("x", "x").requires);
-    assert_eq!(primary.route.fallbacks, route("x", "x").fallbacks);
-    assert_eq!(primary.route.by_scope, route("x", "x").by_scope);
-    assert_eq!(primary.route.extra_headers["x-tenant"], "acme");
+    assert_eq!(primary.route.strategy, route("x", "x").strategy);
+    assert_eq!(
+        primary.route.context_fallbacks,
+        route("x", "x").context_fallbacks
+    );
     let rendered = std::fs::read_to_string(&gateway).expect("regenerated gateway");
     assert!(
         rendered.find("secondary").expect("secondary yaml")

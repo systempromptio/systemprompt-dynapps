@@ -11,10 +11,7 @@ use super::skills_of;
 use super::view::{AudienceMatrixView, MarketplaceCardView, marketplace_url};
 use systemprompt_web_admin_core::catalog_index::manifests::MarketplaceConfigSummary;
 use systemprompt_web_admin_core::repositories::sync::marketplace_versions_db::list_current_marketplace_versions;
-use systemprompt_web_admin_core::repositories::sync::provenance::{
-    OwnedKind, Provenance, owned_by,
-};
-use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
+use systemprompt_web_admin_core::repositories::sync::provenance::{OwnedKind, owned_by};
 use systemprompt_web_admin_core::ssr::sync_plane::HashView;
 
 pub(super) async fn current_hashes(pool: &PgPool) -> HashMap<String, String> {
@@ -34,20 +31,15 @@ pub(super) struct CardInputs<'a> {
     pub grants: &'a HashMap<MarketplaceId, Vec<GroupId>>,
     pub plugin_catalog: &'a [systemprompt_web_admin_core::types::PluginDetail],
     pub versions: &'a HashMap<String, String>,
+    pub sources: &'a systemprompt_web_admin_core::repositories::sync::sources::SourcesView,
 }
 
 pub(super) fn card_views(inputs: &CardInputs<'_>) -> Vec<MarketplaceCardView> {
-    // Why: discard-ok: an unreadable profile leaves every card as base
-    let sources = build_sources()
-        .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: sources unreadable"))
-        .ok();
     inputs
         .manifests
         .iter()
         .map(|m| {
-            let provenance = sources.as_ref().map_or_else(Provenance::base, |s| {
-                owned_by(s, OwnedKind::Marketplace, m.id.as_str())
-            });
+            let provenance = owned_by(inputs.sources, OwnedKind::Marketplace, m.id.as_str());
             let assigned_groups = inputs.grants.get(&m.id).cloned().unwrap_or_default();
             let allowed_subjects = inputs
                 .audience

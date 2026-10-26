@@ -31,9 +31,7 @@ const WAIT_LIMIT: Duration = Duration::from_secs(600);
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct LaunchBody {
-    #[serde(alias = "farm_id")]
     farm: FarmId,
-    #[serde(alias = "agent_id")]
     agent: FarmAgentId,
     prompt: Option<String>,
     case: Option<String>,
@@ -80,7 +78,7 @@ pub(crate) async fn launch_run(
 ) -> AdminResult<Response> {
     check_limits(&body)?;
     let farm = load_farm(&state.pool, &body.farm).await?;
-    require_farm_access(&state.pool, &ctx, &farm).await?;
+    require_farm_access(&state.pool, &state.services, &ctx, &farm).await?;
     agents::find_agent(&state.pool, &body.farm, &body.agent)
         .await?
         .ok_or_else(|| AdminError::NotFound(format!("agent {}", body.agent.as_str())))?;

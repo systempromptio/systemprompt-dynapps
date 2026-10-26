@@ -10,22 +10,22 @@
 
 use std::sync::Arc;
 
-use axum::Router;
 use axum::extract::{Request, State};
 use axum::middleware::{self as axum_middleware, Next};
 use axum::response::Response;
+use axum::{Extension, Router};
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
-use systemprompt::identifiers::InstanceId;
 use systemprompt::prelude::PgPool;
 use systemprompt::system::AppContext;
-use systemprompt::traits::{FileStorage, JobContext, RunnerService};
+use systemprompt::traits::{JobContext, RunnerService};
 use systemprompt_web_admin_core::ssr::viewer_tz::with_viewer_tz;
 use systemprompt_web_admin_farm::routes::public::agent_farm_public_routes;
 use systemprompt_web_admin_farm::routes::worker::agent_farm_worker_routes;
 use systemprompt_web_admin_farm::services::farm_sync::boot::sync_missing_checkouts;
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
+use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::services::runner::report::backfill_missing_reports;
 use systemprompt_web_admin_farm::state::{FarmHost, FarmState, build_farm_state_from_app};
 use tokio_util::sync::CancellationToken;
@@ -47,11 +47,14 @@ pub fn farm_public_router(read_pool: Arc<PgPool>, state: Arc<FarmState>) -> Rout
         ))
 }
 
-pub(crate) fn farm_worker_router() -> Router {
-    agent_farm_worker_routes()
+pub(crate) fn farm_worker_router(runs: Arc<RemoteRuns>) -> Router {
+    agent_farm_worker_routes(runs)
 }
 
 async fn farm_context_middleware(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     mut request: Request,
     next: Next,
@@ -60,7 +63,7 @@ async fn farm_context_middleware(
     let Some(session) = admin::resolve_session(&pool, inputs).await? else {
         return Ok(next.run(request).await);
     };
-    let (ctx, tz) = admin::resolve_user_context(&pool, session).await;
+    let (ctx, tz) = admin::resolve_user_context(&services, &pool, session).await;
     request.extensions_mut().insert(ctx);
     Ok(with_viewer_tz(tz, next.run(request)).await)
 }
@@ -75,7 +78,8 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
         |paths| paths.system().services().to_path_buf(),
     );
     let state = Arc::clone(state);
-    tokio::spawn(async move {
+    let tasks = state.tasks.clone();
+    tasks.spawn("farm_boot_seed", async move {
         match seed_farms_from_yaml(&state.pool, &services).await {
             Ok(count) => tracing::info!(farms = count, "agent farms seeded"),
             Err(e) => tracing::error!(error = %e, "agent farm seed failed"),
@@ -89,7 +93,9 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
     });
 }
 
-pub(crate) struct FarmRunner;
+pub(crate) struct FarmRunner {
+    pub(crate) runs: Arc<RemoteRuns>,
+}
 
 #[async_trait::async_trait]
 impl RunnerService for FarmRunner {
@@ -116,8 +122,19 @@ impl RunnerService for FarmRunner {
         let state = build_state(
             pool,
             paths.as_deref(),
-            Arc::clone(app.file_storage()),
-            app.config().instance_id.clone(),
+            FarmHost {
+                artefacts: Arc::clone(app.file_storage()),
+                instance: app.config().instance_id.clone(),
+                runs: Arc::clone(&self.runs),
+                tasks: app.background_tasks().clone(),
+                services:
+                    systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(
+                        app.as_ref(),
+                    ),
+                boot: systemprompt_web_admin_core::extension_boot::ExtensionBoot::from_context(
+                    app.as_ref(),
+                ),
+            },
         );
         FarmRunnerService::new(state).run(ctx, shutdown).await;
     }
@@ -126,15 +143,7 @@ impl RunnerService for FarmRunner {
 pub fn build_state(
     pool: Arc<PgPool>,
     app_paths: Option<&AppPaths>,
-    artefacts: Arc<dyn FileStorage>,
-    instance: InstanceId,
+    host: FarmHost,
 ) -> Arc<FarmState> {
-    build_farm_state_from_app(
-        pool,
-        app_paths,
-        FarmHost {
-            artefacts,
-            instance,
-        },
-    )
+    build_farm_state_from_app(pool, app_paths, host)
 }

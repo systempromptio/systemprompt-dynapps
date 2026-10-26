@@ -21,7 +21,9 @@ mod tabs;
 mod views;
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
+use axum::Extension;
 use axum::extract::{Query, State};
 use axum::response::Response;
 use chrono::{Duration, Utc};
@@ -63,7 +65,11 @@ fn list_filter(query: &SkillsQuery, tab: SkillsTab) -> SkillListFilter {
 
 pub(crate) async fn page(
     shell: Page,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     Query(query): Query<SkillsQuery>,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
@@ -86,7 +92,7 @@ pub(crate) async fn page(
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
     };
     let filter = list_filter(&query, tab);
-    let index = InventoryIndex::build(&systemprompt_web_admin_core::request::get_services_path()?);
+    let index = InventoryIndex::build(boot.services_root());
     let (rows, adoption, audience) = tokio::join!(
         list_skill_facts(&pool, &window, &filter),
         async {
@@ -96,7 +102,7 @@ pub(crate) async fn page(
                 Ok(Vec::new())
             }
         },
-        get_marketplace_audience(&pool, &index.marketplaces),
+        get_marketplace_audience(&pool, &services, &index.marketplaces),
     );
     let (rows, adoption, audience) = (rows?, adoption?, audience?);
     let report_banner = crate::handlers::ssr::analysis::reports::banner::report_banner(

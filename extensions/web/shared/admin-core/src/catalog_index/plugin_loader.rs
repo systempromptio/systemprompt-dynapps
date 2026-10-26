@@ -1,35 +1,36 @@
 //! Reads and parses the `services/plugins/` YAML descriptors.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::manifest::services::PluginConfigFile;
 
 use crate::types::PlatformPluginConfig;
 use systemprompt_web_shared::error::MarketplaceError;
 
-fn plugins_dir() -> Result<PathBuf, MarketplaceError> {
-    let profile = ProfileBootstrap::get()?;
-    Ok(PathBuf::from(&profile.paths.services).join("plugins"))
+fn plugins_dir(services_dir: &Path) -> PathBuf {
+    services_dir.join("plugins")
 }
 
-fn parse_plugin_config_file(path: &std::path::Path) -> Result<PluginConfigFile, MarketplaceError> {
+fn parse_plugin_config_file(path: &Path) -> Result<PluginConfigFile, MarketplaceError> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))?;
     serde_yaml::from_str::<PluginConfigFile>(&content)
         .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))
 }
 
-pub fn load_all_plugins() -> Result<Vec<(String, PlatformPluginConfig)>, MarketplaceError> {
-    Ok(load_all_plugins_with_paths()?
+pub fn load_all_plugins(
+    services_dir: &Path,
+) -> Result<Vec<(String, PlatformPluginConfig)>, MarketplaceError> {
+    Ok(load_all_plugins_with_paths(services_dir)?
         .into_iter()
         .map(|(id, cfg, _path)| (id, cfg))
         .collect())
 }
 
-pub fn load_all_plugins_with_paths()
--> Result<Vec<(String, PlatformPluginConfig, String)>, MarketplaceError> {
-    let dir = plugins_dir()?;
+pub fn load_all_plugins_with_paths(
+    services_dir: &Path,
+) -> Result<Vec<(String, PlatformPluginConfig, String)>, MarketplaceError> {
+    let dir = plugins_dir(services_dir);
     if !dir.exists() {
         return Ok(Vec::new());
     }
@@ -37,7 +38,7 @@ pub fn load_all_plugins_with_paths()
     let entries = std::fs::read_dir(&dir)
         .map_err(|e| MarketplaceError::config_file(dir.display().to_string(), e))?;
 
-    let services_dir = dir.parent().map(std::path::Path::to_path_buf);
+    let services_dir = dir.parent().map(Path::to_path_buf);
 
     let mut out: Vec<(String, PlatformPluginConfig, String)> = Vec::new();
     for entry in entries {

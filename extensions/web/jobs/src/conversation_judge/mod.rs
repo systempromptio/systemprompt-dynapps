@@ -30,7 +30,6 @@ mod transcript;
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::Actor;
 use systemprompt::system::AppContext;
@@ -243,10 +242,7 @@ impl Job for ConversationJudgeJob {
         let db = ctx.get::<DbPool>()?;
         let app = ctx.get::<Arc<AppContext>>()?;
         let params = JudgeParams::from_context(ctx)?;
-        let automatic = ProfileBootstrap::get()
-            .map_err(JobError::from)?
-            .judge
-            .automatic;
+        let automatic = app.profile().judge.automatic;
         let Some(ai) = app.ai_service_arc() else {
             return Ok(
                 JobResult::success().with_message("no AI provider is configured; judge idle")

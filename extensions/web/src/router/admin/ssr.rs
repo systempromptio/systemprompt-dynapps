@@ -39,6 +39,8 @@ pub struct AdminSsrDeps {
     pub sso_deps: SsoDeps,
     pub managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
     pub files: Arc<dyn FileStorage>,
+    pub boot: systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+    pub ai: Arc<systemprompt::ai::repository::AiRepositories>,
 }
 
 impl std::fmt::Debug for AdminSsrDeps {
@@ -53,6 +55,8 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
         sso_deps,
         managed,
         files,
+        boot,
+        ai,
     } = deps;
     let inner = overview::routes()
         .merge(people_routes())
@@ -66,13 +70,14 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
         .merge(api_routes())
         .merge(redirects::legacy_routes())
         .layer(Extension(engine.clone()))
-        .layer(Extension(ServiceAccounts::new(UserRepository::new(db))))
+        .layer(Extension(ServiceAccounts::new(
+            UserRepository::new(db),
+            Arc::clone(boot.secrets()),
+        )))
         .layer(Extension(managed))
         .layer(Extension(files))
         .layer(Extension(Arc::clone(db)))
-        .layer(Extension(Arc::new(
-            systemprompt::ai::repository::UserProviderCredentialRepository::new(db),
-        )))
+        .layer(Extension(Arc::new(ai.user_provider_credentials.clone())))
         .layer(Extension(sso_deps.clone()))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),
@@ -90,7 +95,7 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
         ))
         .with_state(Arc::clone(&pool));
 
-    let combined = public_routes(Arc::clone(&pool))
+    let combined = public_routes(Arc::clone(&pool), boot.profile())
         .layer(Extension(engine))
         .layer(Extension(sso_deps))
         .with_state(pool)
@@ -103,11 +108,14 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
     )
 }
 
-fn public_routes(pool: Arc<PgPool>) -> Router<Arc<PgPool>> {
+fn public_routes(
+    pool: Arc<PgPool>,
+    profile: &systemprompt::manifest::Profile,
+) -> Router<Arc<PgPool>> {
     let login = Router::new().route("/login", get(login::login_page)).layer(
         axum_middleware::from_fn_with_state(pool, middleware::user_context_middleware),
     );
-    login.merge(sign_in::sign_in_routes())
+    login.merge(sign_in::sign_in_routes(profile))
 }
 
 fn ai_activity_routes() -> Router<Arc<PgPool>> {

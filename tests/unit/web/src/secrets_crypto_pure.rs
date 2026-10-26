@@ -1,5 +1,8 @@
+use std::error::Error;
+
 use systemprompt_web_admin_core::crypto::secret_crypto::{
-    SecretCryptoError, decrypt, encrypt, generate_dek, generate_nonce,
+    SecretCryptoError, decrypt, encrypt, fixed_key_material, generate_dek, generate_nonce,
+    master_key_from_secret,
 };
 
 const KEY: [u8; 32] = [7u8; 32];
@@ -101,24 +104,68 @@ fn a_generated_dek_seals_and_opens_its_own_traffic() {
 
 #[test]
 fn error_messages_name_the_failing_stage() {
-    assert_eq!(
-        SecretCryptoError::MasterKeyMissing.to_string(),
-        "Master key not configured"
+    assert!(
+        SecretCryptoError::MasterKeyMissing
+            .to_string()
+            .starts_with("Master key not configured")
     );
-    assert_eq!(
-        SecretCryptoError::InvalidKeyMaterial.to_string(),
-        "Invalid key material"
+    assert!(
+        SecretCryptoError::Database(sqlx::Error::PoolClosed)
+            .to_string()
+            .starts_with("Database error:")
     );
-    assert_eq!(
-        SecretCryptoError::Database("pool closed".into()).to_string(),
-        "Database error: pool closed"
+    let decryption = decrypt(&KEY, &NONCE, b"not a ciphertext").expect_err("refused");
+    assert!(
+        decryption.to_string().starts_with("Decryption failed:"),
+        "{decryption}"
     );
-    assert_eq!(
-        SecretCryptoError::EncryptionFailed("aead".into()).to_string(),
-        "Encryption failed: aead"
+}
+
+#[test]
+fn a_missing_master_key_is_a_typed_refusal() {
+    assert!(matches!(
+        master_key_from_secret(None),
+        Err(SecretCryptoError::MasterKeyMissing)
+    ));
+    assert!(matches!(
+        master_key_from_secret(Some("   ")),
+        Err(SecretCryptoError::MasterKeyMissing)
+    ));
+}
+
+#[test]
+fn short_or_non_hex_key_material_keeps_cores_cause() {
+    let sixty_three_hex = "0".repeat(63);
+    let error = master_key_from_secret(Some(&sixty_three_hex)).expect_err("63 hex chars refused");
+    assert!(matches!(error, SecretCryptoError::InvalidKeyMaterial(_)));
+    assert!(
+        error
+            .source()
+            .is_some_and(<dyn Error>::is::<systemprompt::config::SecretsBootstrapError>)
     );
+    let error = master_key_from_secret(Some(&"zz".repeat(32))).expect_err("non-hex refused");
+    assert!(matches!(error, SecretCryptoError::InvalidKeyMaterial(_)));
+    assert!(error.source().is_some());
+}
+
+#[test]
+fn a_valid_master_key_decodes_to_thirty_two_bytes() {
+    let key = master_key_from_secret(Some(&format!(" {} ", "ab".repeat(32)))).expect("valid key");
+    assert_eq!(key, [0xab; 32]);
+}
+
+#[test]
+fn stored_key_material_of_the_wrong_length_names_both_lengths() {
+    let error = fixed_key_material::<12>(vec![0; 11]).expect_err("11 bytes is not a nonce");
+    assert!(matches!(
+        error,
+        SecretCryptoError::StoredKeyLength {
+            expected: 12,
+            actual: 11
+        }
+    ));
     assert_eq!(
-        SecretCryptoError::DecryptionFailed("aead".into()).to_string(),
-        "Decryption failed: aead"
+        fixed_key_material::<12>(vec![7; 12]).expect("nonce"),
+        [7; 12]
     );
 }

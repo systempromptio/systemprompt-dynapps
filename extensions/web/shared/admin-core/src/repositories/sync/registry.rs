@@ -9,25 +9,27 @@
 //! `gateway_routes` and `governance`.
 
 use super::plane::SyncPlane;
+use crate::extension_boot::ExtensionBoot;
 
-/// One plane's registration; `order` fixes its position on the page.
+/// One plane's registration; `order` fixes its position on the page, and
+/// `build` makes the plane over the boot values it reads its declaration from.
 #[derive(Debug, Clone, Copy)]
 pub struct PlaneRegistration {
     pub order: u8,
-    pub build: fn() -> Box<dyn SyncPlane>,
+    pub build: fn(&ExtensionBoot) -> Box<dyn SyncPlane>,
 }
 
 inventory::collect!(PlaneRegistration);
 
 #[must_use]
-pub fn planes() -> Vec<Box<dyn SyncPlane>> {
+pub fn planes(boot: &ExtensionBoot) -> Vec<Box<dyn SyncPlane>> {
     let mut registrations: Vec<&PlaneRegistration> =
         inventory::iter::<PlaneRegistration>.into_iter().collect();
     registrations.sort_by_key(|r| r.order);
-    registrations.into_iter().map(|r| (r.build)()).collect()
+    registrations.into_iter().map(|r| (r.build)(boot)).collect()
 }
 
 #[must_use]
-pub fn find_plane(id: &str) -> Option<Box<dyn SyncPlane>> {
-    planes().into_iter().find(|p| p.id() == id)
+pub fn find_plane(boot: &ExtensionBoot, id: &str) -> Option<Box<dyn SyncPlane>> {
+    planes(boot).into_iter().find(|p| p.id() == id)
 }

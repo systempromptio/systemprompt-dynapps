@@ -15,10 +15,12 @@ mod report_context;
 mod view;
 
 use std::sync::Arc;
+use systemprompt::traits::BackgroundTasks;
+use systemprompt_web_admin_core::extension_boot::{ExtensionBoot, WriteRequest};
+use systemprompt_web_admin_core::extension_services::ExtensionServices;
 
 use axum::Json;
 use axum::extract::{Extension, Form, Path, State};
-use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
 use serde::Serialize;
 use sqlx::PgPool;
@@ -26,7 +28,7 @@ use systemprompt::ai::AiService;
 
 use crate::handlers::ssr::analysis::help::{HelpView, item};
 use crate::repositories::analysis::reports::{AnalysisReportRow, find_report, list_reports};
-use crate::services::analysis_report::generate_report;
+use crate::services::analysis_report::{ReportJob, generate_report};
 use systemprompt_web_admin_core::catalog_index::inventory_index::InventoryIndex;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
 use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
@@ -73,11 +75,12 @@ fn require_console(shell: &Page) -> Result<(), AdminError> {
 
 pub(crate) async fn page(
     shell: Page,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
     require_console(&shell)?;
     let rows = list_reports(&pool, HISTORY_LIMIT).await?;
-    let index = InventoryIndex::build(&systemprompt_web_admin_core::request::get_services_path()?);
+    let index = InventoryIndex::build(boot.services_root());
     let context = ReportsPageContext {
         page: "analysis-reports",
         title: "Reports",
@@ -136,22 +139,52 @@ pub(crate) async fn report_page(
     )
 }
 
-async fn start(
-    pool: &Arc<PgPool>,
+pub(crate) struct ReportRunner {
     ai: Option<Arc<AiService>>,
+    tasks: BackgroundTasks,
+    services: ExtensionServices,
+}
+
+impl<S: Send + Sync> axum::extract::FromRequestParts<S> for ReportRunner {
+    type Rejection = axum::extract::rejection::ExtensionRejection;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let Extension(ai) = Extension::from_request_parts(parts, state).await?;
+        let Extension(tasks) = Extension::from_request_parts(parts, state).await?;
+        let Extension(services) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self {
+            ai,
+            tasks,
+            services,
+        })
+    }
+}
+
+async fn start(
+    runner: &ReportRunner,
+    pool: &Arc<PgPool>,
     shell: &Page,
     form: &ReportRequestForm,
 ) -> AdminResult<String> {
     let resolved = resolve(pool, &shell.user, form).await?;
     let queued = queue(pool, &shell.user, resolved).await?;
     let row = load_report(pool, &queued.id).await?;
-    tokio::spawn(generate_report(
-        Arc::clone(pool),
-        ai,
-        shell.user.user_id.clone(),
-        row,
-        queued.lease_token,
-    ));
+    runner.tasks.spawn(
+        "analysis_report",
+        generate_report(
+            Arc::clone(pool),
+            runner.ai.clone(),
+            runner.services.config(),
+            ReportJob {
+                requested_by: shell.user.user_id.clone(),
+                row,
+                lease: queued.lease_token,
+            },
+        ),
+    );
     tracing::info!(report_id = %queued.id, requested_by = %shell.user.user_id, "analysis report generation started from the console");
     Ok(queued.id)
 }
@@ -162,28 +195,28 @@ fn report_redirect(id: &str) -> Redirect {
 
 pub(crate) async fn create(
     shell: Page,
+    write: WriteRequest,
     State(pool): State<Arc<PgPool>>,
-    Extension(ai): Extension<Option<Arc<AiService>>>,
-    headers: HeaderMap,
+    runner: ReportRunner,
     Form(form): Form<ReportRequestForm>,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
-    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
-    let id = start(&pool, ai, &shell, &form).await?;
+    write.require_origin()?;
+    let id = start(&runner, &pool, &shell, &form).await?;
     Ok(report_redirect(&id))
 }
 
 pub(crate) async fn regenerate(
     shell: Page,
+    write: WriteRequest,
     State(pool): State<Arc<PgPool>>,
-    Extension(ai): Extension<Option<Arc<AiService>>>,
+    runner: ReportRunner,
     Path(id): Path<String>,
-    headers: HeaderMap,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
-    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
+    write.require_origin()?;
     let row = load_report(&pool, &id).await?;
-    let new_id = start(&pool, ai, &shell, &regenerate_form(&row)).await?;
+    let new_id = start(&runner, &pool, &shell, &regenerate_form(&row)).await?;
     Ok(report_redirect(&new_id))
 }
 

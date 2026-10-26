@@ -8,44 +8,49 @@
 
 use axum::http::HeaderMap;
 use systemprompt::identifiers::{Email, UserId};
-use systemprompt::manifest::Config;
-use systemprompt::models::auth::JwtAudience;
+use systemprompt::models::auth::{JwtAudience, TokenAuthority};
 use systemprompt::oauth::validate_jwt_token;
 
 use crate::error::AdminError;
 use crate::types::CookieSession;
 
-pub fn extract_user_from_cookie(headers: &HeaderMap) -> Result<CookieSession, AdminError> {
-    extract_user_with_audiences(headers, &[JwtAudience::Api])
+pub fn extract_user_from_cookie(
+    authority: &dyn TokenAuthority,
+    headers: &HeaderMap,
+) -> Result<CookieSession, AdminError> {
+    extract_user_with_audiences(authority, headers, &[JwtAudience::Api])
 }
 
 // Why: core's token accessors are called with a bridge-forwarded token that
 // carries `Mcp`, not `Api`; the widening lives here so the cookie path keeps
 // its single audience.
-pub fn extract_mcp_accessor_user(headers: &HeaderMap) -> Result<CookieSession, AdminError> {
+pub fn extract_mcp_accessor_user(
+    authority: &dyn TokenAuthority,
+    headers: &HeaderMap,
+) -> Result<CookieSession, AdminError> {
     extract_user_with_audiences(
+        authority,
         headers,
         &[JwtAudience::Api, JwtAudience::Mcp, JwtAudience::Bridge],
     )
 }
 
 fn extract_user_with_audiences(
+    authority: &dyn TokenAuthority,
     headers: &HeaderMap,
     audiences: &[JwtAudience],
 ) -> Result<CookieSession, AdminError> {
     let token = extract_token_from_headers(headers)?;
 
-    let jwt_issuer = Config::get()?.jwt_issuer.clone();
+    let claims = validate_jwt_token(authority, &token, audiences)?;
 
-    let claims = validate_jwt_token(&token, &jwt_issuer, audiences)?;
-
-    let email = Email::try_new(claims.email.clone()).map_err(AdminError::unauthenticated)?;
+    let email = Email::try_new(claims.custom.email.clone()).map_err(AdminError::unauthenticated)?;
 
     Ok(CookieSession {
-        user_id: UserId::new(claims.sub),
-        username: claims.username,
+        user_id: UserId::new(claims.registered.sub),
+        username: claims.custom.username,
         email,
-        session_id: claims.session_id,
+        session_id: claims.custom.session_id,
     })
 }
 

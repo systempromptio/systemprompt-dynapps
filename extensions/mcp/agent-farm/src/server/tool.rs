@@ -32,6 +32,12 @@ impl ToolCtx<'_> {
     pub fn pool(&self) -> ToolResult<&Arc<PgPool>> {
         Ok(&self.env()?.pool)
     }
+
+    pub fn services(
+        &self,
+    ) -> ToolResult<&systemprompt_web_admin_core::extension_services::ExtensionServices> {
+        Ok(&self.env()?.services)
+    }
 }
 
 #[derive(Debug)]

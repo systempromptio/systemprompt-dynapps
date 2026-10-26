@@ -5,22 +5,28 @@ use axum::{Extension, Json};
 use std::sync::Arc;
 use systemprompt::marketplace::managed::{ImportedSkills, SourceSpec, capture_skills};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::request::require_write_origin;
 use systemprompt_web_admin_core::state::ManagedState;
 use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) async fn capture_super_admin(
+    Extension(boot): Extension<ExtensionBoot>,
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
 ) -> AdminResult<(StatusCode, Json<ImportedSkills>)> {
-    require_write_origin(&headers)?;
-    let imported = capture(&user, &state).await?;
+    require_write_origin(&boot, &headers)?;
+    let imported = capture(&boot, &user, &state).await?;
     Ok((StatusCode::CREATED, Json(imported)))
 }
 
-async fn capture(_user: &UserContext, state: &ManagedState) -> AdminResult<ImportedSkills> {
-    let root = systemprompt_web_admin_core::request::get_services_path()?;
+async fn capture(
+    boot: &ExtensionBoot,
+    _user: &UserContext,
+    state: &ManagedState,
+) -> AdminResult<ImportedSkills> {
+    let root = systemprompt_web_admin_core::request::get_services_path(boot);
     let source = state
         .repository
         .register_source(

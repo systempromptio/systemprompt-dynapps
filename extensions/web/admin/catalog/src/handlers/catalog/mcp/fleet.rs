@@ -7,8 +7,9 @@
 use sqlx::PgPool;
 
 use crate::repositories::mcp::runtime;
+use std::path::Path;
 use systemprompt_web_admin_core::error::AdminResult;
-use systemprompt_web_admin_core::request as shared;
+
 use systemprompt_web_admin_core::types::ENTITY_MCP_SERVER;
 use systemprompt_web_admin_core::util::time_range::TimeRange;
 
@@ -34,12 +35,12 @@ pub(crate) struct Fleet {
 }
 
 pub(crate) async fn fleet_rows(
+    services_path: &Path,
     pool: &PgPool,
     roles: &[String],
     range: TimeRange,
 ) -> AdminResult<Fleet> {
-    let path = shared::get_services_path()?;
-    let catalog = super::super::data::load_catalog(&path, roles);
+    let catalog = super::super::data::load_catalog(services_path, roles);
     let counts = assignment_counts_by_type(pool, ENTITY_MCP_SERVER).await;
     let rt = load_runtime(pool, range).await;
 

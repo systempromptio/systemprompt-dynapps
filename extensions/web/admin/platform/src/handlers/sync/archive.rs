@@ -9,7 +9,9 @@
 //! row naming the stage it came from. The write tier and a same-origin
 //! check guard everything but the export.
 
+use crate::handlers::deps::Operator;
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::Json;
 use axum::body::Bytes;
@@ -27,6 +29,7 @@ use systemprompt_web_admin_core::repositories::sync::archive::staging::{
     StagedArchive, StagingStore,
 };
 use systemprompt_web_admin_core::repositories::sync::archive::write::build_export_zip;
+use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
 use systemprompt_web_admin_core::repositories::sync::plane::{
     Actor, ApplyOutcome, DeclarationSource, PlaneDrift, SyncMode,
 };
@@ -41,8 +44,10 @@ fn preview_url(stage_id: &str) -> String {
 pub(crate) async fn export_zip_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
+    Extension(core_planes): Extension<CorePlanes>,
 ) -> AdminResult<Response> {
-    let zip = build_export_zip(&pool, user_ctx.user_id.as_str()).await?;
+    let zip = build_export_zip(&pool, &core_planes, &boot, user_ctx.user_id.as_str()).await?;
     activity::record(
         &pool,
         NewActivity::configuration_exported(&user_ctx.user_id, zip.planes, zip.rows),
@@ -69,21 +74,26 @@ pub(crate) struct StageResponse {
     pub expires_at: String,
 }
 
-fn require_admin(user_ctx: &UserContext, headers: &HeaderMap) -> AdminResult<()> {
+fn require_admin(
+    boot: &ExtensionBoot,
+    user_ctx: &UserContext,
+    headers: &HeaderMap,
+) -> AdminResult<()> {
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden(
             "Importing configuration needs an administrator.".to_owned(),
         ));
     }
-    require_write_origin(headers)
+    require_write_origin(boot, headers)
 }
 
 pub(crate) async fn stage_import_handler(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
     body: Bytes,
 ) -> AdminResult<Response> {
-    require_admin(&user_ctx, &headers)?;
+    require_admin(&boot, &user_ctx, &headers)?;
     let store = StagingStore::global();
     if body.is_empty() {
         return Err(AdminError::BadRequest(
@@ -91,7 +101,7 @@ pub(crate) async fn stage_import_handler(
         ));
     }
     let unpacked = unpack_zip(&body)?;
-    let staged = classify(unpacked, &planes(), user_ctx.user_id.as_str())?;
+    let staged = classify(unpacked, &planes(&boot), user_ctx.user_id.as_str())?;
     if staged.planes.is_empty() && staged.other.is_empty() {
         return Err(AdminError::Unprocessable(
             "the archive holds no configuration".to_owned(),
@@ -137,12 +147,12 @@ fn stage_or_404(store: &StagingStore, id: &str) -> AdminResult<StagedArchive> {
 
 pub(crate) async fn apply_import_handler(
     State(pool): State<Arc<PgPool>>,
-    Extension(user_ctx): Extension<UserContext>,
+    Operator { user_ctx, boot }: Operator,
     Path(stage_id): Path<String>,
     headers: HeaderMap,
     Json(body): Json<ImportApplyRequest>,
 ) -> AdminResult<Response> {
-    require_admin(&user_ctx, &headers)?;
+    require_admin(&boot, &user_ctx, &headers)?;
     let store = StagingStore::global();
     let stage = stage_or_404(store, &stage_id)?;
     let chosen: Vec<&'static str> = if body.plane == "all" {
@@ -161,8 +171,8 @@ pub(crate) async fn apply_import_handler(
     let mut applied = Vec::with_capacity(chosen.len());
     let mut stage_closed = false;
     for id in chosen {
-        let plane =
-            find_plane(id).ok_or_else(|| AdminError::NotFound(format!("no sync plane '{id}'")))?;
+        let plane = find_plane(&boot, id)
+            .ok_or_else(|| AdminError::NotFound(format!("no sync plane '{id}'")))?;
         let text = stage.planes.get(id).map(String::as_str).unwrap_or_default();
         let from = DeclarationSource::Text(text);
         let outcome = plane
@@ -202,10 +212,11 @@ pub(crate) async fn apply_import_handler(
 
 pub(crate) async fn discard_import_handler(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(stage_id): Path<String>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    require_admin(&user_ctx, &headers)?;
+    require_admin(&boot, &user_ctx, &headers)?;
     let store = StagingStore::global();
     stage_or_404(store, &stage_id)?;
     store.remove(&stage_id);

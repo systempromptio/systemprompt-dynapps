@@ -12,7 +12,7 @@ WITH spine AS (
            COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0) AS tokens,
            COALESCE(r.cache_read_tokens, 0) AS cache_tokens
     FROM ai_requests r
-    WHERE NOT r.synthetic
+    WHERE r.traffic = 'production'
       AND r.created_at >= $1
       AND r.created_at < $2
 ), agg AS (

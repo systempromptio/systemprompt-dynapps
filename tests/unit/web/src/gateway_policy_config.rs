@@ -10,9 +10,8 @@
 //! These tests exist so that putting any category back into a live block list
 //! is a deliberate, review-visible act rather than a one-word edit.
 
-use systemprompt::gateway::{
-    CalendarPeriod, GatewayPolicyConfig, QuotaMode, SafetyHistoryMode, SafetyMode,
-};
+use systemprompt::gateway::{CalendarPeriod, GatewayPolicyConfig, SafetyHistoryMode};
+use systemprompt::manifest::services::EnforcementMode;
 
 use crate::support::repo_root;
 
@@ -46,13 +45,13 @@ fn the_deployed_file_parses_and_validates() {
 // Emptying them to unblock traffic would have thrown that measurement away.
 #[test]
 fn the_scanners_are_in_warn_mode_and_block_nothing() {
-    assert_eq!(default_quotas().spec.safety.mode, SafetyMode::Warn);
+    assert_eq!(default_quotas().spec.safety.mode, EnforcementMode::Warn);
 }
 
 // Why: enforced quotas refused active users with 429, so the windows only warn.
 #[test]
 fn the_quota_windows_are_warning_thresholds() {
-    assert_eq!(default_quotas().spec.quota_mode, QuotaMode::Warn);
+    assert_eq!(default_quotas().spec.quota_mode, EnforcementMode::Warn);
 }
 
 #[test]

@@ -5,6 +5,7 @@ mod clients_yaml;
 mod evals_yaml;
 mod farms_yaml;
 mod run_as;
+pub use run_as::RunAsError;
 mod runner_yaml;
 mod tool_policy_yaml;
 

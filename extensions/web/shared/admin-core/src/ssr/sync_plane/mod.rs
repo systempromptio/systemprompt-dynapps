@@ -90,10 +90,11 @@ pub async fn plane_card(
 
 pub async fn plane_card_by_id(
     pool: &PgPool,
+    boot: &crate::extension_boot::ExtensionBoot,
     plane_id: &str,
     entity_filter: &str,
 ) -> AdminResult<Option<PlaneCardView>> {
-    let Some(plane) = find_plane(plane_id) else {
+    let Some(plane) = find_plane(boot, plane_id) else {
         return Ok(None);
     };
     let opts = PlaneCardOpts {

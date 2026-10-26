@@ -17,7 +17,7 @@ use systemprompt_web_admin_core::types::access_control::{
     AccessControlRuleInput, AccessDecision, RuleType,
 };
 
-use crate::fixtures::{insert_acl_rule, unique};
+use crate::fixtures::{actor, insert_acl_rule, unique};
 use crate::tempdb::TempDb;
 
 fn allow_user(user_id: &str) -> AccessControlRuleInput {
@@ -162,9 +162,15 @@ async fn set_entity_rules_creates_the_catalog_row_the_foreign_key_needs() {
     };
     let entity = unique("skill");
 
-    let written = set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[allow_user("alice")])
-        .await
-        .expect("set rules");
+    let written = set_entity_rules(
+        &db.pool,
+        EntityKind::Skill,
+        &entity,
+        &[allow_user("alice")],
+        &actor(),
+    )
+    .await
+    .expect("set rules");
 
     assert_eq!(written.len(), 1);
     assert_eq!(written[0].rule_value, "alice");
@@ -190,6 +196,7 @@ async fn set_entity_rules_replaces_the_previous_grants_rather_than_adding_to_the
         EntityKind::Skill,
         &entity,
         &[allow_user("alice"), allow_user("bob")],
+        &actor(),
     )
     .await
     .expect("set initial rules");
@@ -199,6 +206,7 @@ async fn set_entity_rules_replaces_the_previous_grants_rather_than_adding_to_the
         EntityKind::Skill,
         &entity,
         &[deny_role("contractor")],
+        &actor(),
     )
     .await
     .expect("replace rules");
@@ -219,11 +227,17 @@ async fn set_entity_rules_with_an_empty_set_clears_every_grant() {
         return;
     };
     let entity = unique("skill");
-    set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[allow_user("alice")])
-        .await
-        .expect("set initial rules");
+    set_entity_rules(
+        &db.pool,
+        EntityKind::Skill,
+        &entity,
+        &[allow_user("alice")],
+        &actor(),
+    )
+    .await
+    .expect("set initial rules");
 
-    let written = set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[])
+    let written = set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[], &actor())
         .await
         .expect("clear rules");
 
@@ -250,7 +264,7 @@ async fn set_entity_rules_accepts_an_extension_rule_type() {
         justification: Some("test: group allowed".to_owned()),
     };
 
-    set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[input])
+    set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[input], &actor())
         .await
         .expect("set group rule");
 
@@ -277,6 +291,7 @@ async fn bulk_set_rules_applies_the_same_grants_to_every_entity() {
         &db.pool,
         &entities,
         &[allow_user("alice"), deny_role("temp")],
+        &actor(),
     )
     .await
     .expect("bulk set");
@@ -300,7 +315,7 @@ async fn bulk_set_rules_replaces_grants_that_were_already_there() {
     insert_acl_rule(&db.pool, "skill", &entity, "user", "stale", "allow").await;
     let entities = vec![(EntityKind::Skill, entity.clone())];
 
-    bulk_set_rules(&db.pool, &entities, &[allow_user("fresh")])
+    bulk_set_rules(&db.pool, &entities, &[allow_user("fresh")], &actor())
         .await
         .expect("bulk set");
 
@@ -318,7 +333,7 @@ async fn bulk_set_rules_over_no_entities_writes_nothing() {
         return;
     };
 
-    let count = bulk_set_rules(&db.pool, &[], &[allow_user("alice")])
+    let count = bulk_set_rules(&db.pool, &[], &[allow_user("alice")], &actor())
         .await
         .expect("bulk set");
 

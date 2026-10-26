@@ -18,6 +18,7 @@ use systemprompt_web_shared::GroupId;
 
 use crate::repositories;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::types::UserContext;
 
 use super::people_chart::daily_requests_chart;
@@ -41,6 +42,7 @@ pub(crate) struct TabQuery {
 }
 
 pub(crate) async fn group_detail_page(
+    deps: BootServices,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(group_id): Path<GroupId>,
@@ -83,7 +85,7 @@ pub(crate) async fn group_detail_page(
         },
         overview: load_overview(&pool, &group_id, active, &mut faults).await,
         members: load_members(&pool, &group_id, active, &shell.user, &mut faults).await,
-        access: load_access(&pool, &group_id, active, &mut faults).await,
+        access: load_access(&deps, &pool, &group_id, active, &mut faults).await,
         projects: load_projects(&pool, &group_id, active, &mut faults).await,
         mappings: load_mappings(&pool, &group_id, active, &shell.user, &mut faults).await,
         active_tab: active.to_owned(),
@@ -183,6 +185,7 @@ async fn assign_targets(pool: &PgPool, faults: &mut Faults) -> Vec<MemberSetChip
 }
 
 async fn load_access(
+    deps: &BootServices,
     pool: &PgPool,
     group_id: &GroupId,
     active: &str,
@@ -191,7 +194,7 @@ async fn load_access(
     if active != tabs::ACCESS {
         return None;
     }
-    Some(data::load_access(pool, group_id, faults).await)
+    Some(data::load_access(&deps.services, &deps.boot, pool, group_id, faults).await)
 }
 
 async fn load_projects(

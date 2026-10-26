@@ -1,0 +1,16 @@
+# OpenCode CLI — external-agent catalog entry (host id `opencode-cli`).
+#
+# The terminal half of OpenCode (the `opencode` CLI/TUI); the desktop app is
+# opencode.yaml. enabled: false removes the opencode-cli host from every user's
+# bridge manifest on this installation. Deleting this file would RE-enable the
+# host: absent from the catalog means enabled.
+
+external_agents:
+  opencode_cli:
+    id: opencode_cli
+    display_name: "OpenCode CLI"
+    kind: cli_tool
+    enabled: true
+    description: "The open-source OpenCode coding agent in the terminal. Routes inference through this gateway."
+    platforms: [macos, windows, linux]
+    docs_url: "https://opencode.ai/"

@@ -38,18 +38,6 @@ pub(crate) async fn insert_user(pool: &PgPool, id: &str) {
 }
 
 pub(crate) async fn insert_user_with_roles(pool: &PgPool, id: &str, roles: &[String]) {
-    static SERVICES: std::sync::Once = std::sync::Once::new();
-    SERVICES.call_once(|| {
-        if systemprompt::loader::ServicesBootstrap::is_initialized() {
-            return;
-        }
-        let directory = tempfile::tempdir().expect("services fixture");
-        let path = directory.path().join("config.yaml");
-        std::fs::write(&path, "{}").expect("write services fixture");
-        systemprompt::loader::ServicesBootstrap::init_from_path(&path)
-            .expect("install services fixture");
-    });
-
     sqlx::query(
         "INSERT INTO users (id, name, email, display_name, status, email_verified, roles)
          VALUES ($1, $2, $2, $3, 'active', TRUE, $4)",
@@ -183,7 +171,7 @@ pub(crate) async fn insert_acl_entity(
 ) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
-         VALUES ($1, $2, $3, 'test')
+         VALUES ($1, $2, $3, 'code:test-fixture')
          ON CONFLICT (entity_type, entity_id) DO UPDATE SET default_included = EXCLUDED.default_included",
     )
     .bind(entity_type)
@@ -238,4 +226,40 @@ pub(crate) fn write_services_file(dir: &std::path::Path, rel: &str, contents: &s
         std::fs::create_dir_all(parent).expect("create services subdirectory");
     }
     std::fs::write(path, contents).expect("write services file");
+}
+
+// Core's access-control plane over `services_root`, as production builds it.
+pub(crate) fn access_planes(
+    pool: &std::sync::Arc<PgPool>,
+    services_root: &std::path::Path,
+) -> systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes {
+    let db: systemprompt::database::DbPool =
+        std::sync::Arc::new(systemprompt::database::Database::from_pools(
+            std::sync::Arc::clone(pool),
+            Some(std::sync::Arc::clone(pool)),
+        ));
+    let planes = systemprompt::extension::prelude::ConfigPlaneSet::new(
+        vec![std::sync::Arc::new(
+            systemprompt::governance::authz::AccessControlPlane,
+        )],
+        std::collections::BTreeMap::new(),
+        services_root.to_path_buf(),
+    )
+    .expect("access-control plane set");
+    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(
+        planes,
+        systemprompt::scheduler::repository::ConfigReconcileRepository::new(&db),
+    )
+}
+
+// Projects `<services_root>/access-control/rules.yaml` into the database the
+// way a deploy's `config apply` does: core's access-control plane, merged.
+pub(crate) async fn apply_access_rules(
+    pool: &std::sync::Arc<PgPool>,
+    services_root: &std::path::Path,
+) {
+    access_planes(pool, services_root)
+        .apply("access_control", &user_id("rules-seeder"), "test seed")
+        .await
+        .expect("apply rules.yaml through core");
 }

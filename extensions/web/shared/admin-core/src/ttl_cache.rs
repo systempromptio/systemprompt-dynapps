@@ -4,29 +4,33 @@
 //! The route entitlement guard and the subject attribute providers run on
 //! every `/v1/messages` call, and without a cache each one is a database
 //! round trip for data that changes a few times a day. Entries live for
-//! [`AUTHZ_TTL`]. One process-wide generation counter backs
-//! [`invalidate_all`]: an entry stamped with an older generation is a miss,
-//! so an access-control sync apply takes effect at once on the replica that
-//! ran it and within [`AUTHZ_TTL`] on every other replica.
+//! [`AUTHZ_TTL`]. Caches built over one shared [`Generation`] are invalidated
+//! together: an entry stamped with an older generation is a miss, so an
+//! access-control sync apply takes effect at once on the replica that ran it
+//! and within [`AUTHZ_TTL`] on every other replica.
 
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
 pub const AUTHZ_TTL: Duration = Duration::from_secs(30);
 
 const MAX_ENTRIES: usize = 10_000;
 
-static GENERATION: AtomicU64 = AtomicU64::new(0);
+/// The invalidation epoch a group of caches shares.
+#[derive(Debug, Default)]
+pub struct Generation(AtomicU64);
 
-pub fn invalidate_all() {
-    GENERATION.fetch_add(1, Ordering::Relaxed);
-}
+impl Generation {
+    pub fn bump(&self) {
+        self.0.fetch_add(1, Ordering::Relaxed);
+    }
 
-fn generation() -> u64 {
-    GENERATION.load(Ordering::Relaxed)
+    fn current(&self) -> u64 {
+        self.0.load(Ordering::Relaxed)
+    }
 }
 
 #[derive(Debug)]
@@ -45,14 +49,16 @@ impl<V> Entry<V> {
 #[derive(Debug)]
 pub struct TtlCache<K, V> {
     ttl: Duration,
+    generation: Arc<Generation>,
     entries: Mutex<HashMap<K, Entry<V>>>,
 }
 
 impl<K: Eq + Hash, V: Clone> TtlCache<K, V> {
     #[must_use]
-    pub fn new(ttl: Duration) -> Self {
+    pub fn new(ttl: Duration, generation: Arc<Generation>) -> Self {
         Self {
             ttl,
+            generation,
             entries: Mutex::new(HashMap::new()),
         }
     }
@@ -63,7 +69,7 @@ impl<K: Eq + Hash, V: Clone> TtlCache<K, V> {
 
     #[must_use]
     pub fn get(&self, key: &K) -> Option<V> {
-        let current = generation();
+        let current = self.generation.current();
         let now = Instant::now();
         self.lock()
             .get(key)
@@ -72,7 +78,7 @@ impl<K: Eq + Hash, V: Clone> TtlCache<K, V> {
     }
 
     pub fn insert(&self, key: K, value: V) {
-        let current = generation();
+        let current = self.generation.current();
         let now = Instant::now();
         let mut entries = self.lock();
         if entries.len() >= MAX_ENTRIES {

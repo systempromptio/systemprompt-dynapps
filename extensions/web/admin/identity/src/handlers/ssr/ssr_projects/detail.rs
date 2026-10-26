@@ -238,20 +238,22 @@ async fn load_addable_users(
     members: &[ProjectMemberRow],
 ) -> Result<Vec<UserOptionView>, sqlx::Error> {
     let existing: HashSet<&str> = members.iter().map(|m| m.user_id.as_str()).collect();
-    let rows = sqlx::query_as::<_, (String, Option<String>, String)>(
-        "SELECT id, COALESCE(display_name, full_name, name), email
-         FROM users
-         WHERE NOT ('anonymous' = ANY(roles))
-         ORDER BY COALESCE(display_name, full_name, name, id)",
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", COALESCE(display_name, full_name, name) AS "name", email AS "email!"
+           FROM users
+           WHERE NOT ('anonymous' = ANY(roles))
+           ORDER BY COALESCE(display_name, full_name, name, id)"#
     )
     .fetch_all(pool)
     .await?;
     Ok(rows
         .into_iter()
-        .filter(|(id, _, _)| !existing.contains(id.as_str()))
-        .map(|(id, name, email)| UserOptionView {
-            label: name.map_or_else(|| email.clone(), |n| format!("{n} ({email})")),
-            user_id: UserId::new(id),
+        .filter(|row| !existing.contains(row.id.as_str()))
+        .map(|row| UserOptionView {
+            label: row
+                .name
+                .map_or_else(|| row.email.clone(), |n| format!("{n} ({})", row.email)),
+            user_id: UserId::new(row.id),
         })
         .collect())
 }

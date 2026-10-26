@@ -13,6 +13,7 @@ use axum::response::Response;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::page::Page;
@@ -113,6 +114,7 @@ async fn tab_rows(
 
 pub(crate) async fn farm_detail_page(
     shell: Page,
+    BootServices { boot, services }: BootServices,
     State(pool): State<Arc<PgPool>>,
     Path(farm_id): Path<String>,
     Query(query): Query<FarmDetailQuery>,
@@ -135,7 +137,7 @@ pub(crate) async fn farm_detail_page(
     let agents = faults.take("farm agents", agents);
     let suites = faults.take("eval suites", suites);
     let (runs, eval_runs) = tab_rows(&pool, &farm_id, tab, &mut faults).await;
-    let bundles = faults.take("pinned bundles", load_bundles());
+    let bundles = load_bundles(&boot, &services.config());
     let sync = sync_card_view(
         &sync_facts(&farm),
         bundle_for(&bundles, &farm.marketplace_id),

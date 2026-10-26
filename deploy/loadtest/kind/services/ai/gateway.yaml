@@ -1,31 +1,8 @@
-# Load-test gateway routes (deploy/loadtest/kind). Mounted over
-# /app/services/ai/gateway.yaml. One `by_scope` chain, for the shipped
-# `odoo-delivery` project (services/web/config/groups.yaml), so the audit
-# row's route_match can name scope:project=<id>; it and the shared chain are
-# mock-anthropic failing over to mock-anthropic-eu. Only mock providers exist
-# here, and a route to an absent provider fails boot.
 gateway:
   enabled: true
-  routes:
-  - id: claude-star-4203d1
-    name: Claude (mock)
-    description: >-
-      Every claude-* request goes to the in-cluster mock, failing over to the EU mock.
-    model_pattern: claude-*
-    provider: mock-anthropic
-    fallbacks:
-    - provider: mock-anthropic-eu
-    by_scope:
-      dimension: project
-      unmapped: shared
-      chains:
-        odoo-delivery:
-          provider: mock-anthropic
-          fallbacks:
-          - provider: mock-anthropic-eu
-  default_provider: mock-anthropic
+  routes: []
   default_model: claude-sonnet-5-5
-  allow_unlisted_models: false
   quota_fault_mode: closed
+  automatic_prompt_caching: true
   auth_scheme: bearer
   inference_path_prefix: /v1

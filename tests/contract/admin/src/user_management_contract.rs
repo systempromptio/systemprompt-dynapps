@@ -33,14 +33,17 @@ async fn seed_second_admin(pool: &PgPool) -> String {
     .await
     .expect("seed second admin");
     let session_id = SessionId::new(uuid::Uuid::new_v4().to_string());
-    JwtService::generate_admin_token(&AdminTokenParams {
-        user_id: &user_id,
-        session_id: &session_id,
-        email: &email,
-        issuer: &globals::jwt_issuer(),
-        duration: chrono::Duration::hours(1),
-        client_id: None,
-    })
+    JwtService::generate_admin_token(
+        globals::signing_keys(),
+        &AdminTokenParams {
+            user_id: &user_id,
+            session_id: &session_id,
+            email: &email,
+            issuer: &globals::jwt_issuer(),
+            duration: chrono::Duration::hours(1),
+            client_id: None,
+        },
+    )
     .expect("mint a session token")
     .as_str()
     .to_owned()

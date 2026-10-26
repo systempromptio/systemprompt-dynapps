@@ -4,10 +4,16 @@
 //! Core owns `users.account_kind` and refuses every interactive login for a
 //! service row; this crate owns what such an account may present to a
 //! provider (`machine_credentials`). The router root builds one
-//! [`ServiceAccounts`] and layers it as an `Extension`.
+//! [`ServiceAccounts`] and layers it as an `Extension`; it carries the token
+//! cache the machine-credential broker reuses minted tokens from and the
+//! secrets store machine credentials are sealed with.
+
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use systemprompt::identifiers::UserId;
+use systemprompt::security::credential::TokenCache;
+use systemprompt::traits::SecretStore;
 use systemprompt::users::{ArchiveParams, NewServiceAccount, User, UserRepository, UserStatus};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::types::roles_grant_manage;
@@ -34,12 +40,28 @@ impl From<User> for ServiceAccount {
 #[derive(Debug, Clone)]
 pub struct ServiceAccounts {
     users: UserRepository,
+    tokens: Arc<TokenCache>,
+    secrets: Arc<dyn SecretStore>,
 }
 
 impl ServiceAccounts {
     #[must_use]
-    pub const fn new(users: UserRepository) -> Self {
-        Self { users }
+    pub fn new(users: UserRepository, secrets: Arc<dyn SecretStore>) -> Self {
+        Self {
+            users,
+            tokens: Arc::new(TokenCache::new()),
+            secrets,
+        }
+    }
+
+    #[must_use]
+    pub fn tokens(&self) -> &TokenCache {
+        &self.tokens
+    }
+
+    #[must_use]
+    pub fn secrets(&self) -> &dyn SecretStore {
+        self.secrets.as_ref()
     }
 
     pub async fn is_service_account(&self, user: &UserId) -> AdminResult<bool> {

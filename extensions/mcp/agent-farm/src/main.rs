@@ -4,10 +4,11 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
+use systemprompt::config::{LoadedProfile, SecretsService};
 use systemprompt::identifiers::McpServerId;
+use systemprompt::loader::BootContext;
 use systemprompt::system::AppContext;
-use systemprompt_mcp_agent_farm::{AgentFarmServer, Env};
+use systemprompt_mcp_agent_farm::{AgentFarmServer, Env, ServerAccess};
 // Why: core discovers the governance authz hook, the connection snapshot
 // source and the group/project/role subject providers through inventory, so
 // the crates that register them must be linked into this binary or rules on
@@ -49,13 +50,12 @@ fn startup_timeout() -> Duration {
 }
 
 async fn init_context() -> Result<Arc<AppContext>> {
-    ProfileBootstrap::init().context("Failed to initialize profile")?;
-    SecretsBootstrap::init()
+    let profile = LoadedProfile::from_env().context("Failed to initialize profile")?;
+    let secrets = SecretsService::load(Arc::clone(&profile))
         .await
         .context("Failed to initialize secrets")?;
-    try_init_config(None).context("Failed to initialize configuration")?;
     Ok(Arc::new(
-        AppContext::new()
+        AppContext::new(BootContext::new(profile, secrets))
             .await
             .context("Failed to initialize application context")?,
     ))
@@ -78,9 +78,8 @@ fn install_tls_crypto_provider() {
 
 fn build_env(ctx: &AppContext) -> Env {
     let pool = ctx.db_pool().write_pool();
-    let baked_services = ctx.app_paths().system().services().to_string_lossy();
-    let services_path =
-        systemprompt::loader::ServicesRootBootstrap::active_root_or(&baked_services);
+    let boot = systemprompt_web_admin_core::extension_boot::ExtensionBoot::from_context(ctx);
+    let services_path = boot.services_root().to_path_buf();
     Env {
         #[cfg(feature = "farm")]
         farm: Some(
@@ -89,13 +88,20 @@ fn build_env(ctx: &AppContext) -> Env {
                 Some(ctx.app_paths()),
                 ctx.ai_service_arc(),
                 systemprompt_web_admin_farm::state::FarmHost {
+                    tasks: ctx.background_tasks().clone(),
+                    services: systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx),
                     artefacts: Arc::clone(ctx.file_storage()),
                     instance: ctx.config().instance_id.clone(),
+                    runs: Arc::new(
+                        systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns::default(),
+                    ),
+                    boot,
                 },
             ),
         ),
         pool,
         services_path,
+        services: systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx),
     }
 }
 
@@ -145,7 +151,12 @@ async fn main() -> Result<()> {
     let server = AgentFarmServer::new(
         Arc::clone(ctx.db_pool()),
         service_id.clone(),
-        Arc::clone(ctx.authz_hook()),
+        ServerAccess {
+            authz_hook: Arc::clone(ctx.authz_hook()),
+            services: ctx.services_watch().clone(),
+            token_authority: ctx.token_authority(),
+            config: Arc::clone(ctx.config_arc()),
+        },
         ctx.artifact_ingest_arc(),
         Arc::new(build_env(&ctx)),
     );

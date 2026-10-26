@@ -64,12 +64,6 @@ pub async fn list_policies(pool: &PgPool) -> Result<Vec<PolicyRow>, sqlx::Error>
         .collect())
 }
 
-pub async fn count_policies(pool: &PgPool) -> Result<i64, sqlx::Error> {
-    sqlx::query_scalar!(r#"SELECT COUNT(*) AS "count!" FROM ai_gateway_policies"#)
-        .fetch_one(pool)
-        .await
-}
-
 /// One policy to write: the same upsert core's loader performs, keyed on
 /// the name, so an edit and a sync apply land on the same row.
 #[derive(Debug, Clone)]

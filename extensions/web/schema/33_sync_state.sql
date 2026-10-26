@@ -1,6 +1,8 @@
--- What each sync plane last applied from code, so the Code <-> Instance page
--- can say "declared ab12.. · last applied ab12.. by <who> on <when> (mode)"
--- rather than only whether the two currently differ.
+-- What each of the install's own sync planes (groups, gateway routes) last
+-- applied from code, so the Code <-> Instance page can say "declared ab12.. ·
+-- last applied ab12.. by <who> on <when> (mode)" rather than only whether the
+-- two currently differ. The planes core owns keep their state in core's
+-- `config_plane_state`.
 --
 -- Declarative twin of migration 065. One row per plane. `declared_hash` is the
 -- hash of the declaration as last read; `applied_*` describe the last write
@@ -9,7 +11,7 @@
 -- were active at that write.
 
 CREATE TABLE IF NOT EXISTS sync_state (
-    plane TEXT PRIMARY KEY,
+    plane TEXT PRIMARY KEY CONSTRAINT sync_state_plane_check CHECK (plane IN ('groups', 'gateway_routes')),
     declared_hash TEXT NOT NULL,
     applied_hash TEXT,
     applied_mode TEXT CHECK (applied_mode IN ('seed', 'insert_only', 'overwrite')),

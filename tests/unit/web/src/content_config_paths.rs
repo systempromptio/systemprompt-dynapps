@@ -38,6 +38,7 @@ fn validate(
             enable_link_tracking: true,
         },
         base,
+        base,
     )
 }
 
@@ -200,28 +201,33 @@ fn a_valid_source_survives_alongside_a_broken_one_being_rejected() {
     );
 }
 
-// A `./`-prefixed path is the one form that is resolved against the profile's
-// `services/` directory rather than the config file's own directory. No
-// profile is bootstrapped in a test process, so this exercises the documented
-// fallback: the literal `./services` relative to the working directory. The
-// source is disabled so the assertion is about the resolved path alone and
-// does not depend on that directory existing.
+// A `./`-prefixed path is the one form resolved against the services
+// directory the caller passes rather than the config file's own directory; a
+// leading `services/` segment is dropped.
 #[test]
-fn a_dot_slash_services_path_resolves_against_the_profile_services_dir() {
-    let temp = tempfile::tempdir().expect("tempdir");
-    let mut src = source("guides", "./services/content/guides");
-    src.enabled = false;
+fn a_dot_slash_services_path_resolves_against_the_services_dir() {
+    let config_dir = tempfile::tempdir().expect("tempdir");
+    let services = tempfile::tempdir().expect("tempdir");
+    fs::create_dir_all(services.path().join("content/guides")).expect("guides dir");
+    let src = source("guides", "./services/content/guides");
 
-    let config = validate(vec![src], temp.path()).expect("a disabled source always validates");
-
-    let resolved = config.all_sources()[0].path();
-    assert!(
-        resolved.ends_with("content/guides"),
-        "the `./services/` prefix is stripped and rejoined onto the services dir: {resolved:?}"
-    );
-    assert!(
-        !resolved.starts_with(temp.path()),
-        "a `./` path is not resolved against the config file's directory: {resolved:?}"
+    let config = BlogConfigValidated::validate(
+        BlogConfigRaw {
+            content_sources: vec![src],
+            base_url: "https://example.com".to_owned(),
+            enable_link_tracking: true,
+        },
+        config_dir.path(),
+        services.path(),
+    )
+    .expect("the services-relative source validates");
+    assert_eq!(
+        config.all_sources()[0].path(),
+        services
+            .path()
+            .join("content/guides")
+            .canonicalize()
+            .expect("canonical guides")
     );
 }
 
@@ -229,9 +235,10 @@ fn a_dot_slash_services_path_resolves_against_the_profile_services_dir() {
 fn load_from_file_reports_a_file_that_cannot_be_read() {
     let temp = tempfile::tempdir().expect("tempdir");
 
-    let rendered = BlogConfigValidated::load_from_file(&temp.path().join("absent.yaml"))
-        .expect_err("a missing file is an error at this level")
-        .to_string();
+    let rendered =
+        BlogConfigValidated::load_from_file(&temp.path().join("absent.yaml"), temp.path())
+            .expect_err("a missing file is an error at this level")
+            .to_string();
 
     assert!(
         rendered.contains("config file could not be read"),
@@ -245,7 +252,7 @@ fn load_from_file_reports_yaml_that_does_not_parse() {
     let path = temp.path().join("content.yaml");
     fs::write(&path, "content_sources: [\n").expect("broken yaml");
 
-    let rendered = BlogConfigValidated::load_from_file(&path)
+    let rendered = BlogConfigValidated::load_from_file(&path, Path::new("."))
         .expect_err("unbalanced YAML does not parse")
         .to_string();
 
@@ -267,7 +274,8 @@ fn load_from_file_resolves_source_paths_against_the_files_directory() {
     )
     .expect("config file");
 
-    let config = BlogConfigValidated::load_from_file(&path).expect("the fixture config validates");
+    let config = BlogConfigValidated::load_from_file(&path, Path::new("."))
+        .expect("the fixture config validates");
 
     assert_eq!(config.base_url().as_str(), "https://dynapps.es/");
     assert!(
@@ -286,7 +294,8 @@ fn a_config_file_with_only_defaults_still_loads() {
     let path = temp.path().join("content.yaml");
     fs::write(&path, "{}\n").expect("empty config");
 
-    let config = BlogConfigValidated::load_from_file(&path).expect("every field has a default");
+    let config = BlogConfigValidated::load_from_file(&path, Path::new("."))
+        .expect("every field has a default");
 
     assert!(config.all_sources().is_empty());
     assert_eq!(config.base_url().as_str(), "https://example.com/");

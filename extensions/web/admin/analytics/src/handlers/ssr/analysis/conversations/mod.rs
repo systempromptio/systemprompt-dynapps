@@ -31,6 +31,7 @@ pub(crate) mod summary;
 pub(crate) mod view;
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::extract::{Query, State};
 use axum::response::Response;
@@ -78,6 +79,7 @@ fn analysis_filter(
 
 pub(crate) async fn page(
     shell: Page,
+    axum::Extension(boot): axum::Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<ConversationAnalysisQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -130,7 +132,7 @@ pub(crate) async fn page(
             scope_filter,
             report_banner,
             can_judge: shell.user.is_console,
-            manual_judge: !crate::handlers::ssr::analysis::judge_mode::automatic(),
+            manual_judge: !crate::handlers::ssr::analysis::judge_mode::automatic(&boot),
         },
     );
     Ok(

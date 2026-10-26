@@ -5,6 +5,7 @@ use axum::extract::{Extension, Path, State};
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use systemprompt::identifiers::AgentId;
 
@@ -16,17 +17,24 @@ use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::types::responses::AgentsListResponse;
 
 pub(crate) async fn list_agents_handler(
+    Extension(boot): Extension<ExtensionBoot>,
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
 ) -> AdminResult<Response> {
-    let services_path = shared::get_services_path()?;
+    let services_path = shared::get_services_path(&boot);
     let agents = agents::list_configured_agents(&services_path).map_err(AdminError::internal)?;
     if user_ctx.is_admin {
         return Ok(Json(AgentsListResponse { agents }).into_response());
     }
-    let access =
-        systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(&pool, &user_ctx.user_id)
-            .await?;
+    let access = systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(
+        &pool,
+        &services,
+        &user_ctx.user_id,
+    )
+    .await?;
     let ids = agents
         .iter()
         .filter(|a| a.enabled)
@@ -42,8 +50,11 @@ pub(crate) async fn list_agents_handler(
     Ok(Json(AgentsListResponse { agents: filtered }).into_response())
 }
 
-pub(crate) async fn get_agent_handler(Path(agent_id): Path<String>) -> AdminResult<Response> {
-    let services_path = shared::get_services_path()?;
+pub(crate) async fn get_agent_handler(
+    Extension(boot): Extension<ExtensionBoot>,
+    Path(agent_id): Path<String>,
+) -> AdminResult<Response> {
+    let services_path = shared::get_services_path(&boot);
     let agent = agents::find_agent(&services_path, &AgentId::new(agent_id))
         .map_err(AdminError::internal)?
         .ok_or_else(|| AdminError::NotFound("Agent not found".to_owned()))?;

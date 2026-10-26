@@ -10,14 +10,7 @@ database:
 server:
   host: 127.0.0.1
   port: 8099
-  api_server_url: http://localhost:8099
-  api_internal_url: http://localhost:8099
-  api_external_url: http://localhost:8099
-  use_https: false
-  cors_allowed_origins:
-  - http://localhost:8080
-  - http://localhost:5173
-  - http://127.0.0.1:8080
+  external_url: http://localhost:8099
   content_negotiation:
     enabled: false
     markdown_suffix: .md
@@ -40,7 +33,6 @@ paths:
   storage: __REPO__/storage
   geoip_database: null
 security:
-  jwt_issuer: http://localhost:8099
   jwt_access_token_expiration: 2592000
   jwt_refresh_token_expiration: 15552000
   jwt_audiences:
@@ -90,6 +82,5 @@ governance:
   authz:
     hook:
       mode: extension
-      url: null
       timeout_ms: 500
       acknowledgement: null

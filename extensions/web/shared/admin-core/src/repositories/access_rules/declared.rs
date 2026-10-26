@@ -1,12 +1,12 @@
 //! The rule set `rules.yaml` says the database should hold.
 //!
-//! Pure: takes the parsed document plus the two catalogs it needs (the live
-//! gateway routes for glob expansion, the marketplace ids for validation) and
-//! produces the exact `(entity_type, entity_id, rule_type, rule_value)` rows
-//! and entity defaults the seed would write. The drift engine compares this
-//! against the database; the sync applies it; the export renders the database
-//! back into the document the other way round. Nothing here touches a pool,
-//! which is what lets a unit test pin every projection rule.
+//! Pure: takes the parsed document plus the catalogs it validates against
+//! (the marketplace ids and the registered entities) and produces the exact
+//! `(entity_type, entity_id, rule_type, rule_value)` rows and entity defaults
+//! the seed would write. The drift engine compares this against the database;
+//! the sync applies it; the export renders the database back into the document
+//! the other way round. Nothing here touches a pool, which is what lets a unit
+//! test pin every projection rule.
 //!
 //! A declared entity owns every non-user band on it: a database row at one of
 //! those bands the file does not list is drift. An undeclared entity's rows
@@ -21,7 +21,6 @@ use std::fmt;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
-use systemprompt::governance::authz::ingestion::glob::glob_matches;
 use systemprompt::governance::authz::{Access, EntityKind, RegisteredEntities};
 
 use crate::repositories::access_rules::rules_yaml_types::{
@@ -130,9 +129,8 @@ impl DeclaredSet {
 #[derive(Debug)]
 pub enum DeclaredError {
     UnknownMarketplace(String),
-    UnregisteredEntity(String),
-    EmptyGlob(String),
-    Invalid(String),
+    UnregisteredEntity(systemprompt::governance::authz::AuthzError),
+    Invalid(super::rules_yaml_types::EntityRefParseError),
 }
 
 impl fmt::Display for DeclaredError {
@@ -142,29 +140,29 @@ impl fmt::Display for DeclaredError {
                 f,
                 "rules.yaml names marketplace/{id}, which services/marketplaces/ does not define"
             ),
-            Self::EmptyGlob(entity) => write!(
-                f,
-                "rules.yaml declares {entity}, but the live catalog holds no entity of that kind \
-                 for the glob to expand over — the gateway has no dispatchable routes, or the \
-                 services tree did not compose"
-            ),
-            Self::UnregisteredEntity(msg) | Self::Invalid(msg) => f.write_str(msg),
+            Self::UnregisteredEntity(source) => write!(f, "{source}"),
+            Self::Invalid(source) => write!(f, "{source}"),
         }
     }
 }
 
-impl std::error::Error for DeclaredError {}
+impl std::error::Error for DeclaredError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Invalid(source) => Some(source),
+            Self::UnregisteredEntity(source) => Some(source),
+            Self::UnknownMarketplace(_) => None,
+        }
+    }
+}
 
 /// Catalogs the projection consults.
 ///
-/// All data, so tests need no database: every `gateway_route` id the live
-/// gateway configuration dispatches (never the database — a truncated or
-/// not-yet-bootstrapped `access_control_entities` must not shrink what the
-/// file declares), every marketplace id the composed services tree defines,
-/// and the registered entities whose literal ids must already exist.
+/// All data, so tests need no database: every marketplace id the composed
+/// services tree defines, and the registered entities whose literal ids must
+/// already exist.
 #[derive(Debug)]
 pub struct DeclaredInputs<'a> {
-    pub gateway_routes: &'a [String],
     pub marketplace_ids: &'a [String],
     pub registered: &'a RegisteredEntities,
 }
@@ -210,20 +208,11 @@ fn expand_ids(
     entity: &EntityRef,
     inputs: &DeclaredInputs<'_>,
 ) -> Result<Vec<String>, DeclaredError> {
-    if entity.is_glob() {
-        let ids: Vec<String> = match entity.kind {
-            EntityKind::GatewayRoute => inputs
-                .gateway_routes
-                .iter()
-                .filter(|id| glob_matches(&entity.id, id))
-                .cloned()
-                .collect(),
-            _ => Vec::new(),
-        };
-        if ids.is_empty() {
-            return Err(DeclaredError::EmptyGlob(entity.to_string()));
-        }
-        return Ok(ids);
+    // Why: core stores a glob, a `model` and a `provider` as the pattern entity
+    // itself and matches it at decision time, so the projection names it as
+    // written rather than expanding it over a catalog.
+    if entity.is_glob() || matches!(entity.kind, EntityKind::Model | EntityKind::Provider) {
+        return Ok(vec![entity.id.clone()]);
     }
     if entity.kind == EntityKind::Marketplace && !inputs.marketplace_ids.contains(&entity.id) {
         return Err(DeclaredError::UnknownMarketplace(entity.id.clone()));
@@ -231,7 +220,7 @@ fn expand_ids(
     inputs
         .registered
         .require(entity.kind, &entity.id)
-        .map_err(|e| DeclaredError::UnregisteredEntity(e.to_string()))?;
+        .map_err(DeclaredError::UnregisteredEntity)?;
     Ok(vec![entity.id.clone()])
 }
 

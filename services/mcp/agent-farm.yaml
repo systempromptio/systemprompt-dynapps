@@ -9,7 +9,7 @@
 # aggregates need an administrator role at the tool.
 mcp_servers:
   agent-farm:
-    type: internal
+    server_type: internal
     binary: systemprompt-mcp-agent-farm
     package: agent-farm
     port: 5011

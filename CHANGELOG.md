@@ -20,6 +20,62 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Breaking
+
+- **Request and config fields have one name each.** The agent-farm launch and eval bodies
+  (`POST /api/public/agent-farm/…/launch`, `…/evals`) accept only `farm` and `agent`; the
+  `farm_id` and `agent_id` spellings are refused as unknown fields. The branding section of
+  `services/web/config/theme.yaml` reads only `theme_color` (the committed file is renamed).
+  The run detail's Artifacts tab reads core's `DiffSummary` (`entries[].kind`) directly, so the
+  file list shows again and the empty Size column is gone. `scripts/lint-serde-aliases.sh` runs
+  core's gate over this repo with an empty `scripts/serde-aliases-allowlist.txt`.
+- **`deepseek-v4-pro` and `go-deepseek-v4-pro` are separate models.** `deepseek-v4-pro` is
+  deployed on `deepseek/api` alone, so an unhealthy DeepSeek endpoint can no longer make a
+  member's OpenCode Go deployment its first attempt and bill the member's own plan.
+  `go-deepseek-v4-pro` is its own model again, on `opencode-go/chat` with Go's prices, and is
+  listed to OpenAI-family clients as it was in 0.72.1; the alias route is gone.
+- **Access control, governance and gateway policies are core's planes.** `/admin/sync` reads
+  their state from core's `config_plane_state` and applies them through core's
+  `ConfigApplyService`; this install's write paths, sync planes and staged governance chain for
+  the three are removed, and migration `025_core_owned_planes` drops their `sync_state` rows and
+  the `governance_chain` tables. Groups and gateway routes stay install planes.
+- **Model access is declared on `model/*`.** Core 0.73 removes `gateway.catalog_route_id`: a
+  request no declared route matches is decided on its model entity. `rules.yaml` grants
+  `model/*` in place of `gateway_route/*`, `legacy_map.yaml` carries `route_models`, the console
+  projects a glob as the pattern entity core stores, and the after-the-fact ACL detector judges
+  an unrouted request on its model.
+
+### Added
+
+- **Core gates run here through the pinned core checkout.** `scripts/lint-async-trait.sh`,
+  `scripts/lint-owned-tasks.sh` and `scripts/lint-stringly-errors.sh` exec the same-named
+  script in `../systemprompt-core` at `bridge/CORE_REF` over `extensions`, `src` and
+  `bridge/src` (`scripts/core-gate.sh`); while the pinned core's script does not take roots the
+  wrapper prints `skip:` and passes, so the rule becomes live on the core bump that adds them.
+  `scripts/check-gate-parity.sh` fails when a gate in core's `scripts/check-gates.txt` has
+  neither a wrapper nor a line in `scripts/core-gate-map.txt`, so a new core gate is a decision,
+  not a silent gap.
+- **`scripts/lint-authoritative-reads.sh`.** Identity handlers that revoke sessions, roles or
+  accounts must be mounted over `write_pool`, and every other caller of a revocation or login-code
+  repository function must hold the write pool, so a lagging replica can never answer a
+  revocation check.
+- **`scripts/check-claude-code-version.sh`.** Every tracked Dockerfile that installs Claude Code
+  pins it through one `ARG CLAUDE_CODE_VERSION` default, agreed across files; `@latest` and an
+  unpinned `install.sh | bash` fail the gate. All of the above run in `just lint-gates` and the
+  CI static tier.
+
+### Changed
+
+- **`scripts/check-core-ref.sh` proves the core patch is live.** With `[patch.crates-io]` active
+  no tracked `Cargo.lock` may carry `[[patch.unused]]` and the root pin must equal the sibling
+  core's workspace version; with the patch commented no `systemprompt*` crate may resolve from a
+  `path+` or `git+` source.
+- **Claude Code is pinned in both images.** `Dockerfile` installs the native client with
+  `bash -s "${CLAUDE_CODE_VERSION}"` and `deploy/clean-client/Dockerfile` installs
+  `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}`; both default to 2.1.296.
+- **`deploy/loadtest/kind/cluster.sh` defaults the image tag to the workspace version** read from
+  `Cargo.toml` (`LOADTEST_IMAGE_TAG` still overrides it).
+
 ## 0.72.1 — 2026-10-22
 
 ### Changed
@@ -27,6 +83,50 @@ Conventions (strict — hold every entry to them):
 - Built on systemprompt-core 0.72.1 (`bridge/CORE_REF` is `v0.72.1`). The bridge fetches its profile with the member's own bearer, retries once with a freshly minted token when the gateway rejects a stale one, and writes OpenCode MCP entries with `oauth: false` so OpenCode does not probe bridge-owned servers.
 - `services/ai/providers.yaml`: `opencode-go-anthropic` sets `credential_from: opencode-go`, so a member's single OpenCode Go key serves the Anthropic-protocol models (go-minimax, qwen) as well as the Chat Completions ones; members are no longer asked for a second key.
 - The admin Member subscriptions page tells admins where members add their key (Dynapps app → Settings → Personal subscriptions).
+### Changed
+
+- **Every outbound HTTP destination passes core's SSRF guard.** Connector OAuth discovery,
+  registration, token and userinfo requests, the MCP verification probe, Entra ID discovery,
+  JWKS and token requests, the Fly Machines client, the farm worker's API base, the 1Password
+  Connect URL and the console's OTLP collector probe all go through
+  `systemprompt::models::net::validate_outbound_url`. Refusals are typed (`AdminError::OutboundUrl`,
+  `SsoProviderError::OutboundUrl`, `FarmError::OutboundUrl`, `OnePasswordError::ConnectUrl`,
+  `ProbeError::Url`) and keep core's `OutboundUrlError` as their cause. Plain `http` is accepted
+  only for loopback hosts and, for the OTLP probe and the farm worker, Fly's private `.internal`
+  names (`admin-core::util::outbound::validate_mesh_url`). New gate `scripts/check-outbound-urls.sh`
+  (in `lint-gates`) fails any file that sends a reqwest request without calling the guard.
+- **The at-rest master key is read from the secrets store only.** `secret_crypto::load_master_key`
+  reads `encryption_master_key` through `SecretsBootstrap` and decodes it with core's
+  `decode_master_key`; the `ENCRYPTION_MASTER_KEY` environment fallback and the connector
+  client-secret environment fallback are gone, and so are their `scripts/env-var-allowlist.txt`
+  entries. `SecretCryptoError` carries its causes (`InvalidKeyMaterial(SecretsBootstrapError)`,
+  `Database(sqlx::Error)`, the cipher errors) instead of rendered strings.
+- **Service state is owned and injected, never a process-wide static.** The public site's
+  `services/web/` sections load once into `SiteConfig`, owned by `WebExtension` and attached to
+  the router as an axum `Extension`; the blog config is loaded the same way (no `cached()`). The
+  credential-lifetime `SecurityPolicy` lives on `ManagedState` and reaches the device handlers
+  through it. The response secret scanner is built by core's scanner-registry factory from the
+  services root. The authorization caches (`AuthzCaches`) and the subject-attribute caches share
+  one per-database generation on the authz registry; `caches(pool).invalidate_all()` replaces the
+  process-wide counter. The Entra ID provider factory loads
+  `services/web/config/entra-oidc.yaml` itself, so `install_config` is gone. The agent farm's
+  in-flight remote runs and taken runner machines live on `RemoteRuns`, built once by the web
+  extension and shared by every `FarmState` in the process. New gate `scripts/lint-globals.sh`
+  (in `lint-gates`) fails a `OnceLock`/`LazyLock` that holds service state.
+- **Errors keep their causes.** `map_err(|e| e.to_string())`, `Result<_, String>` and
+  string-only variants built from another error's text are replaced by `thiserror` enums with
+  `#[source]`/`#[from]` across the admin crates (`DeclaredPoliciesError`, `DeclaredRoutesError`,
+  `RenderRoutesError`, `DeclaredChainError`, `GroupsDocError`, `RulesValidationError`,
+  `EntityRefParseError`, `HookValidationError`, `LaunchRefusal`, `RunAsError`,
+  `SecurityPolicyError`, `AuthzReadError`, `ProfilePathsError`, the site `ConfigError`).
+  `AdminError` gains `UnprocessableInput`, `ConflictingState` and `OutboundUrl`;
+  `MarketplaceError` gains `Identifier`. The services-relative content-source and blog-config
+  paths no longer fall back to `./services` when the profile is unavailable; the error is
+  reported. New gate `scripts/lint-stringly-errors.sh` (core's rules over this repo, in
+  `lint-gates`).
+- **`scripts/check-sqlx.sh` catches the turbofish spelling** (`sqlx::query_as::<_, T>(`); the two
+  runtime queries it missed, in the project detail page and the catalog inventory index, are now
+  compile-time macros with their offline cache entries.
 
 ## 0.72.0 — 2026-10-22
 

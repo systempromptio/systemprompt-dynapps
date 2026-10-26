@@ -2,6 +2,8 @@
 //! robots.txt and the RSS feed, each recorded as its own step. A feed run with
 //! no `RssFeedProvider` registered is a skip, not a failure.
 
+use std::sync::Arc;
+
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
 use systemprompt::generator::generate_feed;
@@ -37,9 +39,22 @@ impl PublishPipelineJob {
         }
     }
 
-    async fn run_feed(&self, paths: &AppPaths, db_pool: &DbPool, stats: &mut PipelineStats) {
+    async fn run_feed(
+        &self,
+        ctx: &JobContext,
+        paths: &AppPaths,
+        db_pool: &DbPool,
+        stats: &mut PipelineStats,
+    ) {
+        let config = match ctx.get::<Arc<systemprompt::manifest::Config>>() {
+            Ok(config) => config,
+            Err(e) => {
+                record_feed_outcome(Err(e), stats);
+                return;
+            },
+        };
         let content_repo = systemprompt::content::ContentRepository::new(db_pool);
-        let outcome = generate_feed(content_repo, paths).await;
+        let outcome = generate_feed(content_repo, config, paths).await;
         record_feed_outcome(outcome, stats);
     }
 
@@ -66,7 +81,7 @@ impl PublishPipelineJob {
         self.run_sitemap(ctx, stats).await;
         self.run_llms_txt(ctx, stats).await;
         self.run_robots_txt(ctx, stats).await;
-        self.run_feed(paths, db_pool, stats).await;
+        self.run_feed(ctx, paths, db_pool, stats).await;
     }
 }
 

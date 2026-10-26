@@ -414,6 +414,7 @@ _lint-gates-uncoordinated:
         lint-repo-construction.sh
         check-json-value.sh
         check-sqlx.sh
+        check-outbound-urls.sh
         check-http-errors.sh
         check-test-value.sh
         lint-silent-skips.sh
@@ -421,6 +422,7 @@ _lint-gates-uncoordinated:
         lint-test-seams.sh
         lint-raw-ids.sh
         lint-env-vars.sh
+        lint-globals.sh
         check-glob-reexports.sh
         check-comments.sh
         check-yaml-comments.sh
@@ -430,6 +432,7 @@ _lint-gates-uncoordinated:
         check-repository-naming.sh
         check-plane-ownership.sh
         check-ledger-reads.sh
+        check-removed-config-names.sh
         check-admin-template-links.sh
         check-admin-template-assets.sh
         # admin-css-classes + frontend-standards now run as cargo tests in
@@ -445,6 +448,13 @@ _lint-gates-uncoordinated:
         validate-services.sh
         check-gateway-routes.sh
         check-core-ref.sh
+        check-claude-code-version.sh
+        check-gate-parity.sh
+        lint-authoritative-reads.sh
+        lint-async-trait.sh
+        lint-owned-tasks.sh
+        lint-serde-aliases.sh
+        lint-stringly-errors.sh
         check-schema-baseline.sh
         check-skill-cli-flags.sh
         coverage-badge.sh
@@ -861,6 +871,17 @@ start-release:
 stop:
     {{CLI}} infra services stop --all
 
+# Apply services/ to the database (access control, governance, gateway
+# policies): the explicit code-to-database step core never runs at boot.
+config-apply REASON:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "${SYSTEMPROMPT_PROFILE:-}" ]; then
+        export SYSTEMPROMPT_PROFILE="{{justfile_directory()}}/.systemprompt/profiles/local/profile.yaml"
+    fi
+    {{CLI}} admin config apply --reason "{{REASON}}"
+    scripts/check-config-applied.sh {{CLI}}
+
 # Run migrations
 migrate:
     #!/usr/bin/env bash
@@ -1167,6 +1188,13 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     just migrate
     echo "Ensuring bootstrap admin user ($ADMIN_EMAIL)..."
     "$BIN" admin bootstrap --email "$ADMIN_EMAIL"
+    # Why: core boots no config plane. Access control, governance and gateway
+    # policies reach the database only through `admin config apply`; the local
+    # profile keeps core's default `governance.unapplied_planes: warn`, so a
+    # skipped apply would serve ungoverned. The check makes skipping it fatal.
+    echo "Applying services/ to the database (admin config apply)..."
+    "$BIN" admin config apply --reason "setup-local: apply services/ declarations"
+    scripts/check-config-applied.sh "$BIN"
     # Why: `admin setup` stores the identity signing key in secrets.json and
     # the server prefers that over signing_key_path, so a key generated here
     # would be one the server never verifies with (the e2e suite signs with
@@ -1241,7 +1269,14 @@ deploy *FLAGS:
     python3 scripts/check-deploy-sources.py .systemprompt/profiles/{{DEPLOY_PROFILE}}/profile.yaml
     {{just_executable()}} deploy-check
     {{just_executable()}} build-all
-    exec {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
+    {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
+    # Why: core boots no config plane; the deploy pipeline applies the
+    # shipped declarations, and the check fails the deploy if a plane is
+    # still unapplied. An apply that hits a conflict exits non-zero, so the
+    # pipeline stops and a person decides on /admin/sync.
+    {{CLI_RELEASE}} admin config apply --profile {{DEPLOY_PROFILE}} \
+        --reason "deploy $(git rev-parse --short HEAD) to {{DEPLOY_PROFILE}}"
+    scripts/check-config-applied.sh {{CLI_RELEASE}} {{DEPLOY_PROFILE}}
 
 # Pin a kit's services bundle in a profile (default: the production profile)
 # to a GHCR digest, or to the kit's channel tag (e.g. `stable`) so every

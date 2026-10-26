@@ -16,19 +16,12 @@ pub async fn get_or_create_user_dek(
         user_id.as_str(),
     )
     .fetch_optional(pool)
-    .await
-    .map_err(|e| SecretCryptoError::Database(e.to_string()))?;
+    .await?;
 
     if let Some(row) = row {
-        let nonce: [u8; 12] = row.dek_nonce.try_into().map_err(|v: Vec<u8>| {
-            tracing::warn!(len = v.len(), "Stored DEK nonce is not 12 bytes");
-            SecretCryptoError::InvalidKeyMaterial
-        })?;
+        let nonce: [u8; 12] = secret_crypto::fixed_key_material(row.dek_nonce)?;
         let plaintext = secret_crypto::decrypt(master_key, &nonce, &row.encrypted_dek)?;
-        let dek: [u8; 32] = plaintext.try_into().map_err(|v: Vec<u8>| {
-            tracing::warn!(len = v.len(), "Decrypted DEK is not 32 bytes");
-            SecretCryptoError::InvalidKeyMaterial
-        })?;
+        let dek: [u8; 32] = secret_crypto::fixed_key_material(plaintext)?;
         return Ok(dek);
     }
 
@@ -46,8 +39,7 @@ pub async fn get_or_create_user_dek(
         nonce.as_slice(),
     )
     .execute(pool)
-    .await
-    .map_err(|e| SecretCryptoError::Database(e.to_string()))?;
+    .await?;
 
     tracing::info!(user_id = %user_id, "Created new encryption key for user");
 
@@ -65,10 +57,7 @@ pub async fn rotate_user_dek(
     let new_dek_nonce = secret_crypto::generate_nonce();
     let encrypted_new_dek = secret_crypto::encrypt(master_key, &new_dek_nonce, &new_dek)?;
 
-    let mut tx = pool
-        .begin()
-        .await
-        .map_err(|e| SecretCryptoError::Database(e.to_string()))?;
+    let mut tx = pool.begin().await?;
 
     let secret_rows = sqlx::query!(
         "SELECT id, encrypted_value, value_nonce FROM plugin_env_vars \
@@ -76,19 +65,11 @@ pub async fn rotate_user_dek(
         user_id.as_str(),
     )
     .fetch_all(&mut *tx)
-    .await
-    .map_err(|e| SecretCryptoError::Database(e.to_string()))?;
+    .await?;
 
     for row in &secret_rows {
-        let old_nonce: [u8; 12] = row
-            .value_nonce
-            .as_deref()
-            .unwrap_or(&[])
-            .try_into()
-            .map_err(|e: std::array::TryFromSliceError| {
-                tracing::warn!(error = %e, "Stored secret nonce is not 12 bytes");
-                SecretCryptoError::InvalidKeyMaterial
-            })?;
+        let old_nonce: [u8; 12] =
+            secret_crypto::fixed_key_material(row.value_nonce.clone().unwrap_or_default())?;
         let encrypted_value = row.encrypted_value.as_deref().unwrap_or(&[]);
         let plaintext = secret_crypto::decrypt(&old_dek, &old_nonce, encrypted_value)?;
 
@@ -103,8 +84,7 @@ pub async fn rotate_user_dek(
             row.id,
         )
         .execute(&mut *tx)
-        .await
-        .map_err(|e| SecretCryptoError::Database(e.to_string()))?;
+        .await?;
     }
 
     sqlx::query!(
@@ -115,12 +95,9 @@ pub async fn rotate_user_dek(
         user_id.as_str(),
     )
     .execute(&mut *tx)
-    .await
-    .map_err(|e| SecretCryptoError::Database(e.to_string()))?;
+    .await?;
 
-    tx.commit()
-        .await
-        .map_err(|e| SecretCryptoError::Database(e.to_string()))?;
+    tx.commit().await?;
 
     tracing::info!(
         user_id = %user_id,

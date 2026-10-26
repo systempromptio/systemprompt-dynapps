@@ -45,17 +45,30 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
     Arc::new(SessionCreationService::new(
         Arc::new(sessions),
         Arc::new(user),
+        Arc::clone(globals::boot().token_authority()),
+        Arc::clone(globals::boot().config_arc()),
     ))
 }
 
 fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
     let sessions = session_service(pool);
-    let config = systemprompt::manifest::Config::get().expect("fixture profile config");
+    let boot = globals::boot();
+    let ctx = systemprompt::sso::SsoHookContext {
+        db: Arc::clone(database),
+        config: Arc::clone(boot.config_arc()),
+        services: globals::services().clone(),
+        services_root: boot.active_services_root().clone(),
+        secrets: Arc::clone(boot.secrets()),
+    };
+    let oauth = systemprompt::oauth::repository::OAuthRepository::new(
+        database,
+        Arc::from(globals::OAUTH_PEPPER),
+    );
     identity::SsoDeps {
         driver: Some(systemprompt::sso::SsoDriver::discover(
-            database,
+            &ctx,
+            oauth,
             Arc::clone(&sessions),
-            Arc::new(config.clone()),
         )),
         write_pool: Arc::clone(pool),
         session_service: sessions,
@@ -74,6 +87,32 @@ fn farm_state(pool: &Arc<PgPool>) -> Arc<farm::state::FarmState> {
             external_base: String::new(),
         },
         farm::state::RunnerLimits::default(),
+        systemprompt_web_admin_core::extension_boot::BootServices {
+            boot: globals::boot().clone(),
+            services: dynapps_test_common::extension_services(pool, globals::services().clone()),
+        },
+    )
+}
+
+// Core's three planes over the fixture services tree, as the runtime builds
+// them for the extension router.
+fn core_planes(
+    database: &systemprompt::database::DbPool,
+) -> systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes {
+    let root = globals::boot().services_root().to_path_buf();
+    let planes = systemprompt::extension::prelude::ConfigPlaneSet::new(
+        vec![
+            Arc::new(systemprompt::governance::authz::AccessControlPlane),
+            Arc::new(systemprompt::governance::policy::GovernancePlane),
+            Arc::new(systemprompt::gateway::policies::GatewayPoliciesPlane),
+        ],
+        std::collections::BTreeMap::new(),
+        root,
+    )
+    .expect("core plane set");
+    systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes::over(
+        planes,
+        systemprompt::scheduler::repository::ConfigReconcileRepository::new(database),
     )
 }
 
@@ -86,15 +125,21 @@ impl App {
         let admin_dir = globals::repo_root().join("storage/files/admin");
         // Handlebars strict mode: templates read `branding.*`, so an engine
         // without branding 500s on every page the server renders fine.
-        let branding = systemprompt_web_extension::branding_config();
-        let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir)
-            .expect("build the admin template engine from storage/files/admin")
-            .with_branding(branding);
+        let branding = systemprompt_web_site::config_loader::SiteConfig::load_from(
+            globals::boot().services_root(),
+        )
+        .branding;
+        let web_dist = std::path::PathBuf::from(&globals::boot().config().web_path).join("dist");
+        let engine =
+            systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir, &web_dist)
+                .expect("build the admin template engine from storage/files/admin")
+                .with_branding(branding);
 
         let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
             &database,
             credentials.admin_user_id.clone(),
             None,
+            globals::boot().services_root(),
         ));
         let farm_state = farm_state(pool);
         let api = Router::new()
@@ -105,11 +150,12 @@ impl App {
                     pool,
                     Arc::clone(&managed),
                     Arc::clone(&farm_state),
+                    Arc::clone(globals::boot().secrets()),
                 ),
             )
             .merge(platform::connector_api_router(
                 Arc::clone(pool),
-                admin::service_accounts(pool, pool),
+                admin::service_accounts(pool, pool, Arc::clone(globals::boot().secrets())),
             ))
             .merge(platform::bridge_identity_router(Arc::clone(pool)));
         let sso_deps = sso_deps(pool, &database);
@@ -123,6 +169,11 @@ impl App {
                 sso_deps,
                 managed,
                 files: Arc::clone(&farm_state.artefacts),
+                boot: globals::boot().clone(),
+                ai: Arc::new(systemprompt::ai::repository::AiRepositories::new(
+                    &database,
+                    globals::at_rest_cipher().clone(),
+                )),
             },
         )
         .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>))
@@ -158,7 +209,20 @@ impl App {
             .nest(FARM_PUBLIC_PREFIX, farm)
             .merge(hooks)
             .merge(secrets)
-            .merge(share);
+            .merge(share)
+            .layer(axum::Extension(core_planes(&database)))
+            .layer(axum::Extension(systemprompt::traits::BackgroundTasks::new()))
+            .layer(axum::Extension(dynapps_test_common::extension_services(
+                pool,
+                globals::services().clone(),
+            )))
+            .layer(axum::Extension::<
+                Arc<dyn systemprompt::traits::ProviderTokenCache>,
+            >(Arc::new(
+                systemprompt::security::credential::TokenCache::default(),
+            )))
+            .layer(axum::Extension(Arc::clone(globals::boot().config_arc())))
+            .layer(axum::Extension(globals::boot().clone()));
 
         Self {
             router,
@@ -176,8 +240,7 @@ impl App {
             .method(method.to_uppercase().as_str())
             .uri(path);
         if matches!(method, "post" | "put" | "patch" | "delete") {
-            let profile = systemprompt::config::ProfileBootstrap::get().expect("fixture profile");
-            let origin = url::Url::parse(&profile.server.api_external_url)
+            let origin = url::Url::parse(&globals::boot().config().api_external_url)
                 .expect("fixture origin")
                 .origin()
                 .ascii_serialization();

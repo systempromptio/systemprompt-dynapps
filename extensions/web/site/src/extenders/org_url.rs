@@ -3,22 +3,19 @@
 use async_trait::async_trait;
 // JSON: required by trait contract
 use serde_json::Value;
-use systemprompt::manifest::Config;
 use systemprompt::template_provider::{ExtenderContext, TemplateDataExtender};
 
-#[derive(Debug, Clone, Copy)]
-pub struct OrgUrlExtender;
+#[derive(Debug, Clone)]
+pub struct OrgUrlExtender {
+    org_url: String,
+}
 
 impl OrgUrlExtender {
     #[must_use]
-    pub const fn new() -> Self {
-        Self
-    }
-}
-
-impl Default for OrgUrlExtender {
-    fn default() -> Self {
-        Self::new()
+    pub fn new(org_url: impl Into<String>) -> Self {
+        Self {
+            org_url: org_url.into(),
+        }
     }
 }
 
@@ -42,9 +39,7 @@ impl TemplateDataExtender for OrgUrlExtender {
         // JSON: required by trait contract
         data: &mut Value,
     ) -> Result<(), systemprompt::traits::ProviderError> {
-        let config = Config::get()
-            .map_err(|e| systemprompt::traits::ProviderError::Internal(Box::new(e)))?;
-        let org_url = &config.api_external_url;
+        let org_url = &self.org_url;
 
         let default_image = format!("{org_url}/files/images/logo.png");
         let org_logo = format!("{org_url}/files/images/logo.svg");
@@ -58,5 +53,3 @@ impl TemplateDataExtender for OrgUrlExtender {
         Ok(())
     }
 }
-
-systemprompt_web_shared::submit_extender!(OrgUrlExtender::new());

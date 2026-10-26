@@ -35,8 +35,7 @@ impl PluginUsageRetentionJob {
             )
             .fetch_one(pool)
             .await?;
-            let removed =
-                u64::try_from(removed).map_err(|error| JobError::other(error.to_string()))?;
+            let removed = u64::try_from(removed)?;
             batches += 1;
             deleted += removed;
             if removed == 0 {

@@ -7,16 +7,17 @@
 
 use std::sync::Arc;
 
-use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::{Extension, Json};
 use serde::Serialize;
 use sqlx::PgPool;
 
 use crate::repositories;
 use crate::repositories::gateway_routes::editor;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::request as shared;
 use systemprompt_web_admin_core::types::{
     GatewayConfigView, GatewayRouteView, ReorderRoutesRequest, UpdateGatewaySettingsRequest,
@@ -27,8 +28,11 @@ pub(crate) struct CreateRouteResponse {
     pub index: usize,
 }
 
-pub(crate) async fn gateway_config_view(pool: &PgPool) -> AdminResult<GatewayConfigView> {
-    let gateway_path = shared::get_gateway_file_path()?;
+pub(crate) async fn gateway_config_view(
+    pool: &PgPool,
+    boot: &ExtensionBoot,
+) -> AdminResult<GatewayConfigView> {
+    let gateway_path = shared::get_gateway_file_path(boot);
     let mut config =
         systemprompt_web_admin_core::repositories::gateway_catalog::get_gateway_config(
             &gateway_path,
@@ -42,55 +46,63 @@ pub(crate) async fn gateway_config_view(pool: &PgPool) -> AdminResult<GatewayCon
     Ok(config)
 }
 
-pub(crate) async fn get_gateway_handler(State(pool): State<Arc<PgPool>>) -> AdminResult<Response> {
-    Ok(Json(gateway_config_view(&pool).await?).into_response())
+pub(crate) async fn get_gateway_handler(
+    State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
+) -> AdminResult<Response> {
+    Ok(Json(gateway_config_view(&pool, &boot).await?).into_response())
 }
 
 pub(crate) async fn update_gateway_settings_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     Json(body): Json<UpdateGatewaySettingsRequest>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path_for_write()?;
+    let gateway_path = shared::get_gateway_file_path_for_write(&boot)?;
     systemprompt_web_admin_core::repositories::gateway_catalog::update_gateway_settings(
         &gateway_path,
         &body,
     )?;
-    Ok(Json(gateway_config_view(&pool).await?).into_response())
+    Ok(Json(gateway_config_view(&pool, &boot).await?).into_response())
 }
 
 pub(crate) async fn create_gateway_route_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     Json(body): Json<GatewayRouteView>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path_for_write()?;
+    let gateway_path = shared::get_gateway_file_path_for_write(&boot)?;
     let index = editor::create_route_entry(&pool, &gateway_path, &body).await?;
     Ok((StatusCode::CREATED, Json(CreateRouteResponse { index })).into_response())
 }
 
 pub(crate) async fn update_gateway_route_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(idx): Path<usize>,
     Json(body): Json<GatewayRouteView>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path_for_write()?;
+    let gateway_path = shared::get_gateway_file_path_for_write(&boot)?;
     editor::update_route_at(&pool, &gateway_path, idx, &body).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 pub(crate) async fn delete_gateway_route_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(idx): Path<usize>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path_for_write()?;
+    let gateway_path = shared::get_gateway_file_path_for_write(&boot)?;
     editor::delete_route_at(&pool, &gateway_path, idx).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 pub(crate) async fn reorder_gateway_routes_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     Json(body): Json<ReorderRoutesRequest>,
 ) -> AdminResult<Response> {
-    let gateway_path = shared::get_gateway_file_path_for_write()?;
+    let gateway_path = shared::get_gateway_file_path_for_write(&boot)?;
     editor::reorder_route_positions(&pool, &gateway_path, &body.order).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }

@@ -19,6 +19,7 @@
 
 use std::sync::Arc;
 use std::time::Duration;
+use systemprompt::traits::OwnedTask;
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -123,6 +124,7 @@ impl FarmRunHandler {
                 plugin_id: request.plugin_id.clone(),
                 limits: RunCredentialLimits {
                     max_budget_usd: cost_window::run_cost_window_usd(
+                        &self.state.services.catalog,
                         request.max_budget_usd,
                         request.model.as_deref(),
                     ),
@@ -199,6 +201,7 @@ impl FarmRunHandler {
             seq_after,
             sink: &sink,
             cancel: claimed.run_token.clone(),
+            harness: None,
         })
         .await;
         watcher.abort();
@@ -253,11 +256,11 @@ async fn record_notes(
     Ok((total > 0).then_some(total - 1))
 }
 
-fn watch_cancel(claimed: &ClaimedRun) -> tokio::task::JoinHandle<()> {
+fn watch_cancel(claimed: &ClaimedRun) -> OwnedTask<()> {
     let repo = claimed.repo.clone();
     let token = claimed.run_token.clone();
     let id: AgentRunId = claimed.row.id.clone();
-    tokio::spawn(async move {
+    OwnedTask::spawn("farm_cancel_watch", async move {
         loop {
             tokio::select! {
                 () = token.cancelled() => return,

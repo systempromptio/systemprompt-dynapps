@@ -86,8 +86,7 @@ pub(crate) async fn archive_tables(
         written_at: Utc::now(),
         files,
     };
-    let body =
-        serde_json::to_vec_pretty(&manifest).map_err(|error| JobError::other(error.to_string()))?;
+    let body = serde_json::to_vec_pretty(&manifest)?;
     store(
         target.storage,
         &archive_object(target.tier, target.period, "manifest.json"),

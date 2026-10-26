@@ -19,12 +19,17 @@ use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
+use systemprompt::manifest::Config;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt::mcp::middleware::JwtVerifier;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
 };
-use systemprompt::traits::DynToolCallIntentClaims;
-use systemprompt_mcp_shared::auth::authenticate_tool_request;
+use systemprompt::models::auth::TokenAuthority;
+use systemprompt::traits::{ConfigWatch, DynToolCallIntentClaims};
+pub use systemprompt_mcp_shared::auth::ServerAccess;
+use systemprompt_mcp_shared::auth::{ToolAuth, authenticate_tool_request};
 use systemprompt_mcp_shared::record_mcp_access;
 
 use crate::env::Env;
@@ -39,6 +44,9 @@ pub struct AgentFarmServer {
     db_pool: DbPool,
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
+    services: ConfigWatch<ServicesConfig>,
+    token_authority: Arc<dyn TokenAuthority>,
+    config: Arc<Config>,
     env: Arc<Env>,
 }
 
@@ -46,10 +54,16 @@ impl AgentFarmServer {
     pub fn new(
         db_pool: DbPool,
         service_id: McpServerId,
-        authz_hook: SharedAuthzHook,
+        access: ServerAccess,
         artifact_ingest: Arc<ArtifactIngest>,
         env: Arc<Env>,
     ) -> Self {
+        let ServerAccess {
+            authz_hook,
+            services,
+            token_authority,
+            config,
+        } = access;
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
         let executor = McpToolExecutor::new(
@@ -63,6 +77,9 @@ impl AgentFarmServer {
             db_pool,
             executor,
             authz_hook,
+            services,
+            token_authority,
+            config,
             env,
         }
     }
@@ -114,11 +131,18 @@ impl ServerHandler for AgentFarmServer {
         let server_name = self.service_id.to_string();
 
         let (request_context, _auth_token) = authenticate_tool_request(
-            &self.db_pool,
+            ToolAuth {
+                db_pool: &self.db_pool,
+                service_id: &self.service_id,
+                authz_hook: &self.authz_hook,
+                services_config: &self.services.get(),
+                verifier: JwtVerifier {
+                    authority: self.token_authority.as_ref(),
+                    config: &self.config,
+                },
+            },
             &tool_name,
-            &self.service_id,
             &ctx,
-            &self.authz_hook,
         )
         .await?;
 

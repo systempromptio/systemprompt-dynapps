@@ -285,7 +285,8 @@ async fn the_detector_records_a_request_that_should_have_been_denied() {
 }
 
 #[tokio::test]
-async fn the_detector_skips_requests_outside_the_window_and_off_the_catalog() {
+async fn the_detector_skips_requests_outside_the_window_and_judges_undeclared_models_on_their_model_entity()
+ {
     if !globals::init() {
         return;
     }
@@ -334,19 +335,20 @@ async fn the_detector_skips_requests_outside_the_window_and_off_the_catalog() {
         "a request older than the window is not swept"
     );
 
-    // An unrouted model has no ACL to violate: skipped, not denied.
+    // A model no declared route matches is decided on its own model entity,
+    // as the gateway decides it; with no grant on it the request is flagged.
     sqlx::query(
         "UPDATE ai_requests SET created_at = NOW(), model = 'llama-3-70b' WHERE user_id = $1",
     )
     .bind(user.as_str())
     .execute(db.pool.as_ref())
     .await
-    .expect("retarget at an unrouted model");
+    .expect("retarget at an undeclared model");
 
     assert_eq!(
         sweep_and_count(&app, &db.pool, &user).await,
-        0,
-        "no route matched the model, so there was nothing to judge"
+        1,
+        "the model entity judges a model no declared route matched"
     );
 
     db.cleanup().await;

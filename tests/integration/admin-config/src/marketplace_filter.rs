@@ -98,14 +98,20 @@ impl Harness {
             Arc::clone(&db.pool),
             Some(Arc::clone(&db.pool)),
         ));
-        let filter = TemplateMarketplaceFilter::from_db(&database);
+        let filter = TemplateMarketplaceFilter::from_db(
+            &database,
+            dynapps_test_common::extension_services(
+                &db.pool,
+                dynapps_test_common::empty_services_view(),
+            ),
+        );
         let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
         Some(Self { db, filter, repo })
     }
 
     async fn entity(&self, kind: EntityKind, id: &str, default_included: bool) {
         self.repo
-            .upsert_entity(kind, id, default_included, "test")
+            .upsert_entity(kind, id, default_included, "code:test-fixture")
             .await
             .expect("upsert entity");
     }
@@ -119,7 +125,7 @@ impl Harness {
                 rule_value: role,
                 access,
                 justification: None,
-                source: systemprompt::governance::authz::DASHBOARD_SOURCE,
+                source: "console:marketplace-filter-admin",
             })
             .await
             .expect("upsert rule");
@@ -462,7 +468,7 @@ async fn a_group_rule_admits_only_members_of_that_group() {
             rule_value: &group,
             access: Access::Allow,
             justification: None,
-            source: systemprompt::governance::authz::DASHBOARD_SOURCE,
+            source: "console:marketplace-filter-admin",
         })
         .await
         .expect("upsert group rule");

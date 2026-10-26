@@ -243,7 +243,7 @@ POST   /api/public/admin/access-control/entity/{entity_type}/{entity_id}/rules a
 POST   /api/public/admin/agent-farm/farms/{farm_id}/sync     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/approve         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/deny            anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
-POST   /api/public/admin/gateway/routes                      anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/gateway/routes                      anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/gateway/routes/reorder              anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/groups                              anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/groups/{group_id}/ad-mappings       anonymous=401 non-admin=403 developer=403 admin=403 platform-admin=422 project-manager=403 knowledge-worker=403

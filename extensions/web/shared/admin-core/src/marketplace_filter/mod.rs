@@ -25,27 +25,29 @@ use systemprompt::marketplace::{
     register_marketplace_filter,
 };
 
-use crate::authz::{dimensions, subject_attributes_for};
 use crate::connections::Connection;
 use crate::connections::source::get_connections;
+use crate::extension_services::ExtensionServices;
 use crate::repositories::principal::role::find_user_access_profile;
 
 #[derive(Debug)]
 pub struct TemplateMarketplaceFilter {
     pool: Arc<PgPool>,
     repo: AccessControlRepository,
+    services: ExtensionServices,
 }
 
 impl TemplateMarketplaceFilter {
-    pub fn from_db(db: &DbPool) -> Arc<dyn MarketplaceFilter> {
+    pub fn from_db(db: &DbPool, services: ExtensionServices) -> Arc<dyn MarketplaceFilter> {
         let pool = db.pool();
-        Arc::new(Self::from_pool(pool))
+        Arc::new(Self::from_pool(pool, services))
     }
 
-    pub fn from_pool(pool: Arc<PgPool>) -> Self {
+    pub fn from_pool(pool: Arc<PgPool>, services: ExtensionServices) -> Self {
         Self {
             repo: AccessControlRepository::from_pool(Arc::clone(&pool)),
             pool,
+            services,
         }
     }
 
@@ -71,7 +73,9 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
         mut candidate: MarketplaceCandidate,
     ) -> Result<MarketplaceCandidate, MarketplaceFilterError> {
         let roles = self.user_roles(user_id).await?;
-        let attributes = subject_attributes_for(self.pool.as_ref(), user_id)
+        let attributes = self
+            .services
+            .subject_attributes(user_id)
             .await
             .map_err(|e| MarketplaceFilterError::Backend(Box::new(e)))?;
         let mut keep = keep_sets(
@@ -81,11 +85,11 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
                 user_id,
                 roles: &roles,
                 attributes: &attributes,
-                dimensions: dimensions(self.pool.as_ref()),
+                dimensions: self.services.dimensions(),
             },
         )
         .await?;
-        let connections = get_connections(&self.pool, user_id)
+        let connections = get_connections(&self.pool, &self.services, user_id)
             .await
             .map_err(|e| MarketplaceFilterError::Backend(Box::new(e)))?;
         let diagnostics = &mut candidate.diagnostics;
@@ -132,6 +136,9 @@ fn keep_if_connection_ready(
 }
 
 register_marketplace_filter!(
-    |db| Ok(TemplateMarketplaceFilter::from_db(db)),
+    |ctx| Ok(TemplateMarketplaceFilter::from_db(
+        &ctx.db,
+        ExtensionServices::from_marketplace(ctx),
+    )),
     priority = 100
 );

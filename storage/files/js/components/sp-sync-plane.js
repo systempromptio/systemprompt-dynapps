@@ -18,6 +18,14 @@ const closeDialogs = () => {
 let pending = null;
 
 const CONFIRM = {
+  merge: (button) => ({
+    title: 'Apply from code',
+    body:
+      button.dataset.entities
+        ? `Core applies the declaration to ${button.dataset.entities} alone.`
+        : `Core merges the declaration into this database entity by entity (${button.dataset.count} differ). ` +
+          'An entity both code and this database changed is recorded as a conflict and left alone.',
+  }),
   insert_only: (button) => ({
     title: 'Apply all new',
     body: `Add ${button.dataset.count} row(s) the declaration holds and this database lacks. Nothing existing is changed or removed.`,

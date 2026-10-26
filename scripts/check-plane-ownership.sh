@@ -26,7 +26,7 @@
 #   repositories/access_rules/   the access-control plane itself (apply_sync*)
 #   governance/.../gateway_acl.rs  the console's sanctioned per-route edit path
 #   entitlement/rules.rs           the console's sanctioned grant editor
-#                                  (DASHBOARD_SOURCE rows, never boot)
+#                                  (console:<user> rows, never boot)
 #
 # REPO_DIR (space-separated, globs allowed) overrides the scanned directories.
 set -uo pipefail

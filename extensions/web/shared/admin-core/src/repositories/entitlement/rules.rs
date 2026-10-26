@@ -6,18 +6,18 @@
 //!
 //! Replacing an entity's rules is an upsert plus a delete of what is absent,
 //! not a wipe and re-insert: a file-declared row the console left alone keeps
-//! its `yaml` source and justification, so it does not turn into drift.
+//! its `code:` source and justification, so it does not turn into drift.
 
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::governance::authz::{
-    AccessControlRepository, AuthzError, DASHBOARD_SOURCE, EntityKind,
-};
+use systemprompt::governance::authz::{AccessControlRepository, AuthzError, EntityKind};
+use systemprompt::identifiers::UserId;
 
 use crate::types::access_control::{
     AccessControlRule, AccessControlRuleInput, AccessDecision, RuleType,
 };
+use crate::util::change_source::console_source;
 
 pub async fn list_all_rules(pool: &PgPool) -> Result<Vec<AccessControlRule>, sqlx::Error> {
     sqlx::query_as!(
@@ -72,7 +72,6 @@ pub async fn list_rules_for_entity(
     .await
 }
 
-const SOURCE_LABEL: &str = "admin:dashboard";
 
 // Why: core's `ensure_entity` takes the pool, not this transaction, so the
 // catalog row commits first; a later failure leaves an unruled entity, which
@@ -82,12 +81,14 @@ pub async fn set_entity_rules(
     entity_type: EntityKind,
     entity_id: &str,
     rules: &[AccessControlRuleInput],
+    actor: &UserId,
 ) -> Result<Vec<AccessControlRule>, AuthzError> {
+    let source = console_source(actor);
     catalog(pool)
-        .ensure_entity(entity_type, entity_id, SOURCE_LABEL)
+        .ensure_entity(entity_type, entity_id, &source)
         .await?;
     let mut tx = pool.begin().await?;
-    replace_rules(&mut tx, entity_type.as_str(), entity_id, rules).await?;
+    replace_rules(&mut tx, entity_type.as_str(), entity_id, rules, &source).await?;
     tx.commit().await?;
     list_rules_for_entity(pool, entity_type.as_str(), entity_id)
         .await
@@ -98,16 +99,18 @@ pub async fn bulk_set_rules(
     pool: &PgPool,
     entities: &[(EntityKind, String)],
     rules: &[AccessControlRuleInput],
+    actor: &UserId,
 ) -> Result<usize, AuthzError> {
+    let source = console_source(actor);
     let catalog = catalog(pool);
     for (entity_type, entity_id) in entities {
         catalog
-            .ensure_entity(*entity_type, entity_id, SOURCE_LABEL)
+            .ensure_entity(*entity_type, entity_id, &source)
             .await?;
     }
     let mut tx = pool.begin().await?;
     for (entity_type, entity_id) in entities {
-        replace_rules(&mut tx, entity_type.as_str(), entity_id, rules).await?;
+        replace_rules(&mut tx, entity_type.as_str(), entity_id, rules, &source).await?;
     }
     tx.commit().await?;
     Ok(entities.len())
@@ -118,6 +121,7 @@ async fn replace_rules(
     entity_type: &str,
     entity_id: &str,
     rules: &[AccessControlRuleInput],
+    source: &str,
 ) -> Result<(), sqlx::Error> {
     let mut kept_types: Vec<String> = Vec::with_capacity(rules.len());
     let mut kept_values: Vec<String> = Vec::with_capacity(rules.len());
@@ -149,7 +153,7 @@ async fn replace_rules(
             rule.rule_value,
             access_str,
             rule.justification.as_deref().map(str::trim).filter(|j| !j.is_empty()),
-            DASHBOARD_SOURCE,
+            source,
         )
         .execute(&mut **tx)
         .await?;

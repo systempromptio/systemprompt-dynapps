@@ -2,10 +2,9 @@
 //! how the host process ended, and its structured answer. All of it is read
 //! from the run's `agent_runs` row.
 
-use serde::{Deserialize, Serialize};
-use systemprompt_web_admin_core::ssr::format::format_bytes;
+use serde::Serialize;
 
-use systemprompt::agent_runs::AgentRunRow;
+use systemprompt::agent_runs::{AgentRunRow, DiffKind, DiffSummary};
 
 use crate::repositories::rows::RunRow;
 
@@ -13,9 +12,9 @@ use crate::repositories::rows::RunRow;
 pub(crate) struct RunArtifactsView {
     pub has_diff: bool,
     pub diff_unreadable: bool,
-    pub added: i64,
-    pub modified: i64,
-    pub deleted: i64,
+    pub added: usize,
+    pub modified: usize,
+    pub deleted: usize,
     pub files: Vec<DiffFileView>,
     pub fixture: Option<String>,
     pub exit_code: Option<i32>,
@@ -32,35 +31,13 @@ pub(crate) struct DiffFileView {
     pub path: String,
     pub kind: String,
     pub tone: &'static str,
-    pub bytes: String,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct DiffDoc {
-    #[serde(default)]
-    added: i64,
-    #[serde(default)]
-    modified: i64,
-    #[serde(default)]
-    deleted: i64,
-    #[serde(default)]
-    files: Vec<DiffFile>,
-}
-
-#[derive(Debug, Deserialize)]
-struct DiffFile {
-    path: String,
-    #[serde(alias = "kind")]
-    change: String,
-    #[serde(default)]
-    bytes: Option<i64>,
 }
 
 pub(crate) fn artifacts_view(run: &RunRow, agent_run: &AgentRunRow) -> RunArtifactsView {
     let parsed = agent_run
         .diff_summary
         .as_ref()
-        .map(|v| serde_json::from_value::<DiffDoc>(v.clone()));
+        .map(|v| serde_json::from_value::<DiffSummary>(v.clone()));
     let diff_unreadable = matches!(parsed, Some(Err(_)));
     let doc = parsed.and_then(Result::ok);
     let has_diff = doc.is_some();
@@ -72,17 +49,19 @@ pub(crate) fn artifacts_view(run: &RunRow, agent_run: &AgentRunRow) -> RunArtifa
         modified: doc.modified,
         deleted: doc.deleted,
         files: doc
-            .files
+            .entries
             .into_iter()
-            .map(|f| DiffFileView {
-                tone: match f.change.as_str() {
-                    "added" => "ok",
-                    "deleted" => "err",
-                    _ => "info",
-                },
-                bytes: f.bytes.map_or_else(|| "—".to_owned(), format_bytes),
-                path: f.path,
-                kind: f.change,
+            .map(|entry| {
+                let (kind, tone) = match entry.kind {
+                    DiffKind::Added => ("added", "ok"),
+                    DiffKind::Modified => ("modified", "info"),
+                    DiffKind::Deleted => ("deleted", "err"),
+                };
+                DiffFileView {
+                    path: entry.path,
+                    kind: kind.to_owned(),
+                    tone,
+                }
             })
             .collect(),
         fixture: run.fixture.clone(),

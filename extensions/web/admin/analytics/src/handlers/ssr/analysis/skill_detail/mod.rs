@@ -25,6 +25,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::PluginId;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::ssr::analysis_urls::analysis_skill_url;
 use systemprompt_web_admin_core::ssr::page::Page;
 
@@ -145,6 +146,7 @@ impl SkillDetailQuery {
 
 pub(crate) async fn skill_page(
     shell: Page,
+    BootServices { boot, services }: BootServices,
     State(pool): State<Arc<PgPool>>,
     Path(skill): Path<String>,
     Query(query): Query<SkillDetailQuery>,
@@ -168,7 +170,7 @@ pub(crate) async fn skill_page(
         end,
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
     };
-    let index = InventoryIndex::build(&systemprompt_web_admin_core::request::get_services_path()?);
+    let index = InventoryIndex::build(boot.services_root());
     let run_filter = SkillRunFilter {
         marketplace: None,
         skill: Some(skill.skill.clone()),
@@ -184,7 +186,7 @@ pub(crate) async fn skill_page(
             PAGE_SIZE,
             query.page() * PAGE_SIZE
         ),
-        get_marketplace_audience(&pool, &index.marketplaces),
+        get_marketplace_audience(&pool, &services, &index.marketplaces),
         list_skill_runs(&pool, &window, &run_filter, RUNS_READ_FOR_MEDIANS),
     );
     let (facts, daily, breakdown, (conversations, total), audience, runs) =
@@ -205,7 +207,7 @@ pub(crate) async fn skill_page(
             conversations: &conversations,
             runs: &runs,
             total,
-            can_judge: shell.user.is_console && !super::judge_mode::automatic(),
+            can_judge: shell.user.is_console && !super::judge_mode::automatic(&boot),
         },
     );
     Ok(

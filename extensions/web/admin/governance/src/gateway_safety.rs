@@ -16,10 +16,11 @@
 //! no such overlap: the governance chain is request-only, so this is the sole
 //! thing standing between a model that echoes a credential and the client.
 //!
-//! The catalog is compiled once from the same `secret_scan` block the chain
-//! reads, in the active services root (a pinned bundle's `governance/` when
-//! one owns it, else the baked tree), never through a second governance engine:
-//! an inventory-built scanner cannot reach the injected one, and a second
+//! The catalog is compiled once, when core's scanner registry runs this
+//! crate's factory, from the same `secret_scan` block the chain reads, in the
+//! active services root (a pinned bundle's `governance/` when one owns it,
+//! else the baked tree), never through a second governance engine: an
+//! inventory-built scanner cannot reach the injected one, and a second
 //! engine's rate limiter would double every budget.
 
 use systemprompt::gateway::{
@@ -27,31 +28,8 @@ use systemprompt::gateway::{
 };
 use systemprompt::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
-use std::sync::LazyLock;
-
+use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::governance::policy::{GovernanceConfig, GovernedInput, SecretScanner};
-
-static CONFIGURED_SCANNER: LazyLock<Option<SecretScanner>> = LazyLock::new(|| {
-    let profile = systemprompt::config::ProfileBootstrap::get()
-        .inspect_err(|error| tracing::error!(%error, "response secret scanner: no profile"))
-        .ok()?;
-    let path = systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
-        &profile.paths.services,
-    )
-    .join("governance/config.yaml");
-    let config = GovernanceConfig::load(&path)
-        .inspect_err(
-            |error| tracing::error!(%error, "response secret scanner configuration rejected"),
-        )
-        .ok()?;
-    let policy = config
-        .policies
-        .into_iter()
-        .find(|policy| policy.id == "secret_scan" && policy.enabled)?;
-    SecretScanner::from_policy_yaml(&policy.params)
-        .inspect_err(|error| tracing::error!(%error, "response secret scanner patterns rejected"))
-        .ok()
-});
 
 #[derive(Debug, Clone, Default)]
 pub struct SecretsScanner {
@@ -70,6 +48,32 @@ impl SecretsScanner {
             scanner: Some(scanner),
         }
     }
+
+    #[must_use]
+    pub fn from_services_root(services_root: &std::path::Path) -> Self {
+        Self {
+            scanner: configured_scanner(services_root),
+        }
+    }
+}
+
+fn configured_scanner(services_root: &std::path::Path) -> Option<SecretScanner> {
+    let path = services_root.join("governance/config.yaml");
+    let text = std::fs::read_to_string(&path)
+        .inspect_err(|error| tracing::error!(%error, "response secret scanner: config unreadable"))
+        .ok()?;
+    let config = GovernanceConfig::parse(&text)
+        .inspect_err(
+            |error| tracing::error!(%error, "response secret scanner configuration rejected"),
+        )
+        .ok()?;
+    let policy = config
+        .policies
+        .into_iter()
+        .find(|policy| policy.id == "secret_scan" && policy.enabled)?;
+    SecretScanner::from_policy_yaml(&policy.params)
+        .inspect_err(|error| tracing::error!(%error, "response secret scanner patterns rejected"))
+        .ok()
 }
 
 #[async_trait::async_trait]
@@ -99,10 +103,9 @@ impl SafetyScanner for SecretsScanner {
 
 impl SecretsScanner {
     fn scan(&self, text: &str) -> Vec<Finding> {
-        let configured = self.scanner.as_ref();
-        let scanner = configured.or_else(|| CONFIGURED_SCANNER.as_ref());
         let input = GovernedInput::prompt_text(text.to_owned());
-        scanner
+        self.scanner
+            .as_ref()
             .and_then(|scanner| scanner.detect(&input))
             .map_or_else(Vec::new, |hit| {
                 let observation = hit.observation;
@@ -129,7 +132,9 @@ impl SecretsScanner {
 }
 
 register_safety_scanner!(
-    |_: &ScannerSettings| SecretsScanner::new(),
+    |ctx: &dyn ExtensionContext, _: &ScannerSettings| {
+        SecretsScanner::from_services_root(&ctx.services_root().path)
+    },
     name = "secrets"
 );
 
@@ -282,6 +287,6 @@ fn digit_adjacent(bytes: &[u8], start: usize, end: usize) -> bool {
 }
 
 register_safety_scanner!(
-    |_: &ScannerSettings| PiiScanner::new(),
+    |_: &dyn ExtensionContext, _: &ScannerSettings| PiiScanner::new(),
     name = "pii_extended"
 );

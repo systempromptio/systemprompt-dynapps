@@ -9,12 +9,12 @@
 use sqlx::PgPool;
 
 use super::view::{OptionView, ReachView, SubjectOptions};
+use crate::repositories::access_rules::review::band_label;
 use crate::repositories::access_rules::rules::LedgerRuleRow;
 use crate::repositories::entitlement::{
     MatrixSubject, SectionInput, group_subject, project_subject, resolve_subject_matrices,
     role_subject,
 };
-use crate::repositories::sync::access_control_rows::band_label;
 use crate::ssr::faults::Faults;
 use crate::types::access_control::AccessDecision;
 
@@ -22,6 +22,7 @@ const RESOLVED_BANDS: [&str; 3] = ["group", "project", "role"];
 
 pub async fn resolved_reach(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     entity: (&str, &str),
     subjects: &SubjectOptions,
     faults: &mut Faults,
@@ -44,7 +45,7 @@ pub async fn resolved_reach(
     );
     let resolved = faults.take(
         "resolved reach",
-        resolve_subject_matrices(pool, &only, &[section]).await,
+        resolve_subject_matrices(pool, services, &only, &[section]).await,
     );
     asked
         .iter()

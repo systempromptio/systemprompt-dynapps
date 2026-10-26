@@ -54,10 +54,11 @@ struct ContainerRule {
 
 pub async fn get_participation(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     user_id: &UserId,
     group_ids: &[String],
     project_ids: &[String],
-) -> Result<Participation, sqlx::Error> {
+) -> Result<Participation, crate::authz::AuthzReadError> {
     if group_ids.is_empty() && project_ids.is_empty() {
         return Ok(Participation::default());
     }
@@ -67,7 +68,7 @@ pub async fn get_participation(
     }
 
     let candidates: BTreeSet<String> = rules.iter().map(|r| r.entity_id.clone()).collect();
-    let allowed = confirm_allowed(pool, user_id, &candidates).await?;
+    let allowed = confirm_allowed(pool, services, user_id, &candidates).await?;
 
     let mut groups = BTreeSet::new();
     let mut projects = BTreeSet::new();
@@ -116,9 +117,10 @@ async fn list_candidate_container_rules(
 
 async fn confirm_allowed(
     pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
     user_id: &UserId,
     candidates: &BTreeSet<String>,
-) -> Result<BTreeSet<String>, sqlx::Error> {
+) -> Result<BTreeSet<String>, crate::authz::AuthzReadError> {
     let section: SectionInput = (
         MARKETPLACE_ENTITY.to_owned(),
         "Marketplaces".to_owned(),
@@ -127,7 +129,7 @@ async fn confirm_allowed(
             .map(|id| (id.clone(), id.clone(), None))
             .collect(),
     );
-    let Some(matrix) = resolve_user_matrix(pool, user_id, vec![section]).await? else {
+    let Some(matrix) = resolve_user_matrix(pool, services, user_id, vec![section]).await? else {
         return Ok(BTreeSet::new());
     };
     Ok(matrix

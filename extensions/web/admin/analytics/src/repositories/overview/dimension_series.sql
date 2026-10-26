@@ -11,7 +11,7 @@ WITH keyed AS (
                 ELSE r.client_kind END AS key,
            r.cost_microdollars
     FROM ai_requests r
-    WHERE NOT r.synthetic
+    WHERE r.traffic = 'production'
       AND r.created_at >= $1
       AND r.created_at < $2
 ), ranked AS (

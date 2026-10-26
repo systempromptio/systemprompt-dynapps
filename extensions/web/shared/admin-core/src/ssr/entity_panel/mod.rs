@@ -23,6 +23,7 @@ use sqlx::PgPool;
 pub use view::EntityAccessView;
 use view::{OptionView, SubjectOptions};
 
+use crate::error::AdminResult;
 use crate::repositories::access_rules::rules::{list_entity_defaults, list_ledger_rules};
 use crate::repositories::scope::containers::{list_group_summaries, list_project_summaries};
 use crate::repositories::sync::access_control::{declared_now, drift_now};
@@ -48,6 +49,7 @@ pub fn entity_access_url(entity_type: &str, entity_id: &str) -> Option<String> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct PanelRequest<'a> {
+    pub boot: &'a crate::extension_boot::ExtensionBoot,
     pub entity_type: &'a str,
     pub entity_id: &'a str,
     pub page_url: &'a str,
@@ -98,12 +100,15 @@ fn subject_names(options: &SubjectOptions) -> HashMap<(String, String), String> 
     names
 }
 
-async fn review_for(pool: &PgPool, key: &str) -> Result<Option<ReviewedEntity>, String> {
-    let declared = declared_now().await.map_err(|e| e.to_string())?;
-    let drift = drift_now(pool, &declared)
-        .await
-        .map_err(|e| e.to_string())?;
-    let split = reviews_for(pool, &drift).await.map_err(|e| e.to_string())?;
+async fn review_for(
+    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
+    boot: &crate::extension_boot::ExtensionBoot,
+    key: &str,
+) -> AdminResult<Option<ReviewedEntity>> {
+    let declared = declared_now(&services.config(), boot.services_root()).await?;
+    let drift = drift_now(pool, &declared).await?;
+    let split = reviews_for(pool, &drift).await?;
     Ok(split
         .pending
         .into_iter()
@@ -111,7 +116,11 @@ async fn review_for(pool: &PgPool, key: &str) -> Result<Option<ReviewedEntity>, 
         .find(|r| r.review.key == key))
 }
 
-pub async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> EntityAccessView {
+pub async fn build_entity_panel(
+    pool: &PgPool,
+    services: &crate::extension_services::ExtensionServices,
+    req: PanelRequest<'_>,
+) -> EntityAccessView {
     let key = format!("{}/{}", req.entity_type, req.entity_id);
     let mut faults = Faults::new();
     let ledger = faults.take("access rules", list_ledger_rules(pool).await);
@@ -127,14 +136,14 @@ pub async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> EntityA
         });
     let subjects = subject_options(pool, &mut faults).await;
     let entity = (req.entity_type, req.entity_id);
-    let mut reaches = reach::resolved_reach(pool, entity, &subjects, &mut faults).await;
+    let mut reaches = reach::resolved_reach(pool, services, entity, &subjects, &mut faults).await;
     reaches.extend(reach::ruled_reach(&rows));
-    let (review, drift_unreadable) = match review_for(pool, &key).await {
+    let (review, drift_unreadable) = match review_for(pool, services, req.boot, &key).await {
         Ok(review) => (review, None),
-        Err(e) => (None, Some(e)),
+        Err(e) => (None, Some(e.to_string())),
     };
     let why = match req.why.map(str::trim).filter(|w| !w.is_empty()) {
-        Some(q) => Some(why::why(pool, q, entity, &mut faults).await),
+        Some(q) => Some(why::why(pool, services, q, entity, &mut faults).await),
         None => None,
     };
     let people = faults.take("people", list_pickable_users(pool, None).await);

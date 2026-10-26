@@ -6,6 +6,7 @@
 
 pub(crate) mod bridge_whoami;
 pub(crate) mod connector_auth;
+mod deps;
 pub(crate) mod devices;
 mod jobs;
 pub(crate) mod service_accounts;

@@ -1,8 +1,8 @@
 //! The jobs whose entry point is `Job::execute(&JobContext)`.
 //!
-//! `AppPaths` is built over a tempdir, `JobContext` via its public
-//! constructor, and `Config` via `Config::install`, so the job bodies run
-//! against a throwaway database and filesystem.
+//! `AppPaths` is built over a tempdir and `JobContext` via its public
+//! constructor, carrying the test `Config` the way the scheduler injects it,
+//! so the job bodies run against a throwaway database and filesystem.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -49,24 +49,6 @@ pub(crate) fn assert_missing_database(error: systemprompt::traits::ProviderError
     assert_eq!(missing, expected);
 }
 
-// `load_master_key` accepts only a 32-byte hex key.
-#[expect(
-    unsafe_code,
-    reason = "set_var is unsafe in edition 2024; see the SAFETY note"
-)]
-fn set_master_key() {
-    // SAFETY: callers are current-thread `#[tokio::test]`s and nextest gives
-    // each test its own process, so nothing else reads the environment here.
-    unsafe {
-        std::env::set_var(
-            "ENCRYPTION_MASTER_KEY",
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-        );
-    }
-}
-
-// `Config` is a process-wide `OnceLock`: every test in this binary must
-// install the same value, or the first installer decides it for the rest.
 const BASE_URL: &str = "https://dynapps.test";
 
 const DOCUMENTATION_SOURCE_ENABLED: &str = "\
@@ -91,11 +73,8 @@ content_sources:\n\
 \x20   category_id: documentation\n\
 \x20   enabled: false\n";
 
-pub(crate) fn install_config() {
-    if Config::is_initialized() {
-        return;
-    }
-    let installed = Config::install(Config {
+pub(crate) fn test_config() -> Arc<Config> {
+    Arc::new(Config {
         instance_id: systemprompt::identifiers::InstanceId::new("jobs-context-tests"),
         metrics_port: None,
         max_concurrent_streams: 16,
@@ -147,11 +126,7 @@ pub(crate) fn install_config() {
         api_key_max_lifetime_days: None,
         system_admin_username: "admin".to_owned(),
         system_admin_email: None,
-    });
-    assert!(
-        installed.is_ok() || Config::is_initialized(),
-        "a Config is installed, by this call or a racing test"
-    );
+    })
 }
 
 // `AppPaths::from_profile` canonicalises, which fails on a missing directory.
@@ -160,6 +135,7 @@ fn app_paths(root: &Path) -> Arc<AppPaths> {
     Arc::new(
         AppPaths::from_profile(
             &PathsConfig {
+                root: None,
                 system: root.clone(),
                 services: root.clone(),
                 bin: root.clone(),
@@ -184,7 +160,6 @@ struct Harness {
 
 impl Harness {
     async fn create_or_skip() -> Option<Self> {
-        install_config();
         let db = TempDb::create().await?;
         let tmp = TempDir::new().expect("temporary tree");
         let paths = app_paths(tmp.path());
@@ -201,7 +176,8 @@ impl Harness {
             Actor::user(UserId::new("jobs-context-test")),
             systemprompt::traits::Dependencies::new()
                 .with(database)
-                .with(Arc::clone(&self.paths)),
+                .with(Arc::clone(&self.paths))
+                .with(test_config()),
         )
     }
 
@@ -219,7 +195,9 @@ impl Harness {
         ));
         JobContext::new(
             Actor::user(UserId::new("jobs-context-test")),
-            systemprompt::traits::Dependencies::new().with(database),
+            systemprompt::traits::Dependencies::new()
+                .with(database)
+                .with(test_config()),
         )
     }
 
@@ -273,6 +251,7 @@ impl Harness {
         .await
         .expect("seed a plaintext secret");
     }
+
 
     fn write_content_config(&self, yaml: &str) {
         let path = self.paths.system().content_config();
@@ -691,8 +670,8 @@ async fn secret_migration_does_nothing_when_no_master_key_is_configured() {
         return;
     };
 
-    let result = SecretMigrationJob
-        .execute(&h.context())
+    let secrets = dynapps_test_common::secret_store_without_master_key();
+    let result = SecretMigrationJob::run(&h.context(), secrets.as_ref())
         .await
         .expect("a missing master key is a skip, not a failure");
 
@@ -706,10 +685,9 @@ async fn secret_migration_reports_no_work_when_every_secret_is_already_encrypted
     let Some(h) = Harness::create_or_skip().await else {
         return;
     };
-    set_master_key();
+    let secrets = dynapps_test_common::fixture_secret_store();
 
-    let result = SecretMigrationJob
-        .execute(&h.context())
+    let result = SecretMigrationJob::run(&h.context(), secrets.as_ref())
         .await
         .expect("run the migration over an empty table");
 
@@ -724,14 +702,13 @@ async fn secret_migration_encrypts_plaintext_rows_and_audits_each_one() {
     let Some(h) = Harness::create_or_skip().await else {
         return;
     };
-    set_master_key();
+    let secrets = dynapps_test_common::fixture_secret_store();
     h.seed_plaintext_secret("secret-1", "user-a", "API_KEY", "plaintext-value")
         .await;
     h.seed_plaintext_secret("secret-2", "user-a", "OTHER_KEY", "another-value")
         .await;
 
-    let result = SecretMigrationJob
-        .execute(&h.context())
+    let result = SecretMigrationJob::run(&h.context(), secrets.as_ref())
         .await
         .expect("migrate the plaintext rows");
 
@@ -764,15 +741,16 @@ async fn secret_migration_encrypts_plaintext_rows_and_audits_each_one() {
 }
 
 #[tokio::test]
-async fn secret_migration_refuses_a_context_with_no_database() {
-    set_master_key();
-
+async fn secret_migration_refuses_a_context_with_no_app_context() {
     let error = SecretMigrationJob
         .execute(&Harness::empty_context())
         .await
-        .expect_err("the migration reads and rewrites database rows");
+        .expect_err("the migration reads the master key through the app context");
 
-    assert_missing_database(error);
+    assert!(
+        error.to_string().contains("AppContext"),
+        "unexpected error: {error}"
+    );
 }
 
 #[tokio::test]

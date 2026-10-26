@@ -29,6 +29,7 @@ use serde::de::DeserializeOwned;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminResult};
+use crate::extension_boot::ExtensionBoot;
 use crate::types::UserContext;
 
 pub(crate) const HARD_CAP: i64 = 50_000;
@@ -201,6 +202,7 @@ impl ExportWindow {
 #[derive(Debug)]
 pub struct ExportContext<'a> {
     pub pool: &'a PgPool,
+    pub boot: &'a ExtensionBoot,
     pub user: &'a UserContext,
     pub window: Option<ExportWindow>,
     pub limit: i64,
@@ -208,9 +210,15 @@ pub struct ExportContext<'a> {
 }
 
 impl<'a> ExportContext<'a> {
-    pub const fn new(pool: &'a PgPool, user: &'a UserContext, uri: Uri) -> Self {
+    pub const fn new(
+        pool: &'a PgPool,
+        boot: &'a ExtensionBoot,
+        user: &'a UserContext,
+        uri: Uri,
+    ) -> Self {
         Self {
             pool,
+            boot,
             user,
             window: None,
             limit: HARD_CAP,
@@ -230,8 +238,9 @@ impl<'a> ExportContext<'a> {
     }
 }
 
-// Why: Rust native async trait methods are not dyn-compatible, and the
-// registry holds datasets as `&dyn DataSet`.
+/// One exportable dataset. `#[async_trait]` because the registry holds
+/// datasets as `&dyn DataSet`, and native async trait methods are not dyn
+/// compatible.
 #[async_trait]
 pub trait DataSet: Send + Sync {
     fn id(&self) -> &'static str;

@@ -67,7 +67,7 @@ async fn seed_trail(pool: &PgPool) -> Trail {
             session_id: Some(&session_id),
             trace_id: Some(&trace_id),
             context_id: Some(&context_id),
-            status: "error",
+            status: "failed",
         },
     )
     .await;
@@ -368,7 +368,7 @@ async fn analytics_pages_aggregate_the_seeded_trail() {
         ),
         (
             "the requests log filtered to failures",
-            "/admin/requests?tab=log&status=error".to_owned(),
+            "/admin/requests?tab=log&status=failed".to_owned(),
         ),
         (
             "the requests log searched for the seeded session",

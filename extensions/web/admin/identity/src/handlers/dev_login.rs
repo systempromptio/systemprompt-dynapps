@@ -17,11 +17,10 @@ use axum::http::HeaderMap;
 use axum::http::header::SET_COOKIE;
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
-use systemprompt::config::ProfileBootstrap;
+use systemprompt::manifest::Profile;
 use systemprompt::manifest::profile::{Environment, ProfileType};
 
 use systemprompt::analytics::SessionAnalyticsBuilder;
-use systemprompt::manifest::Config;
 use systemprompt::sso::{BrowserSessionSubject, mint_browser_session};
 use systemprompt_web_admin_core::activity::NewActivity;
 use systemprompt_web_admin_core::repositories::user_activity::record;
@@ -36,9 +35,9 @@ pub const fn dev_login_allowed(environment: Environment, target: ProfileType) ->
     environment.is_development() && !target.is_cloud()
 }
 
-pub fn dev_login_enabled() -> bool {
-    ProfileBootstrap::get()
-        .is_ok_and(|profile| dev_login_allowed(profile.runtime.environment, profile.target))
+#[must_use]
+pub const fn dev_login_enabled(profile: &Profile) -> bool {
+    dev_login_allowed(profile.runtime.environment, profile.target)
 }
 
 pub fn dev_login_url(api_external_url: &str, code: &str) -> String {
@@ -55,6 +54,7 @@ pub(crate) struct DevLoginParams {
 
 pub(crate) async fn dev_login_redeem(
     Extension(deps): Extension<SsoDeps>,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     headers: HeaderMap,
     params: Result<Query<DevLoginParams>, QueryRejection>,
 ) -> Result<Response, DevLoginRejected> {
@@ -71,10 +71,7 @@ pub(crate) async fn dev_login_redeem(
         },
     };
 
-    let Ok(config) = Config::get() else {
-        tracing::error!("dev login: profile config unavailable");
-        return Err(DevLoginRejected);
-    };
+    let config = boot.config();
     let subject = BrowserSessionSubject {
         user_id: &user.user_id,
         display_name: &user.display_name,

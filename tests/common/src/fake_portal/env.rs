@@ -3,24 +3,28 @@
 //! A throwaway profile whose
 //! services tree declares `dynapps-odoo` and `dynbrain` at the fake's MCP
 //! paths (adapter `generic`, as in `services/mcp/*.yaml`), secrets carrying a
-//! credential-broker secret and master key, an installed signing authority
-//! for [`PortalEnv::mint`], and `SSL_CERT_FILE` naming the fake's CA so every
-//! default `reqwest` client in the connector code trusts it.
+//! credential-broker secret and master key, the signing keys
+//! [`PortalEnv::mint`] signs with, and `SSL_CERT_FILE` naming the fake's CA so
+//! every default `reqwest` client in the connector code trusts it.
 //!
-//! Core's profile, config, services and signing authority are process-wide,
-//! so one test process holds one `PortalEnv`; nextest gives each test its own
-//! process. Call [`PortalEnv::start`] before anything else touches
-//! `ServicesBootstrap`.
+//! The environment owns its booted profile, secrets and signing keys, and
+//! hands the code under test the [`PortalEnv::services`] view and the
+//! [`PortalEnv::boot`] values it would receive from its extension context.
+//! `SSL_CERT_FILE` is process-wide, so one test process holds one
+//! `PortalEnv`; nextest gives each test its own process.
 
 use std::collections::BTreeMap;
 
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header, encode};
+use std::sync::Arc;
 use systemprompt::identifiers::SessionId;
 use systemprompt::models::auth::{
-    JwtAudience, JwtClaims, Permission, RateLimitTier, TokenType, UserType,
+    CustomClaims, JwtAudience, JwtClaims, Permission, RateLimitTier, RegisteredClaims, TokenType,
+    UserType,
 };
-use systemprompt::security::keys::authority;
+
+use systemprompt::security::keys::SigningKeys;
 
 use super::{DYNBRAIN_PATH, FakePortal, ODOO_PATH};
 
@@ -37,6 +41,9 @@ const COPIED: [&str; 3] = [
 #[derive(Debug)]
 pub struct PortalEnv {
     pub portal: FakePortal,
+    pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pub boot: systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+    keys: SigningKeys,
     _dir: tempfile::TempDir,
 }
 
@@ -61,8 +68,7 @@ impl PortalEnv {
             std::fs::create_dir_all(destination.parent().expect("parent")).expect("mkdir");
             std::fs::copy(crate::repo_path(relative), destination).expect("copy services file");
         }
-        let config = root.join("services/config/config.yaml");
-        std::fs::write(&config, services_yaml(&portal)).expect("write services config");
+        std::fs::write(config_path(root), services_yaml(&portal)).expect("write services config");
         let profile = PROFILE
             .replace("__REPO__", &crate::repo_root().to_string_lossy())
             .replace("__PROFILE_DIR__", &root.to_string_lossy());
@@ -70,33 +76,60 @@ impl PortalEnv {
         std::fs::write(root.join("secrets.json"), secrets()).expect("write secrets");
 
         trust_ca(&portal);
-        systemprompt::config::ProfileBootstrap::init_from_path(&root.join("profile.yaml"))
+        let profile = systemprompt::config::LoadedProfile::from_path(&root.join("profile.yaml"))
             .expect("init profile");
-        systemprompt::config::SecretsBootstrap::try_init()
+        let secrets = systemprompt::config::SecretsService::load(Arc::clone(&profile))
             .await
             .expect("init secrets");
-        systemprompt::config::try_init_config(None).expect("init config");
-        systemprompt::loader::ServicesBootstrap::init_from_path(&config).expect("init services");
-        let key = systemprompt::security::keys::RsaSigningKey::generate().expect("signing key");
-        authority::install(key).expect("install signing key");
-        Self { portal, _dir: dir }
+        let boot = systemprompt::loader::BootContext::new(profile, secrets);
+        let services_root =
+            systemprompt::manifest::services::root::ActiveServicesRoot::baked(boot.profile());
+        let config = Arc::clone(
+            boot.try_init_config(Some(services_root.path.as_path()))
+                .expect("init config"),
+        );
+        let keys = crate::ephemeral_signing_keys();
+        let authority = systemprompt::security::jwt::DeploymentTokenAuthority::new(
+            keys.clone(),
+            config.jwt_issuer.clone(),
+        );
+        let extension_boot = systemprompt_web_admin_core::extension_boot::ExtensionBoot::new(
+            Arc::new(boot.profile().clone()),
+            config,
+            services_root,
+            Arc::new(authority),
+            Arc::<systemprompt::config::SecretsService>::clone(boot.secrets()),
+        );
+        let services = crate::offline_extension_services(crate::services_view(&config_path(root)));
+        Self {
+            portal,
+            services,
+            boot: extension_boot,
+            keys,
+            _dir: dir,
+        }
     }
 
-    // An `aud=mcp` JWT for `who`, signed by the installed authority, the
+    // The keys every minted JWT is signed with, and the routers under test
+    // validate against.
+    pub const fn signing_keys(&self) -> &SigningKeys {
+        &self.keys
+    }
+
+    // An `aud=mcp` JWT for `who`, signed by the environment's authority, the
     // credential core forwards to the broker on a user's behalf.
-    pub fn mint(who: Principal<'_>) -> String {
+    pub fn mint(&self, who: Principal<'_>) -> String {
         let now = Utc::now();
-        let claims = JwtClaims {
+        let registered = RegisteredClaims {
             sub: who.user_id.to_owned(),
             iat: now.timestamp(),
             exp: (now + Duration::hours(1)).timestamp(),
             nbf: Some(now.timestamp()),
-            iss: systemprompt::manifest::Config::get()
-                .expect("config")
-                .jwt_issuer
-                .clone(),
+            iss: self.boot.config().jwt_issuer.clone(),
             aud: vec![JwtAudience::Api, JwtAudience::Mcp],
             jti: uuid::Uuid::new_v4().to_string(),
+        };
+        let custom = CustomClaims {
             scope: vec![Permission::User],
             username: who.email.to_owned(),
             email: who.email.to_owned(),
@@ -112,17 +145,22 @@ impl PortalEnv {
             purpose: None,
             act: None,
         };
+        let claims = JwtClaims { registered, custom };
         let mut header = Header::new(Algorithm::RS256);
-        header.kid = Some(authority::active_kid().expect("active kid").to_owned());
-        let key = authority::encoding_key().expect("encoding key");
-        encode(&header, &claims, key).expect("sign JWT")
+        let keys = &self.keys;
+        header.kid = Some(keys.active_kid().to_owned());
+        encode(&header, &claims, keys.encoding_key()).expect("sign JWT")
     }
+}
+
+fn config_path(root: &std::path::Path) -> std::path::PathBuf {
+    root.join("services/config/config.yaml")
 }
 
 fn services_yaml(portal: &FakePortal) -> String {
     let server = |id: &str, path: &str| {
         format!(
-            "  {id}:\n    type: external\n    endpoint: {}\n    enabled: true\n    \
+            "  {id}:\n    server_type: external\n    endpoint: {}\n    enabled: true\n    \
              display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, \
              client_id: null}}\n    connector: {{adapter: generic, display_name: {id}, scopes: \
              [odoo]}}\n",

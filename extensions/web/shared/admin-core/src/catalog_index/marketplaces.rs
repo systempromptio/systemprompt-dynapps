@@ -1,14 +1,10 @@
 //! Loads the configured marketplace catalog.
 
-use systemprompt::loader::ConfigLoader;
-use systemprompt::manifest::services::MarketplaceConfig;
+use systemprompt::manifest::services::{MarketplaceConfig, ServicesConfig};
 
-pub fn load_marketplaces() -> Vec<MarketplaceConfig> {
-    let Ok(services) = ConfigLoader::load() else {
-        return Vec::new();
-    };
-
-    let mut entries: Vec<MarketplaceConfig> = services.marketplaces.into_values().collect();
+#[must_use]
+pub fn load_marketplaces(services: &ServicesConfig) -> Vec<MarketplaceConfig> {
+    let mut entries: Vec<MarketplaceConfig> = services.marketplaces.values().cloned().collect();
     entries.sort_by(|a, b| a.id.as_str().cmp(b.id.as_str()));
     entries
 }

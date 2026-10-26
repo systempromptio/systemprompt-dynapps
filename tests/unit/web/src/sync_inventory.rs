@@ -50,22 +50,17 @@ fn ids_are_unique_and_projected_kinds_come_first() {
 
 #[test]
 fn registered_planes_keep_the_page_order() {
-    let ids: Vec<&str> = planes().iter().map(|p| p.id()).collect();
-    assert_eq!(
-        ids,
-        [
-            "access_control",
-            "groups",
-            "gateway_policies",
-            "gateway_routes",
-            "governance"
-        ]
-    );
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
+    let ids: Vec<&str> = planes(&boot).iter().map(|p| p.id()).collect();
+    assert_eq!(ids, ["groups", "gateway_routes"]);
 }
 
 #[test]
 fn every_registered_plane_is_a_projected_kind() {
-    for plane in planes() {
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
+    for plane in planes(&boot) {
         let kind = kind_for_path(plane.source_file())
             .unwrap_or_else(|| panic!("plane {} has no inventory kind", plane.id()));
         assert_eq!(

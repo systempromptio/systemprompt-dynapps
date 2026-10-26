@@ -46,7 +46,8 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let db_pool = ctx.get::<DbPool>()?;
     let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
 
-    generate_llms_txt(DbPool::clone(db_pool), paths).await?;
+    let config = ctx.get::<Arc<systemprompt::manifest::Config>>()?;
+    generate_llms_txt(DbPool::clone(db_pool), paths, config).await?;
 
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
@@ -57,11 +58,12 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
 systemprompt::traits::submit_job!(&LlmsTxtGenerationJob);
 
-pub(crate) async fn generate_llms_txt(db_pool: DbPool, paths: &AppPaths) -> Result<(), JobError> {
-    use systemprompt::manifest::Config;
+pub(crate) async fn generate_llms_txt(
+    db_pool: DbPool,
+    paths: &AppPaths,
+    config: &systemprompt::manifest::Config,
+) -> Result<(), JobError> {
     use tokio::fs;
-
-    let global_config = Config::get()?;
 
     let config_path = paths.system().content_config();
     let yaml_content = fs::read_to_string(&config_path).await?;
@@ -69,7 +71,7 @@ pub(crate) async fn generate_llms_txt(db_pool: DbPool, paths: &AppPaths) -> Resu
     let content_config: ContentConfigRaw = serde_yaml::from_str(&yaml_content)?;
 
     let web_dir = paths.web().dist().to_path_buf();
-    let base_url = &global_config.api_external_url;
+    let base_url = &config.api_external_url;
 
     let llms_content = build_llms_txt_content(db_pool, &content_config, base_url).await?;
 
@@ -171,8 +173,7 @@ async fn write_documentation_section(
         && source.enabled
     {
         let source_id = SourceId::new(&source.source_id);
-        let locale =
-            LocaleCode::try_new("en").map_err(|error| JobError::config(error.to_string()))?;
+        let locale = LocaleCode::try_new("en")?;
         if let Ok(docs) = repo.list_by_source(&source_id, &locale).await {
             let prefixes = [
                 ("services", "Services"),

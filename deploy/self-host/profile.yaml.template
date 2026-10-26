@@ -1,4 +1,4 @@
-# template-version: 0.72.1
+# template-version: 0.73.0
 # Dynapps profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are
@@ -158,6 +158,10 @@ governance:
       url: null
       timeout_ms: 500
       acknowledgement: null
+  # The one-shot migrate step runs `admin config apply`; a plane still
+  # unapplied when a node serves means that step was skipped, so refuse
+  # governed and gateway requests instead of serving them ungoverned.
+  unapplied_planes: deny
 # Retention windows for the tables that grow with traffic, applied nightly by
 # database_cleanup. Named explicitly so a default change in the image never
 # silently changes what this deployment keeps; every key is optional.

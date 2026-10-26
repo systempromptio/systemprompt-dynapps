@@ -12,12 +12,6 @@ use systemprompt::governance::authz::{
 };
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
-use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
-use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
-use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
-use systemprompt_web_admin_core::repositories::gateway_catalog::{
-    dispatchable_route_ids, registered_routes,
-};
 use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
 
 use crate::fixtures::{insert_user_with_roles, unique};
@@ -35,7 +29,7 @@ fn services_path() -> PathBuf {
 
 #[test]
 fn workspace_marketplaces_ship_with_resolvable_plugins() {
-    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
+    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"), None)
         .expect("shipped services load and validate");
     for id in WORKSPACES {
         let marketplace = services
@@ -67,26 +61,15 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
     };
     let path = services_path();
     let services =
-        ConfigLoader::load_from_path(&path.join("config/config.yaml")).expect("services");
-    // Why: the parent-chain index reads the shipped catalog from the
-    // process-wide services bootstrap, as in `executive_marketplace`.
-    systemprompt::loader::ServicesBootstrap::init_from_path(&path.join("config/config.yaml"))
-        .expect("install shipped services");
+        ConfigLoader::load_from_path(&path.join("config/config.yaml"), None).expect("services");
+    let view = dynapps_test_common::extension_services(
+        &db.pool,
+        dynapps_test_common::services_view(&path.join("config/config.yaml")),
+    );
     groups_yaml_loader::load_groups_from_yaml(&db.pool, &path)
         .await
         .expect("groups");
-    let marketplace_ids: Vec<String> = services
-        .marketplaces
-        .keys()
-        .map(|id| id.as_str().to_owned())
-        .collect();
-    let registered = registered_routes(&dispatchable_route_ids(&services));
-    let declared = load_declared_set(&path, &marketplace_ids, &registered)
-        .await
-        .expect("rules.yaml");
-    apply_sync(&db.pool, &declared, SyncMode::Overwrite)
-        .await
-        .expect("seed");
+    crate::fixtures::apply_access_rules(&db.pool, &path).await;
     let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
     let chains = ParentChainIndex::load(&repo, Arc::new(ChainSources::from_services(&services)))
         .await
@@ -111,9 +94,7 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
             .await
             .expect("staff membership");
         }
-        let attributes = subject_attributes_for(&db.pool, &user)
-            .await
-            .expect("attributes");
+        let attributes = view.subject_attributes(&user).await.expect("attributes");
         let ids: Vec<String> = WORKSPACES.iter().map(|id| (*id).to_owned()).collect();
         let allowed = allowed_ids(
             &repo,
@@ -124,7 +105,7 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
                 ids: &ids,
                 chains: &chains,
                 attributes: &attributes,
-                dimensions: dimensions(&db.pool),
+                dimensions: view.dimensions(),
             },
         )
         .await

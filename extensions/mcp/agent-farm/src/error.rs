@@ -45,6 +45,9 @@ pub enum ToolError {
     #[error("farm: {0}")]
     Farm(#[from] systemprompt_web_admin_farm::error::FarmError),
 
+    #[error("authorization read: {0}")]
+    Authz(#[from] systemprompt_web_admin_core::authz::AuthzReadError),
+
     #[error("{}", .0.message)]
     Mcp(ErrorData),
 }
@@ -71,6 +74,7 @@ impl From<ToolError> for ErrorData {
             | ToolError::Db(_)
             | ToolError::AgentRuns(_)
             | ToolError::Catalog(_)
+            | ToolError::Authz(_)
             | ToolError::Json(_) => failure(error.to_string()),
         }
     }

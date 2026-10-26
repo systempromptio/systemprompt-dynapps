@@ -1,36 +1,37 @@
 # Vertex AI credentials for the gateway
 
-> **Not in use.** This installation is Anthropic-only by customer requirement
-> (2026-10-16): every Google provider below is commented out of
-> `services/ai/providers.yaml` and the `vertex` and `gemini` secrets are
+> **Not in use.** Claude on this installation is served only by the
+> customer's Anthropic key (customer requirement): no Google credential,
+> provider or deployment is declared, and the `vertex` and `gemini` secrets are
 > removed. This page is kept for a restore.
 
 This page is for the team issuing Google credentials from the Cloud project.
 For the full set of secrets an operator must provide across every provider, and
 how to set and verify them, see [required-secrets.md](required-secrets.md).
 
-The gateway serves five Google providers beside Anthropic. All are declared in
-`services/ai/providers.yaml`; each names the secret it reads its credential
-from, and the secret store supplies the value per environment
-(`systemprompt admin config secret set <name> <value>`).
+A restore declares two platform credentials in `services/ai/credentials.yaml`
+(`gemini` and `vertex`, each naming its secret), and two providers in
+`services/ai/providers.yaml`: `gemini` with one endpoint, and `vertex` with one
+endpoint per Google wire and location. The secret store supplies the value per
+environment (`systemprompt admin config secret set <name> <value>`).
 
-| secret | provider | Google endpoint | what the gateway sends |
+| secret | endpoint | Google URL | what the gateway sends |
 |---|---|---|---|
-| `gemini` | `gemini` (`gemini-3.8-flash`, used by the classifier job) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
-| `vertex` | `vertex` (`vertex-gemini-3.8-flash`, plus whatever discovery adds) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
-| `vertex` | `vertex-anthropic` (the `claude-*` models) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic/models/{model}:rawPredict` | a minted OAuth token as `Authorization: Bearer` |
-| `vertex` | `vertex-maas` (GLM 5.2, DeepSeek V3.2, Kimi K2 Thinking, Qwen3 Coder, gpt-oss and the other open models) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
-| `vertex` | `vertex-maas-us-central1` (DeepSeek R1) | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/{project}/locations/us-central1/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+| `gemini` | `gemini/api` (`gemini-3.8-flash`, used by the classifier job) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
+| `vertex` | `vertex/gemini` (Gemini models, plus whatever discovery adds) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex` | `vertex/claude` (the `claude-*` models) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic/models/{model}:rawPredict` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex` | `vertex/maas` (GLM 5.2, DeepSeek V3.2, Kimi K2 Thinking, Qwen3 Coder, gpt-oss and the other open models) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex` | `vertex/maas-us` (DeepSeek R1) | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/{project}/locations/us-central1/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
 
-Every Vertex provider reads the **one** `vertex` secret: a single
+Every Vertex endpoint uses the **one** `vertex` credential: a single
 service-account JSON in a single GCP project serves Gemini, Claude and the open
-models alike. There is no separate `vertex_maas` secret any more.
+models alike.
 
 **The `vertex` endpoint must be the `global` location.** Every Gemini 3.x
 model is served from `locations/global` only; a regional endpoint such as
 `us-central1-aiplatform.googleapis.com/.../locations/us-central1` returns `404`
-for all of them, which took the whole provider down until 2026-09-11. The MaaS
-endpoint was already global, except DeepSeek R1, which only us-central1 serves.
+for all of them. The MaaS endpoint is global too, except DeepSeek R1, which
+only us-central1 serves.
 
 **`{project}` is filled by the gateway** from the `project_id` of the
 service-account key stored in the secret. It is never written literally in
@@ -55,22 +56,16 @@ A `200` with a `candidates` array means the key is good.
 
 ### Vertex authentication
 
-Every Vertex entry uses the `vertex` service-account credential to obtain
-OAuth access tokens, and fills its project-scoped endpoint from the same key. Use the separate `gemini` entry for API-key authentication.
+Every Vertex endpoint uses the `vertex` service-account credential to obtain
+OAuth access tokens, and fills its project-scoped URL from the same key. Use the separate `gemini` credential for API-key authentication.
 
-### Why the Vertex Gemini models carry a prefix
+### One model, two credentials
 
-The obvious shape — two catalog entries, one per credential type, both carrying
-the bare Gemini model ids — does not load. `ProviderRegistry::validate` hoists
-its `seen_models` set outside the per-provider loop
-(`crates/shared/models/src/services/providers/mod.rs`), so a model id must be
-unique across the *whole* catalog, not merely within one provider. Two entries
-both listing `gemini-3.8-flash` fail at boot with `DuplicateModel`.
-
-So the `vertex` entry prefixes its ids (`vertex-gemini-3.8-flash`) and carries the
-real name in `upstream_model`. A client asking for `vertex-gemini-3.8-flash`
-reaches Google's `gemini-3.8-flash`, and the two routes to the same model stay
-independently selectable and independently audited.
+A model is declared once in `models.yaml`, and its id is unique across the
+catalog. Serving `gemini-3.8-flash` through both credentials is one model with
+two deployments (`gemini/api` and `vertex/gemini`), tried in the order
+`deployments.yaml` lists them. A route can pin a requested id to one of them
+when the two must stay independently selectable.
 
 ## `vertex` — the service account
 
@@ -93,10 +88,9 @@ exchanges that for an access token (RFC 7523), and caches the token until
 shortly before it expires. No flag to set: a secret that is not such a document
 is still sent verbatim as an API key.
 
-Every Vertex provider (`vertex`, `vertex-anthropic`, `vertex-maas`,
-`vertex-maas-us-central1`) names this one secret, so one service-account key in
-one project covers every Vertex model and the gateway mints and caches a single
-token for all of them.
+The one `vertex` provider names this credential for all its endpoints, so one
+service-account key in one project covers every Vertex model and the gateway
+mints and caches a single token for all of them.
 
 The open models the credential must be entitled to include, by their Vertex
 names:
@@ -109,10 +103,10 @@ qwen/qwen3-coder-480b-a35b-instruct-maas
 openai/gpt-oss-120b-maas
 ```
 
-`services/ai/providers.yaml` is the full list. Every Qwen, GLM 4.7/5, Kimi,
-DeepSeek and MiniMax endpoint and `gpt-oss-20b` were deprecated on 2026-07-21
-and retire on 2026-10-21; they stay declared until then (see the lifecycle
-rule below). Only `gpt-oss-120b` and `glm-5.2` are not retiring.
+`services/ai/models.yaml` and `deployments.yaml` hold the full list for a
+restore. Every Qwen, GLM 4.7/5, Kimi, DeepSeek and MiniMax model and
+`gpt-oss-20b` retired on 2026-10-21 (see the lifecycle rule below). Only
+`gpt-oss-120b` and `glm-5.2` are not retiring.
 
 Each must be enabled in Model Garden for the project; a model that is not
 enabled returns `404` to every user who picks it.
@@ -123,15 +117,15 @@ Nothing changes on the developer's machine. The bridge install points Claude
 Code at the gateway and turns on gateway model discovery, so every model above
 appears in Claude Code's `/model` picker beside the Claude models the moment
 the catalog ships. A request names the model id from the catalog
-(`qwen.qwen3-coder-480b`, `vertex-gemini-3.8-flash`, ...), the gateway routes it to the
-provider, rewrites it to the Vertex name, and records the call with the user,
+(`claude-sonnet-5-5`, `gemini-3.8-flash`, ...), the gateway sends it down that
+model's deployments, rewrites it to the Vertex name where `upstream_model` differs, and records the call with the user,
 the tokens and the cost in the same audit trail as every Anthropic call.
 
 ## Which Vertex models are served
 
 The list above is what this deployment authored by hand. It is not the whole
 story, because Vertex publishes and retires MaaS models on its own schedule and
-nobody edits `services/ai/providers.yaml` when it does. So at boot the gateway
+nobody edits `services/ai/models.yaml` when it does. So at boot the gateway
 asks Vertex what it currently publishes and reconciles that against the rate
 card compiled into the core release. Four outcomes:
 
@@ -157,7 +151,7 @@ The daily job also reads the calendar: 60 days before any served model's
 `retires_on` or `price_until` (Gemini 3.8/3.7/3.6 Flash are on introductory
 pricing to 2026-12-31) it warns in the log with the model and the date.
 
-An entry written by hand in `services/ai/providers.yaml` always wins: discovery
+A model written by hand in `services/ai/models.yaml` always wins: discovery
 never overwrites or re-prices an explicitly declared model.
 
 Discovery runs **once, at boot**. The provider registry is fixed for the life
@@ -186,13 +180,13 @@ wrong.
 
 Two ways, depending on who owns the decision:
 
-- **Operator** — add a priced entry to `services/ai/providers.yaml`, the same
-  as any other model. This is the right move for a one-deployment need.
+- **Operator** — add a priced model to `services/ai/models.yaml` and its
+  deployment to `deployments.yaml`, the same as any other model. This is the right move for a one-deployment need.
 - **Core** — add it to the Vertex rate card in the core release, so every
   deployment picks it up on upgrade.
 
-Either way, check `services/ai/gateway.yaml` in the same change: a model with no
-matching route is priced but unreachable, and nothing fails loudly to tell you.
+Either way, a model needs at least one deployment in
+`services/ai/deployments.yaml`; a model with none is priced but unreachable.
 
 ### Turning it off
 
@@ -202,6 +196,6 @@ SYSTEMPROMPT_VERTEX_DISCOVERY=0
 
 Set in the server's environment, this skips the probe entirely and the catalog
 is exactly what the YAML declares. Discovery is also skipped on its own when no
-provider endpoint is on `aiplatform.googleapis.com`, or when the credential for
+endpoint URL is on `aiplatform.googleapis.com`, or when the credential for
 one is not a service-account key — an air-gapped or credential-less boot never
 reaches for the network.

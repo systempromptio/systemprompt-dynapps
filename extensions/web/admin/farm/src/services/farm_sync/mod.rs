@@ -98,7 +98,7 @@ async fn sync_captured(
             source,
         })??;
     let parsed = parse_farm_tree(&captured.files)?;
-    check_mcp_servers(&parsed)?;
+    check_mcp_servers(&state.services, &parsed)?;
     if parsed.manifest.marketplace != farm.marketplace_id.as_str() {
         return Err(FarmError::Validation(format!(
             "farm.yaml marketplace {:?} does not match the configured {:?}",
@@ -138,18 +138,22 @@ async fn sync_captured(
     })
 }
 
-fn check_mcp_servers(parsed: &ParsedFarm) -> FarmResult<()> {
-    let Ok(services) = systemprompt::loader::ServicesBootstrap::get() else {
-        return Err(FarmError::Config(
-            "services config is not loaded; MCP tools cannot be checked".to_owned(),
-        ));
-    };
+fn check_mcp_servers(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    parsed: &ParsedFarm,
+) -> FarmResult<()> {
     for agent in &parsed.agents {
         let unknown = agent
             .tools
             .iter()
             .filter_map(|tool| validate::mcp_server_of(tool))
-            .find(|server| !services.mcp_servers.get(*server).is_some_and(|s| s.enabled));
+            .find(|server| {
+                !services
+                    .config()
+                    .mcp_servers
+                    .get(*server)
+                    .is_some_and(|s| s.enabled)
+            });
         if let Some(server) = unknown {
             return Err(validate::definition_error(
                 &agent.source_path,

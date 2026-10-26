@@ -101,7 +101,8 @@ RUN install -d -o tester -g tester /opt/npm-global \
 
 USER tester
 
-RUN npm install -g @anthropic-ai/claude-code@latest \
+ARG CLAUDE_CODE_VERSION=2.1.296
+RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
     && npm cache clean --force
 
 # OpenCode, for the same reason and in the same prefix: `--host opencode` writes

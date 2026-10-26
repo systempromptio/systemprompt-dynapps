@@ -5,22 +5,21 @@
 //! boots from — or, when a pinned services bundle owns `ai/`, from the
 //! composed root the dispatcher reads (and then never written); hashed on the
 //! parsed routes so a comment or whitespace edit is not a drift. Every field
-//! core's `GatewayRoute` carries is part of the hash, the fallback pair
-//! included.
+//! core's `GatewayRoute` carries is part of the hash.
 
 use serde_yaml::Value;
 use sha2::{Digest, Sha256};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
-use systemprompt_web_admin_core::repositories::gateway_catalog::route_from_yaml;
-use systemprompt_web_admin_core::types::{GatewayRouteView, RouteFallbackView};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{route_from_yaml, route_to_yaml};
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 pub const GATEWAY_FILE: &str = "ai/gateway.yaml";
 
 #[derive(Debug, Clone)]
 pub struct DeclaredRoute {
     pub route: GatewayRouteView,
-    pub explicit_id: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -30,36 +29,10 @@ pub struct DeclaredRoutes {
 
 #[must_use]
 pub fn route_fingerprint(route: &GatewayRouteView) -> String {
-    let block = |v: Option<&Value>| {
-        v.map(|v| serde_yaml::to_string(v).unwrap_or_default())
-            .unwrap_or_default()
-    };
-    let headers = route
-        .extra_headers
-        .iter()
-        .map(|(k, v)| format!("{k}={v}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    format!(
-        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-        route.id,
-        route.name.as_deref().unwrap_or_default(),
-        route.description.as_deref().unwrap_or_default(),
-        route.model_pattern,
-        route.provider,
-        route.upstream_model.as_deref().unwrap_or_default(),
-        headers,
-        block(route.pricing.as_ref()),
-        block(route.when.as_ref()),
-        block(route.requires.as_ref()),
-        route
-            .fallbacks
-            .iter()
-            .map(RouteFallbackView::describe)
-            .collect::<Vec<_>>()
-            .join(","),
-        block(route.by_scope.as_ref()),
-    )
+    route_to_yaml(route)
+        .ok()
+        .and_then(|value| serde_yaml::to_string(&value).ok())
+        .unwrap_or_else(|| format!("unrenderable route {}", route.id))
 }
 
 impl DeclaredRoutes {
@@ -78,8 +51,18 @@ impl DeclaredRoutes {
     }
 }
 
-pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
-    let doc: Value = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
+#[derive(Debug, thiserror::Error)]
+pub enum DeclaredRoutesError {
+    #[error("gateway.yaml does not parse: {0}")]
+    Yaml(#[from] serde_yaml::Error),
+    #[error("gateway.routes[{index}] is not a route core loads")]
+    IncompleteRoute { index: usize },
+    #[error("gateway.routes[{index}] repeats id `{id}`")]
+    DuplicateRoute { index: usize, id: String },
+}
+
+pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, DeclaredRoutesError> {
+    let doc: Value = serde_yaml::from_str(yaml)?;
     let Some(seq) = doc
         .get("gateway")
         .and_then(|g| g.get("routes"))
@@ -90,20 +73,18 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
     let mut routes = Vec::with_capacity(seq.len());
     for (i, entry) in seq.iter().enumerate() {
         let Some(route) = route_from_yaml(entry) else {
-            return Err(format!(
-                "gateway.routes[{i}] lacks model_pattern or provider"
-            ));
+            return Err(DeclaredRoutesError::IncompleteRoute { index: i });
         };
-        let explicit_id = entry
-            .as_mapping()
-            .is_some_and(|m| m.contains_key(Value::from("id")));
         if routes
             .iter()
             .any(|d: &DeclaredRoute| d.route.id == route.id)
         {
-            return Err(format!("gateway.routes[{i}] repeats id `{}`", route.id));
+            return Err(DeclaredRoutesError::DuplicateRoute {
+                index: i,
+                id: route.id,
+            });
         }
-        routes.push(DeclaredRoute { route, explicit_id });
+        routes.push(DeclaredRoute { route });
     }
     Ok(DeclaredRoutes { routes })
 }
@@ -112,17 +93,18 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
 // the next refresh replaces, and this is the one file the console writes back.
 // When a pinned bundle owns `ai/` the composed copy is what the dispatcher
 // reads, so the plane reads that one and the console does not write at all.
-pub fn gateway_file_path() -> AdminResult<std::path::PathBuf> {
-    systemprompt_web_admin_core::request::get_gateway_file_path()
+#[must_use]
+pub fn gateway_file_path(boot: &ExtensionBoot) -> std::path::PathBuf {
+    systemprompt_web_admin_core::request::get_gateway_file_path(boot)
 }
 
 #[must_use]
-pub fn bundle_owner() -> Option<String> {
-    systemprompt_web_admin_core::repositories::sync::sources::dir_owner("ai")
+pub fn bundle_owner(boot: &ExtensionBoot) -> Option<String> {
+    systemprompt_web_admin_core::repositories::sync::sources::dir_owner(boot.profile(), "ai")
 }
 
-pub fn declared_routes_now() -> AdminResult<DeclaredRoutes> {
-    let file = gateway_file_path()?;
+pub fn declared_routes_now(boot: &ExtensionBoot) -> AdminResult<DeclaredRoutes> {
+    let file = gateway_file_path(boot);
     let yaml = std::fs::read_to_string(&file)
         .map_err(|e| AdminError::invalid("gateway.yaml could not be read", e))?;
     parse_declared_routes(&yaml)

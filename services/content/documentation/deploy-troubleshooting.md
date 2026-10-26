@@ -99,10 +99,11 @@ The container reads exactly one directory:
 `SYSTEMPROMPT_PROFILE_DIR=/app/.systemprompt/profiles/self-host`, which the
 compose file binds from `DYNAPPS_PROFILE_DIR` on the host. The profile carries
 only what differs per deployment — URLs, database, admin, secrets pointer,
-governance hook. The provider catalog (models, pricing, limits) and the gateway
-routes are not in it: they ship inside the image as
-`services/ai/providers.yaml` and `services/ai/gateway.yaml`, so every node and
-every environment on the same image serves the same models. Line 1 of the
+governance hook. The AI catalog (credentials, providers, models, deployments
+and gateway routes) is not in it: it ships inside the image as the five files
+`services/ai/credentials.yaml`, `providers.yaml`, `models.yaml`,
+`deployments.yaml` and `gateway.yaml`, so every node and every environment on
+the same image serves the same models. Line 1 of the
 rendered profile records the template release (`# template-version: X.Y.Z`);
 `preflight.sh` refuses a profile whose pin is not the image's version.
 
@@ -117,7 +118,7 @@ grep -E 'api_external_url|jwt_issuer|^  email' /etc/dynapps/profile/profile.yaml
 head -1 /etc/dynapps/profile/profile.yaml
 docker run --rm --entrypoint /app/bin/systemprompt \
   -v /etc/dynapps/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
-  ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ admin config catalog provider list
+  ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ admin config provider list
 docker run --rm --entrypoint /app/bin/systemprompt \
   -v /etc/dynapps/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
   ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ admin config gateway route list
@@ -134,7 +135,8 @@ sha256sum /etc/dynapps/profile/profile.yaml
 |-----------|---------|-----|
 | `unknown field` on validate | a key the image does not know; the template is from a different release | re-render from the bundle that matches the image version (`head -1 profile.yaml` names the template release) |
 | `still carries a top-level \`providers:\` section ... move the block into services/ai/providers.yaml` | a profile rendered from an older bundle, when the catalog and routes still lived in the profile | re-render from the @RELEASE_VERSION@ bundle; the catalog is in the image, nothing to copy |
-| `admin config catalog provider list` is empty, or `/v1/messages` answers `No gateway route matches model` | the image's `services/config/config.yaml` does not include `ai/providers.yaml` and `ai/gateway.yaml` | a build defect, not a deployment one — report the image tag |
+| `admin config provider list` is empty, or `/v1/messages` refuses every model | the image's `services/config/config.yaml` does not include the five `ai/` catalog files | a build defect, not a deployment one — report the image tag |
+| every route answers `403`, or governance and gateway policies record nothing after an upgrade | boot does not seed any plane, and `config apply` has not run | run `systemprompt admin config migrate`, the migrations, then `systemprompt admin config apply --reason "<why>"` |
 | `SYSTEMPROMPT_PROFILE_DIR is set but .../profile.yaml is missing` | wrong `DYNAPPS_PROFILE_DIR`, or the directory is not readable | fix the path in the environment; check ownership |
 | `No admin email configured for 'admin'` | `system_admin.email` missing | re-render with `--admin-email` |
 | sign-in page loads but login fails with a cookie error | `api_external_url` is not the URL in the browser, or not https | re-render with the real public URL |

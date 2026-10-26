@@ -9,8 +9,8 @@ use systemprompt::gateway::{QuotaWindow, SafetyHistoryMode};
 use crate::repositories::gateway_policies::form::{CATEGORIES, MAX_WINDOWS, SCANNERS, SUBJECTS};
 use crate::repositories::gateway_policies::rows::PolicyRow;
 use crate::repositories::gateway_policies::windows::{is_calendar_month, window_label};
+use systemprompt_web_admin_core::ssr::core_plane::CorePlaneCardView;
 use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
-use systemprompt_web_admin_core::ssr::sync_plane::PlaneCardView;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
@@ -214,7 +214,7 @@ pub(crate) struct GatewayPoliciesPageData {
     pub page: &'static str,
     pub title: &'static str,
     pub tabs: Vec<TabLinkView>,
-    pub sync: Option<PlaneCardView>,
+    pub sync: Option<CorePlaneCardView>,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub can_write: bool,
     pub policies: Vec<PolicyView>,

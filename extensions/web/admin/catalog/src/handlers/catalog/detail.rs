@@ -3,6 +3,7 @@
 
 use std::sync::Arc;
 use systemprompt::identifiers::PluginId;
+use systemprompt_web_admin_core::extension_boot::BootServices;
 
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
@@ -17,18 +18,20 @@ use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::types::{ENTITY_PLUGIN, ENTITY_SKILL};
 
 pub(crate) async fn plugin_detail_page(
+    deps: BootServices,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(plugin_id): Path<PluginId>,
     Query(query): Query<PanelQuery>,
 ) -> AdminHtmlResult<Response> {
+    let boot = &deps.boot;
     let Page {
         engine,
         user: user_ctx,
         marketplace: mkt_ctx,
     } = shell;
     admin_only(&user_ctx)?;
-    let path = shared::get_services_path()?;
+    let path = shared::get_services_path(boot);
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_PLUGIN).await;
@@ -38,6 +41,7 @@ pub(crate) async fn plugin_detail_page(
     page.access = Some(
         access::panel(
             &pool,
+            &deps,
             &user_ctx,
             (ENTITY_PLUGIN, plugin_id.as_str()),
             query.why.as_deref(),
@@ -54,18 +58,20 @@ pub(crate) async fn plugin_detail_page(
 }
 
 pub(crate) async fn skill_detail_page(
+    deps: BootServices,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(skill_id): Path<String>,
     Query(query): Query<PanelQuery>,
 ) -> AdminHtmlResult<Response> {
+    let boot = &deps.boot;
     let Page {
         engine,
         user: user_ctx,
         marketplace: mkt_ctx,
     } = shell;
     admin_only(&user_ctx)?;
-    let path = shared::get_services_path()?;
+    let path = shared::get_services_path(boot);
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_SKILL).await;
@@ -76,6 +82,7 @@ pub(crate) async fn skill_detail_page(
     page.access = Some(
         access::panel(
             &pool,
+            &deps,
             &user_ctx,
             (ENTITY_SKILL, &skill_id),
             query.why.as_deref(),

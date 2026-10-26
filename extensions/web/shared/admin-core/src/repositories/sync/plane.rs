@@ -1,5 +1,8 @@
-//! The contract every sync plane meets, and the generic drift shape the page
-//! renders for any of them.
+//! The contract the install's own sync planes meet.
+//!
+//! Groups and the gateway routes implement it, and the page renders their
+//! generic drift shape. The planes core owns go through core instead
+//! ([`super::core_planes`]).
 //!
 //! A plane owns one declaration (a file in `services/`) and one projection
 //! (tables in the database). The page never learns what either looks like;
@@ -18,8 +21,7 @@
 //! ([`DeclarationSource::Text`]). The `_from` methods take that choice and
 //! default to refusing text, so a plane that has not opted in still
 //! compiles and still syncs from disk. A `Text` preview must leave no trace
-//! in `sync_state`, and `apply_scoped` defaults to refusing so a scoped
-//! caller can never reach a plane-wide write. A plane `id` is a URL segment
+//! in `sync_state`. A plane `id` is a URL segment
 //! and the `sync_state.plane` key, so it is a stable token.
 
 use async_trait::async_trait;
@@ -104,39 +106,6 @@ impl Actor<'_> {
     }
 }
 
-/// Which entities an apply may touch: the whole plane, or the named
-/// `<kind>/<id>` entities alone.
-///
-/// A marketplace participant syncs their own marketplaces and nothing else,
-/// so their apply is scoped; an administrator's is not. A plane whose rows
-/// have no entity dimension refuses a scoped apply outright.
-#[derive(Debug, Clone, Copy, Default)]
-pub enum EntityScope<'a> {
-    #[default]
-    All,
-    Entities(&'a [String]),
-}
-
-impl EntityScope<'_> {
-    #[must_use]
-    pub fn admits(&self, entity_type: &str, entity_id: &str) -> bool {
-        match self {
-            Self::All => true,
-            Self::Entities(keys) => keys
-                .iter()
-                .any(|k| k.split_once('/') == Some((entity_type, entity_id))),
-        }
-    }
-
-    #[must_use]
-    pub const fn keys(&self) -> &[String] {
-        match self {
-            Self::All => &[],
-            Self::Entities(keys) => keys,
-        }
-    }
-}
-
 /// What one apply moved.
 #[derive(Debug, Default, Clone, Copy, Serialize)]
 pub struct ApplyOutcome {
@@ -148,6 +117,8 @@ pub struct ApplyOutcome {
     pub entities_retired: usize,
 }
 
+/// One sync plane. `#[async_trait]` because the registry builds planes as
+/// `Box<dyn SyncPlane>`.
 #[async_trait]
 pub trait SyncPlane: Send + Sync {
     fn id(&self) -> &'static str;
@@ -164,21 +135,6 @@ pub trait SyncPlane: Send + Sync {
         mode: SyncMode,
         actor: Actor<'_>,
     ) -> AdminResult<ApplyOutcome>;
-    async fn apply_scoped(
-        &self,
-        pool: &PgPool,
-        mode: SyncMode,
-        actor: Actor<'_>,
-        scope: EntityScope<'_>,
-    ) -> AdminResult<ApplyOutcome> {
-        match scope {
-            EntityScope::All => self.apply(pool, mode, actor).await,
-            EntityScope::Entities(_) => Err(AdminError::Unprocessable(format!(
-                "the {} plane cannot be applied for single entities",
-                self.label()
-            ))),
-        }
-    }
     async fn export(&self, pool: &PgPool) -> AdminResult<Option<Export>>;
 
     fn owner_url(&self) -> &'static str {
