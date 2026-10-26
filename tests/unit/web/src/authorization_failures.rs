@@ -42,9 +42,9 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
             )
             .expect("empty services")
             .view(),
-            Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(
-                Vec::new(),
-            )),
+            Arc::new(
+                systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()),
+            ),
         ),
     ));
     pool.close().await;
