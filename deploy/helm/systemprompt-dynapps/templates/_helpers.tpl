@@ -90,11 +90,8 @@ identity is the pod name (HOSTNAME).
 {{- $server := dict
   "host" "0.0.0.0"
   "port" (int $v.service.port)
-  "api_server_url" $url
-  "api_internal_url" (printf "http://localhost:%d" (int $v.service.port))
-  "api_external_url" $url
-  "use_https" true
-  "cors_allowed_origins" (list $url "https://claude.ai")
+  "external_url" $url
+  "extra_cors_origins" (list "https://claude.ai")
   "content_negotiation" (dict "enabled" false "markdown_suffix" ".md")
   "security_headers" (dict "enabled" true "hsts" "max-age=63072000; includeSubDomains; preload" "frame_options" "DENY" "content_type_options" "nosniff" "referrer_policy" "strict-origin-when-cross-origin" "permissions_policy" "camera=(), microphone=(), geolocation=()" "content_security_policy" nil)
   "role" .role
@@ -112,9 +109,9 @@ identity is the pod name (HOSTNAME).
 {{- else -}}
 {{- $_ := set $base "storage" (dict "backend" $st.backend) -}}
 {{- end -}}
-{{- $_ := set $base "security" (dict "jwt_issuer" $url "jwt_access_token_expiration" 2592000 "jwt_refresh_token_expiration" 15552000 "jwt_audiences" (list "web" "api" "a2a" "mcp") "allowed_resource_audiences" (list "hook") "allow_registration" false "signing_key_path" "signing_key.pem" "id_jag_ttl_secs" 300) -}}
+{{- $_ := set $base "security" (dict "jwt_access_token_expiration" 2592000 "jwt_refresh_token_expiration" 15552000 "jwt_audiences" (list "web" "api" "a2a" "mcp") "allowed_resource_audiences" (list "hook") "allow_registration" false "signing_key_path" "signing_key.pem" "id_jag_ttl_secs" 300) -}}
 {{- /* unapplied_planes: deny. The migrate hook runs `admin config apply` before any pod serves, so a plane that is still unapplied means the hook was skipped or failed: refuse rather than serve ungoverned. */ -}}
-{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "extension" "url" nil "timeout_ms" 500 "acknowledgement" nil)) "unapplied_planes" "deny") -}}
+{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "extension" "timeout_ms" 500 "acknowledgement" nil)) "unapplied_planes" "deny") -}}
 {{- $merged := mergeOverwrite $base (deepCopy (default dict $p.overrides)) -}}
 {{- toYaml $merged -}}
 {{- end -}}

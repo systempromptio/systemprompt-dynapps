@@ -72,16 +72,16 @@ NAME="$(yaml_val name)"
 TARGET="$(yaml_val target)"
 [ -n "$TARGET" ] && ok "target: $TARGET" || warn "no target: field"
 
-EXT_URL="$(yaml_val api_external_url)"
+EXT_URL="$(yaml_val external_url)"
 if [ -n "$EXT_URL" ]; then
     case "$EXT_URL" in
-        https://*) ok "api_external_url: $EXT_URL" ;;
-        http://localhost*|http://127.0.0.1*) ok "api_external_url: $EXT_URL (local)" ;;
-        http://*) warn "api_external_url is plain http: $EXT_URL — use https for anything non-local" ;;
-        *) bad "api_external_url has no scheme: $EXT_URL" ;;
+        https://*) ok "external_url: $EXT_URL" ;;
+        http://localhost*|http://127.0.0.1*) ok "external_url: $EXT_URL (local)" ;;
+        http://*) warn "external_url is plain http: $EXT_URL — use https for anything non-local" ;;
+        *) bad "external_url has no scheme: $EXT_URL" ;;
     esac
 else
-    bad "api_external_url missing"
+    bad "server.external_url missing"
 fi
 
 PORT="$(yaml_val port)"

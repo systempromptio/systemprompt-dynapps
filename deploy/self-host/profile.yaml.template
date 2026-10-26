@@ -31,12 +31,8 @@ server:
   # no auth: the compose files expose it on the internal network only, never
   # publish it. Remove the line to turn the listener off.
   metrics_port: 9090
-  api_server_url: @EXTERNAL_URL@
-  api_internal_url: http://localhost:8080
-  api_external_url: @EXTERNAL_URL@
-  use_https: true
-  cors_allowed_origins:
-  - @EXTERNAL_URL@
+  external_url: @EXTERNAL_URL@
+  extra_cors_origins:
   - https://claude.ai
   content_negotiation:
     enabled: false
@@ -86,7 +82,6 @@ storage:
 services:
   cache_dir: /app/services-cache
 security:
-  jwt_issuer: @EXTERNAL_URL@
   jwt_access_token_expiration: 2592000
   jwt_refresh_token_expiration: 15552000
   jwt_audiences:
@@ -155,7 +150,6 @@ governance:
   authz:
     hook:
       mode: extension
-      url: null
       timeout_ms: 500
       acknowledgement: null
   # The one-shot migrate step runs `admin config apply`; a plane still

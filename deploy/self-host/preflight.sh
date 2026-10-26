@@ -108,12 +108,12 @@ if [ -f "$S" ]; then
     [ -n "$DB_URL" ] || DB_URL="$(jq -r '.database_url // empty' "$S")"
 fi
 if [ -f "$P" ]; then
-    ext="$(sed -n 's/^  api_external_url: //p' "$P" | head -1)"; iss="$(sed -n 's/^  jwt_issuer: //p' "$P" | head -1)"
-    [ -n "$ext" ] && [ "$ext" = "$iss" ] && ok "api_external_url and jwt_issuer agree ($ext)" || bad "api_external_url '$ext' ≠ jwt_issuer '$iss'"
+    ext="$(sed -n 's/^  external_url: //p' "$P" | head -1)"
+    [ -n "$ext" ] && ok "server.external_url set ($ext); the API urls and jwt_issuer derive from it" || bad "server.external_url missing"
     case "$ext" in https://*) ok "external URL is https" ;; *) bad "external URL must be https (Secure cookie, SSO callback)" ;; esac
     grep -q "^  email: " "$P" && ok "system_admin.email set" || bad "system_admin.email missing (bootstrap fails)"
     grep -A1 "^  trusted_proxies:" "$P" | grep -q "^  - " && ok "trusted_proxies has at least one CIDR" || bad "trusted_proxies empty"
-    if [ -n "$EXTERNAL_URL" ] && [ "$EXTERNAL_URL" != "$ext" ]; then bad "--external-url $EXTERNAL_URL ≠ profile api_external_url $ext"; fi
+    if [ -n "$EXTERNAL_URL" ] && [ "$EXTERNAL_URL" != "$ext" ]; then bad "--external-url $EXTERNAL_URL ≠ profile external_url $ext"; fi
     # The mapping that matters: the profile the image will load is the one on
     # this disk. Validate it with the image's own loader, from the same mount.
     if docker run --rm --entrypoint /app/bin/systemprompt -v "$PROFILE_DIR:/p:ro" -e SYSTEMPROMPT_PROFILE=/p/profile.yaml "$IMAGE" \

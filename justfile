@@ -1135,24 +1135,13 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
         # registered hook under any other mode.
         "$BIN" admin config governance set --mode extension
         if [ "$HTTP_PORT" != "8080" ]; then
+            # The API URLs, jwt_issuer and the server's own CORS origin all
+            # derive from external_url, so it must name the chosen port: the
+            # issuer is the base a client resolves `{iss}/.well-known/jwks.json`
+            # against.
             "$BIN" admin config server set --port "$HTTP_PORT" \
-                --api-server-url "http://localhost:${HTTP_PORT}" \
-                --api-internal-url "http://localhost:${HTTP_PORT}" \
-                --api-external-url "http://localhost:${HTTP_PORT}"
-            # jwt_issuer is baked on the default port too, and it is not
-            # cosmetic: it is the base a client resolves
-            # `{iss}/.well-known/jwks.json` against. Left at :8080 on a
-            # non-default port, every external verifier (the bridge, Claude
-            # Code) fetches the signing keys of whatever else is on :8080 —
-            # or nothing — and rejects this server's tokens as minted under an
-            # unknown authority.
-            "$BIN" admin config security set \
-                --jwt-issuer "http://localhost:${HTTP_PORT}"
-            # Same for CORS: the seeded origins name :8080, so the admin UI
-            # served from the chosen port is refused by its own API.
-            "$BIN" admin config server cors add "http://localhost:${HTTP_PORT}" || true
+                --external-url "http://localhost:${HTTP_PORT}"
             "$BIN" admin config server cors add "http://127.0.0.1:${HTTP_PORT}" || true
-            "$BIN" admin config server cors remove "http://localhost:8080" || true
             "$BIN" admin config server cors remove "http://127.0.0.1:8080" || true
         fi
         # The generator binds 127.0.0.1, which no container can route to.
@@ -1335,7 +1324,7 @@ status:
 # Validate any profile without a running server: files, secrets keys, URLs,
 # database reachability from this machine, and (with a built CLI) that the
 # profile deserializes — the loader rejects unknown YAML keys. Add --live to
-# also probe <api_external_url>/api/v1/health.
+# also probe <external_url>/api/v1/health.
 profile-check PROFILE="local" *FLAGS:
     @bash scripts/profile-check.sh {{PROFILE}} {{FLAGS}}
 

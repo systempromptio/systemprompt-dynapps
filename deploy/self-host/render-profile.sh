@@ -76,9 +76,12 @@ gen() { openssl rand -base64 48 | tr -d '\n=/+' | cut -c1-48; }
 pepper="$(echo "$current" | jq -r '.oauth_at_rest_pepper // empty')"
 seed="$(echo "$current" | jq -r '.manifest_signing_secret_seed // empty')"
 pem="$(echo "$current" | jq -r '.signing_key_pem // empty')"
+key="$(echo "$current" | jq -r '.encryption_master_key // empty')"
 [ -n "$pepper" ] || pepper="$(gen)"
 # Ed25519 seed: the loader decodes standard base64 and requires exactly 32 bytes.
 [ -n "$seed" ] || seed="$(openssl rand -base64 32)"
+# 32 bytes as 64 hex characters: seals at-rest secrets and the gateway journal.
+[ -n "$key" ] || key="$(openssl rand -hex 32)"
 # The loader base64-decodes this secret into the PEM (same envelope the Fly
 # deploy uses), so the value is base64 of the PKCS#8 file, on one line.
 if [ -z "$pem" ]; then
@@ -86,8 +89,8 @@ if [ -z "$pem" ]; then
 fi
 
 next="$(echo "$current" | jq \
-    --arg pepper "$pepper" --arg seed "$seed" --arg pem "$pem" \
-    '.oauth_at_rest_pepper = $pepper | .manifest_signing_secret_seed = $seed | .signing_key_pem = $pem')"
+    --arg pepper "$pepper" --arg seed "$seed" --arg pem "$pem" --arg key "$key" \
+    '.oauth_at_rest_pepper = $pepper | .manifest_signing_secret_seed = $seed | .signing_key_pem = $pem | .encryption_master_key = $key')"
 [ -n "$DATABASE_URL" ] && next="$(echo "$next" | jq --arg v "$DATABASE_URL" '.database_url = $v')"
 [ -n "$ANTHROPIC" ]    && next="$(echo "$next" | jq --arg v "$ANTHROPIC" '.anthropic = $v')"
 for kv in "${EXTRA[@]+"${EXTRA[@]}"}"; do
