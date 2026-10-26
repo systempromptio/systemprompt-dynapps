@@ -4,8 +4,9 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
+use systemprompt::config::{LoadedProfile, SecretsService};
 use systemprompt::identifiers::McpServerId;
+use systemprompt::loader::BootContext;
 use systemprompt::system::AppContext;
 use systemprompt_mcp_agent_farm::{AgentFarmServer, Env, ServerAccess};
 // Why: core discovers the governance authz hook, the connection snapshot
@@ -49,13 +50,12 @@ fn startup_timeout() -> Duration {
 }
 
 async fn init_context() -> Result<Arc<AppContext>> {
-    ProfileBootstrap::init().context("Failed to initialize profile")?;
-    SecretsBootstrap::init()
+    let profile = LoadedProfile::from_env().context("Failed to initialize profile")?;
+    let secrets = SecretsService::load(Arc::clone(&profile))
         .await
         .context("Failed to initialize secrets")?;
-    try_init_config(None).context("Failed to initialize configuration")?;
     Ok(Arc::new(
-        AppContext::new()
+        AppContext::new(BootContext::new(profile, secrets))
             .await
             .context("Failed to initialize application context")?,
     ))
@@ -78,10 +78,8 @@ fn install_tls_crypto_provider() {
 
 fn build_env(ctx: &AppContext) -> Env {
     let pool = ctx.db_pool().write_pool();
-    let services_path = systemprompt::loader::ServicesRootBootstrap::require().map_or_else(
-        |_| ctx.app_paths().system().services().to_path_buf(),
-        |root| root.path,
-    );
+    let boot = systemprompt_web_admin_core::extension_boot::ExtensionBoot::from_context(ctx);
+    let services_path = boot.services_root().to_path_buf();
     Env {
         #[cfg(feature = "farm")]
         farm: Some(
@@ -97,6 +95,7 @@ fn build_env(ctx: &AppContext) -> Env {
                     runs: Arc::new(
                         systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns::default(),
                     ),
+                    boot,
                 },
             ),
         ),
@@ -155,7 +154,8 @@ async fn main() -> Result<()> {
         ServerAccess {
             authz_hook: Arc::clone(ctx.authz_hook()),
             services: ctx.services_watch().clone(),
-            signing_keys: ctx.signing_keys().clone(),
+            token_authority: ctx.token_authority(),
+            config: Arc::clone(ctx.config_arc()),
         },
         ctx.artifact_ingest_arc(),
         Arc::new(build_env(&ctx)),

@@ -9,6 +9,8 @@
 //! *Export* renders every dashboard-created set and mapping back into the
 //! file's shape, which is how a group made in the console reaches git.
 
+use std::path::Path;
+
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -20,6 +22,7 @@ use super::groups_drift::{GroupsDrift, compute_groups_drift, declared_count, dec
 use crate::repositories::config::groups_yaml_loader::{GROUPS_FILE, apply_groups_doc};
 use crate::repositories::config::groups_yaml_types::GroupsDoc;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::sync::access_control::applied_from;
 use systemprompt_web_admin_core::repositories::sync::declaration::read_or_text;
 use systemprompt_web_admin_core::repositories::sync::plane::{
@@ -34,15 +37,27 @@ use systemprompt_web_admin_core::repositories::sync::state::{
 
 pub const PLANE_ID: &str = plane_ids::GROUPS;
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct GroupsPlane;
-
-inventory::submit! {
-    PlaneRegistration { order: 1, build: || Box::new(GroupsPlane) }
+#[derive(Debug, Clone)]
+pub struct GroupsPlane {
+    boot: ExtensionBoot,
 }
 
-fn declared_groups_from(from: DeclarationSource<'_>) -> AdminResult<GroupsDoc> {
-    let Some(yaml) = read_or_text(from, GROUPS_FILE)? else {
+impl GroupsPlane {
+    #[must_use]
+    pub const fn new(boot: ExtensionBoot) -> Self {
+        Self { boot }
+    }
+}
+
+inventory::submit! {
+    PlaneRegistration { order: 1, build: |boot| Box::new(GroupsPlane::new(boot.clone())) }
+}
+
+fn declared_groups_from(
+    from: DeclarationSource<'_>,
+    services_dir: &Path,
+) -> AdminResult<GroupsDoc> {
+    let Some(yaml) = read_or_text(from, services_dir, GROUPS_FILE)? else {
         return Ok(GroupsDoc::default());
     };
     parse_groups_doc(&yaml).map_err(|e| AdminError::invalid("groups.yaml could not be parsed", e))
@@ -86,7 +101,7 @@ impl SyncPlane for GroupsPlane {
         from: DeclarationSource<'_>,
     ) -> AdminResult<PlaneDrift> {
         let in_db = usize::try_from(count_member_sets(pool).await?).unwrap_or(0);
-        let doc = match declared_groups_from(from) {
+        let doc = match declared_groups_from(from, self.boot.services_root()) {
             Ok(d) => d,
             Err(e) => {
                 return Ok(PlaneDrift {
@@ -162,7 +177,7 @@ impl SyncPlane for GroupsPlane {
         actor: Actor<'_>,
         from: DeclarationSource<'_>,
     ) -> AdminResult<ApplyOutcome> {
-        let doc = declared_groups_from(from)?;
+        let doc = declared_groups_from(from, self.boot.services_root())?;
         let before = drift_now(pool, &doc).await?;
         let outcome = match mode {
             SyncMode::InsertOnly => {
@@ -189,7 +204,7 @@ impl SyncPlane for GroupsPlane {
                 declared_hash: &declared_hash(&doc),
                 mode: actor.recorded_mode(mode),
                 actor: actor.as_str(),
-                from: applied_from(),
+                from: applied_from(&self.boot),
             },
         )
         .await?;

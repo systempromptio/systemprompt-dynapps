@@ -9,11 +9,10 @@
 //! safe direction). No requested expiry means the maximum, never "forever";
 //! more than the maximum is refused, not clamped.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
-use systemprompt::loader::services_root::ServicesRootBootstrap;
 
 pub const SECURITY_FILE: &str = "web/config/security.yaml";
 pub const DEFAULT_MAX_PAT_LIFETIME_DAYS: u32 = 90;
@@ -46,8 +45,6 @@ struct SecurityDoc {
 
 #[derive(Debug, thiserror::Error)]
 pub enum SecurityPolicyError {
-    #[error("services root unavailable: {0}")]
-    Root(#[source] systemprompt::loader::ConfigLoadError),
     #[error("{path}: {source}")]
     Read {
         path: PathBuf,
@@ -62,8 +59,8 @@ pub enum SecurityPolicyError {
 
 impl SecurityPolicy {
     #[must_use]
-    pub fn load_or_default() -> Self {
-        match Self::load() {
+    pub fn load_or_default(services_dir: &Path) -> Self {
+        match Self::load(services_dir) {
             Ok(policy) => policy,
             Err(error) => {
                 tracing::error!(error = %error, file = SECURITY_FILE, "security policy unreadable; using defaults");
@@ -72,11 +69,8 @@ impl SecurityPolicy {
         }
     }
 
-    pub fn load() -> Result<Self, SecurityPolicyError> {
-        let path = ServicesRootBootstrap::require()
-            .map_err(SecurityPolicyError::Root)?
-            .path
-            .join(SECURITY_FILE);
+    pub fn load(services_dir: &Path) -> Result<Self, SecurityPolicyError> {
+        let path = services_dir.join(SECURITY_FILE);
         let text = match std::fs::read_to_string(&path) {
             Ok(text) => text,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),

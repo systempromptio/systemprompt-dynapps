@@ -7,7 +7,6 @@ use std::sync::Arc;
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt::manifest::Config;
 use systemprompt::marketplace::{AssembleRequest, ManifestService, MarketplaceCache};
 
 use crate::repositories::users::queries;
@@ -110,11 +109,12 @@ fn workspace_view(row: &MatrixRow, plugins: Vec<PluginView>) -> WorkspaceView {
 
 pub(super) async fn load(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     pool: &PgPool,
     user_id: &UserId,
 ) -> AccessOverview {
     let (catalog, connections, runtime) = tokio::join!(
-        included_content(pool, services, user_id),
+        included_content(pool, services, boot, user_id),
         get_connections(pool, services, user_id),
         queries::get_user_runtime_detail(pool, user_id),
     );
@@ -167,11 +167,12 @@ pub(super) async fn load(
 async fn included_content(
     pool: &PgPool,
     view: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     user_id: &UserId,
 ) -> AdminResult<Vec<WorkspaceView>> {
     let services = view.config();
-    let root = systemprompt_web_admin_core::request::get_services_path()?;
-    let url = Config::get()?.api_external_url.clone();
+    let root = systemprompt_web_admin_core::request::get_services_path(boot);
+    let url = boot.config().api_external_url.clone();
     let filter = TemplateMarketplaceFilter::from_pool(Arc::new(pool.clone()), view.clone());
     let cache = uncached_marketplace();
     let request = AssembleRequest {

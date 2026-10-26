@@ -11,15 +11,15 @@ use oauth::failure::{FailureKind, FlowFailure};
 use sqlx::PgPool;
 use std::time::Instant;
 use systemprompt::identifiers::UserId;
-use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use tracing::Instrument;
 use uuid::Uuid;
 
 pub(super) struct CallbackSession<'a> {
     pub pool: &'a PgPool,
-    pub keys: &'a SigningKeys,
+    pub boot: &'a ExtensionBoot,
     pub user: &'a UserId,
     pub headers: &'a HeaderMap,
 }
@@ -46,13 +46,13 @@ async fn complete(
 ) -> AdminResult<Response> {
     let CallbackSession {
         pool,
-        keys,
+        boot,
         user,
         headers,
     } = session;
     let mut report = VerificationReport::for_provider(grant.provider.slug());
     let started = Instant::now();
-    let exchange = oauth::exchange_classified(services, &mut grant, code).await;
+    let exchange = oauth::exchange_classified(services, boot.config(), &mut grant, code).await;
     let outcome = match exchange {
         Ok(()) => {
             report.record("token", started, &Ok("Authorization exchanged".into()));
@@ -65,10 +65,10 @@ async fn complete(
             Err(failure)
         },
     };
-    let actor = live_user(pool, keys, headers, false).await?;
+    let actor = live_user(pool, boot, headers, false).await?;
     if let Err(failure) = outcome {
         if failure.kind != FailureKind::GrantRejected && grant.refresh_token.is_some() {
-            store_pending_verification(pool, user, &grant).await?;
+            store_pending_verification(pool, boot.secrets().as_ref(), user, &grant).await?;
         }
         let stage = report
             .steps
@@ -81,7 +81,7 @@ async fn complete(
             callback_notice::redirect(&grant.provider, stage, failure.kind, reference);
         return Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&destination)).into_response());
     }
-    store_verified(pool, user, &grant).await?;
+    store_verified(pool, boot.secrets().as_ref(), user, &grant).await?;
     tracing::info!(user_id = %user, provider = grant.provider.slug(), trace_id = %reference, "connector_connected");
     let destination = if actor.user_id == *user {
         format!("/admin/connectors#connector-{}", grant.provider.slug())

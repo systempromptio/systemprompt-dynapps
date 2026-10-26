@@ -8,6 +8,7 @@
 
 use std::collections::BTreeMap;
 use std::time::Duration;
+use systemprompt::traits::SecretStore;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -50,13 +51,13 @@ pub struct MachinesClient {
 }
 
 #[must_use]
-pub fn api_token() -> Option<String> {
+pub fn api_token(secrets: &dyn SecretStore) -> Option<String> {
     std::env::var(TOKEN_ENV)
         .ok()
         .or_else(|| {
-            systemprompt::config::SecretsBootstrap::get()
-                .ok()
-                .and_then(|s| s.get(TOKEN_SECRET).cloned())
+            secrets
+                .secret(TOKEN_SECRET)
+                .map(|secret| secret.expose().to_owned())
         })
         .filter(|t| !t.trim().is_empty())
 }

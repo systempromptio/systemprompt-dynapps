@@ -13,6 +13,7 @@
 
 use async_trait::async_trait;
 use sqlx::PgPool;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use super::gateway_routes_drift::rows;
 use crate::repositories::gateway_routes::declared::{
@@ -41,11 +42,20 @@ pub const RUNTIME_NOTE: &str = "Core boots its dispatcher from services/ai/gatew
     never reads this table. Every console write and every apply regenerates the file from the \
     rows, so a change here is dispatched at the next restart.";
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct GatewayRoutesPlane;
+#[derive(Debug, Clone)]
+pub struct GatewayRoutesPlane {
+    boot: ExtensionBoot,
+}
+
+impl GatewayRoutesPlane {
+    #[must_use]
+    pub const fn new(boot: ExtensionBoot) -> Self {
+        Self { boot }
+    }
+}
 
 inventory::submit! {
-    PlaneRegistration { order: 3, build: || Box::new(GatewayRoutesPlane) }
+    PlaneRegistration { order: 3, build: |boot| Box::new(GatewayRoutesPlane::new(boot.clone())) }
 }
 
 async fn write_declared(
@@ -118,7 +128,7 @@ impl SyncPlane for GatewayRoutesPlane {
 
     async fn drift(&self, pool: &PgPool) -> AdminResult<PlaneDrift> {
         let in_db = usize::try_from(count_gateway_routes(pool).await?).unwrap_or(0);
-        let declared = match declared_routes_now() {
+        let declared = match declared_routes_now(&self.boot) {
             Ok(d) => d,
             Err(e) => {
                 return Ok(PlaneDrift {
@@ -176,11 +186,11 @@ impl SyncPlane for GatewayRoutesPlane {
         mode: SyncMode,
         actor: Actor<'_>,
     ) -> AdminResult<ApplyOutcome> {
-        let declared = declared_routes_now()?;
+        let declared = declared_routes_now(&self.boot)?;
         let outcome = write_declared(pool, &declared, mode).await?;
         let user_initiated = matches!(actor, Actor::User(_));
-        if user_initiated && bundle_owner().is_none() {
-            regenerate_gateway_file(pool, &gateway_file_path()?).await?;
+        if user_initiated && bundle_owner(&self.boot).is_none() {
+            regenerate_gateway_file(pool, &gateway_file_path(&self.boot)).await?;
         }
         record_applied(
             pool,
@@ -189,7 +199,7 @@ impl SyncPlane for GatewayRoutesPlane {
                 declared_hash: &declared.declared_hash(),
                 mode: actor.recorded_mode(mode),
                 actor: actor.as_str(),
-                from: applied_from(),
+                from: applied_from(&self.boot),
             },
         )
         .await?;
@@ -198,7 +208,7 @@ impl SyncPlane for GatewayRoutesPlane {
 
     async fn export(&self, pool: &PgPool) -> AdminResult<Option<Export>> {
         let rows = list_gateway_routes(pool).await?;
-        let file = std::fs::read_to_string(gateway_file_path()?).map_err(|e| {
+        let file = std::fs::read_to_string(gateway_file_path(&self.boot)).map_err(|e| {
             systemprompt_web_admin_core::error::AdminError::invalid(
                 "gateway.yaml could not be read",
                 e,

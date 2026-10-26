@@ -2,6 +2,7 @@
 //! apply, and every core plane's state.
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::Json;
 use axum::extract::{Extension, State};
@@ -51,12 +52,16 @@ pub(crate) async fn plane_status(pool: &PgPool, plane: &dyn SyncPlane) -> AdminR
 }
 
 pub(crate) async fn status_handler(
+    Extension(services): Extension<
+        systemprompt_web_admin_core::extension_services::ExtensionServices,
+    >,
     State(pool): State<Arc<PgPool>>,
     Extension(core_planes): Extension<CorePlanes>,
+    Extension(boot): Extension<ExtensionBoot>,
 ) -> AdminResult<Response> {
-    let sources = build_sources()?;
+    let sources = build_sources(&boot, &services.config());
     let mut out = Vec::new();
-    for plane in planes() {
+    for plane in planes(&boot) {
         out.push(plane_status(&pool, plane.as_ref()).await?);
     }
     let mut core = Vec::new();

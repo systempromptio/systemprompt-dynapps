@@ -7,11 +7,10 @@
 //! and a kit's — and the page says so rather than picking one.
 
 use serde::Serialize;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::bundle::{BundleCache, cache_root};
+use systemprompt::manifest::Profile;
 
 use super::sources::SourcesView;
-use crate::error::AdminResult;
 
 pub const BASE_SOURCE: &str = "base";
 
@@ -48,11 +47,11 @@ pub struct BundleFiles {
     pub paths: Vec<String>,
 }
 
-pub fn active_bundle_files() -> AdminResult<Vec<BundleFiles>> {
-    let profile = ProfileBootstrap::get()?;
+#[must_use]
+pub fn active_bundle_files(profile: &Profile) -> Vec<BundleFiles> {
     let cache = BundleCache::new(cache_root(profile));
     let state = cache.read_state();
-    Ok(state
+    state
         .sources
         .iter()
         .filter_map(|(name, active)| {
@@ -67,7 +66,7 @@ pub fn active_bundle_files() -> AdminResult<Vec<BundleFiles>> {
                     .collect(),
             })
         })
-        .collect())
+        .collect()
 }
 
 fn under(path: &str, rel: &str, is_dir: bool) -> bool {

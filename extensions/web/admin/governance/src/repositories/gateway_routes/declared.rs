@@ -9,6 +9,7 @@
 
 use serde_yaml::Value;
 use sha2::{Digest, Sha256};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::gateway_catalog::{route_from_yaml, route_to_yaml};
@@ -92,17 +93,18 @@ pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, DeclaredRoute
 // the next refresh replaces, and this is the one file the console writes back.
 // When a pinned bundle owns `ai/` the composed copy is what the dispatcher
 // reads, so the plane reads that one and the console does not write at all.
-pub fn gateway_file_path() -> AdminResult<std::path::PathBuf> {
-    systemprompt_web_admin_core::request::get_gateway_file_path()
+#[must_use]
+pub fn gateway_file_path(boot: &ExtensionBoot) -> std::path::PathBuf {
+    systemprompt_web_admin_core::request::get_gateway_file_path(boot)
 }
 
 #[must_use]
-pub fn bundle_owner() -> Option<String> {
-    systemprompt_web_admin_core::repositories::sync::sources::dir_owner("ai")
+pub fn bundle_owner(boot: &ExtensionBoot) -> Option<String> {
+    systemprompt_web_admin_core::repositories::sync::sources::dir_owner(boot.profile(), "ai")
 }
 
-pub fn declared_routes_now() -> AdminResult<DeclaredRoutes> {
-    let file = gateway_file_path()?;
+pub fn declared_routes_now(boot: &ExtensionBoot) -> AdminResult<DeclaredRoutes> {
+    let file = gateway_file_path(boot);
     let yaml = std::fs::read_to_string(&file)
         .map_err(|e| AdminError::invalid("gateway.yaml could not be read", e))?;
     parse_declared_routes(&yaml)

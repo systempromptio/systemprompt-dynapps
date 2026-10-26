@@ -320,25 +320,14 @@
           "minimum": 0,
           "maximum": 65535
         },
-        "api_server_url": {
+        "external_url": {
           "type": "string"
         },
-        "api_internal_url": {
-          "type": "string"
-        },
-        "api_external_url": {
-          "type": "string"
-        },
-        "use_https": {
-          "type": "boolean",
-          "default": false
-        },
-        "cors_allowed_origins": {
+        "extra_cors_origins": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "default": []
+          }
         },
         "content_negotiation": {
           "$ref": "#/$defs/ContentNegotiationConfig",
@@ -417,9 +406,7 @@
       "required": [
         "host",
         "port",
-        "api_server_url",
-        "api_internal_url",
-        "api_external_url"
+        "external_url"
       ]
     },
     "ContentNegotiationConfig": {
@@ -535,9 +522,15 @@
       "additionalProperties": false
     },
     "PathsConfig": {
-      "description": "Filesystem roots for one profile.\n\n`shipped_files` is an optional read-only directory holding the files an\nimage ships under `files/` (CSS, JS, fonts, downloads). `/files/*` reads\n`paths.storage/files` first and falls back to it, so `paths.storage` only\nhas to hold user data and nothing has to be copied onto it at boot.",
+      "description": "Filesystem roots for one profile. Relative entries resolve against\n`root`.\n\n`shipped_files` is an optional read-only directory holding the files an\nimage ships under `files/` (CSS, JS, fonts, downloads). `/files/*` reads\n`paths.storage/files` first and falls back to it, so `paths.storage` only\nhas to hold user data and nothing has to be copied onto it at boot.",
       "type": "object",
       "properties": {
+        "root": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "system": {
           "type": "string"
         },
@@ -592,9 +585,6 @@
     "SecurityConfig": {
       "type": "object",
       "properties": {
-        "jwt_issuer": {
-          "type": "string"
-        },
         "jwt_access_token_expiration": {
           "type": "integer",
           "format": "int64"
@@ -651,7 +641,6 @@
       },
       "additionalProperties": false,
       "required": [
-        "jwt_issuer",
         "jwt_access_token_expiration",
         "jwt_refresh_token_expiration",
         "jwt_audiences"
@@ -1227,13 +1216,6 @@
       "properties": {
         "mode": {
           "$ref": "#/$defs/AuthzMode"
-        },
-        "url": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null
         },
         "timeout_ms": {
           "type": "integer",

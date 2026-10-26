@@ -5,6 +5,7 @@ use axum::extract::{Extension, Query, State};
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use crate::repositories;
 use systemprompt_web_admin_core::error::AdminResult;
@@ -14,6 +15,7 @@ use systemprompt_web_admin_core::types::{UserContext, UserQuery};
 use systemprompt_web_admin_core::types::responses::PluginsListResponse;
 
 pub(crate) async fn list_plugins_handler(
+    Extension(boot): Extension<ExtensionBoot>,
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
@@ -21,7 +23,7 @@ pub(crate) async fn list_plugins_handler(
     Extension(user_ctx): Extension<UserContext>,
     Query(_query): Query<UserQuery>,
 ) -> AdminResult<Response> {
-    let services_path = shared::get_services_path()?;
+    let services_path = shared::get_services_path(&boot);
     let plugins = repositories::marketplace::plugins::list_plugins_for_user(
         &pool,
         &services,

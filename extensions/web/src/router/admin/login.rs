@@ -30,6 +30,7 @@ pub(super) async fn login_page(
     user_ctx: Option<Extension<UserContext>>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(sso_deps): Extension<systemprompt_web_admin_identity::SsoDeps>,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     Query(params): Query<LoginParams>,
 ) -> AdminHtmlResult<Response> {
     if let Some(Extension(user_ctx)) = user_ctx {
@@ -49,7 +50,7 @@ pub(super) async fn login_page(
         redirect_encoded,
         sso_oidc_enabled: sso_deps
             .provider_enabled(systemprompt_web_admin_identity::sso::entra_oidc::ID),
-        dev_login_enabled: systemprompt_web_admin_identity::dev_login_enabled(),
+        dev_login_enabled: systemprompt_web_admin_identity::dev_login_enabled(boot.profile()),
     };
     let html = engine.render("login", &ctx)?;
     Ok(Html(html).into_response())

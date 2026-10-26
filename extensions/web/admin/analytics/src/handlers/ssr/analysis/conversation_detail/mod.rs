@@ -14,9 +14,9 @@ mod rows;
 mod views;
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::WriteRequest;
 
 use axum::extract::{Form, Path, State};
-use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
@@ -114,15 +114,15 @@ pub(crate) struct JudgeNowForm {
 
 pub(crate) async fn judge_now(
     shell: Page,
+    write: WriteRequest,
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
-    headers: HeaderMap,
     Form(form): Form<JudgeNowForm>,
 ) -> AdminHtmlResult<Redirect> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Console access required".into()).into());
     }
-    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
+    write.require_origin()?;
     let context_id = parse_context(&context_id)?;
     load_visible(&pool, &shell.user, &context_id).await?;
     insert_manual_judgement(&pool, &context_id, &shell.user.user_id).await?;

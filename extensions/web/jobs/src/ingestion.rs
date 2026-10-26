@@ -24,7 +24,6 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use crate::error::JobError;
 use systemprompt_web_content::services::IngestionService;
 use systemprompt_web_shared::config::BlogConfigValidated;
-use systemprompt_web_shared::config_errors::ExtensionConfigErrors;
 use systemprompt_web_shared::error::MarketplaceError;
 use systemprompt_web_shared::models::IngestionOptions;
 
@@ -190,21 +189,12 @@ async fn ingest_under_lock(
     Ok(result)
 }
 
-fn load_blog_config(
-    path: &std::path::Path,
-) -> Result<Option<Arc<BlogConfigValidated>>, ExtensionConfigErrors> {
-    if !path.exists() {
-        return Ok(None);
-    }
-    BlogConfigValidated::load_from_file(path).map(|c| Some(Arc::new(c)))
-}
-
-fn job_scoped_blog_config_path(ctx: &JobContext) -> Result<std::path::PathBuf, JobError> {
+fn job_services_dir(ctx: &JobContext) -> Result<std::path::PathBuf, JobError> {
     Ok(ctx
         .get::<Arc<AppPaths>>()?
         .system()
         .services()
-        .join("config/blog.yaml"))
+        .to_path_buf())
 }
 
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
@@ -212,9 +202,9 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let pool = db.write_pool();
 
-    let config_path = job_scoped_blog_config_path(ctx)?;
+    let services_dir = job_services_dir(ctx)?;
 
-    let Some(config) = load_blog_config(&config_path)? else {
+    let Some(config) = BlogConfigValidated::load_from_services(&services_dir)? else {
         tracing::debug!(
             "Blog content ingestion skipped: no blog config configured for this profile"
         );

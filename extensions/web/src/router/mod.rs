@@ -23,27 +23,35 @@ use std::sync::Arc;
 use axum::{Extension, Router};
 
 use systemprompt::extension::prelude::{ExtensionContext, ExtensionRouter};
-use systemprompt::manifest::Config;
-use systemprompt::security::keys::SigningKeys;
+use systemprompt_web_shared::config::BlogConfigValidated;
+use systemprompt_web_site::config_loader::SiteConfig;
 
 use crate::extension::WebExtension;
 use pools::DbHandles;
 
 pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<ExtensionRouter> {
     let db = DbHandles::from_context(ctx, Arc::clone(&web.farm_runs))?;
-    let signing_keys = signing_keys()?;
-    let session_service = pools::build_session_service(&db, signing_keys.clone());
+    let session_service = pools::build_session_service(&db);
+    let services_root = db.boot.services_root().to_path_buf();
+    let site = Arc::new(SiteConfig::load_from(&services_root));
+    let blog = BlogConfigValidated::load_from_services(&services_root).unwrap_or_else(|error| {
+        tracing::error!(
+            %error,
+            "Blog config error: link generation and content APIs will run unconfigured"
+        );
+        None
+    });
 
     let sso_deps = sso::build(&db, &session_service);
 
-    let api_router = api::build(&db, &session_service, web.blog_config());
+    let api_router = api::build(&db, &session_service, blog);
     let share_api = api::share(&db);
 
     let mut combined = Router::new()
         .merge(share_api)
         .nest("/api/public", api_router);
 
-    match admin_ssr::build(&db, sso_deps, web.site.branding.clone()) {
+    match admin_ssr::build(&db, sso_deps, site.branding.clone()) {
         Some(ssr) => {
             combined = Router::new()
                 .nest_service("/admin", ssr.admin)
@@ -68,22 +76,12 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
 
     Some(ExtensionRouter::public(
         combined
-            .layer(Extension(Arc::clone(&web.site)))
+            .layer(Extension(site))
             .layer(Extension(ctx.background_tasks()))
-            .layer(Extension(db.services))
-            .layer(Extension(ctx.provider_tokens()))
-            .layer(Extension(signing_keys)),
+            .layer(Extension(Arc::clone(db.boot.config_arc())))
+            .layer(Extension(db.boot.clone()))
+            .layer(Extension(db.services.clone()))
+            .layer(Extension(ctx.provider_tokens())),
         "/",
     ))
-}
-
-fn signing_keys() -> Option<SigningKeys> {
-    let config = Config::get()
-        .inspect_err(|error| tracing::error!(%error, "config unavailable; web routes not mounted"))
-        .ok()?;
-    SigningKeys::resolve(&config.signing_key_path)
-        .inspect_err(
-            |error| tracing::error!(%error, "signing keys unavailable; web routes not mounted"),
-        )
-        .ok()
 }

@@ -12,18 +12,20 @@ use axum::Router;
 use axum::routing::get;
 use sqlx::PgPool;
 
+use systemprompt::manifest::Profile;
+
 use crate::handlers;
 use crate::handlers::sso_alias;
 
-pub fn sign_in_routes() -> Router<Arc<PgPool>> {
+pub fn sign_in_routes(profile: &Profile) -> Router<Arc<PgPool>> {
     let routes = Router::new()
         .route("/auth/entra/start", get(sso_alias::oidc_start))
         .route("/auth/entra/callback", get(sso_alias::oidc_callback));
-    dev_login_routes(routes)
+    dev_login_routes(routes, profile)
 }
 
-fn dev_login_routes(router: Router<Arc<PgPool>>) -> Router<Arc<PgPool>> {
-    if !handlers::dev_login::dev_login_enabled() {
+fn dev_login_routes(router: Router<Arc<PgPool>>, profile: &Profile) -> Router<Arc<PgPool>> {
+    if !handlers::dev_login::dev_login_enabled(profile) {
         return router;
     }
     router.route(

@@ -1,10 +1,10 @@
 //! Owner-authenticated source and revision authoring; no implicit activation.
 
 use axum::extract::Path;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use std::sync::Arc;
 use systemprompt_web_admin_core::error::AdminResult;
-use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::extension_boot::WriteRequest;
 use systemprompt_web_admin_core::state::ManagedState;
 use systemprompt_web_admin_core::types::UserContext;
 
@@ -32,12 +32,12 @@ pub(crate) struct CreateSource {
 }
 
 pub(crate) async fn create_source(
+    write: WriteRequest,
     Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
     Json(input): Json<CreateSource>,
 ) -> AdminResult<(StatusCode, Json<ManagedSourceId>)> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     let id = state
         .repository
         .register_source(&state.owner, &input.name, &input.specification)
@@ -54,13 +54,13 @@ pub(crate) async fn source(
 }
 
 pub(crate) async fn capture_snapshot(
+    write: WriteRequest,
     Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(id): Path<ManagedSourceId>,
-    headers: HeaderMap,
     Json(input): Json<SnapshotProvenance>,
 ) -> AdminResult<(StatusCode, Json<SourceSnapshotId>)> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     Ok((
         StatusCode::CREATED,
         Json(
@@ -73,13 +73,13 @@ pub(crate) async fn capture_snapshot(
 }
 
 pub(crate) async fn sync_git(
+    write: WriteRequest,
     Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(id): Path<ManagedSourceId>,
-    headers: HeaderMap,
     Json(input): Json<GitSyncRequest>,
 ) -> AdminResult<Json<systemprompt::marketplace::managed::GitSyncResult>> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     if input.source_id != id {
         return Err(systemprompt_web_admin_core::error::AdminError::Conflict(
             "Source path and body differ".to_owned(),
@@ -94,6 +94,7 @@ pub(crate) async fn sync_git(
         systemprompt::system::managed::git_sources::GitSourceOrchestrator::new(
             state.repository.clone(),
             scratch_root,
+            Arc::clone(write.boot.secrets()),
         )
         .synchronize(&state.owner, &input)
         .await?,
@@ -101,15 +102,15 @@ pub(crate) async fn sync_git(
 }
 
 pub(crate) async fn begin_reconciliation(
+    write: WriteRequest,
     Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
     Json(input): Json<ReconciliationRequest>,
 ) -> AdminResult<(
     StatusCode,
     Json<systemprompt::marketplace::managed::ReconciliationRecord>,
 )> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     Ok((
         StatusCode::CREATED,
         Json(
@@ -130,13 +131,13 @@ pub(crate) struct ResolveConflict {
 }
 
 pub(crate) async fn resolve_conflict(
+    write: WriteRequest,
     Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(id): Path<ManagedReconciliationId>,
-    headers: HeaderMap,
     Json(input): Json<ResolveConflict>,
 ) -> AdminResult<StatusCode> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     state
         .repository
         .resolve_reconciliation_conflict(
@@ -159,13 +160,13 @@ pub(crate) struct CompleteReconciliation {
 }
 
 pub(crate) async fn complete_reconciliation(
+    write: WriteRequest,
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(id): Path<ManagedReconciliationId>,
-    headers: HeaderMap,
     Json(input): Json<CompleteReconciliation>,
 ) -> AdminResult<StatusCode> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     state
         .repository
         .complete_reconciliation(&state.owner, &user.user_id, &id, &input.revision_id)
@@ -192,13 +193,13 @@ pub(crate) struct DecideWithdrawal {
 }
 
 pub(crate) async fn decide_withdrawal(
+    write: WriteRequest,
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(id): Path<WithdrawalProposalId>,
-    headers: HeaderMap,
     Json(input): Json<DecideWithdrawal>,
 ) -> AdminResult<StatusCode> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     state
         .repository
         .decide_withdrawal_proposal(&state.owner, &user.user_id, &id, input.approved)
@@ -207,12 +208,12 @@ pub(crate) async fn decide_withdrawal(
 }
 
 pub(crate) async fn bind_resource(
+    write: WriteRequest,
     Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
     Json(input): Json<NewResource>,
 ) -> AdminResult<(StatusCode, Json<ManagedResourceId>)> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     Ok((
         StatusCode::CREATED,
         Json(state.repository.bind_resource(&state.owner, &input).await?),
@@ -220,12 +221,12 @@ pub(crate) async fn bind_resource(
 }
 
 pub(crate) async fn create_revision(
+    write: WriteRequest,
     Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
     Json(input): Json<NewRevision>,
 ) -> AdminResult<(StatusCode, Json<ResourceRevisionId>)> {
-    require_write_origin(&headers)?;
+    write.require_origin()?;
     Ok((
         StatusCode::CREATED,
         Json(

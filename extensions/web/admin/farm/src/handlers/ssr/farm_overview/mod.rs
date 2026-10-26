@@ -15,6 +15,7 @@ use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::page::Page;
@@ -56,6 +57,7 @@ struct FarmOverviewContext {
 
 pub(crate) async fn farm_overview_page(
     shell: Page,
+    BootServices { boot, services }: BootServices,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
@@ -88,7 +90,7 @@ pub(crate) async fn farm_overview_page(
     faults.extend(live_faults.into_vec());
     let farms = faults.take("farm list", farms);
     let agents = faults.take("agent list", agents);
-    let bundles = faults.take("pinned bundles", load_bundles());
+    let bundles = load_bundles(&boot, &services.config());
     let farms: Vec<FarmCardView> = farms
         .iter()
         .map(|f| farm_card(f, &agents, &bundles))

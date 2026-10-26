@@ -184,10 +184,11 @@ pub(crate) async fn user_matrix_handler(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Path(user_id): Path<String>,
 ) -> AdminResult<Response> {
-    let services_path = shared::get_services_path()?;
+    let services_path = shared::get_services_path(&boot);
 
     let sections = build_matrix_sections(&services, &services_path);
 
@@ -208,7 +209,7 @@ pub(crate) fn build_matrix_sections(
         Vec::new();
 
     let marketplace_rows: Vec<(String, String, Option<String>)> =
-        catalog_index::marketplaces::load_marketplaces()
+        catalog_index::marketplaces::load_marketplaces(&services.config())
             .into_iter()
             .map(|m| (m.id.to_string(), m.name, Some(m.description)))
             .collect();

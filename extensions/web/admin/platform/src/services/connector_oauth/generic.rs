@@ -58,20 +58,32 @@ pub struct Consent<'a> {
 
 pub async fn authorize(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     consent: Consent<'_>,
     provider: Provider,
 ) -> AdminResult<(String, Grant)> {
-    let callback = provider.callback()?;
-    authorize_with_client(services, consent, provider, &callback, &client()?).await
+    let callback = provider.callback(boot.config());
+    authorize_with_client(
+        super::ConnectorAccess {
+            services,
+            secrets: boot.secrets().as_ref(),
+        },
+        consent,
+        provider,
+        &callback,
+        &client()?,
+    )
+    .await
 }
 
 pub async fn authorize_with_client(
-    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    access: super::ConnectorAccess<'_>,
     consent: Consent<'_>,
     provider: Provider,
     callback: &str,
     http: &reqwest::Client,
 ) -> AdminResult<(String, Grant)> {
+    let services = access.services;
     let Consent {
         user,
         state,
@@ -87,8 +99,7 @@ pub async fn authorize_with_client(
     }
     let meta = metadata(services, http, &provider).await?;
     let scope = settings.scopes.join(" ");
-    let (registration, method) =
-        register_client(services, &provider, &meta, callback, http).await?;
+    let (registration, method) = register_client(access, &provider, &meta, callback, http).await?;
     if registration.client_id.as_str().is_empty() {
         return Err(AdminError::Unavailable(
             "OAuth client registration has no identifier".into(),
@@ -158,7 +169,7 @@ pub async fn validate_refresh(
 }
 
 async fn register_client(
-    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    super::ConnectorAccess { services, secrets }: super::ConnectorAccess<'_>,
     provider: &Provider,
     meta: &super::generic_discovery::AuthorizationMetadata,
     callback: &str,
@@ -172,7 +183,7 @@ async fn register_client(
         let secret = settings
             .client_secret
             .as_deref()
-            .map(config::secret)
+            .map(|name| config::secret(secrets, name))
             .transpose()?
             .unwrap_or_default();
         let method = if secret.is_empty() {
@@ -188,7 +199,7 @@ async fn register_client(
         };
         (
             Registration {
-                client_id: ClientId::new(config::secret(key)?),
+                client_id: ClientId::new(config::secret(secrets, key)?),
                 client_secret: secret,
             },
             method,

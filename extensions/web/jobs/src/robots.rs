@@ -43,7 +43,8 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     tracing::debug!("robots.txt generation started");
 
     let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
-    generate_robots_txt(paths).await?;
+    let config = ctx.get::<Arc<systemprompt::manifest::Config>>()?;
+    generate_robots_txt(paths, config).await?;
 
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
@@ -52,14 +53,14 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     Ok(JobResult::success().with_duration(duration_ms))
 }
 
-pub(crate) async fn generate_robots_txt(paths: &AppPaths) -> Result<(), JobError> {
-    use systemprompt::manifest::Config;
+pub(crate) async fn generate_robots_txt(
+    paths: &AppPaths,
+    config: &systemprompt::manifest::Config,
+) -> Result<(), JobError> {
     use tokio::fs;
 
-    let global_config = Config::get()?;
-
     let web_dir = paths.web().dist().to_path_buf();
-    let base_url = &global_config.api_external_url;
+    let base_url = &config.api_external_url;
 
     let robots_content = build_robots_txt_content(base_url)?;
 

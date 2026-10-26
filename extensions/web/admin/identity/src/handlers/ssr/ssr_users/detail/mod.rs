@@ -16,7 +16,6 @@ mod workspace_grant;
 
 use std::sync::Arc;
 
-use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
@@ -25,6 +24,7 @@ use systemprompt::identifiers::UserId;
 
 use crate::repositories;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::BootServices;
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::types::UserContext;
@@ -56,9 +56,7 @@ fn may_open_profile(viewer: &UserContext, user_id_raw: &str) -> bool {
 }
 
 pub(crate) async fn user_detail_page(
-    Extension(services): Extension<
-        systemprompt_web_admin_core::extension_services::ExtensionServices,
-    >,
+    BootServices { boot, services }: BootServices,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(user_id_raw): Path<String>,
@@ -88,6 +86,7 @@ pub(crate) async fn user_detail_page(
 
     let data = Box::pin(fill_active_tab(
         &services,
+        &boot,
         ActiveTabRead {
             pool: &pool,
             user_id: &user_id,
@@ -123,6 +122,7 @@ struct ActiveTabRead<'a> {
 
 async fn fill_active_tab(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     read: ActiveTabRead<'_>,
     mut data: UserDetailContext,
     faults: &mut Faults,
@@ -152,7 +152,7 @@ async fn fill_active_tab(
         },
         "access" => {
             data.access = Some(view::access_tab(
-                load::load_access(services, pool, user_id, faults).await,
+                load::load_access(services, boot, pool, user_id, faults).await,
                 user_id,
             ));
         },

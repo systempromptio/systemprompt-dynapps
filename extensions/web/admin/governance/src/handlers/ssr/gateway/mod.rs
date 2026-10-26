@@ -29,6 +29,7 @@ mod view;
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::ssr::page::Page;
 
 use axum::extract::{Extension, Query, State};
@@ -82,9 +83,10 @@ struct GatewayRead {
 async fn load_gateway(
     pool: &PgPool,
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &ExtensionBoot,
     faults: &mut Faults,
 ) -> GatewayRead {
-    let (config, config_error) = match super::super::gateway_config_view(pool).await {
+    let (config, config_error) = match super::super::gateway_config_view(pool, boot).await {
         Ok(config) => (config, String::new()),
         Err(e) => (GatewayConfigView::default(), e.to_string()),
     };
@@ -194,6 +196,7 @@ pub(crate) async fn gateway_page(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<GatewayQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -204,12 +207,12 @@ pub(crate) async fn gateway_page(
     } = shell;
     console_only(&user_ctx)?;
     let mut faults = Faults::new();
-    let read = load_gateway(&pool, &services, &mut faults).await;
+    let read = load_gateway(&pool, &services, &boot, &mut faults).await;
     let tab = GatewayTab::parse(query.tab.as_deref());
     let mut page = gateway_view(&pool, read, tab, &mut faults).await;
     if tab == GatewayTab::Sync {
         let plane = repositories::sync_planes::gateway_routes::PLANE_ID;
-        page.sync = plane_card_by_id(&pool, plane, "")
+        page.sync = plane_card_by_id(&pool, &boot, plane, "")
             .await?
             .map(|card| GatewaySyncView {
                 card,

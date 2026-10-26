@@ -7,13 +7,12 @@
 //! through the admin subject matrix, not the manifest audience, so a per-user
 //! deny hides one that a group grants.
 
-use std::path::PathBuf;
 use std::sync::Arc;
 use systemprompt::manifest::services::ResolvedCatalog;
 
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::{TenantId, UserId};
+use systemprompt::manifest::Profile;
 
 use systemprompt_web_admin_core::repositories::bridge::{BridgeIdentityRow, find_bridge_user};
 use systemprompt_web_admin_core::repositories::user_usage as usage_repo;
@@ -117,9 +116,8 @@ pub(super) fn build_usage(sections: UsageSections) -> ProfileUsage {
     }
 }
 
-pub(super) fn read_tenant_id() -> Option<TenantId> {
-    let bootstrap = ProfileBootstrap::get().ok()?;
-    bootstrap
+pub(super) fn read_tenant_id(profile: &Profile) -> Option<TenantId> {
+    profile
         .cloud
         .as_ref()
         .and_then(|cloud| cloud.tenant_id.clone())
@@ -127,13 +125,14 @@ pub(super) fn read_tenant_id() -> Option<TenantId> {
 
 pub(super) fn build_bridge_profile_block(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     catalog: &ResolvedCatalog,
 ) -> Option<BridgeProfileBlock> {
-    let profile = ProfileBootstrap::get().ok()?;
+    let profile = boot.profile();
     let config = services.config();
     let gateway = config.gateway_config().filter(|g| g.enabled)?;
 
-    let base = profile.server.api_external_url.trim_end_matches('/');
+    let base = boot.config().api_external_url.trim_end_matches('/');
     let prefix = gateway.inference_path_prefix.trim_end_matches('/');
     let inference_gateway_base_url = format!("{base}{prefix}");
 
@@ -161,11 +160,10 @@ pub(super) fn build_bridge_profile_block(
     })
 }
 
-pub(super) fn build_agents_block() -> AgentsBlock {
-    let services_path = match ProfileBootstrap::get() {
-        Ok(p) => PathBuf::from(&p.paths.services),
-        Err(_) => return AgentsBlock::default(),
-    };
+pub(super) fn build_agents_block(
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+) -> AgentsBlock {
+    let services_path = boot.baked_services_root();
 
     let agents = match systemprompt_web_admin_core::catalog_index::agents::list_configured_agents(
         &services_path,
@@ -203,13 +201,12 @@ pub(super) fn build_agents_block() -> AgentsBlock {
 
 pub(super) async fn build_reachable_marketplaces(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     pool: &PgPool,
     user_id: &UserId,
     roles: Vec<String>,
 ) -> systemprompt_web_admin_core::error::AdminResult<Vec<ProfileMarketplaceView>> {
-    let Ok(services_path) = systemprompt_web_admin_core::request::get_services_path() else {
-        return Ok(Vec::new());
-    };
+    let services_path = systemprompt_web_admin_core::request::get_services_path(boot);
     let manifests =
         systemprompt_web_admin_core::catalog_index::manifests::list_marketplace_configs(
             &services_path,

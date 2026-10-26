@@ -90,7 +90,6 @@ pub(crate) struct SyncPageData {
     pub composed_hash: Option<HashView>,
     pub last_reconciled_hash: Option<HashView>,
     pub base_tree_hash: Option<HashView>,
-    pub sources_unreadable: Option<String>,
     pub export_planes: Vec<ExportPlaneView>,
     pub stage_ttl_minutes: i64,
 }
@@ -103,12 +102,14 @@ pub(super) struct SyncPageInput {
     pub history: Vec<SyncHistoryRow>,
     pub access_review: Option<AccessReviewView>,
     pub planes: Vec<PlaneRowView>,
+    pub export_planes: Vec<ExportPlaneView>,
     pub sources: SourcesView,
-    pub sources_unreadable: Option<String>,
 }
 
-fn export_planes() -> Vec<ExportPlaneView> {
-    let install = planes().into_iter().map(|p| ExportPlaneView {
+pub(super) fn export_planes(
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+) -> Vec<ExportPlaneView> {
+    let install = planes(boot).into_iter().map(|p| ExportPlaneView {
         id: p.id(),
         label: p.label(),
         source_file: p.source_file(),
@@ -127,7 +128,12 @@ fn export_planes() -> Vec<ExportPlaneView> {
 }
 
 pub(super) fn page_data(input: SyncPageInput) -> SyncPageData {
-    let SyncPageInput { tab, sources, .. } = input;
+    let SyncPageInput {
+        tab,
+        sources,
+        export_planes,
+        ..
+    } = input;
     SyncPageData {
         page: "sync",
         title: "Code sync",
@@ -167,8 +173,7 @@ pub(super) fn page_data(input: SyncPageInput) -> SyncPageData {
             .and_then(HashView::of),
         base_tree_hash: sources.base.tree_hash.as_deref().and_then(HashView::of),
         sources,
-        sources_unreadable: input.sources_unreadable,
-        export_planes: export_planes(),
+        export_planes,
         stage_ttl_minutes: STAGE_TTL_MINUTES,
     }
 }

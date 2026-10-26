@@ -12,6 +12,7 @@
 mod view;
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::Extension;
 use axum::extract::{Form, Query, State};
@@ -66,13 +67,17 @@ fn require_console(page: &Page) -> Result<(), AdminError> {
     Err(AdminError::Forbidden("Admin access required.".to_owned()))
 }
 
-fn require_admin_write(page: &Page, headers: &HeaderMap) -> Result<(), AdminError> {
+fn require_admin_write(
+    page: &Page,
+    boot: &ExtensionBoot,
+    headers: &HeaderMap,
+) -> Result<(), AdminError> {
     if !page.user.is_admin {
         return Err(AdminError::Forbidden(
             "Editing gateway policies needs an administrator.".to_owned(),
         ));
     }
-    require_write_origin(headers)
+    require_write_origin(boot, headers)
 }
 
 fn winners(
@@ -178,10 +183,11 @@ fn not_saved(reason: &str) -> Redirect {
 pub(crate) async fn save_gateway_policy(
     page: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
     Form(fields): Form<Vec<(String, String)>>,
 ) -> AdminHtmlResult<Redirect> {
-    require_admin_write(&page, &headers)?;
+    require_admin_write(&page, &boot, &headers)?;
     let mut parsed = match parse_policy_form(&fields) {
         Ok(p) => p,
         Err(e) => return Ok(not_saved(&e.to_string())),
@@ -218,10 +224,11 @@ pub(crate) struct DeleteForm {
 pub(crate) async fn delete_gateway_policy(
     page: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
     Form(form): Form<DeleteForm>,
 ) -> AdminHtmlResult<Redirect> {
-    require_admin_write(&page, &headers)?;
+    require_admin_write(&page, &boot, &headers)?;
     let name = form.name.trim();
     if name.is_empty() {
         return Ok(not_saved("a policy name is required to delete"));

@@ -43,12 +43,13 @@ fn write_file(
 pub async fn build_export_zip(
     pool: &PgPool,
     core_planes: &CorePlanes,
+    boot: &crate::extension_boot::ExtensionBoot,
     actor: &str,
 ) -> AdminResult<ExportZip> {
     let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let mut exported = Vec::new();
     let mut rows = 0usize;
-    for plane in &planes() {
+    for plane in &planes(boot) {
         let Some(export) = plane.export(pool).await? else {
             continue;
         };
@@ -88,7 +89,7 @@ pub async fn build_export_zip(
             row_count: 0,
         });
     }
-    let manifest = build_manifest(actor, exported);
+    let manifest = build_manifest(boot, actor, exported);
     let planes = manifest.planes.len();
     write_file(&mut writer, MANIFEST_FILE, &render_manifest(&manifest)?)?;
     let bytes = writer.finish().map_err(zip_error)?.into_inner();

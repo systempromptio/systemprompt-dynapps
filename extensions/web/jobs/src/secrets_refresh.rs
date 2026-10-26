@@ -13,9 +13,12 @@
 //! reloads its own copy rather than the one that wins the cluster lock.
 
 use chrono::{DateTime, Utc};
-use systemprompt::config::{ReloadOutcome, SecretsBootstrap};
+use std::sync::Arc;
+
 use systemprompt::database::DbPool;
-use systemprompt::traits::{Job, JobContext, JobResult, JobScope};
+use systemprompt::extension::prelude::ExtensionContext;
+use systemprompt::system::AppContext;
+use systemprompt::traits::{Job, JobContext, JobResult, JobScope, ReloadOutcome};
 use systemprompt_web_admin_core::activity::NewActivity;
 use systemprompt_web_admin_core::repositories::user_activity;
 
@@ -30,17 +33,20 @@ pub fn reload_due(last: DateTime<Utc>, now: DateTime<Utc>, interval: std::time::
 
 impl SecretsRefreshJob {
     pub async fn run_once(ctx: &JobContext) -> JobResult {
-        let Some(interval) = SecretsBootstrap::refresh_interval() else {
+        let secrets = match ctx.get::<Arc<AppContext>>() {
+            Ok(app) => ExtensionContext::secrets(app.as_ref()),
+            Err(error) => return JobResult::failure(error.to_string()),
+        };
+        let Some(interval) = secrets.refresh_interval() else {
             return JobResult::success().with_message("no external secrets refresh configured");
         };
-        if let Some(status) = SecretsBootstrap::status() {
-            let last = status.last_reload_at.unwrap_or(status.initialised_at);
-            if !reload_due(last, Utc::now(), interval) {
-                return JobResult::success().with_message("secrets refresh not due");
-            }
+        let status = secrets.status();
+        let last = status.last_reload_at.unwrap_or(status.initialised_at);
+        if !reload_due(last, Utc::now(), interval) {
+            return JobResult::success().with_message("secrets refresh not due");
         }
         let start = std::time::Instant::now();
-        let outcome = SecretsBootstrap::reload().await;
+        let outcome = secrets.reload().await;
         let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
         match outcome {
             Ok(outcome) => {

@@ -9,6 +9,7 @@
 //! *displays* the code for the user to copy back into the terminal.
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::extract::{Extension, Form, Query, State};
 use axum::http::StatusCode;
@@ -94,6 +95,7 @@ pub(crate) async fn device_link_page(
 pub(crate) async fn device_link_approve(
     Extension(user_ctx): Extension<UserContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Form(form): Form<DeviceLinkApproveForm>,
 ) -> AdminHtmlResult<Response> {
@@ -112,7 +114,7 @@ pub(crate) async fn device_link_approve(
         let login_command = format!(
             "{BRIDGE_BINARY} login --code {code}{gateway}",
             code = issued.code,
-            gateway = gateway_suffix()
+            gateway = gateway_suffix(boot.config())
         );
         return render_code_page(
             &engine,
@@ -168,10 +170,10 @@ fn render_code_page(
     Ok(Html(html).into_response())
 }
 
-fn gateway_suffix() -> String {
-    systemprompt::manifest::Config::get().map_or_else(
-        |_| String::new(),
-        |c| format!(" --gateway {}", c.api_external_url.trim_end_matches('/')),
+fn gateway_suffix(config: &systemprompt::manifest::Config) -> String {
+    format!(
+        " --gateway {}",
+        config.api_external_url.trim_end_matches('/')
     )
 }
 

@@ -1,32 +1,24 @@
 //! Plugin JWT validation for the admin handlers.
 
 use axum::http::HeaderMap;
-use systemprompt::manifest::Config;
-use systemprompt::models::auth::JwtAudience;
+use systemprompt::models::auth::{JwtAudience, TokenAuthority};
 use systemprompt::oauth::validate_jwt_token;
-use systemprompt::security::keys::SigningKeys;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-pub(crate) fn validate_plugin_jwt(keys: &SigningKeys, headers: &HeaderMap) -> AdminResult<String> {
+pub(crate) fn validate_plugin_jwt(
+    authority: &dyn TokenAuthority,
+    headers: &HeaderMap,
+) -> AdminResult<String> {
     let token = headers
         .get("authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
         .ok_or_else(|| AdminError::Unauthorized("Missing Authorization header".to_owned()))?;
 
-    let jwt_issuer = Config::get()
-        .map_err(|e| {
-            tracing::error!(error = %e, "Failed to load config");
-            AdminError::internal(e)
-        })?
-        .jwt_issuer
-        .clone();
-
     let claims = validate_jwt_token(
-        keys,
+        authority,
         token,
-        &jwt_issuer,
         &[JwtAudience::Resource("plugin".to_owned())],
     )
     .map_err(|e| {

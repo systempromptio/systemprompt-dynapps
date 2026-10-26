@@ -25,10 +25,14 @@
 //! Runs once at boot as a `scheduler.bootstrap_jobs` entry; it is not
 //! cron-scheduled (`schedule()` is empty).
 
+use std::sync::Arc;
+
 use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
+use systemprompt::system::AppContext;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::sync::boot::reconcile_all;
 use systemprompt_web_admin_core::repositories::sync::sources_db::record_service_sources;
 use systemprompt_web_shared::error::MarketplaceError;
@@ -67,20 +71,22 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let start = std::time::Instant::now();
 
     let db_pool = ctx.get::<DbPool>()?;
-    let services_path = composed_services_root()?;
+    let app = ctx.get::<Arc<AppContext>>()?;
+    let boot = ExtensionBoot::from_context(app.as_ref());
+    let services_path = boot.services_root().to_path_buf();
 
     let governance = check_governance_config(&services_path)?;
-    check_judge_config(
-        &ctx.get::<systemprompt::manifest::services::ServicesView>()?
-            .config(),
-    )?;
+    let services = ctx
+        .get::<systemprompt::manifest::services::ServicesView>()?
+        .config();
+    check_judge_config(&services, boot.profile());
 
     let pool = db_pool.write_pool();
-    let planes = reconcile_all(&pool)
+    let planes = reconcile_all(&pool, &boot)
         .await
         .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
 
-    let sources = record_service_sources(&pool)
+    let sources = record_service_sources(&pool, &boot, &services)
         .await
         .map_err(JobError::from)?;
 
@@ -102,10 +108,6 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         "governance bootstrap completed"
     );
     Ok(JobResult::success().with_duration(duration_ms))
-}
-
-fn composed_services_root() -> Result<std::path::PathBuf, JobError> {
-    Ok(systemprompt::loader::services_root::ServicesRootBootstrap::require()?.path)
 }
 
 #[doc(hidden)]
@@ -168,15 +170,16 @@ pub fn check_governance_config(
 }
 
 #[doc(hidden)]
-pub fn check_judge_config(config: &systemprompt::manifest::ServicesConfig) -> Result<(), JobError> {
+pub fn check_judge_config(
+    config: &systemprompt::manifest::ServicesConfig,
+    profile: &systemprompt::manifest::Profile,
+) {
     let owner = config
         .plugins
         .values()
         .find(|p| p.enabled && p.hooks.judge)
         .map(|p| p.id.as_str());
-    let automatic = systemprompt::config::ProfileBootstrap::get()?
-        .judge
-        .automatic;
+    let automatic = profile.judge.automatic;
     if let Some(owner) = owner {
         tracing::info!(owner, automatic, "conversation judge configured");
     } else {
@@ -184,7 +187,6 @@ pub fn check_judge_config(config: &systemprompt::manifest::ServicesConfig) -> Re
             "no enabled plugin sets hooks.judge: true — conversations will not be judged"
         );
     }
-    Ok(())
 }
 
 systemprompt::traits::submit_job!(&GovernanceBootstrapJob);

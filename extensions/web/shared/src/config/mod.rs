@@ -14,8 +14,7 @@ use url::Url;
 pub use crate::config_errors::{ExtensionConfigError, ExtensionConfigErrors};
 
 mod config_paths;
-pub use config_paths::ProfilePathsError;
-use config_paths::{resolve_blog_config_path, validate_content_source};
+use config_paths::{blog_config_path, validate_content_source};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BlogConfigRaw {
@@ -78,14 +77,20 @@ pub struct ContentSourceValidated {
 }
 
 impl BlogConfigValidated {
-    pub fn validate(raw: BlogConfigRaw, base_path: &Path) -> Result<Self, ExtensionConfigErrors> {
+    pub fn validate(
+        raw: BlogConfigRaw,
+        base_path: &Path,
+        services_dir: &Path,
+    ) -> Result<Self, ExtensionConfigErrors> {
         let mut errors = ExtensionConfigErrors::new("blog");
 
         let base_url = validate_base_url(&raw.base_url, &mut errors);
 
         let mut content_sources = Vec::with_capacity(raw.content_sources.len());
         for (i, src) in raw.content_sources.into_iter().enumerate() {
-            if let Some(validated) = validate_content_source(src, i, base_path, &mut errors) {
+            if let Some(validated) =
+                validate_content_source(src, i, base_path, services_dir, &mut errors)
+            {
                 content_sources.push(validated);
             }
         }
@@ -100,10 +105,10 @@ impl BlogConfigValidated {
         }
     }
 
-    pub fn load_from_file(path: &Path) -> Result<Self, ExtensionConfigErrors> {
+    pub fn load_from_file(path: &Path, services_dir: &Path) -> Result<Self, ExtensionConfigErrors> {
         let raw = Self::read_raw(path)?;
         let base_path = path.parent().unwrap_or_else(|| Path::new("."));
-        Self::validate(raw, base_path)
+        Self::validate(raw, base_path, services_dir)
     }
 
     fn read_raw(path: &Path) -> Result<BlogConfigRaw, ExtensionConfigErrors> {
@@ -120,10 +125,12 @@ impl BlogConfigValidated {
         })
     }
 
-    pub fn load_from_profile_or_none() -> Result<Option<Arc<Self>>, ExtensionConfigErrors> {
-        let config_path = resolve_blog_config_path()?;
+    pub fn load_from_services(
+        services_dir: &Path,
+    ) -> Result<Option<Arc<Self>>, ExtensionConfigErrors> {
+        let config_path = blog_config_path(services_dir);
         if config_path.exists() {
-            Self::load_from_file(&config_path).map(|c| Some(Arc::new(c)))
+            Self::load_from_file(&config_path, services_dir).map(|c| Some(Arc::new(c)))
         } else {
             Ok(None)
         }

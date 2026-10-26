@@ -20,9 +20,6 @@ pub enum JobError {
     #[error("Configuration error: {0}")]
     CoreConfig(#[from] systemprompt::models::errors::GlobalConfigError),
 
-    #[error("Profile error: {0}")]
-    Profile(#[from] systemprompt::config::ProfileBootstrapError),
-
     #[error("Services config error: {0}")]
     Services(#[from] systemprompt::loader::ConfigLoadError),
 

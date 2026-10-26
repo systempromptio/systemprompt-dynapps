@@ -1,7 +1,7 @@
 //! JSON API, webhook, and secrets routes.
 
 use std::sync::Arc;
-use systemprompt::security::keys::SigningKeys;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::Router;
 use axum::http::HeaderMap;
@@ -23,6 +23,7 @@ pub(crate) fn build(
         &db.write,
         Arc::clone(&db.managed),
         Arc::clone(&db.farm),
+        Arc::clone(db.boot.secrets()),
     );
     let webhook_api =
         admin::hooks_webhook_router(&db.db, Arc::clone(&db.write), Arc::clone(session_service));
@@ -37,8 +38,8 @@ pub(crate) fn build(
             "/auth/session",
             post(api::auth::set_session).delete({
                 let pool = Arc::clone(&db.write);
-                move |axum::Extension(keys): axum::Extension<SigningKeys>, headers: HeaderMap| {
-                    sign_out::sign_out(Arc::clone(&pool), keys, headers)
+                move |axum::Extension(boot): axum::Extension<ExtensionBoot>, headers: HeaderMap| {
+                    sign_out::sign_out(Arc::clone(&pool), boot, headers)
                 }
             }),
         )
@@ -46,7 +47,7 @@ pub(crate) fn build(
         .merge(bridge_identity)
         .merge(systemprompt_web_admin_platform::connector_api_router(
             Arc::clone(&db.write),
-            admin::service_accounts(&db.read, &db.write),
+            admin::service_accounts(&db.read, &db.write, Arc::clone(db.boot.secrets())),
         ))
         .merge(webhook_api)
         .merge(secrets_api)

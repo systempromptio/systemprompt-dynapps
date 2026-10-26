@@ -33,7 +33,7 @@ pub fn list_plugins_for_roles_full(
     let agents_path = services_path.join("agents");
     let is_admin = crate::types::roles_grant_manage(roles);
     let mut overviews = Vec::new();
-    for (_id, plugin) in plugin_loader::load_all_plugins()? {
+    for (_id, plugin) in plugin_loader::load_all_plugins(services_path)? {
         if !plugin.base.enabled && !is_admin {
             continue;
         }

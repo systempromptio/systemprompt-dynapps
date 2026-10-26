@@ -19,7 +19,9 @@ mod core;
 mod refresh;
 mod status;
 
+use crate::handlers::deps::PlaneDeps;
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::Json;
 use axum::extract::{Extension, Path, State};
@@ -106,26 +108,27 @@ pub(crate) struct ApplyResponse {
     pub drift_after: PlaneDrift,
 }
 
-fn plane_or_404(id: &str) -> AdminResult<Box<dyn SyncPlane>> {
-    find_plane(id).ok_or_else(|| AdminError::NotFound(format!("no sync plane '{id}'")))
+fn plane_or_404(boot: &ExtensionBoot, id: &str) -> AdminResult<Box<dyn SyncPlane>> {
+    find_plane(boot, id).ok_or_else(|| AdminError::NotFound(format!("no sync plane '{id}'")))
 }
 
 pub(crate) async fn drift_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(core_planes): Extension<CorePlanes>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(plane): Path<String>,
 ) -> AdminResult<Response> {
     if core_plane_meta(&plane).is_some() {
         return Ok(Json(core_planes.diff(&plane).await?).into_response());
     }
-    let plane = plane_or_404(&plane)?;
+    let plane = plane_or_404(&boot, &plane)?;
     Ok(Json(plane.drift(&pool).await?).into_response())
 }
 
 pub(crate) async fn apply_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
-    Extension(core_planes): Extension<CorePlanes>,
+    PlaneDeps { core_planes, boot }: PlaneDeps,
     Path(plane): Path<String>,
     Json(body): Json<ApplyRequest>,
 ) -> AdminResult<Response> {
@@ -140,7 +143,7 @@ pub(crate) async fn apply_handler(
         }
         return core::apply_core(&pool, &core_planes, &user_ctx, meta, &body).await;
     }
-    let plane = plane_or_404(&plane)?;
+    let plane = plane_or_404(&boot, &plane)?;
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden(
             "Applying this plane needs an administrator".to_owned(),
@@ -212,12 +215,13 @@ pub(crate) async fn export_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     Extension(core_planes): Extension<CorePlanes>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(plane): Path<String>,
 ) -> AdminResult<Response> {
     if let Some(meta) = core_plane_meta(&plane) {
         return core::export_core(&pool, &core_planes, &user_ctx, meta).await;
     }
-    let plane = plane_or_404(&plane)?;
+    let plane = plane_or_404(&boot, &plane)?;
     let Some(export) = plane.export(&pool).await? else {
         return Err(AdminError::NotFound(format!(
             "plane '{}' has no file form to export",

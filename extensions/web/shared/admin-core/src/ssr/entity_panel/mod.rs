@@ -49,6 +49,7 @@ pub fn entity_access_url(entity_type: &str, entity_id: &str) -> Option<String> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct PanelRequest<'a> {
+    pub boot: &'a crate::extension_boot::ExtensionBoot,
     pub entity_type: &'a str,
     pub entity_id: &'a str,
     pub page_url: &'a str,
@@ -102,9 +103,10 @@ fn subject_names(options: &SubjectOptions) -> HashMap<(String, String), String> 
 async fn review_for(
     pool: &PgPool,
     services: &crate::extension_services::ExtensionServices,
+    boot: &crate::extension_boot::ExtensionBoot,
     key: &str,
 ) -> AdminResult<Option<ReviewedEntity>> {
-    let declared = declared_now(&services.config()).await?;
+    let declared = declared_now(&services.config(), boot.services_root()).await?;
     let drift = drift_now(pool, &declared).await?;
     let split = reviews_for(pool, &drift).await?;
     Ok(split
@@ -136,7 +138,7 @@ pub async fn build_entity_panel(
     let entity = (req.entity_type, req.entity_id);
     let mut reaches = reach::resolved_reach(pool, services, entity, &subjects, &mut faults).await;
     reaches.extend(reach::ruled_reach(&rows));
-    let (review, drift_unreadable) = match review_for(pool, services, &key).await {
+    let (review, drift_unreadable) = match review_for(pool, services, req.boot, &key).await {
         Ok(review) => (review, None),
         Err(e) => (None, Some(e.to_string())),
     };

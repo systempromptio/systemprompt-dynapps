@@ -7,8 +7,8 @@
 //! is a console rule.
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::BootServices;
 
-use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Serialize;
@@ -56,9 +56,7 @@ struct GatewayRoutePageData {
 pub(crate) async fn gateway_route_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
-    Extension(services): Extension<
-        systemprompt_web_admin_core::extension_services::ExtensionServices,
-    >,
+    BootServices { boot, services }: BootServices,
     Path(route_id): Path<RouteId>,
     Query(query): Query<RouteQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -77,6 +75,7 @@ pub(crate) async fn gateway_route_page(
         &pool,
         &services,
         PanelRequest {
+            boot: &boot,
             entity_type: ENTITY_GATEWAY_ROUTE,
             entity_id: route_id.as_str(),
             page_url: &page_url,

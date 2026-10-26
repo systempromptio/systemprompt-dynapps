@@ -24,9 +24,9 @@ use systemprompt::prelude::PgPool;
 
 use systemprompt_web_admin_identity::repositories::users::user_settings::find_user_settings;
 
-use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::scope::Participation;
 use systemprompt_web_admin_core::ssr::viewer_tz::{Tz, parse_tz, with_viewer_tz};
 use systemprompt_web_admin_core::types::{
@@ -77,9 +77,11 @@ impl SessionInputs {
     pub(crate) fn from_request(request: &Request, pat_allowed: bool) -> Self {
         let cookie = request
             .extensions()
-            .get::<SigningKeys>()
-            .ok_or_else(|| AdminError::internal("signing keys are not layered on this router"))
-            .and_then(|keys| extract_user_from_cookie(keys, request.headers()));
+            .get::<ExtensionBoot>()
+            .ok_or_else(|| AdminError::internal("boot values are not layered on this router"))
+            .and_then(|boot| {
+                extract_user_from_cookie(boot.token_authority().as_ref(), request.headers())
+            });
         let pat = cookie
             .is_err()
             .then(|| pat::pat_request(request, pat_allowed))

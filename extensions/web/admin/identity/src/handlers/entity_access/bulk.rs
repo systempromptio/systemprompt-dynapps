@@ -29,11 +29,12 @@ pub(crate) async fn list_all_entity_access_handler(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AllAccessQuery>,
 ) -> AdminResult<Response> {
     let kind = validate_entity_type(&query.entity_type)?;
-    let entity_ids = collect_entity_ids(&services, &query.entity_type)?;
+    let entity_ids = collect_entity_ids(&services, &boot, &query.entity_type)?;
     let r = repo(&pool);
     let bulk = r
         .list_rules_bulk(kind, &entity_ids)
@@ -69,6 +70,7 @@ pub(crate) async fn apply_template_handler(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     Json(body): Json<ApplyTemplateBody>,
@@ -90,7 +92,7 @@ pub(crate) async fn apply_template_handler(
         ));
     }
 
-    let entity_ids = collect_entity_ids(&services, &body.entity_type)?;
+    let entity_ids = collect_entity_ids(&services, &boot, &body.entity_type)?;
     let r = repo(&pool);
     let source = console_source(&user_ctx.user_id);
     let subject = TemplateSubject {

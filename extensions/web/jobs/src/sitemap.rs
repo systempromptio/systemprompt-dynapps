@@ -47,7 +47,8 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let content_repo = systemprompt::content::ContentRepository::new(db_pool);
 
-    generate_sitemap(content_repo, paths).await?;
+    let config = ctx.get::<Arc<systemprompt::manifest::Config>>()?;
+    generate_sitemap(content_repo, config, paths).await?;
 
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 

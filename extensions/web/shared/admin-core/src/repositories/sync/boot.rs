@@ -19,6 +19,7 @@ use super::plane::{Actor, SyncMode, SyncPlane};
 use super::plane_ids;
 use super::registry::find_plane;
 use crate::error::{AdminError, AdminResult};
+use crate::extension_boot::ExtensionBoot;
 
 pub const BOOT_ORDER: [&str; 2] = [plane_ids::GROUPS, plane_ids::GATEWAY_ROUTES];
 
@@ -87,16 +88,16 @@ pub async fn reconcile_plane(pool: &PgPool, plane: &dyn SyncPlane) -> AdminResul
     Ok(boot)
 }
 
-pub async fn reconcile_all(pool: &PgPool) -> AdminResult<BootReport> {
+pub async fn reconcile_all(pool: &PgPool, boot: &ExtensionBoot) -> AdminResult<BootReport> {
     let mut report = BootReport::default();
     for id in BOOT_ORDER {
-        let plane = find_plane(id)
+        let plane = find_plane(boot, id)
             .ok_or_else(|| AdminError::internal(format!("sync plane '{id}' is not registered")))?;
-        let boot = reconcile_plane(pool, plane.as_ref()).await?;
+        let seeded = reconcile_plane(pool, plane.as_ref()).await?;
         if id == plane_ids::GROUPS {
-            report.groups = boot;
+            report.groups = seeded;
         } else {
-            report.gateway_routes = boot;
+            report.gateway_routes = seeded;
         }
     }
     Ok(report)

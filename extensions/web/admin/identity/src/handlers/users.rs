@@ -14,7 +14,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
@@ -139,13 +138,14 @@ pub(crate) async fn restore_user_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     Extension(tasks): Extension<BackgroundTasks>,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     Path(user_id_raw): Path<String>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }
-    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
+    let profile = boot.profile();
     let window_days = i32::try_from(profile.retention.archived_users_days).unwrap_or(i32::MAX);
     if !repositories::users::mutations::restore_user(&pool, &user_id, window_days).await? {
         return Err(AdminError::Conflict(format!(

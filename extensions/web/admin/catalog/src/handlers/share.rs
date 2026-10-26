@@ -17,6 +17,7 @@
 //! cannot tell tampered, expired and unknown apart.
 
 use std::sync::Arc;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Response};
@@ -25,7 +26,6 @@ use base64::Engine;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
-use systemprompt::config::SecretsBootstrap;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
@@ -104,6 +104,7 @@ struct ShareTokenResponse {
 }
 
 pub(crate) async fn issue_share_token_handler(
+    Extension(boot): Extension<ExtensionBoot>,
     Extension(user_ctx): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,
     Path(target_user_id): Path<String>,
@@ -112,7 +113,10 @@ pub(crate) async fn issue_share_token_handler(
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }
     let target_user_id = UserId::new(target_user_id);
-    let secret = SecretsBootstrap::manifest_signing_secret_seed().map_err(AdminError::internal)?;
+    let secret = boot
+        .secrets()
+        .manifest_signing_secret_seed()
+        .map_err(AdminError::internal)?;
     let version = systemprompt_web_admin_core::repositories::share_token::find_share_token_version(
         &pool,
         &target_user_id,
@@ -147,13 +151,17 @@ struct ManifestResponse {
 }
 
 pub(crate) async fn public_manifest_handler(
+    Extension(boot): Extension<ExtensionBoot>,
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
     State(pool): State<Arc<PgPool>>,
     Path(token): Path<String>,
 ) -> AdminResult<Response> {
-    let secret = SecretsBootstrap::manifest_signing_secret_seed().map_err(AdminError::internal)?;
+    let secret = boot
+        .secrets()
+        .manifest_signing_secret_seed()
+        .map_err(AdminError::internal)?;
     let Some((user_id, version)) = verify(&secret, &token) else {
         return Err(AdminError::Unauthorized(
             "Invalid or revoked token".to_owned(),
@@ -185,7 +193,7 @@ pub(crate) async fn public_manifest_handler(
         ));
     }
 
-    Ok(Json(build_user_manifest(&pool, &services, &user_id).await?).into_response())
+    Ok(Json(build_user_manifest(&boot, &pool, &services, &user_id).await?).into_response())
 }
 
 fn opt_desc(desc: String) -> Option<String> {
@@ -234,11 +242,12 @@ fn collect_manifest_sections(
 }
 
 async fn build_user_manifest(
+    boot: &ExtensionBoot,
     pool: &PgPool,
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     user_id: &UserId,
 ) -> AdminResult<ManifestResponse> {
-    let services_path = shared::get_services_path()?;
+    let services_path = shared::get_services_path(boot);
     let sections_in = collect_manifest_sections(&services_path);
 
     let matrix = systemprompt_web_admin_core::repositories::entitlement::filter_catalog_for_user(

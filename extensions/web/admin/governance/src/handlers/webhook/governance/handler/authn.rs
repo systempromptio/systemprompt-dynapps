@@ -8,9 +8,9 @@ use systemprompt::governance::authz::{Decision, DenyReason};
 use systemprompt::identifiers::{ClientId, SessionId, UserId};
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::OauthError;
-use systemprompt::security::keys::SigningKeys;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
-use crate::handlers::webhook::helpers::{extract_bearer_token, get_jwt_issuer};
+use crate::handlers::webhook::helpers::extract_bearer_token;
 
 use super::super::types::AuthDenialParams;
 use super::response::HookVerdict;
@@ -34,7 +34,7 @@ pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
 // Why: a Claude Code `PreToolUse` hook treats a 401 as "hook unavailable" and
 // allows the call, so this `Err` is a 200 deny verdict, never an `AdminError`.
 pub(super) fn authenticate_request(
-    keys: &SigningKeys,
+    boot: &ExtensionBoot,
     headers: &HeaderMap,
     denial_params: &AuthDenialParams<'_>,
 ) -> Result<Principal, Box<HookVerdict>> {
@@ -47,24 +47,12 @@ pub(super) fn authenticate_request(
         )));
     };
 
-    let jwt_issuer = match get_jwt_issuer() {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!(error = %e, "Failed to load JWT config");
-            let reason = "Internal configuration error — tool call blocked";
-            spawn_auth_denial(denial_params, reason);
-            return Err(Box::new(HookVerdict::new(
-                deny_for_auth_failure(reason),
-                denial_params.hook_event_name,
-            )));
-        },
-    };
+    let jwt_issuer = &boot.config().jwt_issuer;
 
     let expected_aud = "hook|plugin|api";
     let claims = systemprompt::oauth::validate_jwt_token(
-        keys,
+        boot.token_authority().as_ref(),
         token,
-        &jwt_issuer,
         &[
             JwtAudience::Resource("hook".to_owned()),
             JwtAudience::Resource("plugin".to_owned()),
@@ -72,7 +60,7 @@ pub(super) fn authenticate_request(
         ],
     )
     .map_err(|e| {
-        log_jwt_failure(&e, expected_aud, &jwt_issuer);
+        log_jwt_failure(&e, expected_aud, jwt_issuer);
         let reason = "Invalid or expired token — tool call blocked";
         spawn_auth_denial(denial_params, reason);
         Box::new(HookVerdict::new(

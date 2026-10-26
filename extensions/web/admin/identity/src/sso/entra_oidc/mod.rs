@@ -84,11 +84,8 @@ impl EntraOidcProvider {
 // Why: core calls this hook once at discovery; only the client secret's
 // presence is checked, its value is re-read at every code redemption.
 pub fn factory(ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
-    let services_root = systemprompt::loader::services_root::ServicesRootBootstrap::require()
-        .inspect_err(|error| tracing::warn!(%error, "Entra OIDC: no services root; provider off"))
-        .ok()?
-        .path;
-    let cfg = EntraOidcConfig::load(&services_root, &ctx.config.api_external_url)
+    let services_root = &ctx.services_root.path;
+    let cfg = EntraOidcConfig::load(services_root, &ctx.config.api_external_url)
         .inspect_err(|error| tracing::error!(%error, "Entra OIDC config rejected; provider off"))
         .ok()
         .map(Arc::new)?;
@@ -100,7 +97,10 @@ pub fn factory(ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
         }
         return None;
     }
-    let secret = ClientSecretSource::Store(cfg.client_secret_secret.clone());
+    let secret = ClientSecretSource::Store {
+        store: Arc::clone(&ctx.secrets),
+        key: cfg.client_secret_secret.clone(),
+    };
     if secret.current().is_none() {
         tracing::warn!(
             key = %cfg.client_secret_secret,

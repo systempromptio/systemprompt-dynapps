@@ -9,18 +9,22 @@
 //! and only the `error` code of a 4xx one is surfaced.
 
 use std::fmt;
+use std::sync::Arc;
 
 use serde::Deserialize;
-use systemprompt::config::SecretsBootstrap;
 use systemprompt::models::net::validate_outbound_url;
 use systemprompt::sso::SsoError;
+use systemprompt::traits::SecretStore;
 
 use super::super::error::SsoProviderError;
 
 /// Where the OIDC client secret is read from at each code redemption.
 #[derive(Clone)]
 pub enum ClientSecretSource {
-    Store(String),
+    Store {
+        store: Arc<dyn SecretStore>,
+        key: String,
+    },
     Fixed(String),
 }
 
@@ -28,7 +32,7 @@ impl ClientSecretSource {
     #[must_use]
     pub fn current(&self) -> Option<String> {
         let secret = match self {
-            Self::Store(key) => SecretsBootstrap::get().ok()?.get(key).cloned()?,
+            Self::Store { store, key } => store.secret(key)?.expose().to_owned(),
             Self::Fixed(secret) => secret.clone(),
         };
         Some(secret).filter(|secret| !secret.is_empty())
@@ -38,7 +42,7 @@ impl ClientSecretSource {
 impl fmt::Debug for ClientSecretSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Store(key) => f.debug_tuple("Store").field(key).finish(),
+            Self::Store { key, .. } => f.debug_struct("Store").field("key", key).finish(),
             Self::Fixed(_) => f.write_str("Fixed(..)"),
         }
     }

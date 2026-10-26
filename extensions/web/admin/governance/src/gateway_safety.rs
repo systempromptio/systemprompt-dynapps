@@ -28,6 +28,7 @@ use systemprompt::gateway::{
 };
 use systemprompt::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
+use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::governance::policy::{GovernanceConfig, GovernedInput, SecretScanner};
 
 #[derive(Debug, Clone, Default)]
@@ -49,18 +50,15 @@ impl SecretsScanner {
     }
 
     #[must_use]
-    pub fn from_services_root() -> Self {
+    pub fn from_services_root(services_root: &std::path::Path) -> Self {
         Self {
-            scanner: configured_scanner(),
+            scanner: configured_scanner(services_root),
         }
     }
 }
 
-fn configured_scanner() -> Option<SecretScanner> {
-    let root = systemprompt::loader::services_root::ServicesRootBootstrap::require()
-        .inspect_err(|error| tracing::error!(%error, "response secret scanner: no services root"))
-        .ok()?;
-    let path = root.path.join("governance/config.yaml");
+fn configured_scanner(services_root: &std::path::Path) -> Option<SecretScanner> {
+    let path = services_root.join("governance/config.yaml");
     let text = std::fs::read_to_string(&path)
         .inspect_err(|error| tracing::error!(%error, "response secret scanner: config unreadable"))
         .ok()?;
@@ -134,7 +132,9 @@ impl SecretsScanner {
 }
 
 register_safety_scanner!(
-    |_: &ScannerSettings| SecretsScanner::from_services_root(),
+    |ctx: &dyn ExtensionContext, _: &ScannerSettings| {
+        SecretsScanner::from_services_root(&ctx.services_root().path)
+    },
     name = "secrets"
 );
 
@@ -287,6 +287,6 @@ fn digit_adjacent(bytes: &[u8], start: usize, end: usize) -> bool {
 }
 
 register_safety_scanner!(
-    |_: &ScannerSettings| PiiScanner::new(),
+    |_: &dyn ExtensionContext, _: &ScannerSettings| PiiScanner::new(),
     name = "pii_extended"
 );

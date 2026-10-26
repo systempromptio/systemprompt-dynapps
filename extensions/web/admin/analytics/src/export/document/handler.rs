@@ -27,6 +27,7 @@ use crate::repositories::analytics::context_detail::find_context_header;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::export::model::ExportContext;
 use systemprompt_web_admin_core::export::transcripts::{MAX_CONVERSATIONS, TranscriptSource};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::conversations::get_history_scope;
 use systemprompt_web_admin_core::repositories::scope::visibility::may_view;
 use systemprompt_web_admin_core::types::UserContext;
@@ -124,10 +125,11 @@ fn may_export_set(user: &UserContext, ctx: &ExportContext<'_>) -> AdminResult<()
 
 pub(crate) async fn export_conversations(
     Extension(user): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Response> {
-    let ctx = ExportContext::new(&pool, &user, uri);
+    let ctx = ExportContext::new(&pool, &boot, &user, uri);
     may_export_set(&user, &ctx)?;
     let selection = resolve_selection(&pool, &user, &ctx).await?;
     let opts = options_for(&user);
@@ -182,10 +184,11 @@ pub(crate) struct TranscriptsPreview {
 
 pub(crate) async fn export_conversations_preview(
     Extension(user): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Json<TranscriptsPreview>> {
-    let ctx = ExportContext::new(&pool, &user, uri);
+    let ctx = ExportContext::new(&pool, &boot, &user, uri);
     may_export_set(&user, &ctx)?;
     let selection = resolve_selection(&pool, &user, &ctx).await?;
     Ok(Json(TranscriptsPreview {

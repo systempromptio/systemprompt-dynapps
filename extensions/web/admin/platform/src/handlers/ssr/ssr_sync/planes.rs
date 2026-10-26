@@ -33,6 +33,7 @@ pub(crate) struct PlaneRowView {
 
 pub(super) async fn plane_rows(
     pool: &PgPool,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     core_planes: &CorePlanes,
 ) -> AdminResult<Vec<PlaneRowView>> {
     let mut out = Vec::new();
@@ -64,8 +65,8 @@ pub(super) async fn plane_rows(
             review_url: card.sync_url.to_owned(),
         });
     }
-    for plane in planes() {
-        let Some(card) = plane_card_by_id(pool, plane.id(), "").await? else {
+    for plane in planes(boot) {
+        let Some(card) = plane_card_by_id(pool, boot, plane.id(), "").await? else {
             continue;
         };
         out.push(PlaneRowView {

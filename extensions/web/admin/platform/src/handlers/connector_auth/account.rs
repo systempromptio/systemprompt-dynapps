@@ -14,19 +14,19 @@ use axum::{Extension, Json};
 use chrono::Utc;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::connections::source::get_connections;
 use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 pub(crate) async fn list(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
     State(pool): State<Arc<PgPool>>,
-    Extension(keys): Extension<SigningKeys>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &keys, &headers, false).await?;
+    let user = live_user(&pool, &boot, &headers, false).await?;
     Ok((
         [(CACHE_CONTROL, "no-store")],
         Json(get_connections(&pool, &services, &user.user_id).await?),
@@ -39,11 +39,11 @@ pub(crate) async fn disconnect(
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
     State(pool): State<Arc<PgPool>>,
-    Extension(keys): Extension<SigningKeys>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &keys, &headers, true).await?;
+    let user = live_user(&pool, &boot, &headers, true).await?;
     let mut tx = pool.begin().await?;
     let mut row = accounts::get_locked_account(&mut tx, &user.user_id, provider.slug()).await?;
     credentials::delete(&mut tx, &user.user_id, provider.slug()).await?;
@@ -72,16 +72,25 @@ pub(crate) async fn test(
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
     State(pool): State<Arc<PgPool>>,
-    Extension(keys): Extension<SigningKeys>,
+    Extension(boot): Extension<ExtensionBoot>,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &keys, &headers, true).await?;
+    let user = live_user(&pool, &boot, &headers, true).await?;
     service::require_entitlement(&services, &pool, &user.user_id, provider.clone()).await?;
     let report = if provider.is_session_attested(&services.config()) {
         service::probe_session_connection(&services, &pool, &user.user_id, &provider).await?
     } else {
-        oauth::probe_connection(&services, &pool, &user.user_id, provider.clone()).await?
+        oauth::probe_connection(
+            oauth::ConnectorAccess {
+                services: &services,
+                secrets: boot.secrets().as_ref(),
+            },
+            &pool,
+            &user.user_id,
+            provider.clone(),
+        )
+        .await?
     };
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), ok = report.ok, "connector_probed");
     let mut snapshot = get_connections(&pool, &services, &user.user_id).await?;

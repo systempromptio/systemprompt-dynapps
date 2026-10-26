@@ -13,7 +13,7 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
-use systemprompt::loader::ConfigLoader;
+use systemprompt::manifest::services::ServicesConfig;
 use systemprompt::manifest::services::catalog::CatalogContext;
 use systemprompt::models::execution::context::RequestContext;
 
@@ -38,8 +38,7 @@ pub(crate) struct ReportModel {
 }
 
 impl ReportModel {
-    pub(crate) fn judge_model() -> AdminResult<Self> {
-        let services = ConfigLoader::load().map_err(AdminError::internal)?;
+    pub(crate) fn judge_model(services: &ServicesConfig) -> AdminResult<Self> {
         let judge = services
             .scheduler
             .as_ref()
@@ -146,18 +145,28 @@ async fn call_model(
     Ok(())
 }
 
+pub(crate) struct ReportJob {
+    pub(crate) requested_by: UserId,
+    pub(crate) row: AnalysisReportRow,
+    pub(crate) lease: String,
+}
+
 pub(crate) async fn generate_report(
     pool: Arc<PgPool>,
     ai: Option<Arc<AiService>>,
-    requested_by: UserId,
-    row: AnalysisReportRow,
-    lease: String,
+    services: Arc<ServicesConfig>,
+    job: ReportJob,
 ) {
+    let ReportJob {
+        requested_by,
+        row,
+        lease,
+    } = job;
     let outcome = match ai {
         None => Err(AdminError::internal(
             "no AI provider is configured on this instance, so a report cannot be written",
         )),
-        Some(ai) => match ReportModel::judge_model() {
+        Some(ai) => match ReportModel::judge_model(&services) {
             Err(error) => Err(error),
             Ok(model) => {
                 let grant = Grant {

@@ -5,6 +5,7 @@ mod completion;
 pub(crate) mod consent;
 mod deps;
 pub(crate) mod identity;
+pub(crate) mod token;
 
 use crate::repositories::connectors::{
     connector_accounts as accounts, connector_credentials as credentials,
@@ -13,13 +14,14 @@ use crate::services::connector_oauth as oauth;
 use axum::http::HeaderMap;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt::security::keys::SigningKeys;
+use systemprompt::traits::SecretStore;
 use systemprompt_web_admin_core::auth::session::extract_mcp_accessor_user;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
-fn require_broker(headers: &HeaderMap) -> AdminResult<()> {
+fn require_broker(secrets: &dyn SecretStore, headers: &HeaderMap) -> AdminResult<()> {
     use sha2::{Digest, Sha256};
-    let expected = oauth::config::secret("mcp_credential_broker_secret")?;
+    let expected = oauth::config::secret(secrets, "mcp_credential_broker_secret")?;
     let presented = headers
         .get("x-systemprompt-credential-broker")
         .and_then(|v| v.to_str().ok())
@@ -34,7 +36,7 @@ fn require_broker(headers: &HeaderMap) -> AdminResult<()> {
 
 async fn live_user(
     pool: &PgPool,
-    keys: &SigningKeys,
+    boot: &ExtensionBoot,
     headers: &HeaderMap,
     mutation: bool,
 ) -> AdminResult<systemprompt_web_admin_core::types::CookieSession> {
@@ -44,10 +46,7 @@ async fn live_user(
             .get("origin")
             .and_then(|h| h.to_str().ok())
             .ok_or_else(|| AdminError::Forbidden("Same-origin request required".into()))?;
-        let base = systemprompt::manifest::Config::get()?
-            .api_external_url
-            .clone();
-        let expected = url::Url::parse(&base)
+        let expected = url::Url::parse(&boot.config().api_external_url)
             .map_err(AdminError::internal)?
             .origin()
             .ascii_serialization();
@@ -57,7 +56,7 @@ async fn live_user(
             ));
         }
     }
-    let user = extract_mcp_accessor_user(keys, headers)?;
+    let user = extract_mcp_accessor_user(boot.token_authority().as_ref(), headers)?;
     let session = user
         .session_id
         .as_ref()
@@ -70,25 +69,9 @@ async fn live_user(
     Ok(user)
 }
 
-async fn store_verified(pool: &PgPool, user: &UserId, grant: &oauth::Grant) -> AdminResult<()> {
-    let mut tx = pool.begin().await?;
-    let mut row = accounts::get_locked_account(&mut tx, user, grant.provider.slug()).await?;
-    if row.generation != grant.generation {
-        return Err(AdminError::Conflict(
-            "Connection changed during authorization; start again".into(),
-        ));
-    }
-    credentials::store(&mut tx, user, grant.provider.slug(), &oauth::seal(grant)?).await?;
-    account::apply_verified(&mut row, grant);
-    row.generation += 1;
-    accounts::update_account(&mut tx, user, &row).await?;
-    accounts::delete_pending(&mut tx, user, grant.provider.slug()).await?;
-    tx.commit().await?;
-    Ok(())
-}
-
-async fn store_pending_verification(
+async fn store_verified(
     pool: &PgPool,
+    secrets: &dyn SecretStore,
     user: &UserId,
     grant: &oauth::Grant,
 ) -> AdminResult<()> {
@@ -99,7 +82,41 @@ async fn store_pending_verification(
             "Connection changed during authorization; start again".into(),
         ));
     }
-    credentials::store(&mut tx, user, grant.provider.slug(), &oauth::seal(grant)?).await?;
+    credentials::store(
+        &mut tx,
+        user,
+        grant.provider.slug(),
+        &oauth::seal(secrets, grant)?,
+    )
+    .await?;
+    account::apply_verified(&mut row, grant);
+    row.generation += 1;
+    accounts::update_account(&mut tx, user, &row).await?;
+    accounts::delete_pending(&mut tx, user, grant.provider.slug()).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn store_pending_verification(
+    pool: &PgPool,
+    secrets: &dyn SecretStore,
+    user: &UserId,
+    grant: &oauth::Grant,
+) -> AdminResult<()> {
+    let mut tx = pool.begin().await?;
+    let mut row = accounts::get_locked_account(&mut tx, user, grant.provider.slug()).await?;
+    if row.generation != grant.generation {
+        return Err(AdminError::Conflict(
+            "Connection changed during authorization; start again".into(),
+        ));
+    }
+    credentials::store(
+        &mut tx,
+        user,
+        grant.provider.slug(),
+        &oauth::seal(secrets, grant)?,
+    )
+    .await?;
     row.status = "verification_required".into();
     row.auth_method = Some(grant.auth_method.clone());
     row.account_id = None;

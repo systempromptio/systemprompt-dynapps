@@ -23,9 +23,9 @@ use sha2::Digest;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
-use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::event_hub::EventHub;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::ingestion::webhook;
 use systemprompt_web_admin_core::types::webhook::HookEventPayload;
 
@@ -62,13 +62,13 @@ pub(crate) async fn handle_hook_track(
         services,
     }: TrackDeps,
     State(pool): State<Arc<PgPool>>,
-    Extension(keys): Extension<SigningKeys>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
     // JSON: protocol boundary — the third-party hook envelope, parsed into typed
     // events by `HookEventPayload::from_value` after the raw copy is retained
     Json(mut raw): Json<serde_json::Value>,
 ) -> AdminResult<Response> {
-    let (user_id, plugin_id) = extract_and_validate_jwt(&keys, &headers)?;
+    let (user_id, plugin_id) = extract_and_validate_jwt(boot.token_authority().as_ref(), &headers)?;
     tracing::trace!(payload = %helpers::sanitize_metadata(&raw), "Hook track received payload");
     if let Some(event_id) = headers
         .get("x-ingestion-event-id")

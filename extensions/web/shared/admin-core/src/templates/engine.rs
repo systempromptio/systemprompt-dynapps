@@ -61,7 +61,7 @@ pub struct AdminTemplateEngine {
 }
 
 impl AdminTemplateEngine {
-    pub fn new(admin_dir: &Path) -> Result<Self> {
+    pub fn new(admin_dir: &Path, web_dist: &Path) -> Result<Self> {
         let mut hbs = Handlebars::new();
         hbs.set_strict_mode(true);
         hbs.set_prevent_indent(true);
@@ -71,7 +71,7 @@ impl AdminTemplateEngine {
 
         Self::register_partials_recursive(&mut hbs, &partials_dir, &partials_dir)?;
         Self::register_templates(&mut hbs, &templates_dir)?;
-        helpers::register_helpers(&mut hbs);
+        helpers::register_helpers(&mut hbs, web_dist);
 
         Ok(Self {
             hbs: Arc::new(hbs),

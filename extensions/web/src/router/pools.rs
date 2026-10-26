@@ -3,19 +3,20 @@
 //! are staged under the profile's storage scratch root) and the agent farm
 //! state (run directories under the storage data root).
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt::config::AppPaths;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::state::ManagedState;
 use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::state::FarmState;
 
+use systemprompt::ai::repository::AiRepositories;
 use systemprompt::database::{Database, DbPool};
 use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::oauth::SessionCreationService;
+use systemprompt::oauth::repository::OAuthRepositories;
 use systemprompt::prelude::PgPool;
-use systemprompt::security::keys::SigningKeys;
 use systemprompt::traits::FileStorage;
 use systemprompt::users::{SessionRepository, UserService};
 
@@ -27,6 +28,9 @@ pub(crate) struct DbHandles {
     pub farm: Arc<FarmState>,
     pub files: Arc<dyn FileStorage>,
     pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pub boot: ExtensionBoot,
+    pub oauth: Arc<OAuthRepositories>,
+    pub ai: Arc<AiRepositories>,
 }
 
 impl DbHandles {
@@ -39,12 +43,27 @@ impl DbHandles {
             Arc::clone(&read),
             Some(Arc::clone(&write)),
         ));
+        let boot = ExtensionBoot::from_context(ctx);
+        let dependencies = ctx.dependencies();
+        let oauth = dependencies
+            .get::<Arc<OAuthRepositories>>()
+            .inspect_err(|error| tracing::error!(%error, "web routes not mounted"))
+            .ok()
+            .map(Arc::clone)?;
+        let ai = dependencies
+            .get::<Arc<AiRepositories>>()
+            .inspect_err(|error| tracing::error!(%error, "web routes not mounted"))
+            .ok()
+            .map(Arc::clone)?;
+        let paths = app_paths(&boot);
         let managed = Arc::new(ManagedState::new(
             &db,
             ctx.system_owner_id(),
-            scratch_root(),
+            paths
+                .as_ref()
+                .map(|paths| paths.storage().scratch().to_path_buf()),
+            boot.services_root(),
         ));
-        let paths = app_paths();
         let files = ctx.file_storage();
         let services =
             systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx);
@@ -57,6 +76,7 @@ impl DbHandles {
                 runs,
                 tasks: ctx.background_tasks(),
                 services: services.clone(),
+                boot: boot.clone(),
             },
         );
         super::farm_public::start(&farm, paths.as_ref());
@@ -68,31 +88,25 @@ impl DbHandles {
             farm,
             files,
             services,
+            boot,
+            oauth,
+            ai,
         })
     }
 }
 
-fn app_paths() -> Option<AppPaths> {
-    let profile = ProfileBootstrap::get()
-        .map_err(|e| tracing::error!(error = %e, "Profile unavailable for the storage paths"))
-        .ok()?;
+pub(crate) fn app_paths(boot: &ExtensionBoot) -> Option<AppPaths> {
+    let profile = boot.profile();
     AppPaths::from_profile(
         &profile.paths,
         profile.path_resolution(),
-        systemprompt::loader::ServicesRootBootstrap::get().map(|root| root.path.as_path()),
+        Some(boot.services_root()),
     )
     .map_err(|e| tracing::error!(error = %e, "App paths unavailable for the storage paths"))
     .ok()
 }
 
-fn scratch_root() -> Option<PathBuf> {
-    app_paths().map(|paths| paths.storage().scratch().to_path_buf())
-}
-
-pub(crate) fn build_session_service(
-    db: &DbHandles,
-    signing_keys: SigningKeys,
-) -> Arc<SessionCreationService> {
+pub(crate) fn build_session_service(db: &DbHandles) -> Arc<SessionCreationService> {
     let dbpool = Arc::clone(&db.db);
     let user_repo = systemprompt::users::UserRepository::new(&dbpool);
     let user = UserService::new(Arc::new(user_repo));
@@ -100,6 +114,7 @@ pub(crate) fn build_session_service(
     Arc::new(SessionCreationService::new(
         Arc::new(sessions),
         Arc::new(user),
-        signing_keys,
+        Arc::clone(db.boot.token_authority()),
+        Arc::clone(db.boot.config_arc()),
     ))
 }

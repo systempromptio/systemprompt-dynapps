@@ -131,6 +131,9 @@ impl RunnerService for FarmRunner {
                     systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(
                         app.as_ref(),
                     ),
+                boot: systemprompt_web_admin_core::extension_boot::ExtensionBoot::from_context(
+                    app.as_ref(),
+                ),
             },
         );
         FarmRunnerService::new(state).run(ctx, shutdown).await;

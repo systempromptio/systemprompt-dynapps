@@ -5,10 +5,10 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::MarketplaceId;
 use systemprompt::loader::bundle::{BundleCache, cache_root};
-use systemprompt_web_admin_core::error::AdminError;
+use systemprompt::manifest::services::ServicesConfig;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
 use systemprompt_web_admin_core::ssr::format::{local_time, relative_time};
 
@@ -225,12 +225,11 @@ pub fn bundle_for<'a>(
         .or_else(|| bundles.iter().find(|b| b.name == marketplace_id))
 }
 
-pub(crate) fn load_bundles() -> Result<Vec<BundleFacts>, AdminError> {
-    let sources = build_sources()?;
-    let profile = ProfileBootstrap::get()?;
-    let cache = BundleCache::new(cache_root(profile));
+pub(crate) fn load_bundles(boot: &ExtensionBoot, services: &ServicesConfig) -> Vec<BundleFacts> {
+    let sources = build_sources(boot, services);
+    let cache = BundleCache::new(cache_root(boot.profile()));
     let state = cache.read_state();
-    Ok(sources
+    sources
         .bundles
         .into_iter()
         .map(|b| {
@@ -258,5 +257,5 @@ pub(crate) fn load_bundles() -> Result<Vec<BundleFacts>, AdminError> {
                 source_commit,
             }
         })
-        .collect())
+        .collect()
 }

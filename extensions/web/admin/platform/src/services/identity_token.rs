@@ -6,12 +6,11 @@
 //! `/.well-known/jwks.json` and reads who is calling; no provider credential
 //! and no systemprompt session token ever leaves the gateway.
 
-use jsonwebtoken::{Algorithm, Header, encode};
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::UserId;
 use systemprompt::manifest::ServicesConfig;
+use systemprompt::models::auth::TokenAuthority;
 use systemprompt::models::mcp::McpServerType;
-use systemprompt::security::keys::SigningKeys;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const TOKEN_TTL_SECS: i64 = 300;
@@ -67,9 +66,7 @@ pub fn claims(
     }
 }
 
-pub fn sign(keys: &SigningKeys, claims: &IdentityClaims) -> AdminResult<String> {
-    let mut header = Header::new(Algorithm::RS256);
-    header.typ = Some("JWT".into());
-    header.kid = Some(keys.active_kid().to_owned());
-    encode(&header, claims, keys.encoding_key()).map_err(AdminError::internal)
+pub fn sign(authority: &dyn TokenAuthority, claims: &IdentityClaims) -> AdminResult<String> {
+    let value = serde_json::to_value(claims).map_err(AdminError::internal)?;
+    authority.sign_claims(&value).map_err(AdminError::internal)
 }

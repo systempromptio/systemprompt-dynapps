@@ -141,23 +141,22 @@ fn token_validation_failure(grant: &Grant, kind: FailureKind, reason: &'static s
 
 pub async fn exchange(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    config: &systemprompt::manifest::Config,
     grant: &mut Grant,
     code: &str,
 ) -> AdminResult<()> {
-    exchange_classified(services, grant, code)
+    exchange_classified(services, config, grant, code)
         .await
         .map_err(|failure| failure.error)
 }
 
 pub(crate) async fn exchange_classified(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    config: &systemprompt::manifest::Config,
     grant: &mut Grant,
     code: &str,
 ) -> FlowResult<()> {
-    let callback = grant
-        .provider
-        .callback()
-        .map_err(FlowFailure::verification)?;
+    let callback = grant.provider.callback(config);
     exchange_request(
         services,
         grant,

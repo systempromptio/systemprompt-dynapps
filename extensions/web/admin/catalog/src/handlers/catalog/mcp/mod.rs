@@ -24,6 +24,7 @@ pub(crate) use view::McpServerRow;
 
 use std::sync::Arc;
 use systemprompt::identifiers::McpServerId;
+use systemprompt_web_admin_core::extension_boot::{BootServices, ExtensionBoot};
 
 use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
@@ -35,8 +36,7 @@ use systemprompt_web_admin_core::export::view::ExportView;
 use systemprompt_web_admin_core::request as shared;
 use systemprompt_web_admin_core::ssr::list_view::TimeRangeContext;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{ENTITY_MCP_SERVER, MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::types::{ENTITY_MCP_SERVER, UserContext};
 use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::sorting::{direction, matches, sort_headers};
@@ -77,15 +77,18 @@ fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
 }
 
 pub(crate) async fn mcp_servers_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    Extension(boot): Extension<ExtensionBoot>,
+    Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    }: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<McpListQuery>,
 ) -> AdminHtmlResult<Response> {
     console_only(&user_ctx)?;
     let range = window_of(query.preset, query.from, query.to);
-    let fleet = fleet_rows(&pool, &user_ctx.roles, range).await?;
+    let fleet = fleet_rows(boot.services_root(), &pool, &user_ctx.roles, range).await?;
     let mut servers = fleet.rows;
 
     let search = query.q.unwrap_or_default();
@@ -142,16 +145,15 @@ pub(crate) async fn mcp_servers_page(
 }
 
 pub(crate) async fn mcp_detail_page(
-    Extension(services): Extension<
-        systemprompt_web_admin_core::extension_services::ExtensionServices,
-    >,
+    deps: BootServices,
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(mcp_id): Path<McpServerId>,
     Query(query): Query<McpDetailQuery>,
 ) -> AdminHtmlResult<Response> {
+    let boot = &deps.boot;
     console_only(&shell.user)?;
-    let path = shared::get_services_path()?;
+    let path = shared::get_services_path(boot);
     let range = window_of(query.preset, query.from, query.to);
 
     let catalog = super::data::load_catalog(&path, &shell.user.roles);
@@ -178,7 +180,7 @@ pub(crate) async fn mcp_detail_page(
 
     let access = super::access::panel(
         &pool,
-        &services,
+        &deps,
         &shell.user,
         (ENTITY_MCP_SERVER, mcp_id.as_str()),
         query.why.as_deref(),

@@ -111,7 +111,12 @@ fn worker_token() -> String {
 
 pub async fn run_remote(fly: &FlyRunnerConfig, job: RemoteJob<'_>) -> FarmResult<()> {
     let target = resolve_target(fly)?;
-    let pool = RunnerPool::new(fly, &target, Arc::clone(&job.state.runs))?;
+    let pool = RunnerPool::new(
+        fly,
+        &target,
+        Arc::clone(&job.state.runs),
+        job.state.boot.secrets().as_ref(),
+    )?;
     let id = &job.claimed.row.id;
     let token = worker_token();
     let registration = job.state.runs.register(

@@ -18,6 +18,7 @@ use super::format::Format;
 use super::model::{Column, DataSet, ExportContext, Table};
 use super::{registry, window};
 use crate::error::{AdminError, AdminResult};
+use crate::extension_boot::ExtensionBoot;
 use crate::types::UserContext;
 
 const PREVIEW_COUNT_ONLY_LIMIT: i64 = 1;
@@ -50,6 +51,7 @@ fn prepare<'a>(
     id: &str,
     uri: &axum::http::Uri,
     pool: &'a PgPool,
+    boot: &'a ExtensionBoot,
     user: &'a UserContext,
 ) -> AdminResult<Prepared<'a>> {
     let dataset =
@@ -57,7 +59,7 @@ fn prepare<'a>(
     if !dataset.allows(user) {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()));
     }
-    let mut ctx = ExportContext::new(pool, user, uri.clone());
+    let mut ctx = ExportContext::new(pool, boot, user, uri.clone());
     ctx.window = window::resolve(dataset.window(), &ctx.query::<window::WindowQuery>()?)?;
     ctx.limit = dataset.cap();
     let query: ExportQuery = ctx.query()?;
@@ -111,11 +113,12 @@ fn project(all: &'static [Column], chosen: &[Column], table: Table) -> Table {
 
 pub async fn export_file(
     Extension(user): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Response> {
-    let prepared = prepare(&id, &uri, &pool, &user)?;
+    let prepared = prepare(&id, &uri, &pool, &boot, &user)?;
     let format = prepared
         .ctx
         .query::<ExportQuery>()?
@@ -129,11 +132,12 @@ pub async fn export_file(
 
 pub async fn export_preview(
     Extension(user): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Json<ExportPreview>> {
-    let mut prepared = prepare(&id, &uri, &pool, &user)?;
+    let mut prepared = prepare(&id, &uri, &pool, &boot, &user)?;
     prepared.ctx.limit = PREVIEW_COUNT_ONLY_LIMIT;
     let table = prepared.dataset.load(&prepared.ctx).await?;
     let cap = prepared.dataset.cap();

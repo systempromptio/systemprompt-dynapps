@@ -29,11 +29,20 @@ pub use resolve::TokenResolver;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
+use systemprompt::traits::SecretStore;
 use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::crypto::secret_crypto;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 pub(crate) use tokens::exchange_classified;
 pub use transport::{authorize, client, exchange, exchange_with_client, refresh_with_client};
+
+/// The services view a connector is resolved from and the secrets store its
+/// grants are sealed with.
+#[derive(Debug, Clone, Copy)]
+pub struct ConnectorAccess<'a> {
+    pub services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pub secrets: &'a dyn SecretStore,
+}
 
 /// Debug output never reveals credentials; serialization is only for the
 /// encrypted credential store, never an HTTP response.
@@ -79,8 +88,8 @@ impl std::fmt::Debug for Grant {
     }
 }
 
-pub fn seal(grant: &Grant) -> AdminResult<EncryptedGrant> {
-    let key = secret_crypto::load_master_key()?;
+pub fn seal(secrets: &dyn SecretStore, grant: &Grant) -> AdminResult<EncryptedGrant> {
+    let key = secret_crypto::load_master_key(secrets)?;
     let nonce = secret_crypto::generate_nonce();
     let bytes = serde_json::to_vec(grant).map_err(AdminError::internal)?;
     Ok(EncryptedGrant {
@@ -91,11 +100,12 @@ pub fn seal(grant: &Grant) -> AdminResult<EncryptedGrant> {
 
 pub fn open(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: &dyn SecretStore,
     row: &EncryptedGrant,
     user: &UserId,
     provider: &Provider,
 ) -> AdminResult<Grant> {
-    let key = secret_crypto::load_master_key()?;
+    let key = secret_crypto::load_master_key(secrets)?;
     let nonce = row
         .nonce
         .as_slice()
@@ -117,26 +127,26 @@ fn grant_bound_to(grant: &Grant, user: &UserId, provider: &Provider) -> bool {
 }
 
 pub async fn verified_token(
-    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    access: ConnectorAccess<'_>,
     pool: &PgPool,
     user: &UserId,
     provider: Provider,
     probe: bool,
 ) -> AdminResult<String> {
     let mut report = VerificationReport::for_provider(provider.slug());
-    TokenResolver::new(pool, services, user, &client()?)
+    TokenResolver::new(pool, access, user, &client()?)
         .resolve(provider, probe, &mut report)
         .await
 }
 
 pub async fn probe_connection(
-    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    access: ConnectorAccess<'_>,
     pool: &PgPool,
     user: &UserId,
     provider: Provider,
 ) -> AdminResult<VerificationReport> {
     let mut report = VerificationReport::for_provider(provider.slug());
-    match TokenResolver::new(pool, services, user, &client()?)
+    match TokenResolver::new(pool, access, user, &client()?)
         .resolve(provider, true, &mut report)
         .await
     {

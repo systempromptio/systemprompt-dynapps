@@ -19,7 +19,8 @@ use std::sync::Arc;
 use systemprompt::config::AppPaths;
 use systemprompt::content::ContentRepository;
 use systemprompt::database::DbPool;
-use systemprompt::generator::{organize_dist_assets, prerender_pages};
+use systemprompt::generator::{PrerenderEnv, organize_dist_assets, prerender_pages};
+use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult, JobScope};
 
 use super::{
@@ -115,12 +116,26 @@ impl PublishPipelineJob {
 
     async fn run_page_prerender(
         &self,
+        ctx: &JobContext,
         paths: &AppPaths,
         db_pool: &DbPool,
         stats: &mut PipelineStats,
     ) {
+        let app = match ctx.get::<Arc<AppContext>>() {
+            Ok(app) => app,
+            Err(e) => {
+                tracing::error!(error = %e, "Page prerendering failed");
+                stats.record_failure();
+                return;
+            },
+        };
         let content_repo = ContentRepository::new(db_pool);
-        match prerender_pages(Arc::clone(db_pool), content_repo, paths).await {
+        let env = PrerenderEnv {
+            config: app.config(),
+            paths,
+            extensions: app.as_ref(),
+        };
+        match prerender_pages(Arc::clone(db_pool), content_repo, env).await {
             Ok(results) => {
                 tracing::debug!(page_count = results.len(), "Page prerendering completed");
                 stats.record_success();
@@ -183,7 +198,7 @@ impl PublishPipelineJob {
         self.run_bundle_admin_css(paths, stats).await;
         self.run_asset_copy(paths, stats).await;
         self.run_prerender(ctx, stats).await;
-        self.run_page_prerender(paths, db_pool, stats).await;
+        self.run_page_prerender(ctx, paths, db_pool, stats).await;
         self.run_derived_files(ctx, paths, db_pool, stats).await;
         stats.record_success();
         self.run_asset_organization(paths, stats).await;

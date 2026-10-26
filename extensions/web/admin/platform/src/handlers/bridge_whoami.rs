@@ -15,7 +15,7 @@
 
 use axum::Extension;
 use std::sync::Arc;
-use systemprompt::security::keys::SigningKeys;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use axum::Json;
 use axum::extract::State;
@@ -24,7 +24,6 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
-use systemprompt::manifest::Config;
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::validate_jwt_token;
 
@@ -89,15 +88,15 @@ pub(crate) async fn bridge_whoami_handler(
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
     State(pool): State<Arc<PgPool>>,
-    Extension(keys): Extension<SigningKeys>,
+    Extension(boot): Extension<ExtensionBoot>,
     headers: HeaderMap,
 ) -> AdminResult<Json<BridgeWhoamiResponse>> {
     let token = extract_token_from_headers(&headers)?;
-    let jwt_issuer = Config::get()?.jwt_issuer.clone();
-    let claims = validate_jwt_token(&keys, &token, &jwt_issuer, BRIDGE_AUDIENCES).map_err(|e| {
-        tracing::warn!(error = %e, "bridge whoami: token rejected");
-        AdminError::Unauthorized("Invalid or expired token".to_owned())
-    })?;
+    let claims = validate_jwt_token(boot.token_authority().as_ref(), &token, BRIDGE_AUDIENCES)
+        .map_err(|e| {
+            tracing::warn!(error = %e, "bridge whoami: token rejected");
+            AdminError::Unauthorized("Invalid or expired token".to_owned())
+        })?;
 
     let user_id = UserId::new(claims.registered.sub.clone());
     let envelope =

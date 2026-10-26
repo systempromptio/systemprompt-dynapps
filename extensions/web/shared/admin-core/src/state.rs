@@ -21,6 +21,7 @@ impl ManagedState {
         db: &DbPool,
         owner: systemprompt::identifiers::UserId,
         scratch_root: Option<PathBuf>,
+        services_dir: &std::path::Path,
     ) -> Self {
         let pool = db.write_pool().as_ref().clone();
         Self {
@@ -28,7 +29,7 @@ impl ManagedState {
             scratch_root,
             otlp_export: systemprompt::scheduler::OtlpExportStateRepository::new(pool),
             repository: ManagedRepository::new(db),
-            security: SecurityPolicy::load_or_default(),
+            security: SecurityPolicy::load_or_default(services_dir),
         }
     }
 }

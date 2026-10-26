@@ -114,9 +114,10 @@ fn route_labels(
 
 async fn declared_drift(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     pool: &PgPool,
 ) -> (Option<DriftReport>, usize, Option<String>) {
-    match declared_now(&services.config()).await {
+    match declared_now(&services.config(), boot.services_root()).await {
         Ok(declared) => match drift_now(pool, &declared).await {
             Ok(drift) => (Some(drift), declared.rule_count(), None),
             Err(e) => (None, declared.rule_count(), Some(e.to_string())),
@@ -167,6 +168,7 @@ pub(crate) async fn access_control_page(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AcQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -182,14 +184,15 @@ pub(crate) async fn access_control_page(
         return Ok(redirect.into_response());
     }
     let tab = AcTab::parse(query.tab.as_deref());
-    let services_path = shared::get_services_path()?;
+    let services_path = shared::get_services_path(&boot);
 
     let mut faults = Faults::new();
     let stats = data::load_stats(&pool, &mut faults).await;
     let ledger_rows = faults.take("access rules", list_ledger_rules(&pool).await);
     let open_entities = count_open_entities(&pool).await?;
 
-    let (drift, declared_count, declared_unreadable) = declared_drift(&services, &pool).await;
+    let (drift, declared_count, declared_unreadable) =
+        declared_drift(&services, &boot, &pool).await;
     let body = tab_body(
         &pool,
         &services_path,

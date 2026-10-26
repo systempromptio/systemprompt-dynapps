@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{PluginId, UserId};
+use systemprompt::traits::SecretStore;
 
 use crate::repositories::secrets::secret_audit::{self, AuditLogRow};
 use crate::repositories::secrets::{secret_keys, secret_resolve};
@@ -21,6 +22,7 @@ pub(crate) async fn create_resolution_token(
 
 pub(crate) async fn resolve_secrets(
     pool: &PgPool,
+    store: &dyn SecretStore,
     plugin_id: &PluginId,
     raw_token: &str,
 ) -> AdminResult<HashMap<String, String>> {
@@ -35,7 +37,7 @@ pub(crate) async fn resolve_secrets(
         return Err(AdminError::Forbidden("Token plugin mismatch".to_owned()));
     }
 
-    let master_key = secret_crypto::load_master_key()?;
+    let master_key = secret_crypto::load_master_key(store)?;
 
     let secrets =
         secret_resolve::resolve_secrets_for_plugin(pool, &user_id, plugin_id, &master_key).await?;
@@ -53,10 +55,11 @@ pub(crate) async fn list_audit_log(
 
 pub(crate) async fn rotate_user_keys(
     pool: &PgPool,
+    store: &dyn SecretStore,
     user_id: &UserId,
     plugin_id: &PluginId,
 ) -> AdminResult<()> {
-    let master_key = secret_crypto::load_master_key()?;
+    let master_key = secret_crypto::load_master_key(store)?;
     secret_keys::rotate_user_dek(pool, user_id, &master_key).await?;
 
     if let Err(e) = secret_audit::insert_audit_entry(pool, user_id, plugin_id, "rotated").await {

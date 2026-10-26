@@ -5,7 +5,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::error::AdminResult;
-use crate::repositories::sync::sources::build_sources;
 
 pub const MANIFEST_FORMAT: u32 = 1;
 
@@ -33,18 +32,22 @@ pub struct ArchiveManifest {
     pub planes: Vec<ManifestPlane>,
 }
 
-pub fn build_manifest(actor: &str, planes: Vec<ManifestPlane>) -> ArchiveManifest {
-    // Why: discard-ok: an unreadable profile or cache leaves the hashes blank
-    let sources = build_sources()
-        .inspect_err(|e| tracing::warn!(error = %e, "sync export: sources unreadable"))
-        .ok();
+pub fn build_manifest(
+    boot: &crate::extension_boot::ExtensionBoot,
+    actor: &str,
+    planes: Vec<ManifestPlane>,
+) -> ArchiveManifest {
+    let (base_tree_hash, composed_hash) = crate::repositories::sync::sources::tree_hashes(
+        boot.profile(),
+        boot.active_services_root(),
+    );
     ArchiveManifest {
         format: MANIFEST_FORMAT,
         release: env!("CARGO_PKG_VERSION").to_owned(),
         exported_at: Utc::now(),
         exported_by: actor.to_owned(),
-        base_tree_hash: sources.as_ref().and_then(|s| s.base.tree_hash.clone()),
-        composed_hash: sources.and_then(|s| s.composed_hash),
+        base_tree_hash,
+        composed_hash,
         planes,
     }
 }

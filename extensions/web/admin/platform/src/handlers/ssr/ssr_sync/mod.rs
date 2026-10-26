@@ -20,9 +20,6 @@
 //! apply narrowed to it, the source refresh, and the sync trail filtered to
 //! what touched their marketplaces. The archive and the whole-plane writes
 //! stay with administrators, and so do the review and archive tabs.
-//!
-//! An unreadable profile or cache is the Sources panel's headline, not a
-//! 500 — the rest of the page still renders.
 
 mod access_review;
 mod planes;
@@ -37,7 +34,9 @@ use sqlx::PgPool;
 use systemprompt::identifiers::MarketplaceId;
 
 use self::view::MarketplaceSyncView;
+use crate::handlers::deps::PlaneDeps;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::sync::core_planes::CorePlanes;
 use systemprompt_web_admin_core::repositories::sync::history::{
     SyncHistoryRow, SyncHistoryScope, list_sync_history,
@@ -111,11 +110,12 @@ fn tabs(active: SyncTab, attention: usize) -> Vec<TabLinkView> {
     ]
 }
 
-fn visible_sources(user_ctx: &UserContext) -> (SourcesView, Option<String>) {
-    let (mut sources, unreadable) = match build_sources() {
-        Ok(s) => (s, None),
-        Err(e) => (empty_sources(), Some(e.to_string())),
-    };
+fn visible_sources(
+    boot: &ExtensionBoot,
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    user_ctx: &UserContext,
+) -> SourcesView {
+    let mut sources = build_sources(boot, &services.config());
     if !user_ctx.is_console {
         sources.bundles.retain(|b| {
             b.owns
@@ -124,7 +124,7 @@ fn visible_sources(user_ctx: &UserContext) -> (SourcesView, Option<String>) {
                 .any(|m| user_ctx.participation.includes_marketplace(m))
         });
     }
-    (sources, unreadable)
+    sources
 }
 
 async fn scoped_cards(
@@ -150,7 +150,7 @@ pub(crate) async fn sync_page(
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
     page: Page,
-    Extension(core_planes): Extension<CorePlanes>,
+    PlaneDeps { core_planes, boot }: PlaneDeps,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<SyncQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -166,17 +166,17 @@ pub(crate) async fn sync_page(
         .into());
     }
     let is_participant = !user_ctx.is_console;
-    let (sources, sources_unreadable) = visible_sources(&user_ctx);
+    let sources = visible_sources(&boot, &services, &user_ctx);
     let (marketplaces, history) = scoped_cards(&pool, &core_planes, &user_ctx).await?;
     let tab = SyncTab::for_viewer(is_participant, query.tab.as_deref());
     let access_review = if tab == SyncTab::Access {
-        Some(access_review::access_review(&services, &pool, &core_planes).await?)
+        Some(access_review::access_review(&services, &boot, &pool, &core_planes).await?)
     } else {
         None
     };
 
     let planes = if tab == SyncTab::Sources && user_ctx.is_console {
-        planes::plane_rows(&pool, &core_planes).await?
+        planes::plane_rows(&pool, &boot, &core_planes).await?
     } else {
         Vec::new()
     };
@@ -189,8 +189,8 @@ pub(crate) async fn sync_page(
         history,
         access_review,
         planes,
+        export_planes: view::export_planes(&boot),
         sources,
-        sources_unreadable,
     });
     Ok(
         systemprompt_web_admin_core::ssr::helpers::render_typed_page(
@@ -224,22 +224,4 @@ async fn marketplace_cards(
         });
     }
     Ok(out)
-}
-
-pub(crate) const fn empty_sources() -> SourcesView {
-    SourcesView {
-        base: systemprompt_web_admin_core::repositories::sync::sources::BaseSourceView {
-            version: env!("CARGO_PKG_VERSION"),
-            tree_hash: None,
-            tree_path: String::new(),
-            provenance: "unknown",
-            provenance_error: None,
-        },
-        bundles: Vec::new(),
-        composed_hash: None,
-        last_reconciled_hash: None,
-        restart_pending: false,
-        on_fetch_failure: String::new(),
-        refresh_hint: String::new(),
-    }
 }

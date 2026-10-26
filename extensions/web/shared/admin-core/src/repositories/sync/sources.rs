@@ -18,21 +18,18 @@
 use std::path::Path;
 
 use serde::Serialize;
-use systemprompt::config::ProfileBootstrap;
-use systemprompt::loader::ConfigLoader;
 use systemprompt::loader::bundle::{BundleCache, cache_root};
-use systemprompt::loader::services_root::{
-    ActiveServicesRoot, ServicesProvenance, ServicesRootBootstrap,
-};
 use systemprompt::manifest::profile::{Profile, ServicesSource};
+use systemprompt::manifest::services::ServicesConfig;
 use systemprompt::manifest::services::bundle::{
     BundleOwnership, ServicesBundleManifest, ServicesBundleState,
 };
+use systemprompt::manifest::services::root::{ActiveServicesRoot, ServicesProvenance};
 
 use super::source_badges::{BadgeInputs, SourceBadge, source_badges};
 use super::tree_hash::base_tree_hash;
+use crate::extension_boot::ExtensionBoot;
 
-use crate::error::AdminResult;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct BaseSourceView {
@@ -82,9 +79,10 @@ pub struct SourcesView {
     pub refresh_hint: String,
 }
 
-pub fn build_sources() -> AdminResult<SourcesView> {
-    let profile = ProfileBootstrap::get()?;
-    let active = ServicesRootBootstrap::get();
+#[must_use]
+pub fn build_sources(boot: &ExtensionBoot, services: &ServicesConfig) -> SourcesView {
+    let profile = boot.profile();
+    let active = boot.active_services_root();
     let cache = BundleCache::new(cache_root(profile));
     let state = cache.read_state();
     let (provenance, provenance_error, composed_hash) = provenance_of(active);
@@ -92,7 +90,7 @@ pub fn build_sources() -> AdminResult<SourcesView> {
     let restart_pending = !state.composed_hash.is_empty()
         && state.last_reconciled_hash.as_deref() != Some(state.composed_hash.as_str());
 
-    let composed_marketplaces_declaring_access = marketplaces_declaring_access();
+    let composed_marketplaces_declaring_access = marketplaces_declaring_access(services);
 
     let bundles = profile
         .services
@@ -109,7 +107,7 @@ pub fn build_sources() -> AdminResult<SourcesView> {
         })
         .collect();
 
-    Ok(SourcesView {
+    SourcesView {
         base: BaseSourceView {
             version: env!("CARGO_PKG_VERSION"),
             tree_hash: base_tree_hash(Path::new(&profile.paths.services)),
@@ -127,26 +125,40 @@ pub fn build_sources() -> AdminResult<SourcesView> {
             .map(|s| s.trim().to_owned())
             .unwrap_or_default(),
         refresh_hint: refresh_hint(profile),
-    })
+    }
 }
 
-fn provenance_of(
-    active: Option<&ActiveServicesRoot>,
-) -> (&'static str, Option<String>, Option<String>) {
-    match active.map(|a| &a.provenance) {
-        None | Some(ServicesProvenance::Bundled) => ("bundled", None, None),
-        Some(ServicesProvenance::Fetched { composed_hash, .. }) => {
+#[must_use]
+pub fn tree_hashes(
+    profile: &Profile,
+    active: &ActiveServicesRoot,
+) -> (Option<String>, Option<String>) {
+    let state = BundleCache::new(cache_root(profile)).read_state();
+    let (_, _, composed) = provenance_of(active);
+    let composed_hash = (!state.composed_hash.is_empty())
+        .then(|| state.composed_hash.clone())
+        .or(composed);
+    (
+        base_tree_hash(Path::new(&profile.paths.services)),
+        composed_hash,
+    )
+}
+
+fn provenance_of(active: &ActiveServicesRoot) -> (&'static str, Option<String>, Option<String>) {
+    match &active.provenance {
+        ServicesProvenance::Bundled => ("bundled", None, None),
+        ServicesProvenance::Fetched { composed_hash, .. } => {
             ("fetched", None, Some(composed_hash.clone()))
         },
-        Some(ServicesProvenance::LastGood {
+        ServicesProvenance::LastGood {
             composed_hash,
             error,
-        }) => (
+        } => (
             "last_good",
             Some(error.clone()),
             Some(composed_hash.clone()),
         ),
-        Some(ServicesProvenance::BundledFallback { error }) => {
+        ServicesProvenance::BundledFallback { error } => {
             ("bundled_fallback", Some(error.clone()), None)
         },
     }
@@ -240,8 +252,7 @@ fn owns_view(manifest: &ServicesBundleManifest) -> OwnsView {
 }
 
 #[must_use]
-pub fn dir_owner(dir: &str) -> Option<String> {
-    let profile = ProfileBootstrap::get().ok()?;
+pub fn dir_owner(profile: &Profile, dir: &str) -> Option<String> {
     let cache = BundleCache::new(cache_root(profile));
     let state = cache.read_state();
     profile.services.sources.iter().find_map(|source| {
@@ -259,18 +270,13 @@ pub fn dir_owner(dir: &str) -> Option<String> {
     })
 }
 
-fn marketplaces_declaring_access() -> Vec<String> {
-    ConfigLoader::load().map_or_else(
-        |_| Vec::new(),
-        |services| {
-            services
-                .marketplaces
-                .iter()
-                .filter(|(_, m)| m.access.declares_rules() || m.access.default_included)
-                .map(|(id, _)| id.as_str().to_owned())
-                .collect()
-        },
-    )
+fn marketplaces_declaring_access(services: &ServicesConfig) -> Vec<String> {
+    services
+        .marketplaces
+        .iter()
+        .filter(|(_, m)| m.access.declares_rules() || m.access.default_included)
+        .map(|(id, _)| id.as_str().to_owned())
+        .collect()
 }
 
 fn refresh_hint(profile: &Profile) -> String {

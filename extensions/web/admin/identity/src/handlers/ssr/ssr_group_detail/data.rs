@@ -231,21 +231,16 @@ pub(super) async fn load_mappings(
 
 pub(super) async fn load_access(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     pool: &PgPool,
     group_id: &GroupId,
     faults: &mut Faults,
 ) -> Vec<AccessSectionView> {
-    let services_path = match systemprompt_web_admin_core::request::get_services_path() {
-        Ok(path) => path,
-        Err(error) => {
-            faults.record("access matrix", &error);
-            return Vec::new();
-        },
-    };
+    let services_path = systemprompt_web_admin_core::request::get_services_path(boot);
     let mut sections =
         crate::handlers::access_control::build_matrix_sections(services, &services_path);
     if !sections.iter().any(|(kind, _, _)| kind == "marketplace") {
-        let rows: Vec<(String, String, Option<String>)> = load_marketplaces()
+        let rows: Vec<(String, String, Option<String>)> = load_marketplaces(&services.config())
             .into_iter()
             .map(|m| (m.id.to_string(), m.name, Some(m.description)))
             .collect();

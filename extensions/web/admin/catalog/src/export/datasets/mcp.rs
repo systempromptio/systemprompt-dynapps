@@ -176,7 +176,13 @@ impl DataSet for McpServers {
         Window::Live
     }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
-        let fleet = fleet_rows(ctx.pool, &ctx.user.roles, time_range(ctx)?).await?;
+        let fleet = fleet_rows(
+            ctx.boot.services_root(),
+            ctx.pool,
+            &ctx.user.roles,
+            time_range(ctx)?,
+        )
+        .await?;
         Ok(Table::complete(fleet.rows.iter().map(server_row).collect()))
     }
 }

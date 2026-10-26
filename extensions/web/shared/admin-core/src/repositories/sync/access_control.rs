@@ -11,12 +11,14 @@
 //! `bundle:<name>`) surface as *bundle* rows. An unreadable file is the
 //! review's headline, not a 500.
 
+use std::path::Path;
+
 use sqlx::PgPool;
-use systemprompt::loader::services_root::ServicesRootBootstrap;
 use systemprompt::manifest::ServicesConfig;
 
 use super::state::AppliedFrom;
 use crate::error::{AdminError, AdminResult};
+use crate::extension_boot::ExtensionBoot;
 use crate::repositories::access_rules::declared::DeclaredSet;
 use crate::repositories::access_rules::declared_load::{
     load_declared_set, marketplace_ids_from_services,
@@ -28,12 +30,13 @@ use crate::repositories::gateway_catalog::registered_routes_from_services;
 pub const PLANE_ID: &str = super::plane_ids::ACCESS_CONTROL;
 pub const REVIEW_URL: &str = "/admin/sync?tab=access";
 
-pub async fn declared_now(services: &ServicesConfig) -> AdminResult<DeclaredSet> {
+pub async fn declared_now(
+    services: &ServicesConfig,
+    services_path: &Path,
+) -> AdminResult<DeclaredSet> {
     let registered = registered_routes_from_services(services);
-    let marketplace_ids = marketplace_ids_from_services()
-        .map_err(|source| AdminError::invalid("services tree could not be composed", source))?;
-    let services_path = ServicesRootBootstrap::require()?.path;
-    load_declared_set(&services_path, &marketplace_ids, &registered)
+    let marketplace_ids = marketplace_ids_from_services(services);
+    load_declared_set(services_path, &marketplace_ids, &registered)
         .await
         .map_err(|source| AdminError::invalid("rules.yaml could not be loaded", source))
 }
@@ -45,11 +48,11 @@ pub async fn drift_now(pool: &PgPool, declared: &DeclaredSet) -> AdminResult<Dri
 }
 
 #[must_use]
-pub fn applied_from() -> AppliedFrom {
-    // Why: discard-ok: an unreadable profile or cache records no hashes
-    let sources = super::sources::build_sources().ok();
+pub fn applied_from(boot: &ExtensionBoot) -> AppliedFrom {
+    let (base_tree_hash, composed_hash) =
+        super::sources::tree_hashes(boot.profile(), boot.active_services_root());
     AppliedFrom {
-        base_tree_hash: sources.as_ref().and_then(|s| s.base.tree_hash.clone()),
-        composed_hash: sources.and_then(|s| s.composed_hash),
+        base_tree_hash,
+        composed_hash,
     }
 }

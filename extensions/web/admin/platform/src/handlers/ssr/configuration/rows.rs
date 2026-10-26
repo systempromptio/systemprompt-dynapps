@@ -7,6 +7,7 @@ use sqlx::PgPool;
 
 use super::view::ConfigRowView;
 use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::repositories::sync::inventory::{CONFIG_KINDS, ConfigKind};
 use systemprompt_web_admin_core::repositories::sync::provenance::{BundleFiles, source_for_path};
 use systemprompt_web_admin_core::repositories::sync::registry::planes;
@@ -109,26 +110,27 @@ fn served_row(
 
 pub(super) async fn build_rows(
     pool: &PgPool,
-    active_root: &Path,
-    baked_root: &Path,
+    boot: &ExtensionBoot,
     bundles: &[BundleFiles],
 ) -> AdminResult<Vec<ConfigRowView>> {
-    let registry = planes();
+    let active_root = boot.services_root();
+    let baked_root = boot.baked_services_root();
+    let registry = planes(boot);
     let mut rows = Vec::with_capacity(CONFIG_KINDS.len());
     for kind in CONFIG_KINDS {
         if let Some(plane_id) = kind.plane {
-            if let Some(card) = plane_card_by_id(pool, plane_id, "").await? {
+            if let Some(card) = plane_card_by_id(pool, boot, plane_id, "").await? {
                 rows.push(projected_row(kind, &card));
             }
             continue;
         }
-        rows.push(served_row(kind, active_root, baked_root, bundles));
+        rows.push(served_row(kind, active_root, &baked_root, bundles));
     }
     for plane in &registry {
         if CONFIG_KINDS.iter().any(|k| k.plane == Some(plane.id())) {
             continue;
         }
-        if let Some(card) = plane_card_by_id(pool, plane.id(), "").await? {
+        if let Some(card) = plane_card_by_id(pool, boot, plane.id(), "").await? {
             let kind = ConfigKind {
                 id: plane.id(),
                 label: plane.label(),

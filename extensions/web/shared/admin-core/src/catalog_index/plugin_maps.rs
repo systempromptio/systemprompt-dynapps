@@ -20,7 +20,7 @@ pub fn build_entity_plugin_maps(
     let mut agent_map: EntityPluginMap = HashMap::new();
     let mut mcp_map: EntityPluginMap = HashMap::new();
 
-    let Ok(plugins) = super::plugin_loader::load_all_plugins() else {
+    let Ok(plugins) = super::plugin_loader::load_all_plugins(services_path) else {
         return (skill_map, agent_map, mcp_map);
     };
 

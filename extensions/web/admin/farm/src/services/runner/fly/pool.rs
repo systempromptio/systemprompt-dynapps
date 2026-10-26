@@ -90,8 +90,9 @@ impl RunnerPool {
         config: &FlyRunnerConfig,
         target: &FlyTarget,
         runs: Arc<RemoteRuns>,
+        secrets: &dyn systemprompt::traits::SecretStore,
     ) -> FarmResult<Self> {
-        let token = api_token().ok_or_else(|| {
+        let token = api_token(secrets).ok_or_else(|| {
             FarmError::Runner("fly runner: no fly_api_token secret or FLY_API_TOKEN".to_owned())
         })?;
         Ok(Self {

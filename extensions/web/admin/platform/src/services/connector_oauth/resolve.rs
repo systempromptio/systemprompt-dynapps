@@ -10,10 +10,12 @@ use super::failure::{FailureKind, FlowFailure, FlowResult};
 use chrono::Utc;
 use sqlx::{PgPool, Postgres, Transaction};
 use systemprompt::identifiers::UserId;
+use systemprompt::traits::SecretStore;
 use tracing::Instrument;
 
 use super::account_state::{
-    apply_verification, in_outage_hold, record_grant_failure, require_connection, token_state,
+    GrantOwner, apply_verification, in_outage_hold, record_grant_failure, require_connection,
+    token_state,
 };
 use super::token_plan::{AccessMode, TokenPlan};
 use super::{Grant, Provider, seal, verify};
@@ -29,12 +31,14 @@ type Tx = Transaction<'static, Postgres>;
 pub struct TokenResolver<'a> {
     pool: &'a PgPool,
     services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: &'a dyn SecretStore,
     user: &'a UserId,
     http: &'a reqwest::Client,
 }
 
 struct Resolution<'a> {
     services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: &'a dyn SecretStore,
     user: &'a UserId,
     provider: &'a Provider,
     mode: AccessMode,
@@ -44,13 +48,14 @@ struct Resolution<'a> {
 impl<'a> TokenResolver<'a> {
     pub const fn new(
         pool: &'a PgPool,
-        services: &'a systemprompt_web_admin_core::extension_services::ExtensionServices,
+        access: super::ConnectorAccess<'a>,
         user: &'a UserId,
         http: &'a reqwest::Client,
     ) -> Self {
         Self {
             pool,
-            services,
+            services: access.services,
+            secrets: access.secrets,
             user,
             http,
         }
@@ -80,6 +85,7 @@ impl<'a> TokenResolver<'a> {
         let Self {
             pool,
             services,
+            secrets,
             user,
             http,
         } = *self;
@@ -96,6 +102,7 @@ impl<'a> TokenResolver<'a> {
             .require()?;
         let resolution = Resolution {
             services,
+            secrets,
             user,
             provider: &provider,
             mode,
@@ -115,7 +122,7 @@ impl Resolution<'_> {
         row: &EncryptedGrant,
         account: &mut ProviderConnection,
     ) -> AdminResult<Grant> {
-        match super::open(self.services, row, self.user, self.provider) {
+        match super::open(self.services, self.secrets, row, self.user, self.provider) {
             Ok(grant) => Ok(grant),
             Err(error) => {
                 if matches!(error, AdminError::Unauthorized(_)) {
@@ -166,7 +173,17 @@ impl Resolution<'_> {
             {
                 account.verified_at = None;
             }
-            record_grant_failure(&mut tx, self.user, account, &grant, &error).await?;
+            record_grant_failure(
+                &mut tx,
+                GrantOwner {
+                    user: self.user,
+                    secrets: self.secrets,
+                },
+                account,
+                &grant,
+                &error,
+            )
+            .await?;
             tx.commit().await?;
             return Err(error.error);
         }
@@ -186,7 +203,13 @@ impl Resolution<'_> {
         plan: TokenPlan,
     ) -> AdminResult<()> {
         if plan.reseals() {
-            repo::store(tx, self.user, self.provider.slug(), &seal(grant)?).await?;
+            repo::store(
+                tx,
+                self.user,
+                self.provider.slug(),
+                &seal(self.secrets, grant)?,
+            )
+            .await?;
         }
         if plan.verify {
             apply_verification(account, grant);

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use systemprompt::manifest::ServicesConfig;
 use systemprompt::models::auth::Permission;
 use systemprompt::models::mcp::Deployment;
+use systemprompt::traits::SecretStore;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 /// A configured MCP connector, named by its server id.
@@ -43,13 +44,12 @@ impl Provider {
             .and_then(|server| server.endpoint.clone())
             .unwrap_or_default()
     }
-    pub fn callback(&self) -> AdminResult<String> {
-        let cfg = systemprompt::manifest::Config::get().map_err(AdminError::internal)?;
-        Ok(format!(
+    pub fn callback(&self, config: &systemprompt::manifest::Config) -> String {
+        format!(
             "{}/api/public/connectors/{}/callback",
-            cfg.api_external_url.trim_end_matches('/'),
+            config.api_external_url.trim_end_matches('/'),
             self.slug(),
-        ))
+        )
     }
     pub fn configured(&self, services: &ServicesConfig) -> bool {
         self.server(services).is_some_and(|server| server.enabled)
@@ -83,11 +83,10 @@ impl Provider {
     }
 }
 
-pub(crate) fn secret(name: &str) -> AdminResult<String> {
-    systemprompt::config::SecretsBootstrap::get()
-        .map_err(AdminError::internal)?
-        .get(name)
+pub(crate) fn secret(secrets: &dyn SecretStore, name: &str) -> AdminResult<String> {
+    secrets
+        .secret(name)
+        .map(|s| s.expose().to_owned())
         .filter(|s| !s.is_empty() && !s.starts_with("REPLACE_WITH"))
-        .cloned()
         .ok_or_else(|| AdminError::Unavailable(format!("Connector configuration missing: {name}")))
 }

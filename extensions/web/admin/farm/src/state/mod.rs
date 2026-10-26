@@ -9,7 +9,6 @@ mod judge;
 mod limits;
 mod paths;
 
-use std::path::PathBuf;
 use std::sync::Arc;
 use systemprompt::traits::BackgroundTasks;
 
@@ -21,6 +20,7 @@ use systemprompt::config::AppPaths;
 use systemprompt::identifiers::InstanceId;
 use systemprompt::storage::{FileStorageBackend, build_file_storage};
 use systemprompt::traits::FileStorage;
+use systemprompt_web_admin_core::extension_boot::{BootServices, ExtensionBoot};
 
 pub use judge::{JudgeSource, read_evals_config};
 pub use limits::RunnerLimits;
@@ -55,6 +55,7 @@ pub struct FarmState {
     pub runs: Arc<RemoteRuns>,
     pub tasks: BackgroundTasks,
     pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pub boot: ExtensionBoot,
 }
 
 impl std::fmt::Debug for FarmState {
@@ -81,6 +82,7 @@ pub struct FarmHost {
     pub runs: Arc<RemoteRuns>,
     pub tasks: BackgroundTasks,
     pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pub boot: ExtensionBoot,
 }
 
 impl std::fmt::Debug for FarmHost {
@@ -97,7 +99,7 @@ pub fn build_farm_state(
     paths: FarmPaths,
     gateway: GatewayEndpoints,
     limits: RunnerLimits,
-    services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    BootServices { boot, services }: BootServices,
 ) -> Arc<FarmState> {
     let artefacts = build_file_storage(FileStorageBackend::Local {
         root: paths.data_root.clone(),
@@ -113,6 +115,7 @@ pub fn build_farm_state(
         runs: Arc::new(RemoteRuns::default()),
         tasks: BackgroundTasks::new(),
         services,
+        boot,
     })
 }
 
@@ -132,7 +135,7 @@ pub fn build_farm_state_with_ai(
     ai: Option<Arc<AiService>>,
     host: FarmHost,
 ) -> Arc<FarmState> {
-    let paths = farm_paths(app_paths);
+    let paths = farm_paths(app_paths, &host.boot);
     let judge = JudgeSource {
         config: read_evals_config(&paths.composed_services_root),
         ai,
@@ -140,7 +143,7 @@ pub fn build_farm_state_with_ai(
     Arc::new(FarmState {
         pool,
         paths,
-        gateway: gateway_endpoints(),
+        gateway: gateway_endpoints(host.boot.config()),
         limits: RunnerLimits::default(),
         judge,
         artefacts: host.artefacts,
@@ -148,38 +151,21 @@ pub fn build_farm_state_with_ai(
         runs: host.runs,
         tasks: host.tasks,
         services: host.services,
+        boot: host.boot,
     })
 }
 
-fn farm_paths(app_paths: Option<&AppPaths>) -> FarmPaths {
+fn farm_paths(app_paths: Option<&AppPaths>, boot: &ExtensionBoot) -> FarmPaths {
     let data_root = app_paths.map_or_else(
         || std::env::temp_dir().join("systemprompt-agent-farm"),
         |paths| paths.storage().data().join("agent-farm"),
     );
-    let composed = systemprompt::loader::ServicesRootBootstrap::get().map_or_else(
-        || {
-            app_paths.map_or_else(
-                || PathBuf::from("services"),
-                |paths| paths.system().services().to_path_buf(),
-            )
-        },
-        |root| root.path.clone(),
-    );
-    FarmPaths::new(data_root, composed)
+    FarmPaths::new(data_root, boot.services_root().to_path_buf())
 }
 
-fn gateway_endpoints() -> GatewayEndpoints {
-    systemprompt::manifest::Config::get().map_or_else(
-        |e| {
-            tracing::error!(error = %e, "Config unavailable for the agent farm gateway base");
-            GatewayEndpoints {
-                internal_base: String::new(),
-                external_base: String::new(),
-            }
-        },
-        |config| GatewayEndpoints {
-            internal_base: config.api_internal_url.trim_end_matches('/').to_owned(),
-            external_base: config.api_external_url.trim_end_matches('/').to_owned(),
-        },
-    )
+fn gateway_endpoints(config: &systemprompt::manifest::Config) -> GatewayEndpoints {
+    GatewayEndpoints {
+        internal_base: config.api_internal_url.trim_end_matches('/').to_owned(),
+        external_base: config.api_external_url.trim_end_matches('/').to_owned(),
+    }
 }

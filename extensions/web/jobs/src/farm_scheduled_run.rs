@@ -61,6 +61,9 @@ impl FarmScheduledRunJob {
                 systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(
                     app.as_ref(),
                 ),
+            boot: systemprompt_web_admin_core::extension_boot::ExtensionBoot::from_context(
+                app.as_ref(),
+            ),
         };
         let state = build_farm_state_with_ai(
             db.write_pool(),

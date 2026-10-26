@@ -16,6 +16,7 @@ use sqlx::PgPool;
 use systemprompt::extension::FrameOptionsOverride;
 use systemprompt::identifiers::{ArtifactId, ContextId};
 use systemprompt::manifest::profile::FrameOptions;
+use systemprompt::mcp::services::ui_renderer::registry::create_default_registry;
 use systemprompt::mcp::services::ui_renderer::{RenderTarget, artifact_ui_resource};
 
 use crate::repositories::analytics::artifacts::find_artifact;
@@ -49,7 +50,7 @@ pub(crate) async fn artifact_preview(
         context_id,
         title: detail.artifact_title.clone(),
     };
-    let html = match artifact_ui_resource(&target) {
+    let html = match artifact_ui_resource(&create_default_registry(), &target) {
         Ok(resource) => resource.html,
         Err(error) => {
             tracing::debug!(%error, artifact_id = %artifact_id, "artifact has no UI renderer; previewing as JSON");

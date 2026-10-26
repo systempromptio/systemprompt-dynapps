@@ -9,13 +9,17 @@
 
 use axum::http::HeaderMap;
 use sqlx::PgPool;
-use systemprompt::security::keys::SigningKeys;
+use systemprompt::models::auth::TokenAuthority;
 use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
 
 use crate::repositories::users::sessions::revoke_signin_session;
 
-pub async fn revoke_cookie_session(pool: &PgPool, keys: &SigningKeys, headers: &HeaderMap) -> bool {
-    let Ok(session) = extract_user_from_cookie(keys, headers) else {
+pub async fn revoke_cookie_session(
+    pool: &PgPool,
+    authority: &dyn TokenAuthority,
+    headers: &HeaderMap,
+) -> bool {
+    let Ok(session) = extract_user_from_cookie(authority, headers) else {
         return false;
     };
     let Some(session_id) = session.session_id else {

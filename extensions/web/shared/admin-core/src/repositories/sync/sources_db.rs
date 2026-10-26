@@ -11,14 +11,13 @@ use std::collections::BTreeMap;
 
 use sqlx::{PgPool, Postgres, Transaction};
 use systemprompt::identifiers::MarketplaceId;
-use systemprompt::loader::ConfigLoader;
-use systemprompt::loader::services_root::ServicesRootBootstrap;
 use systemprompt::manifest::services::ServicesConfig;
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::marketplace_hash::compute_marketplace_versions;
 use super::marketplace_versions_db::{VersionsRecorded, record_marketplace_versions};
 use super::sources::{SourcesView, build_sources};
+use crate::extension_boot::ExtensionBoot;
 
 pub const BASE_SOURCE: &str = "base";
 
@@ -36,14 +35,14 @@ struct Owned {
     marketplace: Option<MarketplaceId>,
 }
 
-pub async fn record_service_sources(pool: &PgPool) -> Result<SourcesRecorded, MarketplaceError> {
-    let sources = build_sources().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
-    let services = ConfigLoader::load().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
-    let owned = owned_ids(&sources, &services);
-    let root = ServicesRootBootstrap::require()
-        .map_err(|e| MarketplaceError::Internal(e.to_string()))?
-        .path;
-    let versions = compute_marketplace_versions(&root, &services, &sources);
+pub async fn record_service_sources(
+    pool: &PgPool,
+    boot: &ExtensionBoot,
+    services: &ServicesConfig,
+) -> Result<SourcesRecorded, MarketplaceError> {
+    let sources = build_sources(boot, services);
+    let owned = owned_ids(&sources, services);
+    let versions = compute_marketplace_versions(boot.services_root(), services, &sources);
 
     let mut tx = pool.begin().await?;
     sqlx::query!("DELETE FROM service_owned_ids")

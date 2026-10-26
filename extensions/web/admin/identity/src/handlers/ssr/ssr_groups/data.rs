@@ -138,7 +138,7 @@ async fn load_group_marketplaces(
     groups: &[GroupUsageRow],
     faults: &mut Faults,
 ) -> HashMap<String, Vec<MemberSetChipView>> {
-    let section: Vec<(String, String, Option<String>)> = load_marketplaces()
+    let section: Vec<(String, String, Option<String>)> = load_marketplaces(&services.config())
         .into_iter()
         .map(|m| (m.id.to_string(), m.name, None))
         .collect();

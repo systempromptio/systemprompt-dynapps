@@ -65,6 +65,7 @@ pub(crate) async fn groups_page(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<GroupsQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -84,7 +85,13 @@ pub(crate) async fn groups_page(
 
     let on_sync = is_sync_tab(query.tab.as_deref());
     let sync = if on_sync {
-        plane_card_by_id(&pool, repositories::sync_planes::groups::PLANE_ID, "").await?
+        plane_card_by_id(
+            &pool,
+            &boot,
+            repositories::sync_planes::groups::PLANE_ID,
+            "",
+        )
+        .await?
     } else {
         None
     };

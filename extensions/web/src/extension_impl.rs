@@ -11,11 +11,17 @@ use systemprompt::traits::{Job, RunnerService};
 
 use crate::SkillsPagePrerenderer;
 use crate::assets::web_assets;
+use crate::extenders::OrgUrlExtender;
 use crate::homepage::{HomepagePageDataProvider, HomepagePrerenderer};
 use crate::navigation::NavigationPageDataProvider;
 use crate::schemas::{migrations, schema_definitions};
 
 use crate::extension::WebExtension;
+use systemprompt_web_site::config_loader::SiteConfig;
+
+fn site_config(ctx: &dyn ExtensionContext) -> SiteConfig {
+    SiteConfig::load_from(&ctx.services_root().path)
+}
 
 impl Extension for WebExtension {
     fn metadata(&self) -> ExtensionMetadata {
@@ -26,17 +32,18 @@ impl Extension for WebExtension {
         }
     }
 
-    fn page_data_providers(&self) -> Vec<Arc<dyn PageDataProvider>> {
+    fn page_data_providers(&self, ctx: &dyn ExtensionContext) -> Vec<Arc<dyn PageDataProvider>> {
+        let site = site_config(ctx);
         let mut providers: Vec<Arc<dyn PageDataProvider>> = vec![];
 
-        if let Some(nav_config) = &self.site.navigation {
+        if let Some(nav_config) = &site.navigation {
             providers.push(Arc::new(
                 NavigationPageDataProvider::new(Arc::clone(nav_config))
-                    .with_branding(self.site.branding.clone()),
+                    .with_branding(site.branding.clone()),
             ));
         }
 
-        if let Some(homepage_config) = &self.site.homepage {
+        if let Some(homepage_config) = &site.homepage {
             providers.push(Arc::new(HomepagePageDataProvider::new(Arc::clone(
                 homepage_config,
             ))));
@@ -46,30 +53,41 @@ impl Extension for WebExtension {
         providers
     }
 
-    fn content_data_providers(&self) -> Vec<Arc<dyn ContentDataProvider>> {
+    fn content_data_providers(
+        &self,
+        _ctx: &dyn ExtensionContext,
+    ) -> Vec<Arc<dyn ContentDataProvider>> {
         crate::shared::registry::content_data_providers()
     }
 
-    fn page_prerenderers(&self) -> Vec<Arc<dyn PagePrerenderer>> {
+    fn page_prerenderers(&self, ctx: &dyn ExtensionContext) -> Vec<Arc<dyn PagePrerenderer>> {
+        let site = site_config(ctx);
         let mut prerenderers: Vec<Arc<dyn PagePrerenderer>> = vec![];
 
-        if let Some(config) = &self.site.homepage {
+        if let Some(config) = &site.homepage {
             prerenderers.push(Arc::new(HomepagePrerenderer::new(Arc::clone(config))));
         }
 
-        if let Some(config) = &self.site.skills_page {
+        if let Some(config) = &site.skills_page {
             prerenderers.push(Arc::new(SkillsPagePrerenderer::new(Arc::clone(config))));
         }
 
         prerenderers
     }
 
-    fn component_renderers(&self) -> Vec<Arc<dyn ComponentRenderer>> {
+    fn component_renderers(&self, _ctx: &dyn ExtensionContext) -> Vec<Arc<dyn ComponentRenderer>> {
         crate::shared::registry::component_renderers()
     }
 
-    fn template_data_extenders(&self) -> Vec<Arc<dyn TemplateDataExtender>> {
-        crate::shared::registry::template_data_extenders()
+    fn template_data_extenders(
+        &self,
+        ctx: &dyn ExtensionContext,
+    ) -> Vec<Arc<dyn TemplateDataExtender>> {
+        let mut extenders = crate::shared::registry::template_data_extenders();
+        extenders.push(Arc::new(OrgUrlExtender::new(
+            ctx.app_config().api_external_url.clone(),
+        )));
+        extenders
     }
 
     fn schemas(&self) -> Vec<SchemaDefinition> {

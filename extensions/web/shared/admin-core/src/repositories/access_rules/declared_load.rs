@@ -18,7 +18,7 @@
 use std::path::Path;
 
 use systemprompt::governance::authz::RegisteredEntities;
-use systemprompt::loader::ConfigLoader;
+use systemprompt::manifest::ServicesConfig;
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::declared::{DeclaredInputs, DeclaredSet, build_declared_set};
@@ -53,11 +53,11 @@ pub fn build_declared_from_doc(
     Ok(set)
 }
 
-pub fn marketplace_ids_from_services() -> Result<Vec<String>, MarketplaceError> {
-    let services = ConfigLoader::load()?;
-    Ok(services
+#[must_use]
+pub fn marketplace_ids_from_services(services: &ServicesConfig) -> Vec<String> {
+    services
         .marketplaces
         .keys()
         .map(|id| id.as_str().to_owned())
-        .collect())
+        .collect()
 }

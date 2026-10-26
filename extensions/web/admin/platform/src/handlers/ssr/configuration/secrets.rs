@@ -3,7 +3,7 @@
 //! The card shows where secrets come from and how fresh they are — source,
 //! generation, load and reload times, the last reload error, and the key
 //! names. It never renders a value. **Reload now** re-reads the source
-//! through core's `SecretsBootstrap::reload` and leaves an activity row
+//! through core's secrets store and leaves an activity row
 //! naming the keys that changed.
 
 use std::sync::Arc;
@@ -14,12 +14,14 @@ use axum::response::Redirect;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::config::SecretsBootstrap;
+use systemprompt::traits::SecretStore;
 
 use super::BASE_URL;
 use systemprompt_web_admin_core::activity::{NewActivity, record};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::flash::{FlashTone, redirect_with_flash};
 use systemprompt_web_admin_core::types::UserContext;
 
@@ -39,50 +41,34 @@ pub(crate) struct SecretsCardView {
     pub reload_url: &'static str,
 }
 
-// JSON: core's secrets document is listed by its serialized key names, so
-// the card shows every key core knows without mirroring its struct here.
-fn key_names() -> Vec<String> {
-    let Ok(secrets) = SecretsBootstrap::get() else {
-        return Vec::new();
-    };
-    let Ok(serde_json::Value::Object(map)) = serde_json::to_value(secrets) else {
-        return Vec::new();
-    };
-    let mut names: Vec<String> = map
-        .into_iter()
-        .filter(|(_, value)| !value.is_null())
-        .map(|(key, _)| key)
-        .collect();
-    names.sort_unstable();
-    names
-}
-
-pub(crate) fn secrets_card() -> Option<SecretsCardView> {
-    let status = SecretsBootstrap::status()?;
-    let key_names = key_names();
-    Some(SecretsCardView {
+pub(crate) fn secrets_card(secrets: &dyn SecretStore, faults: &mut Faults) -> SecretsCardView {
+    let status = secrets.status();
+    let mut key_names = faults.take("secret key names", secrets.key_names());
+    key_names.sort_unstable();
+    SecretsCardView {
         source: status.source,
         generation: status.generation,
         initialised_at: status.initialised_at,
         last_reload_at: status.last_reload_at,
         last_error: status.last_error,
-        refresh_secs: SecretsBootstrap::refresh_interval().map(|d| d.as_secs()),
+        refresh_secs: secrets.refresh_interval().map(|d| d.as_secs()),
         key_count: key_names.len(),
         key_names,
         reload_url: RELOAD_URL,
-    })
+    }
 }
 
 pub(crate) async fn secrets_reload(
     Extension(user_ctx): Extension<UserContext>,
+    Extension(boot): Extension<ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
 ) -> AdminHtmlResult<Redirect> {
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Administrator access required".to_owned()).into());
     }
-    require_write_origin(&headers)?;
-    Ok(match SecretsBootstrap::reload().await {
+    require_write_origin(&boot, &headers)?;
+    Ok(match boot.secrets().reload().await {
         Ok(outcome) => {
             record(
                 &pool,

@@ -163,6 +163,7 @@ pub async fn issue_bridge_connect(
 
 pub async fn build_bridge_profile_data(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     pool: Arc<PgPool>,
     user_ctx: &UserContext,
 ) -> systemprompt_web_admin_core::error::AdminResult<BridgeProfilePageData> {
@@ -184,15 +185,15 @@ pub async fn build_bridge_profile_data(
         .flatten()
         .and_then(|env| env.idp_issuer.map(|_| "adfs".to_owned()));
 
-    let (jwt_issuer, gateway_url) = read_config_strings();
-    let bridge_profile = build_bridge_profile_block(services, &services.catalog);
+    let (jwt_issuer, gateway_url) = read_config_strings(boot.config());
+    let bridge_profile = build_bridge_profile_block(services, boot, &services.catalog);
     let bridge_connect_available = gateway_url.is_some();
 
     let identity = ProfileIdentity {
         email: user_ctx.email.as_str().to_owned(),
         display_name,
         user_id: user_ctx.user_id.clone(),
-        tenant_id: read_tenant_id(),
+        tenant_id: read_tenant_id(boot.profile()),
         provider: federated_provider,
         roles: user_ctx.roles.clone(),
         jwt_issuer,
@@ -201,7 +202,7 @@ pub async fn build_bridge_profile_data(
     };
 
     let usage = build_usage(sections);
-    let mut agents = build_agents_block();
+    let mut agents = build_agents_block(boot);
     let access =
         systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(&pool, services, &user_id)
             .await?;
@@ -220,7 +221,8 @@ pub async fn build_bridge_profile_data(
     agents.total = agents.items.len() as i64;
     agents.enabled = agents.total;
     let marketplaces =
-        build_reachable_marketplaces(services, &pool, &user_id, user_ctx.roles.clone()).await?;
+        build_reachable_marketplaces(services, boot, &pool, &user_id, user_ctx.roles.clone())
+            .await?;
 
     Ok(BridgeProfilePageData {
         marketplaces_count: marketplaces.len(),

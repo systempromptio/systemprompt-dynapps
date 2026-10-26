@@ -90,6 +90,7 @@ pub(super) fn parse_access(s: &str) -> Option<Access> {
 
 pub(super) fn collect_entity_ids(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     entity_type: &str,
 ) -> AdminResult<Vec<String>> {
     match entity_type {
@@ -99,7 +100,7 @@ pub(super) fn collect_entity_ids(
             ),
         ),
         "mcp_server" => {
-            let services_path = shared::get_services_path()?;
+            let services_path = shared::get_services_path(boot);
             let servers =
                 mcp_servers::list_mcp_servers(&services_path).map_err(AdminError::internal)?;
             Ok(servers

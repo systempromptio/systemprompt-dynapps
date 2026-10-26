@@ -6,20 +6,20 @@
 //! through the same door. Uploaded text skips both: it is the declaration,
 //! whole, and the plane parses it as it would the file.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::plane::DeclarationSource;
 use crate::error::{AdminError, AdminResult};
-use crate::request::get_services_path;
 
 pub fn read_or_text(
     from: DeclarationSource<'_>,
+    services_dir: &Path,
     source_file: &'static str,
 ) -> AdminResult<Option<String>> {
     match from {
         DeclarationSource::Text(text) => Ok(Some(text.to_owned())),
         DeclarationSource::Disk => {
-            let path: PathBuf = get_services_path()?.join(source_file);
+            let path: PathBuf = services_dir.join(source_file);
             match std::fs::read_to_string(&path) {
                 Ok(s) => Ok(Some(s)),
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),

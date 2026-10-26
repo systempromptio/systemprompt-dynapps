@@ -2,16 +2,14 @@
 //!
 //! Lives beside the config types it deserialises, so adding a YAML-backed
 //! page section is one edit in this crate. The web extension loads the tree
-//! once when it is constructed and owns the result; the router attaches it as
-//! an axum `Extension` for handlers. A section whose file is absent is
-//! `None`; one whose file does not parse is logged and served as absent, never
-//! a crash. Loading happens at extension construction, before any request is
-//! served, so the file-system reads here are not on a hot path.
+//! from the active services root its context hands it: once when the router is
+//! built, which attaches it as an axum `Extension` for handlers, and once per
+//! content-pipeline hook. A section whose file is absent is `None`; one whose
+//! file does not parse is logged and served as absent, never a crash.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use systemprompt::config::{AppPaths, ProfileBootstrap};
 use thiserror::Error;
 
 #[doc(hidden)]
@@ -38,15 +36,9 @@ pub enum ConfigError {
         #[source]
         source: std::io::Error,
     },
-
-    #[error("Profile unavailable: {0}")]
-    Profile(#[source] systemprompt::config::ProfileBootstrapError),
-
-    #[error("Application paths unavailable: {0}")]
-    PathsUnavailable(#[source] systemprompt::config::PathError),
 }
 
-/// Every `services/web/` section the public site renders from, loaded once.
+/// Every `services/web/` section the public site renders from.
 #[derive(Debug, Clone, Default)]
 pub struct SiteConfig {
     pub branding: Option<BrandingConfig>,
@@ -56,17 +48,6 @@ pub struct SiteConfig {
 }
 
 impl SiteConfig {
-    #[must_use]
-    pub fn load() -> Self {
-        match services_dir() {
-            Ok(services) => Self::load_from(&services),
-            Err(error) => {
-                tracing::debug!(%error, "services root unavailable; site config sections absent");
-                Self::default()
-            },
-        }
-    }
-
     #[must_use]
     pub fn load_from(services: &Path) -> Self {
         Self {
@@ -90,17 +71,6 @@ fn section<T>(name: &str, loaded: Result<Option<T>, ConfigError>) -> Option<T> {
             None
         },
     }
-}
-
-fn services_dir() -> Result<PathBuf, ConfigError> {
-    let profile = ProfileBootstrap::get().map_err(ConfigError::Profile)?;
-    let paths = AppPaths::from_profile(
-        &profile.paths,
-        profile.path_resolution(),
-        systemprompt::loader::ServicesRootBootstrap::get().map(|root| root.path.as_path()),
-    )
-    .map_err(ConfigError::PathsUnavailable)?;
-    Ok(paths.system().services().to_path_buf())
 }
 
 fn parse_section<T: serde::de::DeserializeOwned>(

@@ -1,11 +1,9 @@
 //! Server-rendered admin dashboard router.
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::{Extension, Router};
 
-use systemprompt::config::{AppPaths, ProfileBootstrap};
 use systemprompt_web_site::navigation::BrandingConfig;
 
 use super::admin;
@@ -21,11 +19,15 @@ pub(crate) fn build(
     sso_deps: systemprompt_web_admin_identity::SsoDeps,
     branding: Option<BrandingConfig>,
 ) -> Option<SsrRouters> {
-    let admin_dir = admin_template_dir()?;
-    let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir)
-        .map_err(|e| tracing::error!(error = %e, "Failed to initialize admin template engine"))
-        .ok()?
-        .with_branding(branding);
+    let paths = super::pools::app_paths(&db.boot)?;
+    let admin_dir = paths.storage().files().join("admin");
+    let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(
+        &admin_dir,
+        paths.web().dist(),
+    )
+    .map_err(|e| tracing::error!(error = %e, "Failed to initialize admin template engine"))
+    .ok()?
+    .with_branding(branding);
     let admin = admin::admin_ssr_router(
         &db.db,
         Arc::clone(&db.read),
@@ -34,6 +36,8 @@ pub(crate) fn build(
             sso_deps,
             managed: Arc::clone(&db.managed),
             files: Arc::clone(&db.files),
+            boot: db.boot.clone(),
+            ai: Arc::clone(&db.ai),
         },
     )
     .layer(Extension(Arc::clone(&db.farm)));
@@ -41,18 +45,4 @@ pub(crate) fn build(
         bridge_auth: admin::bridge_auth_ssr_router(Arc::clone(&db.read), engine),
         admin,
     })
-}
-
-fn admin_template_dir() -> Option<PathBuf> {
-    let profile = ProfileBootstrap::get()
-        .map_err(|e| tracing::error!(error = %e, "Profile unavailable for admin template dir"))
-        .ok()?;
-    let paths = AppPaths::from_profile(
-        &profile.paths,
-        profile.path_resolution(),
-        systemprompt::loader::ServicesRootBootstrap::get().map(|root| root.path.as_path()),
-    )
-    .map_err(|e| tracing::error!(error = %e, "App paths unavailable for admin template dir"))
-    .ok()?;
-    Some(paths.storage().files().join("admin"))
 }

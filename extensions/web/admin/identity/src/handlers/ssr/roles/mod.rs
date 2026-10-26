@@ -89,6 +89,7 @@ pub(crate) async fn roles_page(
     Extension(services): Extension<
         systemprompt_web_admin_core::extension_services::ExtensionServices,
     >,
+    Extension(boot): Extension<systemprompt_web_admin_core::extension_boot::ExtensionBoot>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<RolesQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -116,8 +117,13 @@ pub(crate) async fn roles_page(
     let (page_rows, total, window) = member_page(&member_rows, &query);
 
     let on_entitlements = query.on_entitlements();
-    let entitlement_groups =
-        entitlement_groups(&services, on_entitlements, &entitlement_rows, &mut faults);
+    let entitlement_groups = entitlement_groups(
+        &services,
+        &boot,
+        on_entitlements,
+        &entitlement_rows,
+        &mut faults,
+    );
 
     let page = RolesPageData {
         page: "roles",
@@ -161,6 +167,7 @@ pub(crate) async fn roles_page(
 
 fn entitlement_groups(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    boot: &systemprompt_web_admin_core::extension_boot::ExtensionBoot,
     on_entitlements: bool,
     entitlement_rows: &[entitlements::RoleEntitlementRow],
     faults: &mut Faults,
@@ -169,10 +176,7 @@ fn entitlement_groups(
         return Vec::new();
     }
     let labels = faults.take("route labels", get_route_labels(&services.config()));
-    let sections = faults.take(
-        "services catalog",
-        shared::get_services_path().map(|p| build_matrix_sections(services, &p)),
-    );
+    let sections = build_matrix_sections(services, &shared::get_services_path(boot));
     entitlements_view::groups(
         rows::entitlement_views(entitlement_rows, &labels),
         &sections,

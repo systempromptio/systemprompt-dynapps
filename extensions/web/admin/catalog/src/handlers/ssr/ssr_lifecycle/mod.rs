@@ -20,7 +20,7 @@ use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
+use systemprompt_web_admin_core::extension_boot::BootServices;
 
 use self::view::{ArchivePeriodView, LifecycleFindingView, MeasureView, build_view};
 use crate::repositories::lifecycle::{
@@ -56,9 +56,7 @@ struct LifecyclePageData {
 }
 
 pub(crate) async fn lifecycle_page(
-    Extension(services): Extension<
-        systemprompt_web_admin_core::extension_services::ExtensionServices,
-    >,
+    BootServices { boot, services }: BootServices,
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -67,9 +65,8 @@ pub(crate) async fn lifecycle_page(
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
-    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
     let ai_history_days = services.config().ai.history.retention_days;
-    let retention = retention_view(&pool, &profile.retention, ai_history_days).await?;
+    let retention = retention_view(&pool, &boot.profile().retention, ai_history_days).await?;
     let measures = list_latest_retention_runs(&pool).await?;
     let archives = list_retention_archives(&pool).await?;
     let health = find_latest_health_report(&pool).await?;

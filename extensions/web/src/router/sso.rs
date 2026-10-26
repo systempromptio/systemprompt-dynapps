@@ -4,28 +4,23 @@
 
 use std::sync::Arc;
 
-use systemprompt::manifest::Config;
 use systemprompt::oauth::SessionCreationService;
-use systemprompt::sso::SsoDriver;
+use systemprompt::sso::{SsoDriver, SsoHookContext};
 use systemprompt_web_admin_identity::SsoDeps;
 
 use super::pools::DbHandles;
 
 pub(super) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> SsoDeps {
-    let driver = match Config::get() {
-        Ok(config) => Some(SsoDriver::discover(
-            &db.db,
-            Arc::clone(session_service),
-            Arc::new(config.clone()),
-            db.services.view().clone(),
-        )),
-        Err(e) => {
-            tracing::warn!(error = %e, "Profile config unavailable; SSO routes answer unavailable");
-            None
-        },
+    let ctx = SsoHookContext {
+        db: Arc::clone(&db.db),
+        config: Arc::clone(db.boot.config_arc()),
+        services: db.services.view().clone(),
+        services_root: db.boot.active_services_root().clone(),
+        secrets: Arc::clone(db.boot.secrets()),
     };
+    let driver = SsoDriver::discover(&ctx, db.oauth.oauth.clone(), Arc::clone(session_service));
     SsoDeps {
-        driver,
+        driver: Some(driver),
         write_pool: Arc::clone(&db.write),
         session_service: Arc::clone(session_service),
     }

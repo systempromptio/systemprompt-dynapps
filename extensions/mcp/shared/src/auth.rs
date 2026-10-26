@@ -7,19 +7,22 @@
 
 use rmcp::ErrorData as McpError;
 use rmcp::service::{RequestContext, RoleServer};
+use std::sync::Arc;
 use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::manifest::services::ServicesConfig;
-use systemprompt::mcp::middleware::enforce_rbac_from_registry;
+use systemprompt::mcp::middleware::{JwtVerifier, enforce_rbac_from_registry};
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
-use systemprompt::security::keys::SigningKeys;
+
+use systemprompt::manifest::Config;
+use systemprompt::models::auth::TokenAuthority;
 use systemprompt::traits::ConfigWatch;
 
 use crate::{record_mcp_access, record_mcp_access_rejected};
 
 /// What a server authenticates its tool calls against: its pool, its id,
-/// the authz hook, the services config and the signing keys it was built
+/// the authz hook, the services config and the token verifier it was built
 /// with.
 #[derive(Clone, Copy)]
 pub struct ToolAuth<'a> {
@@ -27,17 +30,28 @@ pub struct ToolAuth<'a> {
     pub service_id: &'a McpServerId,
     pub authz_hook: &'a SharedAuthzHook,
     pub services_config: &'a ServicesConfig,
-    pub signing_keys: &'a SigningKeys,
+    pub verifier: JwtVerifier<'a>,
 }
 
 /// What a server authorises every tool call against, held for its lifetime:
-/// the authz hook, the live services config and the signing keys tokens are
-/// validated with.
+/// the authz hook, the live services config, and the token authority and
+/// config tokens are validated with.
 #[derive(Clone, Debug)]
 pub struct ServerAccess {
     pub authz_hook: SharedAuthzHook,
     pub services: ConfigWatch<ServicesConfig>,
-    pub signing_keys: SigningKeys,
+    pub token_authority: Arc<dyn TokenAuthority>,
+    pub config: Arc<Config>,
+}
+
+impl ServerAccess {
+    #[must_use]
+    pub fn verifier(&self) -> JwtVerifier<'_> {
+        JwtVerifier {
+            authority: self.token_authority.as_ref(),
+            config: &self.config,
+        }
+    }
 }
 
 impl std::fmt::Debug for ToolAuth<'_> {
@@ -58,12 +72,11 @@ pub async fn authenticate_tool_request(
         service_id,
         authz_hook,
         services_config,
-        signing_keys,
+        verifier,
     } = auth;
     let server_name = service_id.as_str();
     let rbac_result =
-        enforce_rbac_from_registry(ctx, service_id, authz_hook, services_config, signing_keys)
-            .await;
+        enforce_rbac_from_registry(ctx, service_id, authz_hook, services_config, &verifier).await;
 
     match rbac_result {
         Ok(result) => {

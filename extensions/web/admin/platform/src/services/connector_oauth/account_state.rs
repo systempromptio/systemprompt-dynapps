@@ -11,9 +11,14 @@ use chrono::Utc;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
+pub(super) struct GrantOwner<'a> {
+    pub user: &'a UserId,
+    pub secrets: &'a dyn systemprompt::traits::SecretStore,
+}
+
 pub(super) async fn record_grant_failure(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    user: &UserId,
+    GrantOwner { user, secrets }: GrantOwner<'_>,
     account: &mut ProviderConnection,
     grant: &Grant,
     failure: &FlowFailure,
@@ -34,7 +39,7 @@ pub(super) async fn record_grant_failure(
             account.status = "verification_required".into();
             account.verified_at = None;
         }
-        let possibly_rotated_grant = seal(grant)?;
+        let possibly_rotated_grant = seal(secrets, grant)?;
         repo::store(tx, user, provider.slug(), &possibly_rotated_grant).await?;
     }
     update_account(tx, user, account).await?;
