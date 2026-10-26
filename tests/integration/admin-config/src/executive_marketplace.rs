@@ -24,7 +24,7 @@ fn services_path() -> PathBuf {
 
 #[test]
 fn executive_services_load_with_resolvable_plugin_members() {
-    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
+    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"), None)
         .expect("shipped services load and validate");
     for id in ["dynapps-super-admin"] {
         let marketplace = services
@@ -51,7 +51,7 @@ async fn executive_access_grants_only_the_control_plane() {
     };
     let path = services_path();
     let services =
-        ConfigLoader::load_from_path(&path.join("config/config.yaml")).expect("services");
+        ConfigLoader::load_from_path(&path.join("config/config.yaml"), None).expect("services");
     let view = dynapps_test_common::extension_services(
         &db.pool,
         dynapps_test_common::services_view(&path.join("config/config.yaml")),

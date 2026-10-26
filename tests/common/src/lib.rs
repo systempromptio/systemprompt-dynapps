@@ -30,9 +30,12 @@ pub fn ephemeral_signing_keys() -> SigningKeys {
     let key = RsaSigningKey::generate().expect("generate an ephemeral RSA signing key");
     SigningKeys::new(key, &[9; 32]).expect("build the signing keys")
 }
-pub use secrets_fixture::{bootstrap_master_key, bootstrap_signing_config};
+pub use secrets_fixture::{
+    BootFixture, bootstrap_master_key, bootstrap_signing_config, bootstrap_with_secrets,
+};
 pub use services::{
-    empty_services_view, extension_services, offline_extension_services, services_view,
+    empty_services_view, extension_services, fixture_secret_store, offline_extension_services,
+    secret_store_without_master_key, services_view,
 };
 pub use skip::{ci, skip_or_panic};
 pub use sso::{FakeOidcIdp, HeaderSpec, IdTokenSpec, KidForm, TestIdpKeys, TokenForm};

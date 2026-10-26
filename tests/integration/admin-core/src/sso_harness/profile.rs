@@ -1,8 +1,6 @@
-//! The process-wide profile, secrets and signing authority the SSO driver
-//! reads, installed once per test process.
+//! The booted profile, secrets and config the SSO driver reads, loaded once
+//! per test process.
 //!
-//! Core's config, secrets and signing authority are `OnceLock`s, which is why
-//! every SSO test depends on nextest running each test in its own process.
 //! The profile reuses the contract suite's checked-in fixture over a
 //! per-process services tree: every entry of the repository's `services/` is
 //! linked in, except `web/config`, a real directory the test writes its
@@ -11,12 +9,11 @@
 //! provider resolves it by.
 
 use std::path::PathBuf;
-use std::sync::{Once, OnceLock};
+use std::sync::{Arc, OnceLock};
 
 use dynapps_test_common::repo_root;
 
-static INIT: Once = Once::new();
-static READY: OnceLock<bool> = OnceLock::new();
+static BOOT: OnceLock<systemprompt::loader::BootContext> = OnceLock::new();
 
 const FIXTURE_PROFILE: &str = include_str!("../../../../contract/admin/fixtures/profile.yaml");
 // `secret_crypto::load_master_key` refuses anything but exactly 32 bytes.
@@ -30,36 +27,35 @@ pub(crate) const OIDC_SECRET_KEY: &str = "entra_oidc_client_secret";
 pub(crate) const OIDC_WRONG_SECRET_KEY: &str = "entra_oidc_wrong_secret";
 pub(crate) const EXTERNAL_URL: &str = "http://localhost:8099";
 
-pub(crate) fn init() -> bool {
-    INIT.call_once(|| {
-        READY
-            .set(try_init())
-            .expect("call_once runs this exactly once");
-    });
-    *READY.get().unwrap_or(&false)
+pub(crate) fn boot() -> &'static systemprompt::loader::BootContext {
+    BOOT.get_or_init(load)
 }
 
-fn try_init() -> bool {
-    let profile = write_profile();
-    systemprompt::config::ProfileBootstrap::init_from_path(&profile)
+fn load() -> systemprompt::loader::BootContext {
+    let profile = systemprompt::config::LoadedProfile::from_path(&write_profile())
         .expect("initialise the SSO fixture profile");
     // Why: tokio panics on `block_on` inside a `#[tokio::test]` runtime, so the
-    // async secrets bootstrap runs on a throwaway runtime on its own thread.
-    std::thread::scope(|scope| {
+    // async secrets load runs on a throwaway runtime on its own thread.
+    let secrets = std::thread::scope(|scope| {
         scope
             .spawn(|| {
                 tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .expect("runtime for the secrets bootstrap")
-                    .block_on(systemprompt::config::SecretsBootstrap::try_init())
-                    .expect("load the fixture secrets");
+                    .expect("runtime for the secrets load")
+                    .block_on(systemprompt::config::SecretsService::load(Arc::clone(
+                        &profile,
+                    )))
+                    .expect("load the fixture secrets")
             })
             .join()
-            .expect("the secrets bootstrap thread did not panic");
+            .expect("the secrets load thread did not panic")
     });
-    systemprompt::config::try_init_config(None).expect("build config from the fixture profile");
-    true
+    let boot = systemprompt::loader::BootContext::new(profile, secrets);
+    let root = systemprompt::manifest::services::root::ActiveServicesRoot::baked(boot.profile());
+    boot.try_init_config(Some(root.path.as_path()))
+        .expect("build config from the fixture profile");
+    boot
 }
 
 fn secrets() -> String {

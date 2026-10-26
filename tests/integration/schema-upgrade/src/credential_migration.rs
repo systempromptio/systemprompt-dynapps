@@ -97,7 +97,7 @@ async fn release_0_72_1_keys_audit_and_rules_move_to_the_catalog() {
          on the credential and the other is left, not overwritten"
     );
 
-    let catalog = ConfigLoader::load_from_path(&repo_path("services/config/config.yaml"))
+    let catalog = ConfigLoader::load_from_path(&repo_path("services/config/config.yaml"), None)
         .expect("committed services tree loads")
         .resolve_catalog(&CatalogContext::default())
         .expect("committed catalog resolves");

@@ -61,7 +61,7 @@ fn services_dir() -> PathBuf {
 }
 
 fn services() -> ServicesConfig {
-    ConfigLoader::load_from_path(&services_dir().join("config/config.yaml"))
+    ConfigLoader::load_from_path(&services_dir().join("config/config.yaml"), None)
         .unwrap_or_else(|e| panic!("services tree could not be composed: {e}"))
 }
 

@@ -30,7 +30,7 @@ pub(crate) fn repo_root() -> PathBuf {
 
 // The committed `services/` tree, loaded exactly as the server boots it.
 pub(crate) fn committed_services() -> ServicesConfig {
-    ConfigLoader::load_from_path(&repo_root().join("services/config/config.yaml"))
+    ConfigLoader::load_from_path(&repo_root().join("services/config/config.yaml"), None)
         .expect("services/ tree loads")
 }
 

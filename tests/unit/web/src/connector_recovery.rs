@@ -11,11 +11,7 @@ fn callback_notices_name_the_stage_and_only_accept_bounded_fields() {
         let message = notice
             .message(
                 &systemprompt_web_admin_core::extension_services::ExtensionServices::new(
-                    systemprompt::loader::ServicesState::from_config(
-                        systemprompt::manifest::ServicesConfig::default(),
-                    )
-                    .expect("empty services")
-                    .view(),
+                    crate::boot_fixture::empty_services_view(),
                     std::sync::Arc::new(
                         systemprompt::governance::authz::SubjectProviderSet::from_providers(
                             Vec::new(),
@@ -35,11 +31,7 @@ fn callback_notices_name_the_stage_and_only_accept_bounded_fields() {
         notice
             .message(
                 &systemprompt_web_admin_core::extension_services::ExtensionServices::new(
-                    systemprompt::loader::ServicesState::from_config(
-                        systemprompt::manifest::ServicesConfig::default()
-                    )
-                    .expect("empty services")
-                    .view(),
+                    crate::boot_fixture::empty_services_view(),
                     std::sync::Arc::new(
                         systemprompt::governance::authz::SubjectProviderSet::from_providers(
                             Vec::new()

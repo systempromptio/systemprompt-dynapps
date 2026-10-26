@@ -99,7 +99,10 @@ impl Reply {
     }
 }
 
-fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
+fn session_service(
+    pool: &Arc<PgPool>,
+    config: &Arc<systemprompt::manifest::Config>,
+) -> Arc<SessionCreationService> {
     let db = Arc::new(Database::from_pools(
         Arc::clone(pool),
         Some(Arc::clone(pool)),
@@ -108,13 +111,18 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
     Arc::new(SessionCreationService::new(
         Arc::new(SessionRepository::new(&db)),
         Arc::new(users),
-        dynapps_test_common::ephemeral_signing_keys(),
+        Arc::new(systemprompt::security::jwt::DeploymentTokenAuthority::new(
+            dynapps_test_common::ephemeral_signing_keys(),
+            config.jwt_issuer.clone(),
+        )),
+        Arc::clone(config),
     ))
 }
 
 impl SsoApp {
     pub(crate) fn build(pool: &Arc<PgPool>, oidc: Option<entra_oidc::EntraOidcConfig>) -> Self {
-        assert!(profile::init(), "SSO fixture profile");
+        let boot = profile::boot();
+        let config = Arc::clone(boot.config().expect("fixture profile config"));
         let config_file = profile::services_web_config_dir().join("entra-oidc.yaml");
         match oidc {
             Some(cfg) => std::fs::write(
@@ -134,14 +142,25 @@ impl SsoApp {
             Arc::clone(pool),
             Some(Arc::clone(pool)),
         ));
-        let sessions = session_service(pool);
-        let config = systemprompt::manifest::Config::get().expect("fixture profile config");
+        let sessions = session_service(pool, &config);
+        let hook = systemprompt::sso::SsoHookContext {
+            db: Arc::clone(&database),
+            config,
+            services: dynapps_test_common::empty_services_view(),
+            services_root: systemprompt::manifest::services::root::ActiveServicesRoot::baked(
+                boot.profile(),
+            ),
+            secrets: Arc::<systemprompt::config::SecretsService>::clone(boot.secrets()),
+        };
+        let oauth = systemprompt::oauth::repository::OAuthRepository::new(
+            &database,
+            Arc::from(boot.secrets().oauth_at_rest_pepper()),
+        );
         let deps = SsoDeps {
             driver: Some(systemprompt::sso::SsoDriver::discover(
-                &database,
+                &hook,
+                oauth,
                 Arc::clone(&sessions),
-                Arc::new(config.clone()),
-                dynapps_test_common::empty_services_view(),
             )),
             write_pool: Arc::clone(pool),
             session_service: sessions,
@@ -149,7 +168,7 @@ impl SsoApp {
         let router = Router::new()
             .nest(
                 "/admin",
-                routes::public::sign_in_routes().with_state(Arc::clone(pool)),
+                routes::public::sign_in_routes(boot.profile()).with_state(Arc::clone(pool)),
             )
             .layer(Extension(deps));
         Self { router }

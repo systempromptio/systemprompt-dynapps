@@ -16,7 +16,7 @@ fn noon_utc() -> chrono::DateTime<Utc> {
 
 fn format_date(value: &str) -> String {
     let mut hbs = Handlebars::new();
-    register_helpers(&mut hbs);
+    register_helpers(&mut hbs, std::path::Path::new("web/dist"));
     hbs.render_template("{{formatDate v}}", &serde_json::json!({ "v": value }))
         .unwrap()
 }

@@ -10,6 +10,8 @@ use tower::ServiceExt;
 
 #[tokio::test]
 async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
     let pool = Arc::new(
         sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://test:test@localhost:1/test")
@@ -24,11 +26,8 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
     let sessions = Arc::new(SessionCreationService::new(
         Arc::new(session_repository),
         Arc::new(users),
-        systemprompt::security::keys::SigningKeys::new(
-            systemprompt::security::keys::RsaSigningKey::generate().expect("signing key"),
-            &[9; 32],
-        )
-        .expect("signing keys"),
+        Arc::clone(boot.token_authority()),
+        Arc::clone(boot.config_arc()),
     ));
     let router = systemprompt_web_extension::admin::hooks_webhook_router(
         &database,
@@ -37,16 +36,13 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
     )
     .layer(axum::Extension(
         systemprompt_web_admin_core::extension_services::ExtensionServices::new(
-            systemprompt::loader::ServicesState::from_config(
-                systemprompt::manifest::ServicesConfig::default(),
-            )
-            .expect("empty services")
-            .view(),
+            crate::boot_fixture::empty_services_view(),
             Arc::new(
                 systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()),
             ),
         ),
-    ));
+    ))
+    .layer(axum::Extension(boot));
     pool.close().await;
     let payload = serde_json::json!({
         "entity": systemprompt::governance::authz::EntityRef::McpServer(systemprompt::identifiers::McpServerId::try_new("dynbrain").expect("valid fixture identifier")),

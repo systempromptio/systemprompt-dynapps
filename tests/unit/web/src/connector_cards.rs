@@ -38,11 +38,7 @@ fn control_plane(entitled: bool) -> Connection {
 fn an_admin_sees_the_control_plane_as_a_connected_server() {
     let card = connector_card(
         &systemprompt_web_admin_core::extension_services::ExtensionServices::new(
-            systemprompt::loader::ServicesState::from_config(
-                systemprompt::manifest::ServicesConfig::default(),
-            )
-            .expect("empty services")
-            .view(),
+            crate::boot_fixture::empty_services_view(),
             std::sync::Arc::new(
                 systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()),
             ),
@@ -66,11 +62,7 @@ fn an_admin_sees_the_control_plane_as_a_connected_server() {
 fn a_plain_user_is_told_the_control_plane_is_not_open_to_them() {
     let card = connector_card(
         &systemprompt_web_admin_core::extension_services::ExtensionServices::new(
-            systemprompt::loader::ServicesState::from_config(
-                systemprompt::manifest::ServicesConfig::default(),
-            )
-            .expect("empty services")
-            .view(),
+            crate::boot_fixture::empty_services_view(),
             std::sync::Arc::new(
                 systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()),
             ),

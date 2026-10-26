@@ -19,9 +19,15 @@ use axum::http::{Request, StatusCode};
 use sqlx::PgPool;
 use systemprompt::database::Database;
 use systemprompt::extension::prelude::{Extension, ExtensionContext};
+use systemprompt::manifest::services::root::ActiveServicesRoot;
+use systemprompt::manifest::{Config, Profile};
+use systemprompt::models::auth::TokenAuthority;
 use systemprompt::storage::LocalFileStorage;
-use systemprompt::traits::{BackgroundTasks, ConfigProvider, DatabaseHandle, FileStorage};
+use systemprompt::traits::{
+    BackgroundTasks, ConfigProvider, DatabaseHandle, Dependencies, FileStorage, SecretStore,
+};
 use systemprompt_web_extension::WebExtension;
+use systemprompt_web_extension::admin::core::extension_boot::ExtensionBoot;
 use tower::ServiceExt as _;
 
 use crate::tempdb::TempDb;
@@ -49,20 +55,40 @@ impl ConfigProvider for StubConfig {
 
 struct PoolCtx {
     database: Arc<Database>,
+    boot: ExtensionBoot,
 }
 
 impl PoolCtx {
-    fn new(pool: &Arc<PgPool>) -> Self {
+    fn new(pool: &Arc<PgPool>, fixture: &dynapps_test_common::BootFixture) -> Self {
         Self {
             database: Arc::new(Database::from_pools(
                 Arc::clone(pool),
                 Some(Arc::clone(pool)),
             )),
+            boot: fixture.extension_boot(),
         }
     }
 }
 
 impl ExtensionContext for PoolCtx {
+    fn profile(&self) -> Arc<Profile> {
+        Arc::new(self.boot.profile().clone())
+    }
+    fn app_config(&self) -> Arc<Config> {
+        Arc::clone(self.boot.config_arc())
+    }
+    fn services_root(&self) -> ActiveServicesRoot {
+        self.boot.active_services_root().clone()
+    }
+    fn token_authority(&self) -> Arc<dyn TokenAuthority> {
+        Arc::clone(self.boot.token_authority())
+    }
+    fn secrets(&self) -> Arc<dyn SecretStore> {
+        Arc::clone(self.boot.secrets())
+    }
+    fn dependencies(&self) -> Dependencies {
+        Dependencies::new()
+    }
     fn system_owner_id(&self) -> systemprompt::identifiers::UserId {
         systemprompt::identifiers::UserId::new("router-test-owner")
     }
@@ -112,6 +138,24 @@ impl DatabaseHandle for ForeignDb {
 }
 
 impl ExtensionContext for ForeignDbCtx {
+    fn profile(&self) -> Arc<Profile> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn app_config(&self) -> Arc<Config> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn services_root(&self) -> ActiveServicesRoot {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn token_authority(&self) -> Arc<dyn TokenAuthority> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn secrets(&self) -> Arc<dyn SecretStore> {
+        unreachable!("pool extraction refuses a foreign database first")
+    }
+    fn dependencies(&self) -> Dependencies {
+        Dependencies::new()
+    }
     fn system_owner_id(&self) -> systemprompt::identifiers::UserId {
         systemprompt::identifiers::UserId::new("router-test-owner")
     }
@@ -162,9 +206,9 @@ async fn the_router_assembles_from_a_context_carrying_a_real_database() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let _profile = dynapps_test_common::bootstrap_signing_config().await;
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
 
-    let built = WebExtension::new().router(&PoolCtx::new(&db.pool));
+    let built = WebExtension::new().router(&PoolCtx::new(&db.pool, &profile));
 
     let mounted = built.expect("a context with a real database yields a router");
     assert_eq!(
@@ -192,9 +236,9 @@ async fn the_session_route_is_mounted_under_the_public_api_prefix() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let _profile = dynapps_test_common::bootstrap_signing_config().await;
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds")
         .router;
 
@@ -214,9 +258,9 @@ async fn the_admin_json_api_is_nested_below_the_public_api_prefix() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let _profile = dynapps_test_common::bootstrap_signing_config().await;
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds")
         .router;
 
@@ -236,9 +280,9 @@ async fn a_path_outside_every_mounted_plane_is_not_found() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let _profile = dynapps_test_common::bootstrap_signing_config().await;
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds")
         .router;
 
@@ -256,9 +300,9 @@ async fn the_ssr_dashboard_mounts_from_the_bootstrapped_profile() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let _profile = dynapps_test_common::bootstrap_signing_config().await;
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
     let router = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds")
         .router;
 
@@ -278,13 +322,13 @@ async fn two_builds_from_the_same_pool_mount_the_same_surface() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let _profile = dynapps_test_common::bootstrap_signing_config().await;
+    let profile = dynapps_test_common::bootstrap_signing_config().await;
 
     let first = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds");
     let second = WebExtension::new()
-        .router(&PoolCtx::new(&db.pool))
+        .router(&PoolCtx::new(&db.pool, &profile))
         .expect("router builds again from an independent context");
 
     assert_eq!(first.base_path, second.base_path);

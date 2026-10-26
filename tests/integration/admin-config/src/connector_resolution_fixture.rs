@@ -28,6 +28,7 @@ pub(super) struct Harness {
     pub(super) http: reqwest::Client,
     origin: String,
     services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: std::sync::Arc<dyn systemprompt::traits::SecretStore>,
     _server: Server,
     _directory: tempfile::TempDir,
 }
@@ -67,31 +68,15 @@ impl Harness {
         std::fs::write(&config, format!(
             "mcp_servers:\n  rotation-mcp:\n    server_type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
         )).unwrap();
-        let profile = include_str!("../../../contract/admin/fixtures/profile.yaml")
-            .replace(
-                "__REPO__",
-                &dynapps_test_common::repo_root().to_string_lossy(),
-            )
-            .replace("__PROFILE_DIR__", &directory.path().to_string_lossy());
-        std::fs::write(directory.path().join("profile.yaml"), profile).unwrap();
-        std::fs::write(directory.path().join("secrets.json"), r#"{
-            "database_url":"postgres://unused:unused@localhost:5432/postgres",
-            "oauth_at_rest_pepper":"connector-rotation-test-pepper-not-a-real-secret",
-            "manifest_signing_secret_seed":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-            "encryption_master_key":"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
-        }"#).unwrap();
-        systemprompt::config::ProfileBootstrap::init_from_path(
-            &directory.path().join("profile.yaml"),
-        )
-        .unwrap();
-        systemprompt::config::SecretsBootstrap::try_init()
-            .await
-            .unwrap();
-        systemprompt::config::try_init_config(None).unwrap();
         let view = dynapps_test_common::offline_extension_services(
             dynapps_test_common::services_view(&config),
         );
         let services = &view;
+        let secrets = dynapps_test_common::fixture_secret_store();
+        let access = oauth::ConnectorAccess {
+            services,
+            secrets: secrets.as_ref(),
+        };
         let ca = reqwest::Certificate::from_pem(
             &std::fs::read(directory.path().join("ca.pem")).unwrap(),
         )
@@ -109,7 +94,7 @@ impl Harness {
         let provider = Provider::try_from("rotation-mcp".to_owned()).unwrap();
         let callback = "https://dashboard.example.test/api/public/connectors/rotation-mcp/callback";
         let (_, mut grant) = oauth::generic::authorize_with_client(
-            services,
+            access,
             oauth::Consent {
                 user: user.as_str(),
                 state: "test-state",
@@ -136,7 +121,7 @@ impl Harness {
             &mut tx,
             &user,
             provider.slug(),
-            &oauth::seal(&grant).unwrap(),
+            &oauth::seal(secrets.as_ref(), &grant).unwrap(),
         )
         .await
         .unwrap();
@@ -151,6 +136,7 @@ impl Harness {
             http,
             origin,
             services: view,
+            secrets,
             _server: server,
             _directory: directory,
         })
@@ -158,10 +144,13 @@ impl Harness {
 
     pub(super) async fn resolve(&self, probe: bool) -> (AdminResult<String>, VerificationReport) {
         let mut report = VerificationReport::for_provider(self.provider.slug());
-        let result =
-            oauth::TokenResolver::new(&self.db.pool, &self.services, &self.user, &self.http)
-                .resolve(self.provider.clone(), probe, &mut report)
-                .await;
+        let access = oauth::ConnectorAccess {
+            services: &self.services,
+            secrets: self.secrets.as_ref(),
+        };
+        let result = oauth::TokenResolver::new(&self.db.pool, access, &self.user, &self.http)
+            .resolve(self.provider.clone(), probe, &mut report)
+            .await;
         (result, report.finish())
     }
 
@@ -171,7 +160,16 @@ impl Harness {
             .await
             .unwrap();
         tx.commit().await.unwrap();
-        row.map(|row| oauth::open(&self.services, &row.grant, &self.user, &self.provider).unwrap())
+        row.map(|row| {
+            oauth::open(
+                &self.services,
+                self.secrets.as_ref(),
+                &row.grant,
+                &self.user,
+                &self.provider,
+            )
+            .unwrap()
+        })
     }
 
     pub(super) async fn account(&self) -> accounts::ProviderConnection {

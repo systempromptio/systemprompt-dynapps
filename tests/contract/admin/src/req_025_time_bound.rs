@@ -79,7 +79,9 @@ async fn a_genuine_token_expires_on_its_own_without_revocation() {
     .await;
     seed::insert_profile_ext(&db.pool, &user_id, 1).await;
 
-    let secret = systemprompt::config::SecretsBootstrap::manifest_signing_secret_seed()
+    let secret = globals::boot()
+        .secrets()
+        .manifest_signing_secret_seed()
         .expect("globals::init installed the fixture secrets");
     let now = chrono::Utc::now().timestamp();
 
@@ -135,7 +137,9 @@ async fn expiry_at_the_boundary_is_exclusive() {
     .await;
     seed::insert_profile_ext(&db.pool, &user_id, 1).await;
 
-    let secret = systemprompt::config::SecretsBootstrap::manifest_signing_secret_seed()
+    let secret = globals::boot()
+        .secrets()
+        .manifest_signing_secret_seed()
         .expect("globals::init installed the fixture secrets");
 
     // A token whose expiry equals "now" must already be dead: the verifier

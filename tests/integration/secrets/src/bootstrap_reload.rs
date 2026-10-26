@@ -3,13 +3,15 @@
 //! swaps one changed key, a reload with nothing changed, and a reload that
 //! would change a pinned key and is refused.
 //!
-//! The profile and secrets store are process-wide, so each test needs its
-//! own process (nextest's default). The token is read from the process
-//! environment by name; the lint bar forbids `set_var`, so `token_env` names
-//! `HOME`, which every runner has, and the fake is started with its value.
+//! Each test boots its own profile and secrets store. The token is read from
+//! the process environment by name; the lint bar forbids `set_var`, so
+//! `token_env` names `HOME`, which every runner has, and the fake is started
+//! with its value.
 
 use dynapps_test_common::{FakeConnect, repo_root};
-use systemprompt::config::{ProfileBootstrap, SecretsBootstrap};
+use std::sync::Arc;
+
+use systemprompt::config::{LoadedProfile, SecretsService};
 
 use crate::support::{ITEM, VAULT, baseline_fields};
 
@@ -21,6 +23,7 @@ struct Booted {
     connect: FakeConnect,
     vault: String,
     item: String,
+    secrets: Arc<SecretsService>,
     _dir: tempfile::TempDir,
 }
 
@@ -66,35 +69,33 @@ async fn boot() -> Booted {
     let profile = dir.path().join("profile.yaml");
     std::fs::write(&profile, yaml).expect("write profile");
 
-    ProfileBootstrap::init_from_path(&profile).expect("profile with an external source");
-    SecretsBootstrap::try_init()
+    let profile = LoadedProfile::from_path(&profile).expect("profile with an external source");
+    let secrets = SecretsService::load(profile)
         .await
         .expect("first load through 1Password");
     Booted {
         connect,
         vault,
         item,
+        secrets,
         _dir: dir,
     }
 }
 
-fn current(key: &str) -> Option<String> {
-    SecretsBootstrap::get()
-        .expect("initialised")
-        .get(key)
-        .cloned()
+fn current(booted: &Booted, key: &str) -> Option<String> {
+    booted.secrets.get().get(key).cloned()
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn reload_swaps_a_changed_key_and_ignores_an_unchanged_store() {
     let booted = boot().await;
-    let first = SecretsBootstrap::generation();
+    let first = booted.secrets.generation();
     assert_eq!(
-        current("github_token").as_deref(),
+        current(&booted, "github_token").as_deref(),
         Some("ghp-generation-one")
     );
 
-    let unchanged = SecretsBootstrap::reload().await.expect("reload");
+    let unchanged = booted.secrets.reload().await.expect("reload");
     assert!(!unchanged.swapped, "{unchanged:?}");
     assert!(unchanged.changed_keys.is_empty());
     assert_eq!(unchanged.generation, first);
@@ -105,13 +106,13 @@ async fn reload_swaps_a_changed_key_and_ignores_an_unchanged_store() {
         "github_token",
         "ghp-generation-two",
     );
-    let swapped = SecretsBootstrap::reload().await.expect("reload");
+    let swapped = booted.secrets.reload().await.expect("reload");
     assert!(swapped.swapped, "{swapped:?}");
     assert_eq!(swapped.changed_keys, ["github_token"]);
     assert_eq!(swapped.generation, first + 1);
-    assert_eq!(SecretsBootstrap::generation(), first + 1);
+    assert_eq!(booted.secrets.generation(), first + 1);
     assert_eq!(
-        current("github_token").as_deref(),
+        current(&booted, "github_token").as_deref(),
         Some("ghp-generation-two")
     );
 }
@@ -119,8 +120,8 @@ async fn reload_swaps_a_changed_key_and_ignores_an_unchanged_store() {
 #[tokio::test(flavor = "multi_thread")]
 async fn reload_refuses_a_changed_pinned_key_and_keeps_the_generation() {
     let booted = boot().await;
-    let first = SecretsBootstrap::generation();
-    let before = current("encryption_master_key");
+    let first = booted.secrets.generation();
+    let before = current(&booted, "encryption_master_key");
 
     booted.connect.set_field(
         &booted.vault,
@@ -128,7 +129,9 @@ async fn reload_refuses_a_changed_pinned_key_and_keeps_the_generation() {
         "encryption_master_key",
         "ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100",
     );
-    let err = SecretsBootstrap::reload()
+    let err = booted
+        .secrets
+        .reload()
         .await
         .expect_err("a pinned key may not change");
     let message = err.to_string();
@@ -138,12 +141,12 @@ async fn reload_refuses_a_changed_pinned_key_and_keeps_the_generation() {
         "the refusal never echoes the value"
     );
     assert_eq!(
-        SecretsBootstrap::generation(),
+        booted.secrets.generation(),
         first,
         "the old generation stays"
     );
-    assert_eq!(current("encryption_master_key"), before);
-    let status = SecretsBootstrap::status().expect("status");
+    assert_eq!(current(&booted, "encryption_master_key"), before);
+    let status = booted.secrets.status();
     assert!(
         status.last_error.is_some(),
         "the refusal is recorded: {status:?}"
@@ -153,16 +156,14 @@ async fn reload_refuses_a_changed_pinned_key_and_keeps_the_generation() {
 #[tokio::test(flavor = "multi_thread")]
 async fn reload_failure_upstream_keeps_the_current_generation() {
     let booted = boot().await;
-    let first = SecretsBootstrap::generation();
+    let first = booted.secrets.generation();
     booted
         .connect
         .fail_next(4, axum::http::StatusCode::SERVICE_UNAVAILABLE);
-    SecretsBootstrap::reload()
-        .await
-        .expect_err("Connect is down");
-    assert_eq!(SecretsBootstrap::generation(), first);
+    booted.secrets.reload().await.expect_err("Connect is down");
+    assert_eq!(booted.secrets.generation(), first);
     assert_eq!(
-        current("github_token").as_deref(),
+        current(&booted, "github_token").as_deref(),
         Some("ghp-generation-one")
     );
 }
@@ -176,14 +177,16 @@ async fn reload_refuses_a_changed_signing_key_pem() {
         "signing_key_pem",
         "generation-one-pem",
     );
-    let first = SecretsBootstrap::generation();
-    let err = SecretsBootstrap::reload()
+    let first = booted.secrets.generation();
+    let err = booted
+        .secrets
+        .reload()
         .await
         .expect_err("signing_key_pem is pinned");
     assert!(err.to_string().contains("signing_key_pem"), "{err}");
-    assert_eq!(SecretsBootstrap::generation(), first);
+    assert_eq!(booted.secrets.generation(), first);
     assert_eq!(
-        current("signing_key_pem"),
+        current(&booted, "signing_key_pem"),
         None,
         "the refused value never goes live"
     );

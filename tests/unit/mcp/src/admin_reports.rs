@@ -72,18 +72,22 @@ fn stored_reports_from_before_request_and_highlights_are_still_renderable() {
 #[test]
 fn report_data_renders_as_a_deterministic_mcp_asset() {
     use systemprompt::identifiers::{ArtifactId, ContextId};
+    use systemprompt::mcp::services::ui_renderer::registry::create_default_registry;
     use systemprompt::mcp::services::ui_renderer::{RenderTarget, artifact_ui_resource};
     let data = json!({"report":"costs","title":"AI Cost & Adoption","checked_at":"2026-09-07T12:00:00Z",
         "period":"7 days","complete":true,"sources":[],"metrics":{},"tables":[],
         "request":{"report":"costs","days":7}});
-    let html = artifact_ui_resource(&RenderTarget {
-        artifact_id: &ArtifactId::generate(),
-        artifact_type: "dashboard",
-        payload: &data,
-        context_id: ContextId::try_new("00000000-0000-4000-8000-000000000002")
-            .expect("valid fixture identifier"),
-        title: Some("Costs".into()),
-    })
+    let html = artifact_ui_resource(
+        &create_default_registry(),
+        &RenderTarget {
+            artifact_id: &ArtifactId::generate(),
+            artifact_type: "dashboard",
+            payload: &data,
+            context_id: ContextId::try_new("00000000-0000-4000-8000-000000000002")
+                .expect("valid fixture identifier"),
+            title: Some("Costs".into()),
+        },
+    )
     .expect("render")
     .html;
     // The brand mark is written once, in title case, and uppercased by CSS —
@@ -165,16 +169,20 @@ fn report_normalization_refuses_charts_that_do_not_match_the_chart_contract() {
 #[test]
 fn a_payload_that_is_not_a_report_fails_loudly() {
     use systemprompt::identifiers::{ArtifactId, ContextId};
+    use systemprompt::mcp::services::ui_renderer::registry::create_default_registry;
     use systemprompt::mcp::services::ui_renderer::{RenderTarget, artifact_ui_resource};
 
-    let error = artifact_ui_resource(&RenderTarget {
-        artifact_id: &ArtifactId::generate(),
-        artifact_type: "dashboard",
-        payload: &json!({"report": "costs", "tables": "not-an-array"}),
-        context_id: ContextId::try_new("00000000-0000-4000-8000-000000000004")
-            .expect("valid fixture identifier"),
-        title: Some("Broken".into()),
-    });
+    let error = artifact_ui_resource(
+        &create_default_registry(),
+        &RenderTarget {
+            artifact_id: &ArtifactId::generate(),
+            artifact_type: "dashboard",
+            payload: &json!({"report": "costs", "tables": "not-an-array"}),
+            context_id: ContextId::try_new("00000000-0000-4000-8000-000000000004")
+                .expect("valid fixture identifier"),
+            title: Some("Broken".into()),
+        },
+    );
 
     assert!(
         error.is_err(),

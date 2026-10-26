@@ -13,13 +13,25 @@ use axum::http::HeaderMap;
 use systemprompt::ai::BillingSource;
 use systemprompt::ai::repository::{AiRequestRepository, UserProviderCredentialRepository};
 use systemprompt::database::{Database, DbPool};
+use systemprompt::extension::prelude::{Extension, ExtensionContext};
+use systemprompt::gateway::GatewayEngines;
 use systemprompt::gateway::service::DispatchError;
 use systemprompt::gateway::service::credentials::{KeyOwner, resolve};
 use systemprompt::identifiers::{AiRequestId, CredentialId, UserId};
 use systemprompt::manifest::services::catalog::{
     CatalogContext, CatalogDocument, ResolvedCatalog, ResolvedHop,
 };
+use systemprompt::manifest::services::root::ActiveServicesRoot;
+use systemprompt::manifest::{Config, Profile};
+use systemprompt::models::auth::TokenAuthority;
+use systemprompt::security::at_rest::AtRestCipher;
+use systemprompt::security::credential::TokenCache;
+use systemprompt::storage::LocalFileStorage;
+use systemprompt::traits::{
+    BackgroundTasks, ConfigProvider, DatabaseHandle, FileStorage, SecretStore,
+};
 use systemprompt::wire::WireProtocol;
+use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
@@ -28,27 +40,97 @@ const CREDENTIAL: &str = "opencode-go";
 const MODEL: &str = "go-kimi-k3";
 const USER_AGENT: &str = "opencode/1.0 (systemprompt-gateway)";
 
-async fn secrets() -> tempfile::TempDir {
-    let dir = tempfile::tempdir().expect("profile directory");
-    let root = dynapps_test_common::repo_path("");
-    let yaml = include_str!("../../../contract/admin/fixtures/profile.yaml")
-        .replace("__PROFILE_DIR__", &dir.path().to_string_lossy())
-        .replace("__REPO__", &root.to_string_lossy());
-    std::fs::create_dir_all(dir.path().join("bin")).expect("bin directory");
-    std::fs::write(dir.path().join("profile.yaml"), yaml).expect("fixture profile");
-    let secrets = serde_json::json!({
-        "database_url": "postgres://unused:unused@localhost:5432/postgres",
-        "oauth_at_rest_pepper": "personal-keys-test-pepper-1234567890",
-        "manifest_signing_secret_seed": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "encryption_master_key": "22".repeat(32),
+#[derive(Debug)]
+struct StubConfig;
+
+impl ConfigProvider for StubConfig {
+    fn get(&self, _key: &str) -> Option<String> {
+        None
+    }
+    fn database_url(&self) -> &'static str {
+        "postgres://unused/unused"
+    }
+    fn system_path(&self) -> &'static str {
+        "/tmp"
+    }
+    fn api_port(&self) -> u16 {
+        0
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+struct KeysCtx {
+    database: DbPool,
+    boot: ExtensionBoot,
+    tokens: Arc<TokenCache>,
+}
+
+impl ExtensionContext for KeysCtx {
+    fn profile(&self) -> Arc<Profile> {
+        Arc::new(self.boot.profile().clone())
+    }
+    fn app_config(&self) -> Arc<Config> {
+        Arc::clone(self.boot.config_arc())
+    }
+    fn services_root(&self) -> ActiveServicesRoot {
+        self.boot.active_services_root().clone()
+    }
+    fn token_authority(&self) -> Arc<dyn TokenAuthority> {
+        Arc::clone(self.boot.token_authority())
+    }
+    fn secrets(&self) -> Arc<dyn SecretStore> {
+        Arc::clone(self.boot.secrets())
+    }
+    fn dependencies(&self) -> systemprompt::traits::Dependencies {
+        systemprompt::traits::Dependencies::new()
+    }
+    fn system_owner_id(&self) -> UserId {
+        UserId::new("personal-keys-owner")
+    }
+    fn config(&self) -> Arc<dyn ConfigProvider> {
+        Arc::new(StubConfig)
+    }
+    fn database(&self) -> Arc<dyn DatabaseHandle> {
+        Arc::<Database>::clone(&self.database)
+    }
+    fn get_extension(&self, _id: &str) -> Option<Arc<dyn Extension>> {
+        None
+    }
+    fn file_storage(&self) -> Arc<dyn FileStorage> {
+        Arc::new(LocalFileStorage::new(std::env::temp_dir()))
+    }
+    fn instance_id(&self) -> systemprompt::identifiers::InstanceId {
+        systemprompt::identifiers::InstanceId::new("personal-keys")
+    }
+    fn background_tasks(&self) -> BackgroundTasks {
+        BackgroundTasks::new()
+    }
+    fn services(&self) -> systemprompt::manifest::services::ServicesView {
+        dynapps_test_common::empty_services_view()
+    }
+    fn provider_tokens(&self) -> Arc<dyn systemprompt::traits::ProviderTokenCache> {
+        Arc::<TokenCache>::clone(&self.tokens)
+    }
+    fn subject_attributes(&self) -> Arc<dyn systemprompt::models::authz::SubjectAttributeSource> {
+        Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new()))
+    }
+}
+
+fn engines(fixture: &dynapps_test_common::BootFixture, pool: &DbPool) -> GatewayEngines {
+    let tokens = Arc::new(TokenCache::default());
+    let ctx: Arc<dyn ExtensionContext> = Arc::new(KeysCtx {
+        database: Arc::clone(pool),
+        boot: fixture.extension_boot(),
+        tokens: Arc::clone(&tokens),
     });
-    std::fs::write(dir.path().join("secrets.json"), secrets.to_string()).expect("secrets");
-    systemprompt::config::ProfileBootstrap::init_from_path(&dir.path().join("profile.yaml"))
-        .expect("profile bootstrap");
-    systemprompt::config::SecretsBootstrap::init()
-        .await
-        .expect("secrets bootstrap");
-    dir
+    GatewayEngines::new(tokens, &ctx, Arc::clone(fixture.boot().secrets()))
+        .expect("gateway engines")
+}
+
+fn cipher(fixture: &dynapps_test_common::BootFixture) -> AtRestCipher {
+    AtRestCipher::from_secrets(&fixture.boot().secrets().get()).expect("at-rest cipher")
 }
 
 type Seen = Arc<Mutex<Vec<HeaderMap>>>;
@@ -125,7 +207,7 @@ async fn personal_key_is_required_used_and_never_shared() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let _profile = secrets().await;
+    let fixture = dynapps_test_common::bootstrap_master_key().await;
     let pool: DbPool = Arc::new(Database::from_pools(
         Arc::clone(&db.pool),
         Some(Arc::clone(&db.pool)),
@@ -136,8 +218,9 @@ async fn personal_key_is_required_used_and_never_shared() {
     let catalog = personal_catalog(&endpoint);
     let hop = hop(&catalog);
     let credential = CredentialId::new(CREDENTIAL);
-    let keys = UserProviderCredentialRepository::new(&pool);
-    let tokens = Arc::new(systemprompt::security::credential::TokenCache::default());
+    let at_rest = cipher(&fixture);
+    let keys = UserProviderCredentialRepository::new(&pool, at_rest.clone());
+    let tokens = engines(&fixture, &pool);
 
     let refused = resolve(&catalog, &hop, &owner(&keys, &alice), &tokens)
         .await
@@ -152,7 +235,7 @@ async fn personal_key_is_required_used_and_never_shared() {
             .contains("personal key required for credential opencode-go")
     );
 
-    let sealed = systemprompt::security::at_rest::seal("go-key-alice").expect("seal alice's key");
+    let sealed = at_rest.seal("go-key-alice").expect("seal alice's key");
     keys.set_key(&alice, &credential, &sealed, Some("laptop"))
         .await
         .expect("store alice's key");

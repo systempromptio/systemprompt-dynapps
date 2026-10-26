@@ -7,15 +7,17 @@
 //! [`PortalEnv::mint`] signs with, and `SSL_CERT_FILE` naming the fake's CA so
 //! every default `reqwest` client in the connector code trusts it.
 //!
-//! Core's profile and config are process-wide, so one test process holds one
-//! `PortalEnv`; nextest gives each test its own process. The services tree is
-//! not: [`PortalEnv::services`] is the view the code under test is handed.
+//! The environment owns its booted profile, secrets and signing keys, and
+//! hands the code under test the [`PortalEnv::services`] view and the
+//! [`PortalEnv::boot`] values it would receive from its extension context.
+//! `SSL_CERT_FILE` is process-wide, so one test process holds one
+//! `PortalEnv`; nextest gives each test its own process.
 
 use std::collections::BTreeMap;
 
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header, encode};
-use std::sync::OnceLock;
+use std::sync::Arc;
 use systemprompt::identifiers::SessionId;
 use systemprompt::models::auth::{
     CustomClaims, JwtAudience, JwtClaims, Permission, RateLimitTier, RegisteredClaims, TokenType,
@@ -29,8 +31,6 @@ use super::{DYNBRAIN_PATH, FakePortal, ODOO_PATH};
 // The broker secret core presents as `x-systemprompt-credential-broker`.
 pub const BROKER_SECRET: &str = "fake-portal-broker-secret-not-a-real-secret";
 
-static KEYS: OnceLock<SigningKeys> = OnceLock::new();
-
 const PROFILE: &str = include_str!("../../../contract/admin/fixtures/profile.yaml");
 const COPIED: [&str; 3] = [
     "services/web/config.yaml",
@@ -42,6 +42,8 @@ const COPIED: [&str; 3] = [
 pub struct PortalEnv {
     pub portal: FakePortal,
     pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
+    pub boot: systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+    keys: SigningKeys,
     _dir: tempfile::TempDir,
 }
 
@@ -66,8 +68,7 @@ impl PortalEnv {
             std::fs::create_dir_all(destination.parent().expect("parent")).expect("mkdir");
             std::fs::copy(crate::repo_path(relative), destination).expect("copy services file");
         }
-        let config = root.join("services/config/config.yaml");
-        std::fs::write(&config, services_yaml(&portal)).expect("write services config");
+        std::fs::write(config_path(root), services_yaml(&portal)).expect("write services config");
         let profile = PROFILE
             .replace("__REPO__", &crate::repo_root().to_string_lossy())
             .replace("__PROFILE_DIR__", &root.to_string_lossy());
@@ -75,40 +76,56 @@ impl PortalEnv {
         std::fs::write(root.join("secrets.json"), secrets()).expect("write secrets");
 
         trust_ca(&portal);
-        systemprompt::config::ProfileBootstrap::init_from_path(&root.join("profile.yaml"))
+        let profile = systemprompt::config::LoadedProfile::from_path(&root.join("profile.yaml"))
             .expect("init profile");
-        systemprompt::config::SecretsBootstrap::try_init()
+        let secrets = systemprompt::config::SecretsService::load(Arc::clone(&profile))
             .await
             .expect("init secrets");
-        systemprompt::config::try_init_config(None).expect("init config");
-        let services = crate::offline_extension_services(crate::services_view(&config));
-        KEYS.get_or_init(crate::ephemeral_signing_keys);
+        let boot = systemprompt::loader::BootContext::new(profile, secrets);
+        let services_root =
+            systemprompt::manifest::services::root::ActiveServicesRoot::baked(boot.profile());
+        let config = Arc::clone(
+            boot.try_init_config(Some(services_root.path.as_path()))
+                .expect("init config"),
+        );
+        let keys = crate::ephemeral_signing_keys();
+        let authority = systemprompt::security::jwt::DeploymentTokenAuthority::new(
+            keys.clone(),
+            config.jwt_issuer.clone(),
+        );
+        let extension_boot = systemprompt_web_admin_core::extension_boot::ExtensionBoot::new(
+            Arc::new(boot.profile().clone()),
+            config,
+            services_root,
+            Arc::new(authority),
+            Arc::<systemprompt::config::SecretsService>::clone(boot.secrets()),
+        );
+        let services = crate::offline_extension_services(crate::services_view(&config_path(root)));
         Self {
             portal,
             services,
+            boot: extension_boot,
+            keys,
             _dir: dir,
         }
     }
 
     // The keys every minted JWT is signed with, and the routers under test
     // validate against.
-    pub fn signing_keys() -> &'static SigningKeys {
-        KEYS.get_or_init(crate::ephemeral_signing_keys)
+    pub const fn signing_keys(&self) -> &SigningKeys {
+        &self.keys
     }
 
-    // An `aud=mcp` JWT for `who`, signed by the installed authority, the
+    // An `aud=mcp` JWT for `who`, signed by the environment's authority, the
     // credential core forwards to the broker on a user's behalf.
-    pub fn mint(who: Principal<'_>) -> String {
+    pub fn mint(&self, who: Principal<'_>) -> String {
         let now = Utc::now();
         let registered = RegisteredClaims {
             sub: who.user_id.to_owned(),
             iat: now.timestamp(),
             exp: (now + Duration::hours(1)).timestamp(),
             nbf: Some(now.timestamp()),
-            iss: systemprompt::manifest::Config::get()
-                .expect("config")
-                .jwt_issuer
-                .clone(),
+            iss: self.boot.config().jwt_issuer.clone(),
             aud: vec![JwtAudience::Api, JwtAudience::Mcp],
             jti: uuid::Uuid::new_v4().to_string(),
         };
@@ -130,10 +147,14 @@ impl PortalEnv {
         };
         let claims = JwtClaims { registered, custom };
         let mut header = Header::new(Algorithm::RS256);
-        let keys = Self::signing_keys();
+        let keys = &self.keys;
         header.kid = Some(keys.active_kid().to_owned());
         encode(&header, &claims, keys.encoding_key()).expect("sign JWT")
     }
+}
+
+fn config_path(root: &std::path::Path) -> std::path::PathBuf {
+    root.join("services/config/config.yaml")
 }
 
 fn services_yaml(portal: &FakePortal) -> String {

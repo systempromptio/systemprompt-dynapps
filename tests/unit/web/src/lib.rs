@@ -269,6 +269,8 @@ mod authz_marketplace_pure;
 #[cfg(test)]
 mod authz_quota_subjects;
 #[cfg(test)]
+mod boot_fixture;
+#[cfg(test)]
 mod config_gateway_pure;
 #[cfg(test)]
 mod frontend_standards;

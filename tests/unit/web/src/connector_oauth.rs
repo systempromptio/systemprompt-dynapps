@@ -206,8 +206,8 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     );
     let config = root.path().join("config.yaml");
     std::fs::write(&config, yaml).unwrap();
-    let state = systemprompt::loader::ServicesState::load_from_path(&config).unwrap();
-    let services = &offline(state.view());
+    let services = &offline(crate::boot_fixture::services_view(&config));
+    let secrets = crate::boot_fixture::secret_store();
     let ca = reqwest::Certificate::from_pem(&std::fs::read(root.path().join("ca.pem")).unwrap())
         .unwrap();
     let http = reqwest::Client::builder()
@@ -220,7 +220,10 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     assert!(provider.configured(&services.config()) && provider.requires_auth(&services.config()));
     let callback = "https://dashboard.example.test/api/public/connectors/fourth-mcp/callback";
     let (url, mut grant) = generic::authorize_with_client(
-        services,
+        systemprompt_web_admin_platform::connector_oauth::ConnectorAccess {
+            services,
+            secrets: secrets.as_ref(),
+        },
         generic::Consent {
             user: "active-user",
             state: "test-state",
@@ -324,8 +327,8 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
     );
     let config = root.path().join("config.yaml");
     std::fs::write(&config, yaml).unwrap();
-    let state = systemprompt::loader::ServicesState::load_from_path(&config).unwrap();
-    let services = &offline(state.view());
+    let services = &offline(crate::boot_fixture::services_view(&config));
+    let secrets = crate::boot_fixture::secret_store();
     let ca = reqwest::Certificate::from_pem(&std::fs::read(root.path().join("ca.pem")).unwrap())
         .unwrap();
     let http = reqwest::Client::builder()
@@ -341,7 +344,10 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
     );
     let callback = "https://dashboard.example.test/api/public/connectors/google_rag/callback";
     let (url, mut grant) = generic::authorize_with_client(
-        services,
+        systemprompt_web_admin_platform::connector_oauth::ConnectorAccess {
+            services,
+            secrets: secrets.as_ref(),
+        },
         generic::Consent {
             user: "active-user",
             state: "test-state",
@@ -390,6 +396,7 @@ async fn subject_attribute_failure_is_not_an_empty_membership() {
                 sink: std::sync::Arc::new(systemprompt::governance::authz::NullAuditSink),
                 services: empty_view(),
                 subjects: systemprompt::models::authz::SubjectSourceHandle::default(),
+                secrets: crate::boot_fixture::secret_store(),
             }
         )
         .resolve_all(&user)
@@ -438,11 +445,7 @@ async fn gateway_rejects_incompatible_database_handles_even_when_reported_connec
 }
 
 fn empty_view() -> systemprompt::manifest::services::ServicesView {
-    systemprompt::loader::ServicesState::from_config(
-        systemprompt::manifest::ServicesConfig::default(),
-    )
-    .expect("empty services")
-    .view()
+    crate::boot_fixture::empty_services_view()
 }
 
 fn offline(

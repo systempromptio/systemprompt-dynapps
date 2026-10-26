@@ -37,7 +37,10 @@ fn accounts(pool: &Arc<PgPool>) -> ServiceAccounts {
         Arc::clone(pool),
         Some(Arc::clone(pool)),
     ));
-    ServiceAccounts::new(UserRepository::new(&db))
+    ServiceAccounts::new(
+        UserRepository::new(&db),
+        dynapps_test_common::fixture_secret_store(),
+    )
 }
 
 async fn service_account(pool: &Arc<PgPool>) -> UserId {

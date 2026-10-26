@@ -33,6 +33,7 @@ fn validated(sources: Vec<ContentSourceRaw>) -> BlogConfigValidated {
             enable_link_tracking: true,
         },
         base_path(),
+        base_path(),
     )
     .expect("fixture config validates")
 }

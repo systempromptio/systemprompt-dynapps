@@ -50,8 +50,9 @@ fn stateless_provider_registries_are_complete() {
     // and Dynapps ships no blog.
     assert_eq!(registry::page_data_providers().len(), 1);
     assert_eq!(registry::content_data_providers().len(), 1);
-    // org_url and release_version (site/src/extenders).
-    assert_eq!(registry::template_data_extenders().len(), 2);
+    // release_version (site/src/extenders); org_url takes the external URL, so
+    // the facade builds it from the extension context instead.
+    assert_eq!(registry::template_data_extenders().len(), 1);
 }
 
 #[test]

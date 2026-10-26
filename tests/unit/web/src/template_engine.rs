@@ -46,7 +46,7 @@ fn repo_admin_dir() -> Option<PathBuf> {
 #[test]
 fn a_registered_template_renders_with_its_data() {
     let dir = admin_dir_with(&[("page", "Hello {{name}}")], &[]);
-    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let engine = AdminTemplateEngine::new(dir.path(), dir.path()).expect("build engine");
     let rendered = engine
         .render("page", &serde_json::json!({ "name": "Ada" }))
         .expect("render");
@@ -62,7 +62,7 @@ fn indented_layout_preserves_instruction_text_and_escapes_markup() {
         )],
         &[("layout", "<main>\n    {{> content}}\n</main>")],
     );
-    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let engine = AdminTemplateEngine::new(dir.path(), dir.path()).expect("build engine");
     let rendered = engine
         .render(
             "page",
@@ -81,7 +81,7 @@ fn partials_are_registered_under_their_path_relative_to_the_partials_root() {
         &[("page", "[{{> components/badge}}][{{> sidebar}}]")],
         &[("components/badge", "BADGE"), ("sidebar", "SIDEBAR")],
     );
-    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let engine = AdminTemplateEngine::new(dir.path(), dir.path()).expect("build engine");
     let rendered = engine
         .render("page", &serde_json::json!({}))
         .expect("render");
@@ -91,7 +91,7 @@ fn partials_are_registered_under_their_path_relative_to_the_partials_root() {
 #[test]
 fn the_registered_helpers_are_available_to_templates() {
     let dir = admin_dir_with(&[("page", "{{formatNumber n}}|{{governanceColor d}}")], &[]);
-    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let engine = AdminTemplateEngine::new(dir.path(), dir.path()).expect("build engine");
     let rendered = engine
         .render("page", &serde_json::json!({ "n": 12345, "d": "deny" }))
         .expect("render");
@@ -103,7 +103,7 @@ fn non_hbs_files_are_ignored_in_both_trees() {
     let dir = admin_dir_with(&[("page", "ok")], &[]);
     write(&dir.path().join("templates/README.md"), "not a template");
     write(&dir.path().join("partials/notes.txt"), "not a partial");
-    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let engine = AdminTemplateEngine::new(dir.path(), dir.path()).expect("build engine");
     assert_eq!(
         engine
             .render("page", &serde_json::json!({}))
@@ -116,7 +116,8 @@ fn non_hbs_files_are_ignored_in_both_trees() {
 #[test]
 fn a_missing_admin_directory_yields_an_engine_with_no_templates() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let engine = AdminTemplateEngine::new(&dir.path().join("absent")).expect("build engine");
+    let engine =
+        AdminTemplateEngine::new(&dir.path().join("absent"), dir.path()).expect("build engine");
     let err = engine
         .render("anything", &serde_json::json!({}))
         .expect_err("no such template");
@@ -127,7 +128,8 @@ fn a_missing_admin_directory_yields_an_engine_with_no_templates() {
 #[test]
 fn a_malformed_template_fails_at_load_naming_the_file() {
     let dir = admin_dir_with(&[("broken", "{{#if x}}unclosed")], &[]);
-    let err = AdminTemplateEngine::new(dir.path()).expect_err("malformed template rejected");
+    let err =
+        AdminTemplateEngine::new(dir.path(), dir.path()).expect_err("malformed template rejected");
     assert!(matches!(err, AdminTemplateError::RegisterTemplate { .. }));
     assert!(err.to_string().contains("broken"), "{err}");
 }
@@ -135,7 +137,8 @@ fn a_malformed_template_fails_at_load_naming_the_file() {
 #[test]
 fn a_malformed_partial_fails_at_load_naming_the_partial() {
     let dir = admin_dir_with(&[], &[("broken", "{{#each xs}}unclosed")]);
-    let err = AdminTemplateEngine::new(dir.path()).expect_err("malformed partial rejected");
+    let err =
+        AdminTemplateEngine::new(dir.path(), dir.path()).expect_err("malformed partial rejected");
     assert!(matches!(err, AdminTemplateError::RegisterPartial { .. }));
     assert!(err.to_string().contains("broken"), "{err}");
 }
@@ -145,7 +148,7 @@ fn strict_mode_makes_a_missing_field_an_error_rather_than_a_blank() {
     // Why: a governance page that silently renders an empty cell for a field
     // the query stopped returning is worse than one that fails loudly.
     let dir = admin_dir_with(&[("page", "{{absent_field}}")], &[]);
-    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let engine = AdminTemplateEngine::new(dir.path(), dir.path()).expect("build engine");
     let err = engine
         .render("page", &serde_json::json!({}))
         .expect_err("strict mode rejects the missing field");
@@ -155,7 +158,7 @@ fn strict_mode_makes_a_missing_field_an_error_rather_than_a_blank() {
 #[test]
 fn branding_is_absent_until_it_is_attached() {
     let dir = admin_dir_with(&[("page", "ok")], &[]);
-    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let engine = AdminTemplateEngine::new(dir.path(), dir.path()).expect("build engine");
     assert!(engine.branding().is_none());
     assert!(engine.with_branding(None).branding().is_none());
 }
@@ -163,7 +166,7 @@ fn branding_is_absent_until_it_is_attached() {
 #[test]
 fn every_shipped_admin_template_and_partial_parses() {
     let admin_dir = repo_admin_dir().expect("storage/files/admin is checked in");
-    let engine = AdminTemplateEngine::new(&admin_dir)
+    let engine = AdminTemplateEngine::new(&admin_dir, &admin_dir)
         .expect("the shipped admin templates all parse and register");
 
     // Why: rendering needs page-specific data, so the assertion that carries

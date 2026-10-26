@@ -29,7 +29,7 @@ fn services_path() -> PathBuf {
 
 #[test]
 fn workspace_marketplaces_ship_with_resolvable_plugins() {
-    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
+    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"), None)
         .expect("shipped services load and validate");
     for id in WORKSPACES {
         let marketplace = services
@@ -61,7 +61,7 @@ async fn workspace_marketplaces_reach_only_entitled_principals() {
     };
     let path = services_path();
     let services =
-        ConfigLoader::load_from_path(&path.join("config/config.yaml")).expect("services");
+        ConfigLoader::load_from_path(&path.join("config/config.yaml"), None).expect("services");
     let view = dynapps_test_common::extension_services(
         &db.pool,
         dynapps_test_common::services_view(&path.join("config/config.yaml")),

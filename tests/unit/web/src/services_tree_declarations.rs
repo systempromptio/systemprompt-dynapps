@@ -47,7 +47,7 @@ fn read(relative: &str) -> String {
 // compose fails this test with the composition error — not with a rules.yaml
 // error one page later.
 fn services() -> ServicesConfig {
-    ConfigLoader::load_from_path(&services_dir().join("config/config.yaml"))
+    ConfigLoader::load_from_path(&services_dir().join("config/config.yaml"), None)
         .unwrap_or_else(|e| panic!("services tree could not be composed: {e}"))
 }
 

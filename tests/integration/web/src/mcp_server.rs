@@ -35,9 +35,11 @@ fn server(pool: &Arc<PgPool>) -> SystempromptServer {
         systemprompt_mcp_shared::auth::ServerAccess {
             authz_hook: hook(),
             services: ConfigWatch::new(ServicesConfig::default()),
-            signing_keys: dynapps_test_common::ephemeral_signing_keys(),
+            token_authority: crate::mcp_access::token_authority(),
+            config: crate::jobs_context::test_config(),
         },
         ingest,
+        crate::mcp_access::cli(),
     )
 }
 
@@ -125,9 +127,11 @@ async fn a_different_service_id_only_changes_the_server_name() {
         systemprompt_mcp_shared::auth::ServerAccess {
             authz_hook: hook(),
             services: ConfigWatch::new(ServicesConfig::default()),
-            signing_keys: dynapps_test_common::ephemeral_signing_keys(),
+            token_authority: crate::mcp_access::token_authority(),
+            config: crate::jobs_context::test_config(),
         },
         ingest,
+        crate::mcp_access::cli(),
     );
 
     let info = renamed.get_info();

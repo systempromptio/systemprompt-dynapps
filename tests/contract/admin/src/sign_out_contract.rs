@@ -76,7 +76,7 @@ async fn sign_out_revokes_only_the_session_the_cookie_names() {
     assert!(
         revoke_cookie_session(
             &db.pool,
-            globals::signing_keys(),
+            globals::boot().token_authority().as_ref(),
             &cookie_for(&me, &current)
         )
         .await
@@ -90,7 +90,7 @@ async fn sign_out_revokes_only_the_session_the_cookie_names() {
     assert!(
         !revoke_cookie_session(
             &db.pool,
-            globals::signing_keys(),
+            globals::boot().token_authority().as_ref(),
             &cookie_for(&me, &current)
         )
         .await,
@@ -100,7 +100,7 @@ async fn sign_out_revokes_only_the_session_the_cookie_names() {
     assert!(
         !revoke_cookie_session(
             &db.pool,
-            globals::signing_keys(),
+            globals::boot().token_authority().as_ref(),
             &cookie_for(&me, &someone_else)
         )
         .await,
@@ -121,14 +121,28 @@ async fn sign_out_without_a_valid_token_revokes_nothing() {
         return;
     };
 
-    assert!(!revoke_cookie_session(&db.pool, globals::signing_keys(), &HeaderMap::new()).await);
+    assert!(
+        !revoke_cookie_session(
+            &db.pool,
+            globals::boot().token_authority().as_ref(),
+            &HeaderMap::new()
+        )
+        .await
+    );
 
     let mut garbage = HeaderMap::new();
     garbage.insert(
         header::COOKIE,
         HeaderValue::from_static("access_token=not-a-jwt"),
     );
-    assert!(!revoke_cookie_session(&db.pool, globals::signing_keys(), &garbage).await);
+    assert!(
+        !revoke_cookie_session(
+            &db.pool,
+            globals::boot().token_authority().as_ref(),
+            &garbage
+        )
+        .await
+    );
 
     db.cleanup().await;
 }

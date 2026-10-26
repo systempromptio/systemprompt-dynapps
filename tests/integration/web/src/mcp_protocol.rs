@@ -4,7 +4,7 @@
 //! `ServerHandler` methods that cannot be called with a hand-built request
 //! context: handshake, resource discovery/read, and the fail-closed auth gate.
 
-use std::sync::{Arc, Once};
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::body::Body;
@@ -73,9 +73,11 @@ fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
         systemprompt_mcp_shared::auth::ServerAccess {
             authz_hook: deny_all_hook(),
             services: ConfigWatch::new(services()),
-            signing_keys: dynapps_test_common::ephemeral_signing_keys(),
+            token_authority: crate::mcp_access::token_authority(),
+            config: crate::jobs_context::test_config(),
         },
         Arc::clone(&ingest),
+        crate::mcp_access::cli(),
     );
     (server, ingest)
 }
@@ -90,29 +92,6 @@ fn client_info() -> ClientConfig {
         Implementation::new("protocol-contract-client", "1.0"),
     )
     .with_protocol_version(rmcp::model::ProtocolVersion::LATEST_WITH_INITIALIZE)
-}
-
-fn install_services_profile() {
-    static INIT: Once = Once::new();
-    INIT.call_once(|| {
-        let root = dynapps_test_common::repo_root();
-        let dir = root.join(format!(
-            "tests/target/mcp-protocol-profile-{}",
-            std::process::id()
-        ));
-        std::fs::create_dir_all(dir.join("bin")).expect("create MCP protocol fixture directory");
-        let profile = include_str!("../../../contract/admin/fixtures/profile.yaml")
-            .replace("__PROFILE_DIR__", &dir.to_string_lossy())
-            .replace("__REPO__", &root.to_string_lossy())
-            .replace(
-                &format!("services: {}/services", dir.display()),
-                &format!("services: {}/services", root.display()),
-            );
-        let path = dir.join("profile.yaml");
-        std::fs::write(&path, profile).expect("write MCP protocol fixture profile");
-        systemprompt::config::ProfileBootstrap::init_from_path(&path)
-            .expect("install profile that registers the systemprompt MCP service");
-    });
 }
 
 fn mcp_request(body: &serde_json::Value, session: Option<&str>) -> http::Request<Body> {
@@ -344,7 +323,6 @@ async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution()
     let Some(db) = TempDb::create().await else {
         return;
     };
-    install_services_profile();
     let (server, _) = server(&db.pool);
     let db_pool = db_pool(&db.pool);
     let router = systemprompt::mcp::create_router(

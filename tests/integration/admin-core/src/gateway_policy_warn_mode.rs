@@ -100,10 +100,14 @@ async fn the_resolver_keeps_both_mode_switches_after_ingestion() {
     let pool = ingest_shipped(&db).await;
 
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
-        .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
-        .await
-        .expect("policy row resolves");
+    let resolved = PolicyResolver::from_repository(
+        repo,
+        systemprompt::traits::CacheEpochs::new(),
+        systemprompt::manifest::profile::UnappliedPlaneMode::Warn,
+    )
+    .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
+    .await
+    .expect("policy row resolves");
 
     assert!(
         resolved.quota_mode.is_warn(),
@@ -132,10 +136,14 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     };
     let pool = ingest_shipped(&db).await;
     let repo = AiGatewayPolicyRepository::new(&pool);
-    let resolved = PolicyResolver::from_repository(repo, systemprompt::traits::CacheEpochs::new())
-        .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
-        .await
-        .expect("policy row resolves");
+    let resolved = PolicyResolver::from_repository(
+        repo,
+        systemprompt::traits::CacheEpochs::new(),
+        systemprompt::manifest::profile::UnappliedPlaneMode::Warn,
+    )
+    .resolve(systemprompt::manifest::services::QuotaFaultMode::default())
+    .await
+    .expect("policy row resolves");
     assert!(resolved.quota_mode.is_warn());
 
     let user_window = resolved
@@ -158,12 +166,9 @@ async fn an_exhausted_window_is_detected_so_the_refusal_carries_a_reason() {
     let providers = SubjectProviderSet::discover(&AuthzHookContext {
         pool: pool.pool(),
         sink: Arc::new(NullAuditSink),
-        services: systemprompt::loader::ServicesState::from_config(
-            systemprompt::manifest::ServicesConfig::default(),
-        )
-        .expect("empty services")
-        .view(),
+        services: dynapps_test_common::empty_services_view(),
         subjects: systemprompt::models::authz::SubjectSourceHandle::default(),
+        secrets: dynapps_test_common::fixture_secret_store(),
     });
     let attribution = RequestAttribution::none();
     let params = ReserveParams {

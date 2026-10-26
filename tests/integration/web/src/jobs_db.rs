@@ -284,8 +284,8 @@ async fn the_job_is_idempotent_across_runs() {
 
 // Deliberately uncovered here:
 //
-// - `llms_txt`: `generate_llms_txt` needs a global `Config` and an `AppPaths`,
-//   and its two pool-touching helpers (`build_llms_txt_content`,
+// - `llms_txt`: `generate_llms_txt` needs a `Config` and an `AppPaths`, and its
+//   two pool-touching helpers (`build_llms_txt_content`,
 //   `write_documentation_section`) are private. Only the pure formatting
 //   helpers are re-exported (`jobs::internals`), and they take no pool.
 // - `daily_summary::generate_user_daily_summary`: the `daily_summary` module is

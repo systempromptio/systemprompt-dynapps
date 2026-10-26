@@ -63,9 +63,14 @@ pub(crate) async fn connect(pool: &PgPool, env: &PortalEnv, user: &UserId) {
     account.status = "connected".into();
     account.auth_method = Some("oauth".into());
     account.verified_at = Some(chrono::Utc::now());
-    credentials::store(&mut tx, user, PROVIDER, &oauth::seal(&grant).expect("seal"))
-        .await
-        .expect("store grant");
+    credentials::store(
+        &mut tx,
+        user,
+        PROVIDER,
+        &oauth::seal(env.boot.secrets().as_ref(), &grant).expect("seal"),
+    )
+    .await
+    .expect("store grant");
     accounts::update_account(&mut tx, user, &account)
         .await
         .expect("update account");
@@ -86,14 +91,17 @@ pub(crate) async fn broker_bearer(
     ));
     let router = connector_api_router(
         Arc::clone(pool),
-        ServiceAccounts::new(UserRepository::new(&database)),
+        ServiceAccounts::new(
+            UserRepository::new(&database),
+            Arc::clone(env.boot.secrets()),
+        ),
     )
-    .layer(axum::Extension(PortalEnv::signing_keys().clone()))
+    .layer(axum::Extension(env.boot.clone()))
     .layer(axum::Extension(dynapps_test_common::extension_services(
         pool,
         env.services.view().clone(),
     )));
-    let jwt = PortalEnv::mint(Principal {
+    let jwt = env.mint(Principal {
         user_id: user.as_str(),
         email: &format!("{user}@test.invalid"),
         session_id: None,

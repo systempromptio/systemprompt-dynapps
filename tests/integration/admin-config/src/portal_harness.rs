@@ -44,9 +44,12 @@ impl Harness {
             Arc::clone(&db.pool),
             Some(Arc::clone(&db.pool)),
         ));
-        let accounts = ServiceAccounts::new(UserRepository::new(&database));
+        let accounts = ServiceAccounts::new(
+            UserRepository::new(&database),
+            Arc::clone(env.boot.secrets()),
+        );
         let router = connector_api_router(Arc::clone(&db.pool), accounts)
-            .layer(axum::Extension(PortalEnv::signing_keys().clone()))
+            .layer(axum::Extension(env.boot.clone()))
             .layer(axum::Extension(dynapps_test_common::extension_services(
                 &db.pool,
                 env.services.view().clone(),
@@ -77,7 +80,7 @@ impl Harness {
             .await
             .expect("insert live session");
         let email = format!("{raw}@example.test");
-        let jwt = PortalEnv::mint(Principal {
+        let jwt = self.env.mint(Principal {
             user_id: &raw,
             email: &email,
             session_id: Some(&session),

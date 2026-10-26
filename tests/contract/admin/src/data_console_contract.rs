@@ -117,11 +117,7 @@ async fn platform_forms_run_queries_and_clear_only_after_confirmation() {
     .unwrap();
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
-    let origin = systemprompt::config::ProfileBootstrap::get()
-        .unwrap()
-        .server
-        .api_external_url
-        .clone();
+    let origin = globals::boot().config().api_external_url.clone();
     let request = |path, body| Call {
         method: "post",
         path,

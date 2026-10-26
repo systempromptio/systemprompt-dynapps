@@ -41,8 +41,10 @@ fn router_sources() -> String {
 
 #[test]
 fn every_plane_names_a_served_sync_location() {
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
     let routers = router_sources();
-    let registered = planes();
+    let registered = planes(&boot);
     assert_eq!(registered.len(), 2, "expected the two install planes");
     let install = registered.iter().map(|plane| {
         let url = plane.sync_url();

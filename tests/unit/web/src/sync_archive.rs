@@ -35,6 +35,8 @@ fn refusal(entries: &[(&str, &[u8])]) -> String {
 
 #[test]
 fn a_good_archive_unpacks_and_classifies() {
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
     let manifest = ArchiveManifest {
         format: MANIFEST_FORMAT,
         release: "0.54.0".to_owned(),
@@ -66,7 +68,7 @@ fn a_good_archive_unpacks_and_classifies() {
     assert_eq!(m.release, "0.54.0");
     assert_eq!(m.planes[0].id, "groups");
 
-    let staged = classify(unpacked, &planes(), "ed").expect("classified");
+    let staged = classify(unpacked, &planes(&boot), "ed").expect("classified");
     assert_eq!(
         staged.planes.get("groups").map(String::as_str),
         Some("groups: []\n")
@@ -126,12 +128,14 @@ fn an_oversized_entry_is_refused_by_what_it_delivers() {
 
 #[test]
 fn a_plane_file_that_is_not_text_is_refused_at_classification() {
+    let fixture = crate::boot_fixture::Fixture::new();
+    let boot = fixture.extension_boot();
     let unpacked = unpack_zip(&zip_of(&[(
         "services/web/config/groups.yaml",
         &[0xff, 0xfe, 0x00],
     )]))
     .expect("bytes unpack");
-    let err = classify(unpacked, &planes(), "ed").expect_err("not text");
+    let err = classify(unpacked, &planes(&boot), "ed").expect_err("not text");
     assert!(err.to_string().contains("not UTF-8"), "{err}");
 }
 
