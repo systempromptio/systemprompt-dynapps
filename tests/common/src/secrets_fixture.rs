@@ -99,17 +99,11 @@ pub async fn bootstrap_signing_config() -> BootFixture {
     use base64::Engine as _;
     let key = systemprompt::security::keys::RsaSigningKey::generate().expect("signing key");
     let pem = key.to_pkcs8_pem().expect("signing key pem");
-    let fixture = bootstrap(
+    bootstrap(
         Some(base64::engine::general_purpose::STANDARD.encode(pem)),
         &[],
     )
-    .await;
-    std::os::unix::fs::symlink(
-        crate::repo_path("services"),
-        fixture.path().join("services"),
-    )
-    .expect("link the repository services tree into the profile");
-    fixture
+    .await
 }
 
 async fn bootstrap(signing_key_pem: Option<String>, extra: &[(&str, &str)]) -> BootFixture {
@@ -119,6 +113,8 @@ async fn bootstrap(signing_key_pem: Option<String>, extra: &[(&str, &str)]) -> B
         .replace("__PROFILE_DIR__", &dir.path().to_string_lossy())
         .replace("__REPO__", &root.to_string_lossy());
     std::fs::create_dir_all(dir.path().join("bin")).expect("bin directory");
+    std::os::unix::fs::symlink(crate::repo_path("services"), dir.path().join("services"))
+        .expect("link the repository services tree into the profile");
     std::fs::write(dir.path().join("profile.yaml"), yaml).expect("fixture profile");
     std::fs::write(
         dir.path().join("secrets.json"),

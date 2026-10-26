@@ -17,11 +17,14 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use sqlx::PgPool;
+use systemprompt::ai::repository::AiRepositories;
 use systemprompt::database::Database;
 use systemprompt::extension::prelude::{Extension, ExtensionContext};
 use systemprompt::manifest::services::root::ActiveServicesRoot;
 use systemprompt::manifest::{Config, Profile};
 use systemprompt::models::auth::TokenAuthority;
+use systemprompt::oauth::repository::OAuthRepositories;
+use systemprompt::security::at_rest::AtRestCipher;
 use systemprompt::storage::LocalFileStorage;
 use systemprompt::traits::{
     BackgroundTasks, ConfigProvider, DatabaseHandle, Dependencies, FileStorage, SecretStore,
@@ -56,15 +59,26 @@ impl ConfigProvider for StubConfig {
 struct PoolCtx {
     database: Arc<Database>,
     boot: ExtensionBoot,
+    oauth: Arc<OAuthRepositories>,
+    ai: Arc<AiRepositories>,
 }
 
 impl PoolCtx {
     fn new(pool: &Arc<PgPool>, fixture: &dynapps_test_common::BootFixture) -> Self {
+        let database = Arc::new(Database::from_pools(
+            Arc::clone(pool),
+            Some(Arc::clone(pool)),
+        ));
+        let secrets = fixture.boot().secrets().get();
+        let cipher = AtRestCipher::from_secrets(&secrets)
+            .expect("the fixture secrets carry an encryption master key");
         Self {
-            database: Arc::new(Database::from_pools(
-                Arc::clone(pool),
-                Some(Arc::clone(pool)),
+            oauth: Arc::new(OAuthRepositories::new(
+                &database,
+                Arc::from(secrets.oauth_at_rest_pepper.as_str()),
             )),
+            ai: Arc::new(AiRepositories::new(&database, cipher)),
+            database,
             boot: fixture.extension_boot(),
         }
     }
@@ -88,6 +102,8 @@ impl ExtensionContext for PoolCtx {
     }
     fn dependencies(&self) -> Dependencies {
         Dependencies::new()
+            .with(Arc::clone(&self.oauth))
+            .with(Arc::clone(&self.ai))
     }
     fn system_owner_id(&self) -> systemprompt::identifiers::UserId {
         systemprompt::identifiers::UserId::new("router-test-owner")
