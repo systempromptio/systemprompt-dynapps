@@ -23,7 +23,7 @@ providers:
       system_prompts: false
       image_resolution_config: false
       reasoning: false
-      prompt_caching: false
+      prompt_caching: true
     resilience:
       request_timeout_ms: 60000
       connect_timeout_ms: 10000
@@ -60,7 +60,7 @@ providers:
       system_prompts: false
       image_resolution_config: false
       reasoning: false
-      prompt_caching: false
+      prompt_caching: true
     resilience:
       request_timeout_ms: 60000
       connect_timeout_ms: 10000
@@ -97,7 +97,7 @@ providers:
       system_prompts: false
       image_resolution_config: false
       reasoning: false
-      prompt_caching: false
+      prompt_caching: true
     resilience:
       request_timeout_ms: 60000
       connect_timeout_ms: 10000
@@ -137,7 +137,7 @@ providers:
       system_prompts: false
       image_resolution_config: false
       reasoning: false
-      prompt_caching: false
+      prompt_caching: true
     resilience:
       request_timeout_ms: 60000
       connect_timeout_ms: 10000
