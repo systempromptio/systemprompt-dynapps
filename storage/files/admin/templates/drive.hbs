@@ -1,0 +1,45 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="The shared document store: every folder and document, its format, its head revision and who is editing it now. Rows are read from the document API as you, so each is one you may view."}}
+
+    <section class="sp-section sp-p-drive" aria-label="Folders and documents" data-drive-list="{{list_api}}" data-documents-api="{{documents_api}}" data-base-url="{{base_url}}">
+    {{#> components/table caption="Folders and documents"}}
+      <thead><tr>
+        <th scope="col">Name</th>
+        <th scope="col">Format</th>
+        <th scope="col">Head revision</th>
+        <th scope="col">Editing now</th>
+        <th scope="col" class="sp-col-date">Updated</th>
+      </tr></thead>
+      <tbody data-slot="drive-rows">
+        <tr data-slot="drive-loading"><td colspan="5"><span class="sp-u-text-tertiary">Loading…</span></td></tr>
+      </tbody>
+    {{/components/table}}
+    <p class="sp-p-drive__empty" data-slot="drive-empty" hidden>This folder holds no documents you may view.</p>
+    <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-more" hidden>Load more</button>
+    </section>
+
+    <template data-template="drive-folder-row">
+      <tr>
+        <td class="sp-table__cell--primary"><a class="sp-table__link" data-field="link"></a></td>
+        <td><span class="sp-u-text-tertiary">Folder</span></td>
+        <td></td>
+        <td></td>
+        <td class="sp-col-date" data-field="updated"></td>
+      </tr>
+    </template>
+    <template data-template="drive-document-row">
+      <tr>
+        <td class="sp-table__cell--primary"><a class="sp-table__link" data-field="link"></a></td>
+        <td class="sp-u-mono" data-field="format"></td>
+        <td class="sp-u-mono" data-field="head"></td>
+        <td data-field="editors"><span class="sp-u-text-tertiary">—</span></td>
+        <td class="sp-col-date" data-field="updated"></td>
+      </tr>
+    </template>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-drive.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/layout}}

@@ -1,0 +1,73 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle="One shared document: its rendered preview, revision history, grants and live editors."}}
+        {{#*inline "header_actions"}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{content_url}}" download>Download</a>
+        {{/inline}}
+    {{/components/page-header}}
+
+    <div class="sp-p-drive" data-drive-document="{{document_api}}" data-revisions-api="{{revisions_api}}" data-grants-api="{{grants_api}}" data-presence-api="{{presence_api}}">
+    <dl class="sp-kv-list">
+        <div class="sp-kv-row"><dt>Name</dt><dd data-field="name"></dd></div>
+        <div class="sp-kv-row"><dt>Document id</dt><dd class="sp-u-mono">{{document_id}}</dd></div>
+        <div class="sp-kv-row"><dt>Format</dt><dd class="sp-u-mono" data-field="format"></dd></div>
+        <div class="sp-kv-row"><dt>Folder</dt><dd data-field="folder"></dd></div>
+        <div class="sp-kv-row"><dt>Owner</dt><dd class="sp-u-mono" data-field="owner"></dd></div>
+        <div class="sp-kv-row"><dt>Head revision</dt><dd class="sp-u-mono" data-field="head"></dd></div>
+        <div class="sp-kv-row"><dt>Updated</dt><dd data-field="updated"></dd></div>
+        <div class="sp-kv-row"><dt>Editing now</dt><dd data-field="editors"></dd></div>
+    </dl>
+
+    <section class="sp-section" aria-label="Preview">
+    <h2 class="sp-section__title">Preview</h2>
+    <iframe class="sp-p-drive__preview" src="{{preview_url}}" sandbox title="Document preview" loading="lazy"></iframe>
+    </section>
+
+    <section class="sp-section" aria-label="Revisions">
+    <h2 class="sp-section__title">Revisions</h2>
+    {{#> components/table caption="Revisions"}}
+      <thead><tr>
+        <th scope="col">Revision</th><th scope="col">Author</th><th scope="col">Actor</th>
+        <th scope="col">Origin</th><th scope="col">Message</th><th scope="col" class="sp-col-date">Created</th>
+      </tr></thead>
+      <tbody data-slot="revision-rows"></tbody>
+    {{/components/table}}
+    </section>
+
+    <section class="sp-section" aria-label="Grants">
+    <h2 class="sp-section__title">Grants</h2>
+    {{#> components/table caption="Grants"}}
+      <thead><tr>
+        <th scope="col">Subject</th><th scope="col">Level</th><th scope="col">Granted by</th>
+        <th scope="col" class="sp-col-date">Valid until</th><th scope="col" class="sp-col-date">Created</th>
+      </tr></thead>
+      <tbody data-slot="grant-rows"></tbody>
+    {{/components/table}}
+    </section>
+    </div>
+
+    <template data-template="drive-revision-row">
+      <tr>
+        <td class="sp-u-mono" data-field="id"></td>
+        <td class="sp-u-mono" data-field="author"></td>
+        <td data-field="actor"></td>
+        <td data-field="origin"></td>
+        <td data-field="message"></td>
+        <td class="sp-col-date" data-field="created"></td>
+      </tr>
+    </template>
+    <template data-template="drive-grant-row">
+      <tr>
+        <td class="sp-u-mono" data-field="subject"></td>
+        <td data-field="level"></td>
+        <td class="sp-u-mono" data-field="granted_by"></td>
+        <td class="sp-col-date" data-field="valid_until"></td>
+        <td class="sp-col-date" data-field="created"></td>
+      </tr>
+    </template>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-drive-document.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/layout}}

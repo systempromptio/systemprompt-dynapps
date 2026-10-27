@@ -1,0 +1,23 @@
+@layer components {
+
+/* Drive: the folder listing and one document's sandboxed preview. */
+
+.sp-p-drive {
+  display: grid;
+  gap: var(--sp-space-4);
+}
+
+.sp-p-drive__empty {
+  color: var(--sp-text-secondary);
+  font-size: var(--sp-text-sm);
+}
+
+.sp-p-drive__preview {
+  inline-size: 100%;
+  min-block-size: 32rem;
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg-base);
+}
+
+}
