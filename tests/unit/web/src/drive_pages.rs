@@ -47,7 +47,10 @@ fn the_scripts_set_text_and_never_html() {
     ] {
         let source = read(path);
         assert!(!source.contains("innerHTML"), "{path} writes HTML");
-        assert!(!source.contains("fetch("), "{path} bypasses services/api.js");
+        assert!(
+            !source.contains("fetch("),
+            "{path} bypasses services/api.js"
+        );
     }
 }
 

@@ -48,6 +48,23 @@ const showEditors = async (root) => {
   setField(root, 'editors', editorsLabel(await loadEditors(root.dataset.presenceApi)));
 };
 
+const setSlotMessage = (root, slot, message) => {
+  const body = root.querySelector(`[data-slot="${slot}"]`);
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  cell.colSpan = 5;
+  cell.textContent = message;
+  row.append(cell);
+  body.replaceChildren(row);
+};
+
+const fallbacks = [
+  (root) => setField(root, 'name', 'Unavailable'),
+  (root) => setSlotMessage(root, 'revision-rows', 'Revisions could not be loaded.'),
+  (root) => setSlotMessage(root, 'grant-rows', 'Grants could not be loaded.'),
+  (root) => setField(root, 'editors', 'Unavailable'),
+];
+
 export const init = async () => {
   const root = document.querySelector('[data-drive-document]');
   if (!root) return;
@@ -57,9 +74,9 @@ export const init = async () => {
     showGrants(root),
     showEditors(root),
   ]);
-  for (const result of results) {
-    if (result.status === 'rejected') console.error(result.reason);
-  }
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') fallbacks[index](root);
+  });
 };
 
 init();

@@ -156,6 +156,17 @@ entities:
     allow:
       role: [developer, project_manager, admin, platform_admin, super_admin]
 
+  - entity: mcp_server/documents
+    default: closed
+    why: >-
+      The documents MCP server: every tool authorizes the caller through the
+      document store's own grants and folder entities, so this band only
+      decides who sees the server at all. Every signed-in user reaches it;
+      oauth.scopes (user) in services/mcp/documents.yaml gates it a second
+      time.
+    allow:
+      role: [user, developer, project_manager, admin, platform_admin, super_admin]
+
   - entity: plugin/dynapps-engineering
     default: closed
     why: Engineering plugin; the agent-farm server and its guide skill.

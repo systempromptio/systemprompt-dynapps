@@ -151,11 +151,11 @@ impl ServerHandler for DocumentsServer {
         std::future::ready(Ok(self.tools.list_resources()))
     }
 
-    async fn read_resource(
+    fn read_resource(
         &self,
         request: ReadResourceRequestParams,
         _ctx: RequestContext<RoleServer>,
-    ) -> Result<ReadResourceResponse, McpError> {
-        self.tools.read_resource(&request).map(Into::into)
+    ) -> impl Future<Output = Result<ReadResourceResponse, McpError>> + MaybeSendFuture + '_ {
+        std::future::ready(self.tools.read_resource(&request).map(Into::into))
     }
 }

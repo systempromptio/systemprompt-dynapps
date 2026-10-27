@@ -24,9 +24,11 @@ const EXPECTED: [&str; 11] = [
 ];
 
 fn repo_file(rel: &str) -> Value {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join(rel);
-    let text = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .join(rel);
+    let text =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     serde_yaml::from_str(&text).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
 }
 
@@ -43,7 +45,10 @@ fn manifest_and_services_yaml_agree_and_enable_the_server() {
     let server = &repo_file("services/mcp/documents.yaml")["mcp_servers"][SERVER_NAME];
 
     assert_eq!(manifest["name"].as_str(), Some(SERVER_NAME));
-    assert_eq!(manifest["binary"].as_str(), Some("systemprompt-mcp-documents"));
+    assert_eq!(
+        manifest["binary"].as_str(),
+        Some("systemprompt-mcp-documents")
+    );
     assert_eq!(server["binary"], manifest["binary"]);
     assert_eq!(server["port"], manifest["port"]);
     assert_eq!(server["port"].as_u64(), Some(5012));

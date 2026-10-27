@@ -4,7 +4,8 @@ use systemprompt::files::documents::codecs::CodecRegistry;
 use systemprompt::files::documents::templates::{TemplateRegistry, load_catalog};
 use systemprompt::identifiers::DocumentTemplateId;
 use systemprompt_provider_contracts::documents::{
-    DocumentFormat, TemplateParams, TemplateSource, registered_template_providers,
+    DocumentFormat, DocumentTemplateProvider, TemplateParams, TemplateSource,
+    registered_template_providers,
 };
 use systemprompt_web_extension::documents_templates::{
     DYNAPPS_TEMPLATE_PRIORITY, DynappsTemplateProvider,
@@ -65,7 +66,8 @@ fn the_services_catalog_lists_the_four_dynapps_templates() {
 
 #[test]
 fn the_dynapps_provider_is_discovered_through_the_inventory() {
-    let _linked = DynappsTemplateProvider;
+    let linked = DynappsTemplateProvider;
+    assert_eq!(linked.provider_id(), "dynapps");
     let provider = registered_template_providers()
         .find(|provider| provider.provider_id() == "dynapps")
         .expect("dynapps template provider registered");
@@ -95,10 +97,7 @@ fn every_dynapps_template_loads_and_projects_with_its_core_codec() {
             text.contains("{{title}}"),
             "{id} carries the title placeholder"
         );
-        assert!(
-            text.contains("Dynapps"),
-            "{id} carries the brand line"
-        );
+        assert!(text.contains("Dynapps"), "{id} carries the brand line");
     }
 }
 

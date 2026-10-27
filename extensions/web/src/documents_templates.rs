@@ -30,8 +30,7 @@ impl DocumentTemplateProvider for DynappsTemplateProvider {
             id: DocumentTemplateId::new("dynapps-note"),
             format: DocumentFormat::Markdown,
             name: "Dynapps note".to_owned(),
-            description: "Markdown note with a title heading and the Dynapps byline."
-                .to_owned(),
+            description: "Markdown note with a title heading and the Dynapps byline.".to_owned(),
             source: TemplateSource::Embedded(DYNAPPS_NOTE),
             placeholders: vec![TemplatePlaceholder {
                 key: "title".to_owned(),

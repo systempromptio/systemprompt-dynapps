@@ -185,6 +185,8 @@ mod report_pnl;
 mod secrets_scanner_response;
 
 #[cfg(test)]
+mod documents_templates;
+#[cfg(test)]
 mod seed_contract;
 #[cfg(test)]
 mod shared_errors;
@@ -228,8 +230,6 @@ mod sso_oidc_compliance;
 mod sso_permissions;
 #[cfg(test)]
 mod sso_policy;
-#[cfg(test)]
-mod documents_templates;
 #[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]
@@ -442,6 +442,8 @@ mod farm_eval_judge_config;
 #[cfg(test)]
 mod catalogue_integrity;
 #[cfg(test)]
+mod drive_pages;
+#[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]
 mod farm_egress;
@@ -455,7 +457,5 @@ mod farm_tool_allowlist;
 mod farm_tool_policy;
 #[cfg(test)]
 mod farm_tool_tally;
-#[cfg(test)]
-mod drive_pages;
 #[cfg(test)]
 mod personal_upstream_headers;
