@@ -6,6 +6,7 @@
 # spawns, and Fly's machine metadata and injected platform token. Application
 # secrets are read from core's SecretsBootstrap only.
 extensions/mcp/agent-farm/src/main.rs  # MCP_PORT / MCP_STARTUP_TIMEOUT_SECS / MCP_SERVICE_ID, the subprocess boot variables core's MCP spawner sets on the child
+extensions/mcp/documents/src/main.rs  # MCP_PORT / MCP_STARTUP_TIMEOUT_SECS / MCP_SERVICE_ID, the subprocess boot variables core's MCP spawner sets on the child
 extensions/mcp/systemprompt/src/main.rs  # MCP_PORT / MCP_STARTUP_TIMEOUT_SECS / MCP_SERVICE_ID, the subprocess boot variables core's MCP spawner sets on the child
 extensions/cli/farm-worker/src/main.rs  # the worker's boot variables (API base, run id, worker token), set by the farm runner on the machine it launches
 extensions/web/admin/farm/src/services/runner/fly/api.rs  # FLY_API_TOKEN, a Fly-injected secret

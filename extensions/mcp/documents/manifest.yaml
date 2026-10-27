@@ -1,0 +1,8 @@
+extension:
+  type: mcp
+  name: documents
+  binary: systemprompt-mcp-documents
+  description: Shared documents and folders — read, edit, create and share Word, Excel, PowerPoint, HTML and Markdown documents
+  port: 5012
+  build_type: workspace
+  enabled: true

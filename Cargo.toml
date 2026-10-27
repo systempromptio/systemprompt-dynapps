@@ -14,6 +14,7 @@ members = [
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
     "extensions/mcp/agent-farm",
+    "extensions/mcp/documents",
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",

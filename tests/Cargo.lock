@@ -625,6 +625,7 @@ dependencies = [
  "matchit",
  "memchr",
  "mime",
+ "multer",
  "percent-encoding",
  "pin-project-lite",
  "serde_core",
@@ -4116,9 +4117,11 @@ dependencies = [
  "rmcp",
  "serde",
  "serde_json",
+ "serde_yaml_ng",
  "systemprompt",
  "systemprompt-mcp-agent",
  "systemprompt-mcp-agent-farm",
+ "systemprompt-mcp-documents",
  "systemprompt-mcp-shared",
  "systemprompt-web-admin-core",
  "systemprompt-web-shared",
@@ -4300,6 +4303,23 @@ dependencies = [
  "png",
  "thiserror 2.0.21",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "multer"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83e87776546dc87511aa5ee218730c92b666d7264ab6ed41f9d215af9cd5224b"
+dependencies = [
+ "bytes",
+ "encoding_rs",
+ "futures-util",
+ "http",
+ "httparse",
+ "memchr",
+ "mime",
+ "spin",
+ "version_check",
 ]
 
 [[package]]
@@ -7655,6 +7675,7 @@ dependencies = [
  "systemprompt-models",
  "systemprompt-oauth",
  "systemprompt-oauth-issuance",
+ "systemprompt-provider-contracts",
  "systemprompt-runtime",
  "systemprompt-scheduler",
  "systemprompt-security",
@@ -8370,6 +8391,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-mcp-documents"
+version = "0.73.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "rmcp",
+ "rustls",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "systemprompt-mcp-shared"
 version = "0.73.0"
 dependencies = [
@@ -8502,6 +8541,8 @@ dependencies = [
  "indicatif",
  "maxminddb",
  "reqwest",
+ "rmcp",
+ "schemars",
  "serde",
  "serde_json",
  "serde_yaml_ng",

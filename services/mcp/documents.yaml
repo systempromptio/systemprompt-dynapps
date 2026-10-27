@@ -1,13 +1,12 @@
-# Shared document store tools. Shipped disabled until the
-# systemprompt-mcp-documents binary lands; a disabled internal server is
-# never resolved to a binary, so boot does not need it yet.
+# Shared document store tools. Every tool acts as the signed-in caller: the
+# document store authorizes each call against the caller's own access.
 mcp_servers:
   documents:
     server_type: internal
     binary: systemprompt-mcp-documents
     package: documents
     port: 5012
-    enabled: false
+    enabled: true
     tool_policy: allow
     display_in_web: true
     removable: false
