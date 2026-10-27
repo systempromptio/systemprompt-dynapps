@@ -43,6 +43,14 @@ scheduler:
       schedule: "0 0 * * * *"
       enabled: true
 
+    # Reports drift between each declared config plane and the database
+    # every minute; writes nothing. `admin config planes apply` resolves it.
+    - name: config_reconcile
+      extension: core
+      owner: admin
+      schedule: "0 * * * * *"
+      enabled: true
+
     # The one retention job. Windows come from `retention:` in the profile
     # (defaults: logs 30 d, analytics_events 90 d, ai_request_messages =
     # ai.history.retention_days, mcp_tool_executions 365 d, processed
