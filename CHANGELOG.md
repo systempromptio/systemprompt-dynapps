@@ -47,6 +47,9 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- **Dynapps document templates.** `services/documents/templates/` is the document template catalog core loads at boot: `dynapps-word` (docx), `dynapps-sheet` (xlsx), `dynapps-deck` (pptx) and `dynapps-html` (html), each with a `title` placeholder defaulting to "Untitled" and at priority 200. The Office files were generated from core's blank documents through its own codecs, so every one projects and instantiates with the codec that will edit it.
+- **`dynapps-note` template provider.** `extensions/web/src/documents_templates.rs` registers `DynappsTemplateProvider` with core's template provider inventory, shipping a Markdown note with the Dynapps byline. The web extension now depends on `systemprompt-provider-contracts` directly, because the facade does not re-export the registration macro's crate.
+- **`documents` MCP server declaration.** `services/mcp/documents.yaml` declares the internal `systemprompt-mcp-documents` server on port 5012 with user-scoped OAuth, shipped `enabled: false` until its binary lands; a disabled internal server is never resolved to a binary, so boot is unaffected. The web extension depends on core's `files` extension and lists the `documents`, `document_folders`, `document_revisions` and `document_grants` tables it will read.
 - **Core gates run here through the pinned core checkout.** `scripts/lint-async-trait.sh`,
   `scripts/lint-owned-tasks.sh` and `scripts/lint-stringly-errors.sh` exec the same-named
   script in `../systemprompt-core` at `bridge/CORE_REF` over `extensions`, `src` and

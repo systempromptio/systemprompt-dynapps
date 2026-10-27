@@ -229,6 +229,8 @@ mod sso_permissions;
 #[cfg(test)]
 mod sso_policy;
 #[cfg(test)]
+mod documents_templates;
+#[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]
 mod web_extension_wiring;

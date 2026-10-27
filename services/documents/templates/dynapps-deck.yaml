@@ -1,0 +1,11 @@
+# Dynapps document template; `file` is relative to this directory.
+id: dynapps-deck
+format: pptx
+name: Dynapps presentation
+description: 'Branded deck: a {{title}} title slide and a "Dynapps" overview slide. Generated from core''s blank_pptx() with the pptx codec''s replace_text and insert_slide operations.'
+file: files/dynapps-deck.pptx
+priority: 200
+placeholders:
+- key: title
+  label: Title
+  default: Untitled

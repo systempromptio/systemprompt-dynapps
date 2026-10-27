@@ -1,0 +1,11 @@
+# Dynapps document template; `file` is relative to this directory.
+id: dynapps-html
+format: html
+name: Dynapps web page
+description: 'Branded HTML page with a "Dynapps" eyebrow and a {{title}} heading. Hand-written.'
+file: files/dynapps-html.html
+priority: 200
+placeholders:
+- key: title
+  label: Title
+  default: Untitled
