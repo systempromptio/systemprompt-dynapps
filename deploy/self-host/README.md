@@ -80,7 +80,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --trusted-proxies 10.10.0.0/16,10.20.0.0/16,10.30.0.0/16 \
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --image ghcr.io/systempromptio/systemprompt-dynapps:0.73.0     # validates the result in the image
+  --image ghcr.io/systempromptio/systemprompt-dynapps:0.74.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -129,7 +129,7 @@ On every node, with `/etc/dynapps/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.73.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
+export SYSTEMPROMPT_TAG=0.74.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml run --rm app migrate   # node 1 only, once
@@ -152,7 +152,7 @@ balancer, so capacity never drops to zero. Run the checklist on each node
 once it is `healthy`, passing the node's `server.role`:
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.73.0 --role all
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.74.0 --role all
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its

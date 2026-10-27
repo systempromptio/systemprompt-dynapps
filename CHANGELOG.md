@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.74.0 — 2026-10-27
+
 ### Breaking
 
 - **Request and config fields have one name each.** The agent-farm launch and eval bodies
@@ -71,6 +73,9 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Built against systemprompt-core 0.74.0.** Every core crate pin in `Cargo.toml` and
+  `tests/Cargo.toml` requires 0.74.0, `bridge/CORE_REF` names `v0.74.0`, and both
+  `[patch.crates-io]` blocks are inactive, so the release builds from the published crates.
 - **The shared document store is off by default.** Enable it with `files.documents.enabled: true` in `services/config/files.yaml` and `enabled: true` in `services/mcp/documents.yaml`. While it is off, core mounts no document routes, `systemprompt-mcp-documents` exits at boot naming the switch, `/admin/drive` and `/admin/drive/{id}` answer 404, and the Drive sidebar entry is hidden.
 - **`scripts/check-core-ref.sh` proves the core patch is live.** With `[patch.crates-io]` active
   no tracked `Cargo.lock` may carry `[[patch.unused]]` and the root pin must equal the sibling
