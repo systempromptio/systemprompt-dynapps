@@ -1,7 +1,7 @@
 //! The `documents` MCP server: it advertises exactly core's eleven document
 //! tools under the `documents` server name, and its extension manifest and
-//! `services/mcp/documents.yaml` agree on the binary, the port and that the
-//! server is enabled with user-scoped OAuth.
+//! `services/mcp/documents.yaml` agree on the binary and the port, and that the
+//! server is declared with user-scoped OAuth and off by default.
 
 use std::path::PathBuf;
 
@@ -40,7 +40,7 @@ fn the_server_lists_exactly_cores_document_tools() {
 }
 
 #[test]
-fn manifest_and_services_yaml_agree_and_enable_the_server() {
+fn manifest_and_services_yaml_agree_and_the_server_is_off_by_default() {
     let manifest = &repo_file("extensions/mcp/documents/manifest.yaml")["extension"];
     let server = &repo_file("services/mcp/documents.yaml")["mcp_servers"][SERVER_NAME];
 
@@ -52,7 +52,7 @@ fn manifest_and_services_yaml_agree_and_enable_the_server() {
     assert_eq!(server["binary"], manifest["binary"]);
     assert_eq!(server["port"], manifest["port"]);
     assert_eq!(server["port"].as_u64(), Some(5012));
-    assert_eq!(server["enabled"].as_bool(), Some(true));
+    assert_eq!(server["enabled"].as_bool(), Some(false));
     assert_eq!(manifest["enabled"].as_bool(), Some(true));
     assert_eq!(server["server_type"].as_str(), Some("internal"));
     assert_eq!(server["oauth"]["required"].as_bool(), Some(true));

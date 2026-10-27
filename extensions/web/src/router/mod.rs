@@ -29,6 +29,16 @@ use systemprompt_web_site::config_loader::SiteConfig;
 use crate::extension::WebExtension;
 use pools::DbHandles;
 
+fn documents_enabled(ctx: &dyn ExtensionContext) -> bool {
+    ctx.dependencies()
+        .get::<Arc<systemprompt::files::FilesConfig>>()
+        .map(|files| files.documents_config().is_enabled())
+        .inspect_err(|error| {
+            tracing::warn!(%error, "files config unavailable; document store treated as disabled");
+        })
+        .unwrap_or(false)
+}
+
 pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<ExtensionRouter> {
     let db = DbHandles::from_context(ctx, Arc::clone(&web.farm_runs))?;
     let session_service = pools::build_session_service(&db);
@@ -51,7 +61,7 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
         .merge(share_api)
         .nest("/api/public", api_router);
 
-    match admin_ssr::build(&db, sso_deps, site.branding.clone()) {
+    match admin_ssr::build(&db, sso_deps, site.branding.clone(), documents_enabled(ctx)) {
         Some(ssr) => {
             combined = Router::new()
                 .nest_service("/admin", ssr.admin)

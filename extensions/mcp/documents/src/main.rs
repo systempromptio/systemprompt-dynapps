@@ -120,7 +120,8 @@ async fn main() -> Result<()> {
             config: Arc::clone(ctx.config_arc()),
         },
         ctx.artifact_ingest_arc(),
-        DocumentsMcpTools::from_context(&ctx, service_id.clone()),
+        DocumentsMcpTools::from_context(&ctx, service_id.clone())
+            .context("Document store unavailable")?,
     );
     let router = systemprompt::mcp::create_router(
         server,

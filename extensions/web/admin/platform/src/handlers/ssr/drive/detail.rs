@@ -32,6 +32,9 @@ pub(crate) async fn drive_document_page(
     shell: Page,
     Path(raw_id): Path<String>,
 ) -> AdminHtmlResult<Response> {
+    if !shell.engine.documents_enabled() {
+        return Err(AdminError::NotFound("Document store is disabled.".to_owned()).into());
+    }
     if !shell.user.is_admin {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }

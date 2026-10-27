@@ -58,6 +58,7 @@ type Result<T> = std::result::Result<T, AdminTemplateError>;
 pub struct AdminTemplateEngine {
     hbs: Arc<Handlebars<'static>>,
     branding: Option<BrandingConfig>,
+    documents_enabled: bool,
 }
 
 impl AdminTemplateEngine {
@@ -76,6 +77,7 @@ impl AdminTemplateEngine {
         Ok(Self {
             hbs: Arc::new(hbs),
             branding: None,
+            documents_enabled: false,
         })
     }
 
@@ -83,6 +85,17 @@ impl AdminTemplateEngine {
     pub fn with_branding(mut self, branding: Option<BrandingConfig>) -> Self {
         self.branding = branding;
         self
+    }
+
+    #[must_use]
+    pub const fn with_documents_enabled(mut self, enabled: bool) -> Self {
+        self.documents_enabled = enabled;
+        self
+    }
+
+    #[must_use]
+    pub const fn documents_enabled(&self) -> bool {
+        self.documents_enabled
     }
 
     #[must_use]

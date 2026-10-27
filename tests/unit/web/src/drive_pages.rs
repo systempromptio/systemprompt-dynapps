@@ -78,6 +78,18 @@ fn the_sidebar_entry_sits_inside_the_admin_guard() {
 }
 
 #[test]
+fn the_sidebar_entry_sits_inside_the_documents_switch() {
+    let source = read("storage/files/admin/partials/sidebar.hbs");
+    let entry = source
+        .find("href=\"/admin/drive\"")
+        .expect("drive nav entry");
+    let switch = source[..entry]
+        .rfind("{{#if documents_enabled}}")
+        .expect("documents switch");
+    assert!(!source[switch..entry].contains("{{/if}}"));
+}
+
+#[test]
 fn the_page_scripts_are_registered_assets() {
     let admin = read("extensions/web/shared/admin-core/src/assets.rs");
     assert!(admin.contains("\"admin-drive.js\""));

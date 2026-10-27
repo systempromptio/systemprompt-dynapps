@@ -71,6 +71,7 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **The shared document store is off by default.** Enable it with `files.documents.enabled: true` in `services/config/files.yaml` and `enabled: true` in `services/mcp/documents.yaml`. While it is off, core mounts no document routes, `systemprompt-mcp-documents` exits at boot naming the switch, `/admin/drive` and `/admin/drive/{id}` answer 404, and the Drive sidebar entry is hidden.
 - **`scripts/check-core-ref.sh` proves the core patch is live.** With `[patch.crates-io]` active
   no tracked `Cargo.lock` may carry `[[patch.unused]]` and the root pin must equal the sibling
   core's workspace version; with the patch commented no `systemprompt*` crate may resolve from a

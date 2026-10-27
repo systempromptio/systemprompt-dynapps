@@ -18,6 +18,7 @@ pub(crate) fn build(
     db: &DbHandles,
     sso_deps: systemprompt_web_admin_identity::SsoDeps,
     branding: Option<BrandingConfig>,
+    documents_enabled: bool,
 ) -> Option<SsrRouters> {
     let paths = super::pools::app_paths(&db.boot)?;
     let admin_dir = paths.storage().files().join("admin");
@@ -27,7 +28,8 @@ pub(crate) fn build(
     )
     .map_err(|e| tracing::error!(error = %e, "Failed to initialize admin template engine"))
     .ok()?
-    .with_branding(branding);
+    .with_branding(branding)
+    .with_documents_enabled(documents_enabled);
     let admin = admin::admin_ssr_router(
         &db.db,
         Arc::clone(&db.read),
