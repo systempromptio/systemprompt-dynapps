@@ -150,6 +150,11 @@ fn report_normalization_refuses_text_that_is_not_json_and_unknown_envelopes() {
     let unknown = normalize_cli(&json!({"result":{"rows":[]}}))
         .expect_err("an unrecognised wrapper must not silently render an empty report");
     assert!(unknown.message.contains("Unsupported CLI report envelope"));
+    assert!(
+        unknown.message.contains("keys: result"),
+        "the refusal names what arrived: {}",
+        unknown.message
+    );
 }
 
 #[test]

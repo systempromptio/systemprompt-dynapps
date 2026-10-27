@@ -31,7 +31,28 @@ pub fn normalize_cli(value: &Value) -> Result<Vec<Value>, rmcp::ErrorData> {
     if let Some(items) = value.as_array() {
         return Ok(items.clone());
     }
-    Err(failure("Unsupported CLI report envelope"))
+    Err(failure(format!(
+        "Unsupported CLI report envelope ({})",
+        envelope_shape(value)
+    )))
+}
+
+fn envelope_shape(value: &Value) -> String {
+    match value {
+        Value::Object(map) if map.is_empty() => "empty object".to_owned(),
+        Value::Object(map) => format!(
+            "keys: {}",
+            map.keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Value::Null => "null".to_owned(),
+        Value::Bool(_) => "boolean".to_owned(),
+        Value::Number(_) => "number".to_owned(),
+        Value::String(_) => "string".to_owned(),
+        Value::Array(_) => "array".to_owned(),
+    }
 }
 
 fn chart_rows(value: &Value) -> Result<Vec<Value>, rmcp::ErrorData> {
