@@ -223,7 +223,7 @@ fn bundle_view(
         following_tag,
         active_digest: active.map(|a| a.digest.clone()),
         version: active.map(|a| a.version.clone()),
-        content_hash: active.map(|a| a.content_hash.clone()),
+        content_hash: active.map(|a| a.content_hash.to_string()),
         fetched_at: active.map(|a| a.fetched_at.to_rfc3339()),
         owns,
         badges,
