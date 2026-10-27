@@ -64,8 +64,10 @@ jobs:
         include:
           - part: root
             phases: root
-          - part: tests
-            phases: tests
+          - part: tests-unit
+            phases: tests-unit
+          - part: tests-integration
+            phases: tests-integration
           - part: bridge
             phases: bridge
     # Nothing instrumented is cached (see the rust-cache step), so every run
@@ -220,7 +222,7 @@ jobs:
           # A leg that failed before packing uploads nothing; report over
           # what arrived, and the last step keeps the job red.
           missing=""
-          for part in root tests bridge; do
+          for part in root tests-unit tests-integration bridge; do
             if [ -f "/mnt/coverage-in/coverage-$part.tar.zst" ]; then
               zstd -dc "/mnt/coverage-in/coverage-$part.tar.zst" | tar -xPf -
             else
