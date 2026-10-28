@@ -43,6 +43,7 @@ dependencies = [
  "dynapps-test-common",
  "http-body-util",
  "jsonwebtoken",
+ "reqwest",
  "serde_json",
  "sha2 0.11.1",
  "sqlx",

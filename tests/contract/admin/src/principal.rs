@@ -74,7 +74,7 @@ impl Credentials {
 
 // Scoped listings narrow to the caller's groups; a caller in none is derived
 // into `unassigned`, so a real membership keeps scoped routes non-vacuous.
-const CONTRACT_GROUP: &str = "contract-group";
+pub(crate) const CONTRACT_GROUP: &str = "contract-group";
 
 pub(crate) async fn provision(pool: &PgPool) -> Credentials {
     sqlx::query(

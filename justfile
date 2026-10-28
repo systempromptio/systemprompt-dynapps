@@ -371,14 +371,19 @@ _test-contract-uncoordinated *ARGS:
     # carries the governance privilege-escalation check. This turns that skip
     # into a failure, so a missing database can never be read as a pass.
     export SYSTEMPROMPT_REQUIRE_DB=1
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests)' "$@"
+    # Why: docs-smoke drives the running documents MCP binary and is its own
+    # recipe and Gates job; this tier stays a router-level contract.
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests) and not test(docs_smoke)' "$@"
 
-# The shared document store end to end on a throwaway database: create from
-# the install's Word template, guarded, quote-target and Markdown edits,
-# comment and resolve, a group share and an outsider's refusal, the /drive
-# pages per principal, and the bridge Drive feed through a merged and a
-# conflicting upload. The same test runs inside test-contract; this recipe is
-# its own Gates job so a document-store break has its own red context.
+# The shared document store end to end on a throwaway database, against the
+# installation running: the runtime and API booted on a profile over that
+# database, and the documents MCP binary started as its own process. The
+# agent's steps are MCP tool calls to the binary (create from the install's
+# Word template, a stale guard, one-op, quote-target and Markdown edits,
+# history, comment and resolve, a proposal accepted); the people's steps are
+# REST calls (a group share and an outsider's refusal, the /drive pages, the
+# bridge Drive feed through a merged and a conflicting upload). The run holds
+# the tools to their size budget. A missing database or binary fails it.
 docs-smoke:
     @scripts/build-coordinator.sh run docs-smoke "" -- {{just_executable()}} _docs-smoke-uncoordinated
 
@@ -397,6 +402,7 @@ _docs-smoke-uncoordinated:
         exit 1
     fi
     export SYSTEMPROMPT_REQUIRE_DB=1
+    SQLX_OFFLINE=true cargo build -p systemprompt-mcp-documents
     cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p admin-contract-tests -E 'test(docs_smoke)'
 
 # All tests

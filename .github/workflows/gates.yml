@@ -300,7 +300,8 @@ jobs:
         timeout-minutes: 65
 
   # The shared document store end to end (`just docs-smoke`) on the same
-  # Postgres service the test tier uses, as its own red context.
+  # Postgres service the test tier uses, as its own red context: the recipe
+  # builds the documents MCP binary and the run drives it over HTTP.
   docs-smoke:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Docs smoke (document store end to end)
@@ -340,7 +341,9 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
-          workspaces: tests
+          workspaces: |
+            .
+            tests
           save-if: false
       - run: just docs-smoke
         timeout-minutes: 65

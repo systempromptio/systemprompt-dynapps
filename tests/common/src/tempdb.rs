@@ -284,6 +284,11 @@ impl TempDb {
     }
 
     #[must_use]
+    pub fn url(&self) -> String {
+        with_database(&self.admin_url, &self.db_name)
+    }
+
+    #[must_use]
     pub fn db_pool(&self) -> DbPool {
         Arc::new(Database::from_pools(Arc::clone(&self.pool), None))
     }

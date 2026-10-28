@@ -56,5 +56,16 @@ documents that gained a revision in the window.
 
 ## Smoke test
 
-`just docs-smoke` runs the store end to end on a throwaway database, and the
-Gates workflow runs it as the `docs-smoke` job.
+`just docs-smoke` runs the store end to end on a throwaway database, against
+the installation running. It builds the `systemprompt-mcp-documents` binary,
+boots the runtime and API on a profile over that database, and starts the
+binary on the same profile. Agent steps are MCP tool calls to the binary:
+creating from the catalog's `dynapps-word` and the compiled-in
+`dynapps-note`, guarded edits, history, a comment, a proposal, and a trash
+and untrash. People's steps (sharing, `/drive`, the bridge Drive feed) are
+REST calls to the API. A refusal is checked in each surface's shape: the
+refused tool result's structured `code`, and the HTTP envelope's `error_key`.
+The run also holds the tools to a size budget: `tools/list` within 6144
+bytes, a one-op edit result within 400 bytes and a three-revision history
+within 800 bytes, measured as the model receives a result. The Gates
+workflow runs it as the `docs-smoke` job.

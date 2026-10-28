@@ -330,47 +330,6 @@ impl App {
         self.dispatch(call, Some(token), &[]).await
     }
 
-    pub(crate) async fn call_with_bearer_get(
-        &self,
-        path: &str,
-        token: &str,
-    ) -> (StatusCode, String) {
-        self.dispatch(Call::get(path, Principal::Anonymous), Some(token), &[])
-            .await
-    }
-
-    // A binary body under a bearer: the bridge's multipart Drive commit.
-    pub(crate) async fn send_bytes(
-        &self,
-        path: &str,
-        token: &str,
-        headers: &[(&str, &str)],
-        body: Vec<u8>,
-    ) -> (StatusCode, String) {
-        let mut builder = Request::builder()
-            .method("POST")
-            .uri(path)
-            .header("authorization", format!("Bearer {token}"));
-        for (name, value) in headers {
-            builder = builder.header(*name, *value);
-        }
-        let request = builder.body(Body::from(body)).expect("build request");
-        let response = self
-            .router
-            .clone()
-            .oneshot(request)
-            .await
-            .expect("router is infallible");
-        let status = response.status();
-        let bytes = response
-            .into_body()
-            .collect()
-            .await
-            .map(http_body_util::Collected::to_bytes)
-            .unwrap_or_default();
-        (status, String::from_utf8_lossy(&bytes).into_owned())
-    }
-
     pub(crate) async fn call_with_headers(
         &self,
         call: Call<'_>,

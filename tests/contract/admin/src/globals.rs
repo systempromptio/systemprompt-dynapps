@@ -122,10 +122,7 @@ const FIXTURE_PROFILE: &str = include_str!("../fixtures/profile.yaml");
 // `anthropic` must exist: core's services loader demotes a provider with no
 // credential to `surface: backend`, which hides both fixture routes from the
 // per-user catalog before any ACL rule is consulted.
-fn fixture_secrets() -> String {
-    let database_url = std::env::var("SYSTEMPROMPT_TEST_DATABASE_URL")
-        .or_else(|_| std::env::var("DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://unused:unused@localhost:5432/postgres".to_owned());
+fn fixture_secrets(database_url: &str) -> String {
     format!(
         r#"{{
   "database_url": "{database_url}",
@@ -146,13 +143,22 @@ const MASTER_KEY_HEX: &str = "00112233445566778899aabbccddeeff001122334455667788
 // Profile path validation requires `paths.bin` to exist; a runner that built
 // only this workspace has no `target/debug`, so an empty `bin/` stands in.
 fn write_fixture_profile() -> PathBuf {
-    let root = repo_root();
     // Why: the tree is rewritten on every init; two concurrent runs sharing a
     // path race into "No such file or directory" mid-copy.
-    let dir = root.join(format!(
+    let dir = repo_root().join(format!(
         "tests/target/contract-profile-{}",
         std::process::id()
     ));
+    let database_url = std::env::var("SYSTEMPROMPT_TEST_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .unwrap_or_else(|_| "postgres://unused:unused@localhost:5432/postgres".to_owned());
+    write_profile(&dir, &database_url)
+}
+
+// The fixture profile, its secrets naming `database_url`, and its services
+// tree, written under `dir`. Returns the profile path.
+pub(crate) fn write_profile(dir: &std::path::Path, database_url: &str) -> PathBuf {
+    let root = repo_root();
     std::fs::create_dir_all(dir.join("bin")).expect("create fixture profile and bin directories");
 
     let yaml = FIXTURE_PROFILE
@@ -163,7 +169,8 @@ fn write_fixture_profile() -> PathBuf {
             &format!("jwt_issuer: {ISSUER}"),
         );
     std::fs::write(dir.join("profile.yaml"), yaml).expect("write fixture profile");
-    std::fs::write(dir.join("secrets.json"), fixture_secrets()).expect("write fixture secrets");
+    std::fs::write(dir.join("secrets.json"), fixture_secrets(database_url))
+        .expect("write fixture secrets");
     write_fixture_services(&root, &dir.join("services"));
 
     dir.join("profile.yaml")
