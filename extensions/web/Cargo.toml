@@ -41,9 +41,6 @@ systemprompt-secrets-onepassword = { workspace = true }
 # expansion (`::systemprompt_extension::Migration`) resolves.
 systemprompt-extension = { workspace = true }
 inventory = { workspace = true }
-# `register_document_template_provider!` expands to
-# `::systemprompt_provider_contracts` paths; the facade does not re-export it.
-systemprompt-provider-contracts = { workspace = true }
 
 # Web framework
 axum = { workspace = true }

@@ -70,12 +70,10 @@ fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
         Arc::from(globals::OAUTH_PEPPER),
     );
     identity::SsoDeps {
-        driver: Some(systemprompt::sso::SsoDriver::discover(
-            &ctx,
-            oauth,
-            Arc::clone(&sessions),
-        )
-        .expect("SSO provider discovery")),
+        driver: Some(
+            systemprompt::sso::SsoDriver::discover(&ctx, oauth, Arc::clone(&sessions))
+                .expect("SSO provider discovery"),
+        ),
         write_pool: Arc::clone(pool),
         session_service: sessions,
     }

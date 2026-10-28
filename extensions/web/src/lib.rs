@@ -23,7 +23,6 @@
 // registering `onepassword` must be linked into the server binary or a
 // profile naming that kind fails at boot.
 use systemprompt_secrets_onepassword as _;
-pub mod documents_templates;
 pub mod extension;
 mod extension_impl;
 mod router;

@@ -6758,6 +6758,7 @@ dependencies = [
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
  "tokio",
  "tracing",
 ]
@@ -7391,7 +7392,6 @@ dependencies = [
  "serde_json",
  "systemprompt",
  "systemprompt-extension",
- "systemprompt-provider-contracts",
  "systemprompt-secrets-onepassword",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
@@ -7454,6 +7454,7 @@ dependencies = [
  "serde_yaml_ng",
  "sqlx",
  "systemprompt",
+ "systemprompt-provider-contracts",
  "thiserror 2.0.21",
  "tracing",
  "url",

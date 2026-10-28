@@ -23,7 +23,7 @@ const EXPECTED: [&str; 16] = [
     "documents_copy",
     "documents_update",
     "documents_trash",
-    "documents_restore_document",
+    "documents_untrash",
     "documents_export",
     "documents_guide",
 ];

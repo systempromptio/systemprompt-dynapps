@@ -29,6 +29,7 @@ systemprompt-secrets-onepassword.workspace = true
 systemprompt-web-admin-governance.workspace = true
 systemprompt-web-admin-identity.workspace = true
 systemprompt-web-admin-platform.workspace = true
+systemprompt-web-shared.workspace = true
 
 [lints]
 workspace = true
