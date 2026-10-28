@@ -87,6 +87,14 @@ Conventions (strict — hold every entry to them):
 - **`deploy/loadtest/kind/cluster.sh` defaults the image tag to the workspace version** read from
   `Cargo.toml` (`LOADTEST_IMAGE_TAG` still overrides it).
 
+### Fixed
+
+- **A node that migrates on boot applies its config planes after the admin bootstrap.**
+  `docker/entrypoint.sh` ran `admin config apply` straight after the migrations, but the apply
+  builds the full application context, which resolves the system admin, so a database with no
+  admin user yet refused to boot. The apply now runs once, after `admin bootstrap` (a gateway
+  node still skips the bootstrap), and `tests/unit/web/src/entrypoint_role.rs` asserts the order.
+
 ## 0.72.1 — 2026-10-22
 
 ### Changed

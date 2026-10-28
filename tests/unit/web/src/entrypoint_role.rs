@@ -65,3 +65,29 @@ fn a_gateway_node_skips_the_bootstrap_and_no_node_renders_twice() {
     assert!(bootstrap_jobs.contains("- site_render"));
     assert!(!bootstrap_jobs.contains("- publish_pipeline"));
 }
+
+#[test]
+fn a_node_that_migrates_on_boot_applies_the_config_after_the_bootstrap() {
+    let text =
+        std::fs::read_to_string(repo_root().join("docker/entrypoint.sh")).expect("read entrypoint");
+    let boot = &text[text.find("if migrate_on_boot; then").expect("the migrate-on-boot branch")..];
+    let branch = &boot[..boot.find("fi\n").expect("the branch ends")];
+    assert!(branch.contains("run_migrations"));
+    assert!(
+        !branch.contains("apply_config"),
+        "the apply needs the admin, which does not exist before the bootstrap"
+    );
+    let bootstrap = text
+        .rfind("/app/bin/systemprompt admin bootstrap")
+        .expect("the boot-time admin bootstrap");
+    let apply = text.rfind("    apply_config\n").expect("the boot-time apply");
+    let start = text.find("infra services start").expect("the server start");
+    assert!(bootstrap < apply && apply < start);
+
+    let one_shot = &text[text.find("if [ \"${1:-}\" = \"migrate\" ]").expect("the one-shot")..];
+    let one_shot = &one_shot[..one_shot.find("exit 0").expect("the one-shot exits")];
+    let migrate = one_shot.find("run_migrations").expect("one-shot migrates");
+    let bootstrap = one_shot.find("admin bootstrap").expect("one-shot bootstraps");
+    let apply = one_shot.find("apply_config").expect("one-shot applies");
+    assert!(migrate < bootstrap && bootstrap < apply);
+}
