@@ -1,4 +1,3 @@
-import '/assets/documents/js/documents.js';
 import { rawFetch } from '../services/api.js';
 
 const DOCUMENTS_API = '/api/v1/documents';

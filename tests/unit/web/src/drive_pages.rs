@@ -132,12 +132,12 @@ fn the_user_document_page_authorizes_before_it_renders() {
 #[test]
 fn the_document_pages_load_cores_components() {
     for path in [
-        "storage/files/js/pages/admin-drive-document.js",
-        "storage/files/js/pages/my-drive.js",
-        "storage/files/js/pages/my-drive-document.js",
+        "storage/files/admin/templates/drive-document.hbs",
+        "storage/files/admin/templates/my-drive.hbs",
+        "storage/files/admin/templates/my-drive-document.hbs",
     ] {
         assert!(
-            read(path).contains("import '/assets/documents/js/documents.js';"),
+            read(path).contains(r#"type="module" src="/assets/documents/js/documents.js?v="#),
             "{path} does not define the document components"
         );
     }
