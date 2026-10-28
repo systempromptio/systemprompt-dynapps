@@ -45,6 +45,7 @@
 {{/components/table}}
 </section>
 {{/if}}
+{{> components/documents-panel documents=documents}}
 <section class="sp-section sp-aconv-block" aria-label="Conversations">
 {{#> components/table caption=(concat conversation_count " conversations invoked this skill") pagination=pagination modifier="sp-aconv-table"}}
 <thead><tr><th scope="col" class="sp-aconv-col-title">Conversation</th><th scope="col" class="sp-aconv-col-person">Person</th><th scope="col" class="sp-aconv-col-client">Client · model</th><th scope="col" class="sp-table__cell--num">Turns</th><th scope="col" class="sp-table__cell--num" title="Tool calls">{{> components/icon name="wrench"}}</th><th scope="col" class="sp-table__cell--num" title="Artifacts">{{> components/icon name="file"}}</th><th scope="col" class="sp-table__cell--num">Err</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">p95</th><th scope="col" class="sp-table__cell--num">Length</th><th scope="col" class="sp-aconv-col-skills">Skills</th><th scope="col" class="sp-col-date">Last</th><th scope="col" class="sp-aconv-col-judge" title="AI judge completion">{{> components/icon name="sparkle"}} AI</th></tr></thead>

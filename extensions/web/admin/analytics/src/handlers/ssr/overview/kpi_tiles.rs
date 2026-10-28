@@ -1,12 +1,14 @@
-//! The ten tiles of the overview strip, in three rows of intent: how much
+//! The tiles of the overview strip, in three rows of intent: how much
 //! happened (requests, spend, people, conversations), what the work was made
 //! of (tokens and cache, tool calls), and how well it went (latency, errors,
-//! denials).
+//! denials), then the documents the store's revisions touched.
 //!
 //! Every tile links to the page that owns exactly the rows it counted, with
 //! the window carried along, so the overview stays a place to start from.
 
 use crate::repositories::overview::kpis::OverviewKpis;
+
+use super::data::DocumentsTouched;
 use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total, short_num,
 };
@@ -222,4 +224,24 @@ const fn latency_tone(p95_ms: i64) -> &'static str {
         ms if ms <= GATEWAY_P95_TARGET_MS => "warn",
         _ => "err",
     }
+}
+
+pub(super) fn documents_tile(d: &DocumentsTouched, i: &TileInputs<'_>) -> KpiTileView {
+    let vs = i.range.previous_label();
+    tile(
+        Tile {
+            label: "Documents touched",
+            icon: "file",
+            value: short_num(d.current),
+            note: comparison(&short_num(d.previous), vs),
+            hint: format!(
+                "{} distinct documents gained a revision in the shared document store",
+                d.current
+            ),
+            href: "/admin/drive".to_owned(),
+            tone: "",
+        },
+        i.comparable.then(|| delta(d.current, d.previous, true)),
+        &[],
+    )
 }

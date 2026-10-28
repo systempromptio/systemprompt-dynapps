@@ -166,4 +166,5 @@ pub(super) struct ConversationDetailContext {
     pub(super) safety_count: usize,
     pub(super) help: HelpView,
     pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
+    pub(super) documents: crate::handlers::ssr::analysis::documents_panel::DocumentsPanelView,
 }

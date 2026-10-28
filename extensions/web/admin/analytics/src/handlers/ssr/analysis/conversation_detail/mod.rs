@@ -2,7 +2,8 @@
 //! plane: the record's header and KPIs, per-turn charts (tokens, cost,
 //! latency), the turn ledger, every tool call from the ledger, every
 //! governance decision, every safety finding, the skills invoked with the
-//! marketplace version served at the time — and the judge's one label with
+//! marketplace version served at the time, the documents it created or
+//! edited — and the judge's one label with
 //! its rationale, plus the button that asks for it again.
 //!
 //! An owner outside the caller's view answers 404 like a missing id, so the
@@ -35,6 +36,8 @@ use systemprompt_web_admin_core::ssr::analysis_urls::analysis_conversation_url;
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::types::UserContext;
 
+use super::documents_panel::documents_panel;
+use crate::repositories::analysis::documents::list_conversation_documents;
 use context::{Planes, build_context};
 
 fn parse_context(raw: &str) -> Result<ContextId, AdminError> {
@@ -77,15 +80,16 @@ pub(crate) async fn page(
     let context_id = parse_context(&context_id)?;
     let row = load_visible(&pool, &shell.user, &context_id).await?;
     let session = row.facts.client_session_id.as_deref();
-    let (turns, tools, decisions, skills, safety) = tokio::join!(
+    let (turns, tools, decisions, skills, safety, documents) = tokio::join!(
         list_conversation_turns(&pool, &context_id),
         list_conversation_tool_calls(&pool, &context_id, session),
         list_conversation_decisions(&pool, &context_id, session),
         list_conversation_skills(&pool, &context_id),
         list_conversation_safety_findings(&pool, &context_id),
+        list_conversation_documents(&pool, &context_id),
     );
     let (turns, tools, decisions, skills, safety) = (turns?, tools?, decisions?, skills?, safety?);
-    let context = build_context(
+    let mut context = build_context(
         &row,
         Planes {
             turns,
@@ -96,6 +100,7 @@ pub(crate) async fn page(
         },
         shell.user.is_console,
     );
+    context.documents = documents_panel(&documents?);
     Ok(
         systemprompt_web_admin_core::ssr::helpers::render_typed_page(
             &shell.engine,

@@ -68,4 +68,5 @@ pub(super) struct SkillDetailContext {
     pub(super) pagination: Pagination,
     pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
     pub(super) help: HelpView,
+    pub(super) documents: crate::handlers::ssr::analysis::documents_panel::DocumentsPanelView,
 }
