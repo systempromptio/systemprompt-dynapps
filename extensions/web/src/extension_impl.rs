@@ -112,7 +112,14 @@ impl Extension for WebExtension {
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
-        vec!["content", "users", "authz", "managed_resources", "oauth"]
+        vec![
+            "content",
+            "users",
+            "authz",
+            "managed_resources",
+            "oauth",
+            "files",
+        ]
     }
 
     fn cross_extension_tables(&self) -> Vec<&'static str> {
@@ -120,6 +127,10 @@ impl Extension for WebExtension {
             "agent_run_events",
             "agent_runs",
             "ai_requests",
+            "document_folders",
+            "document_grants",
+            "document_revisions",
+            "documents",
             "managed_installation_receipts",
             "managed_publications",
             "managed_resources",

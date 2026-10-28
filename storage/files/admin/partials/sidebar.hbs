@@ -249,6 +249,13 @@
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 6.5A5.5 5.5 0 003.6 4.6M3 9.5a5.5 5.5 0 009.4 1.9" stroke-linecap="round"/><path d="M2.5 2.5v3h3M13.5 13.5v-3h-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Code sync
         </a>
+        {{#if current_user.is_admin}}
+        {{#if documents_enabled}}
+        {{#> nav-item href="/admin/drive" text="Drive" leaf="drive" child="drive-document" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1.5h5.5L13 5v9.5H4z" stroke-linejoin="round"/><path d="M9.5 1.5V5H13M6 8.5h5M6 11h5" stroke-linecap="round"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{/if}}
+        {{/if}}
         {{#if current_user.is_console}}
         {{#> nav-item href="/admin/marketplaces" text="Marketplaces" leaf="marketplaces" child="marketplace-detail" page=page}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5.5h12L13 13H3z" stroke-linejoin="round"/><path d="M5.5 5.5V4a2.5 2.5 0 015 0v1.5" stroke-linecap="round"/></svg>{{/inline}}

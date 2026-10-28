@@ -237,6 +237,8 @@ MISSING-FEATURES-SPEC.md
 # Local working artifacts (requirements registers, spreadsheets) — never tracked
 *.xlsx
 *.xls
+# The document template catalog ships a workbook template.
+!/services/documents/templates/files/*.xlsx
 
 # Governance exports contain production audit evidence and stay local.
 /governance-*.csv

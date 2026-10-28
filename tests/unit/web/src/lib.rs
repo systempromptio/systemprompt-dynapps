@@ -185,6 +185,8 @@ mod report_pnl;
 mod secrets_scanner_response;
 
 #[cfg(test)]
+mod documents_templates;
+#[cfg(test)]
 mod seed_contract;
 #[cfg(test)]
 mod shared_errors;
@@ -439,6 +441,8 @@ mod farm_eval_judge_config;
 
 #[cfg(test)]
 mod catalogue_integrity;
+#[cfg(test)]
+mod drive_pages;
 #[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]

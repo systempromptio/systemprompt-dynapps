@@ -1,0 +1,11 @@
+# Dynapps document template; `file` is relative to this directory.
+id: dynapps-word
+format: docx
+name: Dynapps Word document
+description: 'Branded Word document: a "Dynapps" paragraph and a {{title}} heading. Generated from core''s blank_docx() with the docx codec''s replace_text and insert_after operations.'
+file: files/dynapps-word.docx
+priority: 200
+placeholders:
+- key: title
+  label: Title
+  default: Untitled

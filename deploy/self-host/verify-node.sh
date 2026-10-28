@@ -80,7 +80,7 @@ if [ -n "$CONTAINER" ]; then
     fi
     # MCP servers speak streamable HTTP under /mcp; a bare GET without the MCP
     # Accept header is answered 406 by a live server and refused by a dead one.
-    serves_site && for port in 5010:systemprompt; do
+    serves_site && for port in 5010:systemprompt 5012:documents; do
         p="${port%%:*}"; n="${port#*:}"
         code="$(x curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$p/mcp" 2>/dev/null || echo 000)"
         case "$code" in

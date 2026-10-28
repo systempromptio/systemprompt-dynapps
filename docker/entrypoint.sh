@@ -196,6 +196,7 @@ migrate_on_boot() {
 
 if migrate_on_boot; then
     run_migrations
+    apply_config
 else
     echo "database.migrate_on_boot is false: skipping migrations (run the one-shot migrate step first)."
 fi

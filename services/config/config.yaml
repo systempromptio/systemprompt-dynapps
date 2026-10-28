@@ -13,6 +13,7 @@ includes:
   # each connected per user through the generic OAuth connector.
   - ../mcp/systemprompt.yaml
   - ../mcp/agent-farm.yaml
+  - ../mcp/documents.yaml
   - ../mcp/dynapps-odoo.yaml
   - ../mcp/dynbrain.yaml
 

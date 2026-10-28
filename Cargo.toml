@@ -14,6 +14,7 @@ members = [
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
     "extensions/mcp/agent-farm",
+    "extensions/mcp/documents",
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",
@@ -39,7 +40,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.73.0"
+version = "0.74.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -49,9 +50,10 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.73.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.73.0" }
-systemprompt-extension = { version = "0.73.0" }
+systemprompt = { version = "0.74.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.74.0" }
+systemprompt-extension = { version = "0.74.0" }
+systemprompt-provider-contracts = { version = "0.74.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -274,7 +276,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE: built against the published core 0.73.0 crates.
+# INACTIVE: built against the published core 0.74.0 crates.
 # [patch.crates-io]
 # systemprompt = { path = "../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }

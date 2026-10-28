@@ -165,6 +165,7 @@ fn platform_routes() -> Router<Arc<PgPool>> {
         .merge(platform_ssr::configuration_routes())
         .merge(catalog_ssr::lifecycle_routes())
         .merge(platform_ssr::sync_routes())
+        .merge(platform_ssr::drive_routes())
         .merge(observability_ssr::routes())
 }
 

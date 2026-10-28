@@ -102,6 +102,7 @@ pub(crate) struct PageShell<'a, T> {
     scope_selector: bool,
     app_version: &'static str,
     access_attention: usize,
+    documents_enabled: bool,
     unavailable: &'a [Fault],
     #[serde(flatten)]
     page: &'a T,
@@ -111,6 +112,7 @@ pub(crate) struct PageShell<'a, T> {
 pub(crate) struct PageChrome<'a> {
     pub(crate) page_id: Option<&'a str>,
     pub(crate) unavailable: &'a [Fault],
+    pub(crate) documents_enabled: bool,
 }
 
 impl<'a, T: Serialize> PageShell<'a, T> {
@@ -123,6 +125,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
         let PageChrome {
             page_id,
             unavailable,
+            documents_enabled,
         } = chrome;
         let help = page_id.map(demo_help_text);
         Self {
@@ -140,6 +143,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             } else {
                 0
             },
+            documents_enabled,
             unavailable,
             page,
         }

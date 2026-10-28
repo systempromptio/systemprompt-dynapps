@@ -52,12 +52,14 @@ TBASE="${COVERAGE_TARGET_DIR:-$ROOT/coverage-report/target}"
 
 # COVERAGE_PHASES picks a subset of root, tests, bridge and report, so CI can
 # build each workspace on its own runner and report over all of them on
-# another. Any build phase starts a fresh profile;
+# another. tests-unit and tests-integration each build half of the tests/
+# workspace (the *-unit-tests packages, and every other one), so neither
+# compile outgrows a runner's time bound. Any build phase starts a fresh profile;
 # a report-only run reads the profraw and objects it was handed.
 PHASES=" ${COVERAGE_PHASES:-root tests bridge report} "
 has_phase() { [[ "$PHASES" == *" $1 "* ]]; }
 
-if has_phase root || has_phase tests || has_phase bridge; then
+if has_phase root || has_phase tests || has_phase tests-unit || has_phase tests-integration || has_phase bridge; then
     rm -rf "$PROFDIR" "$ROOT/coverage-report/tests.profdata"
 fi
 mkdir -p "$PROFDIR"
@@ -137,8 +139,17 @@ if has_phase root; then
     run_instrumented "$TBASE-root" --workspace --tests --no-tests=pass
 fi
 
+tests_selection=()
 if has_phase tests; then
-    echo "==> [2/3] Instrumented tests: tests/ workspace"
+    tests_selection=(--workspace)
+elif has_phase tests-unit; then
+    tests_selection=(--package '*-unit-tests')
+elif has_phase tests-integration; then
+    tests_selection=(--workspace --exclude '*-unit-tests')
+fi
+
+if [ "${#tests_selection[@]}" -gt 0 ]; then
+    echo "==> [2/3] Instrumented tests: tests/ workspace (${tests_selection[*]})"
     # A repo whose tests/.config/nextest.toml declares a `coverage` profile
     # (longer slow-timeouts under instrumentation) gets it; nextest refuses a
     # profile its config does not name, so it is never passed blind.
@@ -146,7 +157,7 @@ if has_phase tests; then
     if grep -q '^\[profile\.coverage\]' tests/.config/nextest.toml 2>/dev/null; then
         profile=(--profile coverage)
     fi
-    run_instrumented "$TBASE-tests" --manifest-path tests/Cargo.toml --workspace "${profile[@]}"
+    run_instrumented "$TBASE-tests" --manifest-path tests/Cargo.toml "${tests_selection[@]}" "${profile[@]}"
 fi
 
 if has_phase bridge; then

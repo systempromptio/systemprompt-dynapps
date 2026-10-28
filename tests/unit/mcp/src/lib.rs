@@ -14,6 +14,7 @@
 //! - the `agent-farm` server's tool surface, schemas, run authorisation and the
 //!   administrator-only `all` scope, and `farm_dashboard`'s JSON shape against
 //!   the fields its dashboard artifact reads
+//! - the `documents` server's tool surface and its manifest/services yaml
 
 #[cfg(test)]
 mod access_policy;
@@ -36,6 +37,8 @@ mod admin_reports;
 mod agent_farm_tools;
 #[cfg(test)]
 mod bounds;
+#[cfg(test)]
+mod documents_tools;
 #[cfg(test)]
 mod farm_dashboard_shape;
 #[cfg(test)]

@@ -53,8 +53,8 @@ gh auth status >/dev/null 2>&1 || die "gh is not authenticated (the repository i
 tenant_id="$(sed -n 's/^  tenant_id: *//p' "$ROOT/$PROD_PROFILE" | head -1)"
 [ -n "$tenant_id" ] || die "production profile has no tenant_id"
 FLY_APP="sp-$(printf '%s' "$tenant_id" | tr -d '-' | cut -c1-12)"
-HOST="$(sed -n 's/^  api_external_url: *//p' "$ROOT/$PROD_PROFILE" | head -1)"
-[ -n "$HOST" ] || die "production profile has no api_external_url"
+HOST="$(sed -n 's/^  external_url: *//p' "$ROOT/$PROD_PROFILE" | head -1)"
+[ -n "$HOST" ] || die "production profile has no server.external_url"
 
 log "release $TAG must be origin/main"
 git -C "$ROOT" fetch -q origin main "refs/tags/$TAG:refs/tags/$TAG" 2>/dev/null \

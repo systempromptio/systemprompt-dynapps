@@ -55,7 +55,14 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
     dependencies.sort_unstable();
     assert_eq!(
         dependencies,
-        vec!["authz", "content", "managed_resources", "oauth", "users"]
+        vec![
+            "authz",
+            "content",
+            "files",
+            "managed_resources",
+            "oauth",
+            "users"
+        ]
     );
 
     let mut shared = extension.cross_extension_tables();
@@ -66,6 +73,10 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
             "agent_run_events",
             "agent_runs",
             "ai_requests",
+            "document_folders",
+            "document_grants",
+            "document_revisions",
+            "documents",
             "managed_installation_receipts",
             "managed_publications",
             "managed_resources",

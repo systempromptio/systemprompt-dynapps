@@ -45,9 +45,10 @@ fn the_extension_dimensions_are_distinct_and_ordered() {
 fn every_entity_kind_maps_to_its_own_typed_reference() {
     let mut seen = Vec::new();
     for kind in EntityKind::ALL {
-        let entity = EntityRef::from_kind_and_id(*kind, "id-1").expect("valid fixture entity id");
+        let entity = EntityRef::from_kind_and_id(*kind, "00000000-0000-4000-8000-000000000001")
+            .expect("valid fixture entity id");
         assert_eq!(entity.kind(), *kind);
-        assert_eq!(entity.id_str(), "id-1");
+        assert_eq!(entity.id_str(), "00000000-0000-4000-8000-000000000001");
         assert!(
             !seen.contains(&std::mem::discriminant(&entity)),
             "{kind:?} reuses another kind's EntityRef variant"

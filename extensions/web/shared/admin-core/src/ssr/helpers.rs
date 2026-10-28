@@ -74,6 +74,7 @@ pub(crate) fn render_shell<T: Serialize>(
     let chrome = PageChrome {
         page_id,
         unavailable: faults.as_slice(),
+        documents_enabled: engine.documents_enabled(),
     };
     let shell = PageShell::new(engine.branding(), viewer, chrome, &value);
 

@@ -1,0 +1,11 @@
+# Dynapps document template; `file` is relative to this directory.
+id: dynapps-sheet
+format: xlsx
+name: Dynapps spreadsheet
+description: 'Branded workbook: "Dynapps" and {{title}} in row 1, an Item/Owner/Status/Notes header in row 2. Generated from core''s blank_xlsx() with the xlsx codec''s set_cells operation.'
+file: files/dynapps-sheet.xlsx
+priority: 200
+placeholders:
+- key: title
+  label: Title
+  default: Untitled

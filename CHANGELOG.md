@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.74.0 — 2026-10-27
+
 ### Breaking
 
 - **Request and config fields have one name each.** The agent-farm launch and eval bodies
@@ -47,6 +49,11 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- **Dynapps document templates.** `services/documents/templates/` is the document template catalog core loads at boot: `dynapps-word` (docx), `dynapps-sheet` (xlsx), `dynapps-deck` (pptx) and `dynapps-html` (html), each with a `title` placeholder defaulting to "Untitled" and at priority 200. The Office files were generated from core's blank documents through its own codecs, so every one projects and instantiates with the codec that will edit it.
+- **`dynapps-note` template provider.** `extensions/web/src/documents_templates.rs` registers `DynappsTemplateProvider` with core's template provider inventory, shipping a Markdown note with the Dynapps byline. The web extension now depends on `systemprompt-provider-contracts` directly, because the facade does not re-export the registration macro's crate.
+- **`documents` MCP server.** `extensions/mcp/documents` builds `systemprompt-mcp-documents`, which serves core's sixteen document tools (`documents_list`, `documents_search`, `documents_create`, `documents_read`, `documents_edit`, `documents_comment`, `documents_history`, `documents_proposals`, `documents_share`, `documents_access`, `documents_copy`, `documents_update`, `documents_trash`, `documents_restore_document`, `documents_export`, `documents_guide`) and the `ui://documents/document-preview` resource on port 5012. Each call is authenticated with the caller's OAuth token, recorded in the MCP access log and run as that user through core's tool executor, so the document store authorizes every read and write against the caller's own grants. `services/mcp/documents.yaml` declares it enabled with user-scoped OAuth. The binary is copied into the Docker image, listed in `CI_SERVER_BINS` for release builds, and checked by `deploy/self-host/preflight.sh` and `verify-node.sh`.
+- The web extension depends on core's `files` extension and lists the `documents`, `document_folders`, `document_revisions` and `document_grants` tables it will read.
+- **Drive admin pages.** `/admin/drive` lists a folder's subfolders and documents with format, head revision, live editors and last update, and `/admin/drive/{document_id}` shows one document's sandboxed preview, a download of its head revision, its revision history and its grants. Both are administrator pages under Platform in the sidebar. The page scripts read core's `/api/v1/documents` routes with the admin session, so the document service authorizes each row and the admin plane queries none of the document tables.
 - **Core gates run here through the pinned core checkout.** `scripts/lint-async-trait.sh`,
   `scripts/lint-owned-tasks.sh` and `scripts/lint-stringly-errors.sh` exec the same-named
   script in `../systemprompt-core` at `bridge/CORE_REF` over `extensions`, `src` and
@@ -66,6 +73,10 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Built against systemprompt-core 0.74.0.** Every core crate pin in `Cargo.toml` and
+  `tests/Cargo.toml` requires 0.74.0, `bridge/CORE_REF` names `v0.74.0`, and both
+  `[patch.crates-io]` blocks are inactive, so the release builds from the published crates.
+- **The shared document store is off by default.** Enable it with `files.documents.enabled: true` in `services/config/files.yaml` and `enabled: true` in `services/mcp/documents.yaml`. While it is off, core mounts no document routes, `systemprompt-mcp-documents` exits at boot naming the switch, `/admin/drive` and `/admin/drive/{id}` answer 404, and the Drive sidebar entry is hidden.
 - **`scripts/check-core-ref.sh` proves the core patch is live.** With `[patch.crates-io]` active
   no tracked `Cargo.lock` may carry `[[patch.unused]]` and the root pin must equal the sibling
   core's workspace version; with the patch commented no `systemprompt*` crate may resolve from a

@@ -1,0 +1,21 @@
+# Shared document store tools. Every tool acts as the signed-in caller: the
+# document store authorizes each call against the caller's own access. The
+# store is enabled per installation with `files.documents.enabled` in
+# services/config/files.yaml and this flag.
+mcp_servers:
+  documents:
+    server_type: internal
+    binary: systemprompt-mcp-documents
+    package: documents
+    port: 5012
+    enabled: false
+    tool_policy: allow
+    display_in_web: true
+    removable: false
+    description: Shared documents and folders — read, edit and create Word, Excel, PowerPoint, HTML and Markdown documents from templates
+    oauth:
+      required: true
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

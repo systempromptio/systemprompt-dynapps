@@ -1,0 +1,34 @@
+[package]
+name = "systemprompt-mcp-documents"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The documents MCP server for the Dynapps instance: core's shared document store tools and preview resource, served to signed-in users as themselves."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[[bin]]
+name = "systemprompt-mcp-documents"
+path = "src/main.rs"
+
+[dependencies]
+systemprompt = { workspace = true, features = ["full"] }
+
+anyhow.workspace = true
+rustls.workspace = true
+tokio.workspace = true
+
+rmcp.workspace = true
+axum.workspace = true
+
+tracing.workspace = true
+
+systemprompt-mcp-shared.workspace = true
+systemprompt-secrets-onepassword.workspace = true
+systemprompt-web-admin-governance.workspace = true
+systemprompt-web-admin-identity.workspace = true
+systemprompt-web-admin-platform.workspace = true
+
+[lints]
+workspace = true

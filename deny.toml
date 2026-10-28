@@ -38,6 +38,8 @@ allow = [
     "CDLA-Permissive-2.0",
     # Data-only license on Unicode character tables (finl_unicode, transitive)
     "Unicode-DFS-2016",
+    # Public-domain dedication on notify (bridge Drive watcher, via core bin/bridge)
+    "CC0-1.0",
 ]
 confidence-threshold = 0.8
 
