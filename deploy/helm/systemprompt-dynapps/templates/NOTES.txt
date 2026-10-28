@@ -5,14 +5,22 @@ Dynapps gateway {{ include "dynapps.tag" . }} - release {{ .Release.Name }} in {
 1. The schema was migrated by the hook Job {{ $fullname }}-migrate before any pod rolled:
      kubectl -n {{ .Release.Namespace }} logs job/{{ $fullname }}-migrate -c migrate
 {{- end }}
-2. Exactly one admin pod (scheduler, MCP, console) and the gateway pods:
+2. The gateway, api (console, MCP and agent routes) and worker (scheduler,
+   MCP and agent processes; one holds the lease, the rest stand by) pods:
      kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
-     kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ $fullname }}-admin
+     kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ $fullname }}-api
+     kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ $fullname }}-worker
      kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ $fullname }}-gateway
 3. Readiness (503 {"status":"saturated"} means the pod is shedding load):
      kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $fullname }}-gateway 8080:{{ .Values.service.port }}
      curl -s localhost:8080/readyz
 4. Public URL: {{ .Values.profile.externalUrl }}  (sign in at /admin/login, AD FS SSO)
+{{- if not .Values.pod.sharedWeb.existingClaim }}
+
+NOTE: pod.sharedWeb.existingClaim is empty, so each api pod has its own empty
+web/ and services-cache/: the worker renders the public site into its own pod
+only. Set it to a ReadWriteMany claim the worker and api pods share.
+{{- end }}
 {{- if not .Values.networkPolicy.allowPublicHttps }}
 
 NOTE: networkPolicy.allowPublicHttps is false. Providers outside Google (e.g. the

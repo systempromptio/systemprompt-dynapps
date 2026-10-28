@@ -115,7 +115,7 @@ These were all found on first boot, and every one of them also applies to GKE.
   creates the directory tree in the init container, and the entrypoint
   refills it from `/app/share`.
 - **The authz hook runs in-process** (`governance.authz.hook.mode: extension`)
-  on every role, so no inference request crosses the admin pod.
+  on every role, so no inference request crosses an api pod.
 - **`render-profile.sh` does not generate `encryption_master_key`.** The rig
   passes the key in with `--secret`.
 - **Plain-http provider endpoints need `SYSTEMPROMPT_TRUSTED_HTTP_HOSTS`.** The

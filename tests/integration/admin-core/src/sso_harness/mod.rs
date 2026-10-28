@@ -161,7 +161,8 @@ impl SsoApp {
                 &hook,
                 oauth,
                 Arc::clone(&sessions),
-            )),
+            )
+            .expect("SSO provider discovery")),
             write_pool: Arc::clone(pool),
             session_service: sessions,
         };

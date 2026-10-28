@@ -77,7 +77,7 @@ identity is the pod name (HOSTNAME).
   "display_name" "Kubernetes"
   "target" "local"
   "site" (dict "name" "Dynapps" "github_link" nil)
-  "database" (dict "type" "postgres" "external_db_access" false "migrate_on_boot" false)
+  "database" (dict "type" "postgres" "external_db_access" false "migrate_on_boot" false "pool" (dict "max_connections_by_role" $p.maxConnectionsByRole))
   "paths" (dict "system" "/app" "services" "/app/services" "bin" "/app/bin" "web_path" "/app/web" "storage" "/app/storage" "geoip_database" nil)
   "services" (dict "cache_dir" "/app/services-cache")
   "system_admin" (dict "username" "admin" "email" (required "profile.adminEmail is required" $p.adminEmail))
@@ -100,6 +100,8 @@ identity is the pod name (HOSTNAME).
   "trusted_proxies" $p.trustedProxies
 -}}
 {{- if $v.metrics.enabled }}{{- $_ := set $server "metrics_port" (int $v.metrics.port) -}}{{- end -}}
+{{- /* The address api replicas forward MCP and agent traffic to: this worker pod's own IP, from the downward-API POD_IP the pod spec sets and core interpolates at boot. */ -}}
+{{- if eq .role "worker" }}{{- $_ := set $server "advertise_url" (printf "http://${POD_IP}:%d" (int $v.service.port)) -}}{{- end -}}
 {{- $_ := set $base "server" $server -}}
 {{- $st := $p.storage -}}
 {{- if eq $st.backend "gcs" -}}
@@ -117,7 +119,7 @@ identity is the pod name (HOSTNAME).
 {{- end -}}
 
 {{/*
-Pod spec shared by the gateway, admin and migrate pods.
+Pod spec shared by the gateway, api, worker and migrate pods.
 pass (dict "ctx" $ "role" "gateway" "component" "gateway" "profileConfigMap" NAME
           "serviceAccount" NAME "spc" NAME "secretName" NAME "job" bool "args" list "resources" dict)
 */}}
@@ -215,6 +217,11 @@ containers:
     env:
       - {name: SYSTEMPROMPT_PROFILE_DIR, value: {{ $profileDir }}}
       - {name: HOME, value: /home/app}
+      {{- if eq .role "worker" }}
+      - name: POD_IP
+        valueFrom:
+          fieldRef: {fieldPath: status.podIP}
+      {{- end }}
       {{- if eq $v.secrets.mode "onepassword" }}
       {{- $op := $v.secrets.onepassword }}
       - name: {{ $op.tokenEnv }}
@@ -262,8 +269,13 @@ containers:
     volumeMounts:
       - {name: profile, mountPath: {{ $profileDir }}, readOnly: true}
       - {name: storage, mountPath: /app/storage}
+      {{- if and $v.pod.sharedWeb.existingClaim (has .role (list "api" "worker")) }}
+      - {name: web, mountPath: /app/web, subPath: web, readOnly: {{ eq .role "api" }}}
+      - {name: services-cache, mountPath: /app/services-cache, subPath: services-cache, readOnly: {{ eq .role "api" }}}
+      {{- else }}
       - {name: web, mountPath: /app/web}
       - {name: services-cache, mountPath: /app/services-cache}
+      {{- end }}
       - {name: logs, mountPath: /app/logs}
       - {name: sessions, mountPath: /app/.systemprompt/sessions}
       - {name: tmp, mountPath: /tmp}
@@ -296,10 +308,19 @@ volumes:
     emptyDir: {medium: Memory, sizeLimit: 16Mi}
   - name: storage
     emptyDir: {sizeLimit: {{ $v.pod.volumes.storage }}}
+  {{- $shared := and $v.pod.sharedWeb.existingClaim (has .role (list "api" "worker")) }}
   - name: web
+  {{- if $shared }}
+    persistentVolumeClaim: {claimName: {{ $v.pod.sharedWeb.existingClaim }}, readOnly: {{ eq .role "api" }}}
+  {{- else }}
     emptyDir: {sizeLimit: {{ $v.pod.volumes.web }}}
+  {{- end }}
   - name: services-cache
+  {{- if $shared }}
+    persistentVolumeClaim: {claimName: {{ $v.pod.sharedWeb.existingClaim }}, readOnly: {{ eq .role "api" }}}
+  {{- else }}
     emptyDir: {sizeLimit: {{ $v.pod.volumes.servicesCache }}}
+  {{- end }}
   - name: logs
     emptyDir: {sizeLimit: {{ $v.pod.volumes.logs }}}
   - name: sessions

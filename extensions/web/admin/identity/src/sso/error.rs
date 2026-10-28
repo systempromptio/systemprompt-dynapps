@@ -57,6 +57,17 @@ pub enum SsoProviderError {
     IdTokenClaims(#[source] serde_json::Error),
 }
 
+/// Why an enabled Entra ID provider cannot be built at boot.
+#[derive(Debug, thiserror::Error)]
+pub enum EntraSetupError {
+    #[error("tenant_id, client_id or redirect_uri is unset")]
+    Incomplete,
+    #[error("client secret `{key}` is missing from the secrets store")]
+    ClientSecretMissing { key: String },
+    #[error("provider could not be built: {0}")]
+    Build(#[source] SsoError),
+}
+
 impl From<SsoProviderError> for SsoError {
     fn from(err: SsoProviderError) -> Self {
         match err {

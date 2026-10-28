@@ -111,7 +111,8 @@ cmd_deploy() {
         --set-file secrets.inline.json="$SECRETS" \
         "${sets[@]+"${sets[@]}"}" --wait --timeout 15m
     k -n "$NS" rollout status deploy/dynapps-gateway --timeout 300s
-    k -n "$NS" rollout status deploy/dynapps-admin --timeout 300s
+    k -n "$NS" rollout status deploy/dynapps-api --timeout 300s
+    k -n "$NS" rollout status deploy/dynapps-worker --timeout 300s
 }
 
 cmd_image_local() {

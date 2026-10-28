@@ -209,8 +209,8 @@ With this profile's `paths`:
 | `storage.files` | `/app/storage/files` | per node, or shared; see below |
 | `storage.exports` | `/app/storage/exports` | per node; the weekly and monthly retention archives are not kept here but in the `storage:` backend under `exports/` |
 | `storage.data` | `/app/storage/data` (scratch under `data/scratch`) | per node, already `app_storage_data` |
-| `web.dist` | `/app/web/dist` | per node, already under `app_web` (admin and all roles) |
-| `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (admin and all roles) |
+| `web.dist` | `/app/web/dist` | per node, already under `app_web` (all and worker write it; api reads the worker's copy) |
+| `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (all and worker write it; api reads the worker's copy) |
 | CLI session store | `/app/.systemprompt/sessions` | per node, ephemeral (`emptyDir`) |
 
 The CLI session store is not a server root: the entrypoint's `admin
@@ -238,13 +238,18 @@ The Helm chart `deploy/helm/systemprompt-dynapps/` implements everything below; 
   uploaded and generated files live in one bucket every pod sees.
   `paths.storage` still needs a per-pod volume for the journal, exports and
   scratch space.
-- **Role split:** run exactly one `admin` Deployment (`server.role: admin`,
-  `replicas: 1`): it runs the scheduler, MCP and agent reconciliation and the
-  console. Run the gateway pods as a separate Deployment with `server.role:
-  gateway`, scaled freely; they mount only the gateway, bridge, OAuth and
-  health routes and run no workers, and they need neither `web.dist` nor
-  `services.cache_dir`. Two `admin` replicas would run the scheduler twice.
-  Check a node with `verify-node.sh --role gateway` or `--role admin`.
+- **Role split:** three Deployments from one image. `server.role: gateway`
+  pods mount only the gateway, bridge, OAuth and health routes, run no
+  scheduler or processes, need neither `web.dist` nor `services.cache_dir`,
+  and scale freely. `server.role: api` pods serve the console, agent, MCP,
+  content and static routes, run no scheduler and own no MCP or agent
+  process, and scale freely too; they read `web.dist` and
+  `services.cache_dir` from a volume the worker writes. `server.role: worker`
+  pods run the scheduler and own the MCP and agent processes; they compete
+  for one lease, so a second replica is a warm standby, and each sets
+  `server.advertise_url` to an address the api pods reach (its pod IP) and
+  stays off the public balancer. Check a node with `verify-node.sh --role
+  gateway`, `--role api` or `--role worker`.
 - **Migrations:** a Job running the image with argument `migrate`, before the
   rollout; no pod migrates on boot.
 

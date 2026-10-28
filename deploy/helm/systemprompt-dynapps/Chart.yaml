@@ -1,6 +1,6 @@
 apiVersion: v2
 name: systemprompt-dynapps
-description: Dynapps AI governance gateway on Kubernetes (GKE first) - gateway/admin role split, Cloud SQL Auth Proxy, Secret Manager CSI, GCS storage, restricted Pod Security.
+description: Dynapps AI governance gateway on Kubernetes (GKE first) - gateway/api/worker role split, Cloud SQL Auth Proxy, Secret Manager CSI, GCS storage, restricted Pod Security.
 type: application
 # Chart version moves on its own; appVersion is the image tag deployed by default.
 version: 0.1.0

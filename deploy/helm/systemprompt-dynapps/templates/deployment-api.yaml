@@ -1,0 +1,61 @@
+{{- /* api role: console, agent, MCP, content, stream, messaging, extension and static routes. No scheduler and no MCP or agent processes (it forwards that traffic to the worker that owns them), so it scales horizontally. */ -}}
+{{- $fullname := include "dynapps.fullname" . -}}
+{{- $sel := dict "ctx" . "component" "api" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-api
+  labels:
+    {{- include "dynapps.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 25%, maxUnavailable: 0}
+  selector:
+    matchLabels:
+      {{- include "dynapps.selectorLabels" $sel | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "dynapps.labels" . | nindent 8 }}
+        {{- include "dynapps.selectorLabels" $sel | nindent 8 }}
+      annotations:
+        checksum/profile: {{ include "dynapps.profile" (dict "ctx" . "role" "api") | sha256sum }}
+        checksum/secrets-source: {{ toJson .Values.secrets | sha256sum }}
+        {{- with .Values.api.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "dynapps.podSpec" (dict "ctx" . "role" "api" "component" "api" "profileConfigMap" (printf "%s-profile-api" $fullname) "serviceAccount" (include "dynapps.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "dynapps.secretName" .) "job" false "args" list "resources" .Values.api.resources) | nindent 6 }}
+      {{- if .Values.api.topologySpread }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "dynapps.selectorLabels" $sel | nindent 14 }}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "dynapps.selectorLabels" $sel | nindent 14 }}
+      {{- end }}
+      {{- with .Values.api.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

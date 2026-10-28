@@ -2,12 +2,14 @@
 # Post-boot checklist for one node. Exit 0 only when every check passes.
 #
 # Usage: verify-node.sh [--url http://localhost:8080] [--container <name>] [--version X.Y.Z]
-#                       [--role all|gateway|admin]
+#                       [--role all|gateway|api|worker]
 #
 # --role matches the node's server.role (default all). A gateway node serves
-# only /v1, the bridge, OAuth and health: it has no admin console, public
-# site, downloads or MCP child server, so those checks are skipped. An admin
-# node has no /v1 gateway, so /v1/messages must not answer 401 there.
+# only /v1, the bridge, OAuth and health: no console, public site, downloads
+# or MCP child server. An api node serves the console, site and downloads but
+# runs no MCP child server (the worker does) and no /v1 gateway. A worker node
+# serves the probes and the MCP and agent routes and runs the MCP children, but
+# no console, site or /v1. Where /v1 is absent it must not answer 401.
 #
 # --container enables the in-container checks (binary version, MCP child
 # server, migration ledger) via `docker exec`.
@@ -25,9 +27,10 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-case "$ROLE" in all|gateway|admin) ;; *) echo "--role must be all, gateway or admin" >&2; exit 2 ;; esac
-serves_site() { [ "$ROLE" != "gateway" ]; }
-serves_gateway() { [ "$ROLE" != "admin" ]; }
+case "$ROLE" in all|gateway|api|worker) ;; *) echo "--role must be all, gateway, api or worker" >&2; exit 2 ;; esac
+serves_site() { [ "$ROLE" = "all" ] || [ "$ROLE" = "api" ]; }
+serves_gateway() { [ "$ROLE" = "all" ] || [ "$ROLE" = "gateway" ]; }
+runs_mcp() { [ "$ROLE" = "all" ] || [ "$ROLE" = "worker" ]; }
 
 PASS=0 FAIL=0
 ok()  { printf '  PASS  %s\n' "$1"; PASS=$((PASS+1)); }
@@ -67,7 +70,7 @@ code="$(curl -sk -o /dev/null -w '%{http_code}' -X POST "$URL/v1/messages" -H 'c
 if serves_gateway; then
     [ "$code" = "401" ] && ok "POST /v1/messages without credentials → 401" || bad "POST /v1/messages without credentials → $code (expected 401)"
 else
-    [ "$code" != "401" ] && [ "$code" != "200" ] && ok "POST /v1/messages not mounted on an admin node → $code" || bad "POST /v1/messages answered $code on an admin node (the gateway is mounted)"
+    [ "$code" != "401" ] && [ "$code" != "200" ] && ok "POST /v1/messages not mounted on a $ROLE node → $code" || bad "POST /v1/messages answered $code on a $ROLE node (the gateway is mounted)"
 fi
 
 if [ -n "$CONTAINER" ]; then
@@ -80,7 +83,7 @@ if [ -n "$CONTAINER" ]; then
     fi
     # MCP servers speak streamable HTTP under /mcp; a bare GET without the MCP
     # Accept header is answered 406 by a live server and refused by a dead one.
-    serves_site && for port in 5010:systemprompt 5012:documents; do
+    runs_mcp && for port in 5010:systemprompt 5012:documents; do
         p="${port%%:*}"; n="${port#*:}"
         code="$(x curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$p/mcp" 2>/dev/null || echo 000)"
         case "$code" in

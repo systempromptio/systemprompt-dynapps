@@ -34,7 +34,7 @@ fn the_entrypoint_reads_the_server_role() {
         role_of("database:\n  url: x\nserver:\n  host: 0.0.0.0\n  role: gateway\n"),
         "gateway"
     );
-    assert_eq!(role_of("server:\n  role: \"admin\" # split\n"), "admin");
+    assert_eq!(role_of("server:\n  role: \"worker\" # split\n"), "worker");
     assert_eq!(
         role_of("server:\n  host: 0.0.0.0\nworkers:\n  role: gateway\n"),
         "",

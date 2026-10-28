@@ -48,9 +48,9 @@ spec:
     - matches:
         - path: {type: PathPrefix, value: /}
       backendRefs:
-        - name: {{ $fullname }}-admin
+        - name: {{ $fullname }}-api
           port: {{ .Values.service.port }}
-{{- range $c := list "gateway" "admin" }}
+{{- range $c := list "gateway" "api" }}
 ---
 apiVersion: networking.gke.io/v1
 kind: HealthCheckPolicy

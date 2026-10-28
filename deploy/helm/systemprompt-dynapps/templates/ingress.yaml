@@ -77,7 +77,7 @@ spec:
   {{- end }}
   defaultBackend:
     service:
-      name: {{ $fullname }}-admin
+      name: {{ $fullname }}-api
       port: {number: {{ .Values.service.port }}}
   rules:
     - host: {{ $host }}
@@ -95,6 +95,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ $fullname }}-admin
+                name: {{ $fullname }}-api
                 port: {number: {{ .Values.service.port }}}
 {{- end }}

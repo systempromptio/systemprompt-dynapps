@@ -69,7 +69,8 @@ fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
             &ctx,
             oauth,
             Arc::clone(&sessions),
-        )),
+        )
+        .expect("SSO provider discovery")),
         write_pool: Arc::clone(pool),
         session_service: sessions,
     }

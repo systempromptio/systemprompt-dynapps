@@ -52,7 +52,11 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
         None
     });
 
-    let sso_deps = sso::build(&db, &session_service);
+    let sso_deps = sso::build(&db, &session_service)
+        .inspect_err(
+            |error| tracing::error!(%error, "SSO provider set refused; web router not mounted"),
+        )
+        .ok()?;
 
     let api_router = api::build(&db, &session_service, blog);
     let share_api = api::share(&db);

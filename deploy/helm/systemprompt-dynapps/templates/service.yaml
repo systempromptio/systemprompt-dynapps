@@ -1,4 +1,4 @@
-{{- range $c := list "gateway" "admin" }}
+{{- range $c := list "gateway" "api" }}
 ---
 apiVersion: v1
 kind: Service
@@ -23,3 +23,24 @@ spec:
       targetPort: http
       protocol: TCP
 {{- end }}
+---
+# Headless and off every balancer: api replicas reach the lease-holding worker
+# at the advertise_url it records (its pod IP), never through this Service. It
+# gives the worker pods a stable DNS name for operators and scrapers.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dynapps.fullname" . }}-worker
+  labels:
+    {{- include "dynapps.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: false
+  selector:
+    {{- include "dynapps.selectorLabels" (dict "ctx" . "component" "worker") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP

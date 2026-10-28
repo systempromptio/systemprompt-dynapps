@@ -33,7 +33,7 @@ K="kubectl --context kind-dynapps-loadtest -n loadtest"
 psqlc() { $K exec -i deploy/postgres -c postgres -- psql -U postgres -d systemprompt -At "$@"; }
 mock_stats() {
     for m in mock-primary mock-eu; do
-        printf '%s=%s\n' "$m" "$($K exec deploy/dynapps-admin -c server -- curl -s "http://$m:9100/stats" | sed -n 's/.*"requests":\([0-9]*\).*/\1/p')"
+        printf '%s=%s\n' "$m" "$($K exec deploy/dynapps-worker -c server -- curl -s "http://$m:9100/stats" | sed -n 's/.*"requests":\([0-9]*\).*/\1/p')"
     done
 }
 secs="${DUR%s}"
@@ -64,9 +64,9 @@ if [ -n "$HELM" ]; then
     IFS=',' read -ra kv <<< "$HELM"
     for s in "${kv[@]+"${kv[@]}"}"; do args+=(--set "$s"); done
     "$HERE/cluster.sh" deploy "${args[@]}" >"$RUN/helm.log" 2>&1
-    # Policies are loaded at admin boot; restart so the table matches the file.
-    $K rollout restart deploy/dynapps-admin deploy/dynapps-gateway >/dev/null
-    $K rollout status deploy/dynapps-admin --timeout 300s >/dev/null
+    # Policies are loaded at worker boot; restart so the table matches the file.
+    $K rollout restart deploy/dynapps-api deploy/dynapps-worker deploy/dynapps-gateway >/dev/null
+    $K rollout status deploy/dynapps-worker --timeout 300s >/dev/null
     $K rollout status deploy/dynapps-gateway --timeout 300s >/dev/null
 fi
 { [ "$MOCK_MODE" = ok ] && [ "$MOCK_LAT" = 300:900 ]; } || set_mock "$MOCK_MODE"
@@ -94,7 +94,7 @@ esac
 $K create configmap loadtest-body --from-file=body.json="$B" --dry-run=client -o yaml | $K apply -f - >/dev/null
 
 # --- baseline marks ------------------------------------------------------------
-# rules.yaml declares gateway_route/* `default: open`, but each admin boot's
+# rules.yaml declares gateway_route/* `default: open`, but each node boot's
 # catalog sync (source services:/app/services/ai/gateway.yaml) rewrites it to
 # closed, and core's rule-based check sees roles [] for a PAT caller, so every
 # call 403s. Restore the declared default; this is a product bug, not a knob.
@@ -108,7 +108,7 @@ psqlc -c "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE us
 sleep 35
 # Warm the fresh pools (connect + first prepares) outside the measured window.
 IFS=, read -r wtok wsid < <($K get secret "loadtest-tokens-$SET" -o jsonpath='{.data.tokens\.csv}' | base64 -d | head -1)
-$K exec deploy/dynapps-admin -c server -- /app/bin/hey -z 20s -c 12 -m POST -T application/json \
+$K exec deploy/dynapps-worker -c server -- /app/bin/hey -z 20s -c 12 -m POST -T application/json \
     -H "Authorization: Bearer $wtok" -H "x-session-id: $wsid" -H "anthropic-version: 2023-06-01" \
     -d '{"model":"claude-sonnet-5-5","max_tokens":32,"messages":[{"role":"user","content":"warm"}]}' \
     http://dynapps-gateway:8080/v1/messages >/dev/null 2>&1 </dev/null || true

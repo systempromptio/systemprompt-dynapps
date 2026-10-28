@@ -1,6 +1,6 @@
 ---
 title: "Deploy on Google Kubernetes Engine"
-description: "The Helm chart for GKE: a scalable gateway tier, one admin pod, a migration Job before every rollout, Cloud SQL through the Auth Proxy with IAM auth, Secret Manager as a file, GCS for files and Pod Security restricted."
+description: "The Helm chart for GKE: scalable gateway and api tiers, a lease-elected worker, a migration Job before every rollout, Cloud SQL through the Auth Proxy with IAM auth, Secret Manager as a file, GCS for files and Pod Security restricted."
 author: "Dynapps"
 slug: "deploy-gke"
 keywords: "gke, google kubernetes engine, helm, cloud sql auth proxy, secret manager, workload identity, gcs, hpa, pod disruption budget, pod security restricted, deploy"
@@ -9,7 +9,7 @@ public: true
 tags: ["documentation", "deployment", "configuration"]
 published_at: "2026-10-08"
 after_reading_this:
-  - "Explain the GKE topology: gateway pods, one admin pod, and the migrate Job"
+  - "Explain the GKE topology: gateway pods, api pods, worker pods, and the migrate Job"
   - "List the Google Cloud resources and identities to create before installing"
   - "Know what each chart piece does for probes, autoscaling, secrets, storage and network"
   - "Know what stays on each pod and how to roll back safely"
@@ -41,11 +41,12 @@ repository.
 | piece | what it runs | how many |
 |---|---|---|
 | Gateway Deployment | `server.role: gateway`: `/v1` inference, the bridge, OAuth, well-known and health routes. No scheduler, MCP or agent workers. | 3 to 12, scaled by a HorizontalPodAutoscaler on CPU, with a PodDisruptionBudget |
-| Admin Deployment | `server.role: admin`: the console, the scheduler, MCP servers and agents | exactly 1, `Recreate` strategy, because two would run the scheduler twice |
+| API Deployment | `server.role: api`: the console, agent, MCP, content, stream, messaging and static routes. No scheduler and no MCP or agent processes. | `api.replicas` (2 by default), with a PodDisruptionBudget |
+| Worker Deployment | `server.role: worker`: the scheduler and the MCP server and agent processes, reached by the api pods at the pod IP each worker advertises | 1 by default; a second replica is a standby that takes the lease when the holder goes |
 | Migrate Job | the image's one-shot `migrate` step: schema migrations, then the bootstrap admin | once, as a Helm pre-install and pre-upgrade hook |
 
 The load balancer sends `/v1` to the gateway pods and everything else to the
-admin pod. Pods never migrate on boot and refuse a schema that is behind, so
+api pods; no balancer reaches the worker pods. Pods never migrate on boot and refuse a schema that is behind, so
 the Job always runs before any new pod starts.
 
 ## What each pod carries

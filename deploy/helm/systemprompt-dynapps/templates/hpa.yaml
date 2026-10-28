@@ -1,17 +1,19 @@
-{{- if .Values.gateway.autoscaling.enabled }}
-{{- $a := .Values.gateway.autoscaling }}
+{{- range $c := list "gateway" "api" }}
+{{- $a := (index $.Values $c).autoscaling }}
+{{- if $a.enabled }}
+---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "dynapps.fullname" . }}-gateway
+  name: {{ include "dynapps.fullname" $ }}-{{ $c }}
   labels:
-    {{- include "dynapps.labels" . | nindent 4 }}
-    app.kubernetes.io/component: gateway
+    {{- include "dynapps.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $c }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "dynapps.fullname" . }}-gateway
+    name: {{ include "dynapps.fullname" $ }}-{{ $c }}
   minReplicas: {{ $a.minReplicas }}
   maxReplicas: {{ $a.maxReplicas }}
   metrics:
@@ -21,17 +23,20 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ $a.targetCPUUtilizationPercentage }}
-    {{- if $a.customMetric.enabled }}
+    {{- with $a.customMetric }}
+    {{- if .enabled }}
     - type: Pods
       pods:
         metric:
-          name: {{ $a.customMetric.name }}
+          name: {{ .name }}
         target:
           type: AverageValue
-          averageValue: {{ $a.customMetric.targetAverageValue | quote }}
+          averageValue: {{ .targetAverageValue | quote }}
+    {{- end }}
     {{- end }}
   {{- with $a.behavior }}
   behavior:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+{{- end }}
 {{- end }}
