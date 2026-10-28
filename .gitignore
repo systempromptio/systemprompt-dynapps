@@ -297,3 +297,7 @@ evals/
 /deploy/loadtest/kind/.bin/
 services-cache/
 .release-bin/
+
+# Cargo build output under any target-dir suffix, at any depth
+target-*/
+**/target-*/
