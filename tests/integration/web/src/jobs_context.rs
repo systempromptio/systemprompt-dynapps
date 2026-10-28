@@ -103,6 +103,7 @@ pub(crate) fn test_config() -> Arc<Config> {
         api_server_url: BASE_URL.to_owned(),
         api_internal_url: BASE_URL.to_owned(),
         api_external_url: BASE_URL.to_owned(),
+        advertise_url: None,
         jwt_issuer: "https://issuer.test".to_owned(),
         login_page_url: None,
         jwt_access_token_expiration: 3_600,
