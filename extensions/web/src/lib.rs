@@ -34,8 +34,8 @@ pub mod schemas;
 /// routers composed from their fragments in `router::admin`.
 pub mod admin {
     pub use crate::router::admin::{
-        AdminSsrDeps, admin_router, admin_ssr_router, bridge_auth_ssr_router, hooks_webhook_router,
-        secrets_router, service_accounts, share_manifest_router,
+        AdminSsrDeps, admin_router, admin_ssr_router, bridge_auth_ssr_router, drive_ssr_router,
+        hooks_webhook_router, secrets_router, service_accounts, share_manifest_router,
     };
     pub use crate::router::farm_public::{build_state as build_farm_state, farm_public_router};
     pub use systemprompt_web_admin_analytics as analytics;

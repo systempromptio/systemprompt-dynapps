@@ -50,6 +50,7 @@ struct DrivePage {
     folder_id: Option<DocumentFolderId>,
     list_api: String,
     documents_api: &'static str,
+    folders_api: &'static str,
     base_url: &'static str,
     templates: [TemplateOption; 5],
 }
@@ -91,6 +92,7 @@ pub(crate) async fn drive_page(
         folder_id,
         list_api,
         documents_api: ApiPaths::DOCUMENTS,
+        folders_api: ApiPaths::DOCUMENT_FOLDERS,
         base_url: BASE_URL,
         templates: NEW_DOCUMENT_TEMPLATES,
     };

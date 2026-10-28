@@ -1,0 +1,50 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "head_extra"}}
+    <link rel="stylesheet" href="/assets/documents/css/documents.css?v={{css_version}}">
+    <link rel="stylesheet" href="/assets/documents/css/documents-panels.css?v={{css_version}}">
+    {{/inline}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle="Your documents, the ones shared with you and the ones you worked on last."}}
+        {{#*inline "header_actions"}}
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="drive-create-open" aria-controls="drive-create">New document</button>
+        {{/inline}}
+    {{/components/page-header}}
+
+    <section class="sp-section" aria-label="Documents" data-my-drive data-base-url="{{base_url}}">
+        <sp-document-browser scope="mine" data-slot="drive-browser"></sp-document-browser>
+    </section>
+
+    <dialog class="sp-dialog sp-p-my-drive__create" id="drive-create" aria-labelledby="drive-create-title" data-drive-create>
+        <form method="dialog" class="sp-dialog-form" data-slot="drive-create-form">
+            <h2 class="sp-ac-dialog__header" id="drive-create-title">New document</h2>
+            <div class="sp-ac-dialog__body">
+                <div class="sp-form-field">
+                    <label class="sp-form-label" for="drive-create-template">Template</label>
+                    <select class="sp-select" id="drive-create-template" name="template_id" required>
+                        {{#each templates}}
+                        <option value="{{id}}" data-format="{{format}}">{{name}} ({{format}})</option>
+                        {{/each}}
+                    </select>
+                </div>
+                <div class="sp-form-field">
+                    <label class="sp-form-label" for="drive-create-name">Name</label>
+                    <input class="sp-field-input" id="drive-create-name" type="text" name="name" required maxlength="200" autocomplete="off">
+                </div>
+                <div class="sp-form-field">
+                    <label class="sp-form-label" for="drive-create-title-param">Title</label>
+                    <input class="sp-field-input" id="drive-create-title-param" type="text" name="title" data-param="title" maxlength="200" autocomplete="off" placeholder="Untitled">
+                </div>
+                <p class="sp-ac-form-error" data-slot="drive-create-error" role="alert" hidden></p>
+            </div>
+            <div class="sp-ac-dialog__actions">
+                <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-create-cancel">Cancel</button>
+                <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary" value="create">Create</button>
+            </div>
+        </form>
+    </dialog>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/my-drive.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/layout}}

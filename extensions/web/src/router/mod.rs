@@ -39,6 +39,20 @@ fn documents_enabled(ctx: &dyn ExtensionContext) -> bool {
         .unwrap_or(false)
 }
 
+fn drive_documents(
+    ctx: &dyn ExtensionContext,
+) -> Option<systemprompt_web_admin_platform::routes::drive_user::DriveDocuments> {
+    ctx.dependencies()
+        .get::<Arc<systemprompt::files::documents::DocumentService>>()
+        .map(|service| {
+            systemprompt_web_admin_platform::routes::drive_user::DriveDocuments(Arc::clone(service))
+        })
+        .inspect_err(|error| {
+            tracing::warn!(%error, "document service unavailable; /drive is not mounted");
+        })
+        .ok()
+}
+
 pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<ExtensionRouter> {
     let db = DbHandles::from_context(ctx, Arc::clone(&web.farm_runs))?;
     let session_service = pools::build_session_service(&db);
@@ -65,12 +79,26 @@ pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<Ex
         .merge(share_api)
         .nest("/api/public", api_router);
 
-    match admin_ssr::build(&db, sso_deps, site.branding.clone(), documents_enabled(ctx)) {
+    match admin_ssr::build(
+        &db,
+        sso_deps,
+        site.branding.clone(),
+        admin_ssr::DocumentsSurface {
+            enabled: documents_enabled(ctx),
+            service: drive_documents(ctx),
+        },
+    ) {
         Some(ssr) => {
-            combined = Router::new()
+            let mut ssr_routes = Router::new()
                 .nest_service("/admin", ssr.admin)
-                .nest_service("/bridge-auth", ssr.bridge_auth)
-                .merge(combined);
+                .nest_service("/bridge-auth", ssr.bridge_auth);
+            if let Some(drive) = ssr.drive {
+                ssr_routes = ssr_routes.nest_service(
+                    systemprompt_web_admin_platform::routes::drive_user::USER_BASE_URL,
+                    drive,
+                );
+            }
+            combined = ssr_routes.merge(combined);
         },
         None => {
             tracing::error!(

@@ -1,7 +1,11 @@
 {{#> layout page_title=title page_id=page}}
+    {{#*inline "head_extra"}}
+    <link rel="stylesheet" href="/assets/documents/css/documents.css?v={{css_version}}">
+    <link rel="stylesheet" href="/assets/documents/css/documents-panels.css?v={{css_version}}">
+    {{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="One shared document: read it as a page, edit it block by block, and see its revisions, grants and live editors."}}
+    {{#> components/page-header title=title subtitle="One shared document: read it as a page, edit it block by block, and see its revisions, grants, comments, proposals and live editors."}}
         {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{content_url}}" download>Download</a>
         {{/inline}}
@@ -63,6 +67,21 @@
       <tbody data-slot="grant-rows"></tbody>
     {{/components/table}}
     </section>
+
+    <section class="sp-section" aria-label="Sharing">
+    <h2 class="sp-section__title">Sharing</h2>
+    <sp-share-dialog document-id="{{document_id}}"></sp-share-dialog>
+    </section>
+
+    <section class="sp-section" aria-label="Comments">
+    <h2 class="sp-section__title">Comments</h2>
+    <sp-comments document-id="{{document_id}}"></sp-comments>
+    </section>
+
+    <section class="sp-section" aria-label="Proposals">
+    <h2 class="sp-section__title">Proposals</h2>
+    <sp-proposal-list document-id="{{document_id}}"></sp-proposal-list>
+    </section>
     </div>
 
     <template data-template="drive-revision-row">
@@ -97,6 +116,7 @@
     </template>
     {{/inline}}
     {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/assets/documents/js/documents.js?v={{css_version}}"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-drive-document.js?v={{css_version}}"></script>
     {{/inline}}
 {{/layout}}

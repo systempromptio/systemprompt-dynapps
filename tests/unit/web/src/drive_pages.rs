@@ -43,6 +43,8 @@ fn the_scripts_set_text_and_never_html() {
     for path in [
         "storage/files/js/pages/admin-drive.js",
         "storage/files/js/pages/admin-drive-document.js",
+        "storage/files/js/pages/my-drive.js",
+        "storage/files/js/pages/my-drive-document.js",
         "storage/files/js/services/drive-rows.js",
     ] {
         let source = read(path);
@@ -94,6 +96,61 @@ fn the_page_scripts_are_registered_assets() {
     let admin = read("extensions/web/shared/admin-core/src/assets.rs");
     assert!(admin.contains("\"admin-drive.js\""));
     assert!(admin.contains("\"admin-drive-document.js\""));
+    assert!(admin.contains("\"my-drive.js\""));
+    assert!(admin.contains("\"my-drive-document.js\""));
     let services = read("extensions/web/site/src/assets/js_services.rs");
     assert!(services.contains("\"drive-rows.js\""));
+}
+
+#[test]
+fn the_user_drive_entry_is_for_everyone_while_the_store_is_on() {
+    let source = read("storage/files/admin/partials/sidebar.hbs");
+    let entry = source
+        .find("href=\"/drive\"")
+        .expect("user drive nav entry");
+    let switch = source[..entry]
+        .rfind("{{#if documents_enabled}}")
+        .expect("documents switch");
+    assert!(!source[switch..entry].contains("{{/if}}"));
+    let guard = source[..entry].rfind("{{#if current_user.is_admin}}");
+    assert!(
+        guard.is_none_or(|at| source[at..entry].contains("{{/if}}")),
+        "the user drive entry sits inside the admin guard"
+    );
+}
+
+#[test]
+fn the_user_document_page_authorizes_before_it_renders() {
+    let source = read("extensions/web/admin/platform/src/handlers/ssr/drive/user.rs");
+    let get = source.find(".get(&caller(").expect("document service read");
+    let render = source
+        .rfind("\"my-drive-document\",\n        &page")
+        .expect("render call");
+    assert!(get < render);
+}
+
+#[test]
+fn the_document_pages_load_cores_components() {
+    for path in [
+        "storage/files/js/pages/admin-drive-document.js",
+        "storage/files/js/pages/my-drive.js",
+        "storage/files/js/pages/my-drive-document.js",
+    ] {
+        assert!(
+            read(path).contains("import '/assets/documents/js/documents.js';"),
+            "{path} does not define the document components"
+        );
+    }
+    let page = read("storage/files/admin/templates/my-drive-document.hbs");
+    for element in [
+        "sp-presence-bar",
+        "sp-comments",
+        "sp-proposal-list",
+        "sp-history",
+        "sp-share-dialog",
+        "sp-document-preview",
+        "sp-document-editor",
+    ] {
+        assert!(page.contains(&format!("<{element} ")), "{element} missing");
+    }
 }

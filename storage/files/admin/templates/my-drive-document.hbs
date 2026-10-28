@@ -1,0 +1,42 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "head_extra"}}
+    <link rel="stylesheet" href="/assets/documents/css/documents.css?v={{css_version}}">
+    <link rel="stylesheet" href="/assets/documents/css/documents-panels.css?v={{css_version}}">
+    {{/inline}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle=format}}
+        {{#*inline "header_actions"}}
+            {{#if can_share}}<button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-share-open" aria-controls="drive-share">Share</button>{{/if}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{content_url}}" download>Download</a>
+        {{/inline}}
+    {{/components/page-header}}
+
+    <div class="sp-p-my-drive-document" data-my-drive-document="{{document_id}}">
+        <sp-presence-bar document-id="{{document_id}}"></sp-presence-bar>
+        <section class="sp-section" aria-label="Document">
+            {{#if (eq editor "editor")}}<sp-document-editor document-id="{{document_id}}"{{#if readonly}} readonly{{/if}}></sp-document-editor>{{/if}}
+            {{#if (eq editor "sheet")}}{{#if readonly}}<sp-document-preview document-id="{{document_id}}"></sp-document-preview>{{else}}<sp-sheet-grid document-id="{{document_id}}"></sp-sheet-grid>{{/if}}{{/if}}
+            {{#if (eq editor "slides")}}{{#if readonly}}<sp-document-preview document-id="{{document_id}}"></sp-document-preview>{{else}}<sp-slide-text document-id="{{document_id}}"></sp-slide-text>{{/if}}{{/if}}
+            {{#if (eq editor "preview")}}<sp-document-preview document-id="{{document_id}}"></sp-document-preview>{{/if}}
+        </section>
+        <aside class="sp-p-my-drive-document__panels" aria-label="Comments, proposals and history">
+            <sp-comments document-id="{{document_id}}"></sp-comments>
+            <sp-proposal-list document-id="{{document_id}}"></sp-proposal-list>
+            <sp-history document-id="{{document_id}}"></sp-history>
+        </aside>
+    </div>
+
+    {{#if can_share}}
+    <dialog class="sp-dialog" id="drive-share" aria-label="Share" data-drive-share>
+        <sp-share-dialog document-id="{{document_id}}"></sp-share-dialog>
+        <form method="dialog" class="sp-ac-dialog__actions">
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Close</button>
+        </form>
+    </dialog>
+    {{/if}}
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/my-drive-document.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/layout}}

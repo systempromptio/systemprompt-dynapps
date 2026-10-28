@@ -1,6 +1,7 @@
 @layer components {
 
-/* Drive: the folder listing, one document as a page, and its block editor. */
+/* Drive: the folder listing, one document as a page and its block editor,
+   and the user-facing drive that lays core's document components out. */
 
 .sp-p-drive {
   display: grid;
@@ -106,6 +107,32 @@
 
 .sp-p-drive__save .sp-field-input {
   flex: 1;
+}
+
+.sp-p-my-drive-document {
+  display: grid;
+  gap: var(--sp-space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 64rem) {
+  .sp-p-my-drive-document {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+  }
+
+  .sp-p-my-drive-document > sp-presence-bar {
+    grid-column: 1 / -1;
+  }
+}
+
+.sp-p-my-drive-document__panels {
+  display: grid;
+  gap: var(--sp-space-4);
+  align-content: start;
+}
+
+.sp-p-my-drive__create {
+  inline-size: min(32rem, 100%);
 }
 
 }
