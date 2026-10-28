@@ -1,6 +1,6 @@
 @layer components {
 
-/* Drive: the folder listing and one document's sandboxed preview. */
+/* Drive: the folder listing, one document as a page, and its block editor. */
 
 .sp-p-drive {
   display: grid;
@@ -12,12 +12,100 @@
   font-size: var(--sp-text-sm);
 }
 
-.sp-p-drive__preview {
-  inline-size: 100%;
-  min-block-size: 32rem;
+.sp-p-drive__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+}
+
+.sp-p-drive__modes {
+  display: flex;
+  gap: var(--sp-space-1);
+}
+
+.sp-p-drive__modes [aria-pressed="true"] {
+  background: var(--sp-accent-surface);
+  border-color: var(--sp-accent);
+  color: var(--sp-accent-text);
+}
+
+.sp-p-drive__desk {
   border: 1px solid var(--sp-border-subtle);
   border-radius: var(--sp-radius-sm);
-  background: var(--sp-bg-base);
+  background: color-mix(in oklch, var(--sp-bg-surface) 92%, var(--sp-primitive-black));
+  overflow: hidden;
+}
+
+.sp-p-drive__paper {
+  display: block;
+  inline-size: 100%;
+  block-size: max(40rem, 80vh);
+  border: 0;
+}
+
+.sp-p-drive__editor {
+  display: grid;
+  gap: var(--sp-space-3);
+  max-inline-size: 60rem;
+}
+
+.sp-p-drive__blocks {
+  display: grid;
+  gap: var(--sp-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-p-drive__block {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: var(--sp-space-1) var(--sp-space-3);
+  align-items: start;
+}
+
+.sp-p-drive__kind {
+  padding-block-start: var(--sp-space-2);
+  color: var(--sp-text-tertiary);
+  font-size: var(--sp-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sp-p-drive__text {
+  resize: vertical;
+  overflow: hidden;
+  font-family: var(--sp-font-body);
+  line-height: 1.5;
+}
+
+.sp-p-drive__block--heading .sp-p-drive__text {
+  font-size: var(--sp-text-lg);
+  font-weight: var(--sp-font-semibold);
+}
+
+.sp-p-drive__tools {
+  grid-column: 2;
+  display: flex;
+  gap: var(--sp-space-1);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.sp-p-drive__block:hover .sp-p-drive__tools,
+.sp-p-drive__block:focus-within .sp-p-drive__tools {
+  opacity: 1;
+}
+
+.sp-p-drive__save {
+  display: flex;
+  gap: var(--sp-space-2);
+  align-items: center;
+}
+
+.sp-p-drive__save .sp-field-input {
+  flex: 1;
 }
 
 }

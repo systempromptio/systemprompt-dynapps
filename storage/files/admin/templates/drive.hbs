@@ -1,7 +1,19 @@
 {{#> layout page_title=title page_id=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{> components/page-header title=title subtitle="The shared document store: every folder and document, its format, its head revision and who is editing it now. Rows are read from the document API as you, so each is one you may view."}}
+    {{#> components/page-header title=title subtitle="The shared document store: every folder and document, its format, its head revision and who is editing it now. Rows are read from the document API as you, so each is one you may view."}}
+        {{#*inline "header_actions"}}
+            <form class="sp-inventory-inline" data-drive-create="{{documents_api}}" data-base-url="{{base_url}}"{{#if folder_id}} data-folder-id="{{folder_id}}"{{/if}}>
+                <label class="sp-u-sr-only" for="drive-new-name">Document name</label>
+                <input class="sp-field-input" id="drive-new-name" name="name" placeholder="Document name" required maxlength="200">
+                <label class="sp-u-sr-only" for="drive-new-template">Template</label>
+                <select class="sp-select" id="drive-new-template" name="template_id">
+                    {{#each templates}}<option value="{{id}}">{{label}}</option>{{/each}}
+                </select>
+                <button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">New document</button>
+            </form>
+        {{/inline}}
+    {{/components/page-header}}
 
     <section class="sp-section sp-p-drive" aria-label="Folders and documents" data-drive-list="{{list_api}}" data-documents-api="{{documents_api}}" data-base-url="{{base_url}}">
     {{#> components/table caption="Folders and documents"}}

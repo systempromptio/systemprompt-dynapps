@@ -9,9 +9,11 @@
 
 mod detail;
 mod list;
+mod people;
 
 pub(crate) use detail::drive_document_page;
 pub(crate) use list::drive_page;
+pub(crate) use people::drive_people;
 
 use systemprompt::models::ApiPaths;
 

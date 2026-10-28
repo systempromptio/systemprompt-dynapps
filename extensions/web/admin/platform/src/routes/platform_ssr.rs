@@ -47,6 +47,7 @@ pub fn device_routes() -> Router<Arc<PgPool>> {
 pub fn drive_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/drive", get(handlers::ssr::drive_page))
+        .route("/drive/people", get(handlers::ssr::drive_people))
         .route(
             "/drive/{document_id}",
             get(handlers::ssr::drive_document_page),

@@ -182,6 +182,8 @@ storage/services-cache/
 storage/exports/
 # Gateway journal and other runtime state (profile gateway journal dir)
 storage/data/
+# Document store blobs written at runtime by the local storage backend
+storage/documents/
 
 # Secrets and credentials
 .systemprompt/credentials.json

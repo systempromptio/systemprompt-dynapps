@@ -16,7 +16,7 @@ mod ssr_sync_import;
 
 pub(crate) use configuration::{configuration_page, secrets_reload};
 pub(crate) use devices::devices_page;
-pub(crate) use drive::{drive_document_page, drive_page};
+pub(crate) use drive::{drive_document_page, drive_page, drive_people};
 pub(crate) use ssr_bridge_device_link::{device_link_approve, device_link_deny, device_link_page};
 pub(crate) use ssr_connect::connect_page;
 pub(crate) use ssr_connectors::connectors_page;

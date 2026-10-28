@@ -58,6 +58,8 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
         svc_js!(p, "bootstrap.js"),
         svc_js!(p, "confirm.js"),
         svc_js!(p, "connector-labels.js"),
+        svc_js!(p, "drive-editor.js"),
+        svc_js!(p, "drive-paper.js"),
         svc_js!(p, "drive-rows.js"),
         svc_js!(p, "dropdown.js"),
         svc_js!(p, "events.js"),
