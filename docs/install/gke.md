@@ -133,6 +133,7 @@ gcloud sql backups create --instance=<instance> --description="pre-<tag>"
   run no scheduler or processes, so `api.replicas` (or `api.autoscaling`)
   scales them. They serve `web/dist` and the services cache read-only from
   `pod.sharedWeb.existingClaim`, a ReadWriteMany claim the worker writes.
+  The claim is required: the chart fails to render api pods without it.
 - **Worker pods** run the scheduler and own the MCP and agent processes.
   Workers compete for one lease, so `worker.replicas: 2` is a warm standby,
   not double execution; scheduled jobs take a cluster lock. Each worker

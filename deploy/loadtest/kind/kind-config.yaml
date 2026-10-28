@@ -1,7 +1,10 @@
 # kind cluster for the load-test rig: one control plane, three workers.
 # worker 1+2 run the app and the generator, worker 3 runs Postgres alone so
 # database CPU is never stolen by the gateway. NodePort 30080 -> host 18080
-# (gateway), 30090 -> host 19091 (Prometheus).
+# (gateway), 30090 -> host 19091 (Prometheus). Both app workers mount the same
+# host directory at /mnt/shared-web, which backs the ReadWriteMany shared-web
+# volume (manifests/15-shared-web.yaml) the worker renders into and the api
+# pods read; cluster.sh up creates it.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: dynapps-loadtest
@@ -12,7 +15,11 @@ nodes:
       - {containerPort: 30090, hostPort: 19091, protocol: TCP}
   - role: worker
     labels: {loadtest/role: app}
+    extraMounts:
+      - {hostPath: /tmp/dynapps-loadtest-shared-web, containerPath: /mnt/shared-web}
   - role: worker
     labels: {loadtest/role: app}
+    extraMounts:
+      - {hostPath: /tmp/dynapps-loadtest-shared-web, containerPath: /mnt/shared-web}
   - role: worker
     labels: {loadtest/role: db}

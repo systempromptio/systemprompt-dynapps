@@ -9,6 +9,7 @@ the same test on GKE.
 |---|---|---|
 | `postgres` Deployment, pg16, `pg_stat_statements`, lock-wait logging, exporter sidecar | Cloud SQL | `manifests/20-postgres.yaml` |
 | `mock-primary`, `mock-eu` (core `crates/tests/mock-inference`) | Vertex Claude global + europe-west1 | `manifests/30-mock-inference.yaml`, `Dockerfile.mock` |
+| hostPath PersistentVolume + `shared-web` ReadWriteMany claim over one host directory both app workers mount | Filestore (`pod.sharedWeb.existingClaim`) | `manifests/15-shared-web.yaml`, `kind-config.yaml` |
 | Prometheus with pod discovery on `prometheus.io/*` annotations | Managed Prometheus | `manifests/40-prometheus.yaml` |
 | inline Secret rendered by `deploy/self-host/render-profile.sh` | Secret Manager CSI | `cluster.sh secrets` |
 | `services/` ConfigMap mounted through `pod.extraVolumes` | the image's provider catalog, routes and policies | `services/` |

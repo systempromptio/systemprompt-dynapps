@@ -1,0 +1,31 @@
+# The ReadWriteMany claim the chart requires (pod.sharedWeb.existingClaim): the
+# worker renders web/ and services-cache/ into it, the api pods mount it
+# read-only. Backed by /mnt/shared-web, the one host directory kind-config.yaml
+# mounts into both app workers, so every pod sees the same files.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: loadtest-shared-web
+spec:
+  capacity: {storage: 2Gi}
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath: {path: /mnt/shared-web, type: Directory}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: loadtest/role, operator: In, values: [app]}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared-web
+  namespace: loadtest
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: loadtest-shared-web
+  resources:
+    requests: {storage: 2Gi}

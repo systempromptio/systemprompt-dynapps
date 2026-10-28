@@ -15,12 +15,10 @@ Dynapps gateway {{ include "dynapps.tag" . }} - release {{ .Release.Name }} in {
      kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $fullname }}-gateway 8080:{{ .Values.service.port }}
      curl -s localhost:8080/readyz
 4. Public URL: {{ .Values.profile.externalUrl }}  (sign in at /admin/login, AD FS SSO)
-{{- if not .Values.pod.sharedWeb.existingClaim }}
 
-NOTE: pod.sharedWeb.existingClaim is empty, so each api pod has its own empty
-web/ and services-cache/: the worker renders the public site into its own pod
-only. Set it to a ReadWriteMany claim the worker and api pods share.
-{{- end }}
+Shared web volume: {{ .Values.pod.sharedWeb.existingClaim | default "none (no api pods)" }}. The worker
+renders web/ and services-cache/ into this ReadWriteMany claim and the api pods
+serve them read-only; the chart refuses to render api pods without it.
 {{- if not .Values.networkPolicy.allowPublicHttps }}
 
 NOTE: networkPolicy.allowPublicHttps is false. Providers outside Google (e.g. the

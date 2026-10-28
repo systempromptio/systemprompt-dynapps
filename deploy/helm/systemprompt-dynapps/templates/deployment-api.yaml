@@ -1,4 +1,5 @@
 {{- /* api role: console, agent, MCP, content, stream, messaging, extension and static routes. No scheduler and no MCP or agent processes (it forwards that traffic to the worker that owns them), so it scales horizontally. */ -}}
+{{- include "dynapps.requireSharedWeb" . -}}
 {{- $fullname := include "dynapps.fullname" . -}}
 {{- $sel := dict "ctx" . "component" "api" -}}
 apiVersion: apps/v1

@@ -351,3 +351,16 @@ parameters:
     - resourceName: {{ required "secrets.csi.secretVersion is required with secrets.mode csi" .Values.secrets.csi.secretVersion | quote }}
       path: {{ .Values.secrets.fileName | quote }}
 {{- end -}}
+
+{{/*
+Fails the render when api pods would run without the shared web volume: an api
+pod never renders web/ or services-cache/, so without the worker's
+ReadWriteMany claim it serves no site. Included at the top of
+deployment-api.yaml, which every render produces.
+*/}}
+{{- define "dynapps.requireSharedWeb" -}}
+{{- $v := .Values -}}
+{{- if and (or (gt (int $v.api.replicas) 0) $v.api.autoscaling.enabled) (not $v.pod.sharedWeb.existingClaim) -}}
+{{- fail "pod.sharedWeb.existingClaim is required when api pods run (api.replicas > 0 or api.autoscaling.enabled): set it to a ReadWriteMany claim the worker and api pods share" -}}
+{{- end -}}
+{{- end -}}

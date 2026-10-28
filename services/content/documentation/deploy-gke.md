@@ -49,6 +49,12 @@ The load balancer sends `/v1` to the gateway pods and everything else to the
 api pods; no balancer reaches the worker pods. Pods never migrate on boot and refuse a schema that is behind, so
 the Job always runs before any new pod starts.
 
+The api pods never render the public site or compose the services cache; the
+worker does, into a ReadWriteMany volume the api pods mount read-only. Set
+`pod.sharedWeb.existingClaim` to an existing ReadWriteMany claim (Filestore on
+GKE). It is required: the chart refuses to render while `api.replicas` is above
+zero or `api.autoscaling.enabled` is true and the claim is empty.
+
 ## What each pod carries
 
 - **Database.** A Cloud SQL Auth Proxy runs as a native sidecar with IAM

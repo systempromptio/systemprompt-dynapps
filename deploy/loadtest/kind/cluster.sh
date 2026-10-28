@@ -44,6 +44,8 @@ load_image() {
 
 cmd_up() {
     if ! kind get clusters 2>/dev/null | grep -qx "$CLUSTER"; then
+        mkdir -p /tmp/dynapps-loadtest-shared-web
+        chmod 0777 /tmp/dynapps-loadtest-shared-web
         kind create cluster --config "$HERE/kind-config.yaml" --wait 120s
     fi
     cap_cpus
