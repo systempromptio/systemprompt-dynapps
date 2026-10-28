@@ -87,3 +87,23 @@ pub fn offline_extension_services(
         Arc::new(systemprompt::governance::authz::SubjectProviderSet::from_providers(Vec::new())),
     )
 }
+
+pub fn subject_source(
+    pool: Arc<sqlx::PgPool>,
+    services: ServicesView,
+    secrets: Arc<dyn SecretStore>,
+) -> Arc<dyn systemprompt::models::authz::SubjectAttributeSource> {
+    use systemprompt::governance::authz::{AuthzHookContext, NullAuditSink, SubjectProviderSet};
+    let handle = systemprompt::models::authz::SubjectSourceHandle::default();
+    let set = SubjectProviderSet::discover(&AuthzHookContext {
+        pool,
+        sink: Arc::new(NullAuditSink),
+        services,
+        subjects: handle.clone(),
+        secrets,
+    });
+    handle
+        .bind(Arc::new(set))
+        .expect("a fresh subject handle is unbound");
+    Arc::new(handle)
+}

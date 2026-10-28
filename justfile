@@ -373,6 +373,32 @@ _test-contract-uncoordinated *ARGS:
     export SYSTEMPROMPT_REQUIRE_DB=1
     cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests)' "$@"
 
+# The shared document store end to end on a throwaway database: create from
+# the install's Word template, guarded, quote-target and Markdown edits,
+# comment and resolve, a group share and an outsider's refusal, the /drive
+# pages per principal, and the bridge Drive feed through a merged and a
+# conflicting upload. The same test runs inside test-contract; this recipe is
+# its own Gates job so a document-store break has its own red context.
+docs-smoke:
+    @scripts/build-coordinator.sh run docs-smoke "" -- {{just_executable()}} _docs-smoke-uncoordinated
+
+_docs-smoke-uncoordinated:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ] && [ -f .systemprompt/profiles/local/secrets.json ]; then
+        SYSTEMPROMPT_TEST_DATABASE_URL=$(python3 -c "
+    import json, urllib.parse as up
+    u = up.urlsplit(json.load(open('.systemprompt/profiles/local/secrets.json'))['database_url'])
+    print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
+        export SYSTEMPROMPT_TEST_DATABASE_URL
+    fi
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ]; then
+        echo "No test database. Set SYSTEMPROMPT_TEST_DATABASE_URL, or run \`just setup-local\`." >&2
+        exit 1
+    fi
+    export SYSTEMPROMPT_REQUIRE_DB=1
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p admin-contract-tests -E 'test(docs_smoke)'
+
 # All tests
 # Every tier runs even after one fails. As `just` dependencies they stopped
 # at the first red tier, so the contract tier's failures stayed hidden behind

@@ -299,6 +299,52 @@ jobs:
       - run: just schema-ladder
         timeout-minutes: 65
 
+  # The shared document store end to end (`just docs-smoke`) on the same
+  # Postgres service the test tier uses, as its own red context.
+  docs-smoke:
+    if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
+    name: Docs smoke (document store end to end)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: ./.github/actions/free-disk
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev
+      - run: rustup show
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
+          workspaces: tests
+          save-if: false
+      - run: just docs-smoke
+        timeout-minutes: 65
+
   # cargo-deny and cargo-audit over every workspace (root, tests/, bridge/).
   # Advisory databases are fetched under a retry, then checked offline, so a
   # flaky fetch is retried and a real finding fails once.
@@ -375,7 +421,7 @@ jobs:
     name: Gates passed
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [promotion, hotfix, static, lint, test, schema-ladder, supply-chain]
+    needs: [promotion, hotfix, static, lint, test, schema-ladder, docs-smoke, supply-chain]
     if: always()
     steps:
       - env:
@@ -383,14 +429,14 @@ jobs:
           IS_HOTFIX: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/') }}
           IS_PROMOTION: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
-          tiers='.static.result == "%s" and .lint.result == "%s" and .test.result == "%s" and .["schema-ladder"].result == "%s" and .["supply-chain"].result == "%s"'
+          tiers='.static.result == "%s" and .lint.result == "%s" and .test.result == "%s" and .["schema-ladder"].result == "%s" and .["docs-smoke"].result == "%s" and .["supply-chain"].result == "%s"'
           if [ "$IS_PROMOTION" = true ]; then
             # shellcheck disable=SC2059
-            jq -e ".promotion.result == \"success\" and $(printf "$tiers" skipped skipped skipped skipped skipped)" <<<"$NEEDS_JSON" >/dev/null
+            jq -e ".promotion.result == \"success\" and $(printf "$tiers" skipped skipped skipped skipped skipped skipped)" <<<"$NEEDS_JSON" >/dev/null
           elif [ "$IS_HOTFIX" = true ]; then
             # shellcheck disable=SC2059
-            jq -e ".hotfix.result == \"success\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success)" <<<"$NEEDS_JSON" >/dev/null
+            jq -e ".hotfix.result == \"success\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success success)" <<<"$NEEDS_JSON" >/dev/null
           else
             # shellcheck disable=SC2059
-            jq -e ".hotfix.result == \"skipped\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success)" <<<"$NEEDS_JSON" >/dev/null
+            jq -e ".hotfix.result == \"skipped\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success success)" <<<"$NEEDS_JSON" >/dev/null
           fi

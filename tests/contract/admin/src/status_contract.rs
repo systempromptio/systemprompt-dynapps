@@ -13,7 +13,7 @@ use crate::app::App;
 use crate::principal::Principal;
 use crate::route_source::{MountedRoute, mounted_routes};
 use crate::tempdb::TempDb;
-use crate::{baseline, globals, principal};
+use crate::{baseline, documents_fixture, globals, principal};
 
 // Routes known to answer 5xx today, each with the reason.
 //
@@ -50,7 +50,13 @@ async fn admin_routes_honour_their_http_contract() {
     };
 
     let credentials = principal::provision(&db.pool).await;
-    let app = App::new(&db.pool, credentials);
+    let store = documents_fixture::store(&db.pool);
+    let owned = owned_document(&store, &credentials.knowledge_worker_user_id).await;
+    let app = App::with_documents(
+        &db.pool,
+        credentials,
+        documents_fixture::mount(&db.pool, &store),
+    );
 
     let routes = mounted_routes();
     assert!(
@@ -77,6 +83,7 @@ async fn admin_routes_honour_their_http_contract() {
         }
         observed.push((route, statuses));
     }
+    observed.push(owned_document_row(&app, &owned, &mut violations).await);
 
     db.cleanup().await;
 
@@ -163,4 +170,68 @@ fn is_platform_only(template: &str) -> bool {
             "/admin/data/clear/confirm",
         ]
         .contains(&template)
+}
+
+// The one Drive row a well-formed unknown id cannot show: a document that
+// exists, owned by the knowledge worker and shared with nobody, so its owner
+// opens the page and every other signed-in principal meets a 404.
+const OWNED_DOCUMENT_TEMPLATE: &str = "/drive/{owned_document}";
+
+async fn owned_document(
+    store: &documents_fixture::Store,
+    owner: &systemprompt::identifiers::UserId,
+) -> systemprompt::identifiers::DocumentId {
+    use systemprompt::files::documents::models::RevisionAttribution;
+    use systemprompt::files::documents::service::{Author, CreateRequest, RevisionOrigin};
+    use systemprompt::identifiers::{DocumentTemplateId, TraceId};
+    use systemprompt::models::auth::{AuthenticatedUser, Permission};
+    use systemprompt::models::documents::ActorKind;
+
+    let caller = AuthenticatedUser::new(
+        owner.clone(),
+        owner.as_str().to_owned(),
+        format!("{}@contract.test", owner.as_str()),
+        vec![Permission::User],
+    );
+    let (document, _) = store
+        .service
+        .create_from_template(
+            &caller,
+            CreateRequest {
+                template_id: DocumentTemplateId::new("dynapps-word"),
+                folder: None,
+                name: "contract-owned".to_owned(),
+                params: systemprompt_provider_contracts::documents::TemplateParams::default(),
+                ops: Vec::new(),
+                author: Author {
+                    actor_kind: ActorKind::User,
+                    origin: RevisionOrigin::Api,
+                    attribution: RevisionAttribution::default(),
+                },
+                message: None,
+            },
+            &TraceId::generate(),
+        )
+        .await
+        .expect("seed the knowledge worker's document");
+    document.id
+}
+
+async fn owned_document_row(
+    app: &App,
+    document: &systemprompt::identifiers::DocumentId,
+    violations: &mut Vec<String>,
+) -> (MountedRoute, Vec<(Principal, StatusCode)>) {
+    let route = MountedRoute {
+        method: "get".to_owned(),
+        template: OWNED_DOCUMENT_TEMPLATE.to_owned(),
+    };
+    let path = format!("/drive/{}", document.as_str());
+    let mut statuses = Vec::with_capacity(Principal::ALL.len());
+    for principal in Principal::ALL {
+        let (status, body) = app.send("get", &path, principal).await;
+        check(&route, principal, status, body.as_deref(), violations);
+        statuses.push((principal, status));
+    }
+    (route, statuses)
 }

@@ -52,6 +52,10 @@ mod devices_contract;
 #[cfg(test)]
 mod devices_credentials_contract;
 #[cfg(test)]
+mod docs_smoke;
+#[cfg(test)]
+mod documents_fixture;
+#[cfg(test)]
 mod error_contract;
 #[cfg(test)]
 mod gateway_catalog_contract;

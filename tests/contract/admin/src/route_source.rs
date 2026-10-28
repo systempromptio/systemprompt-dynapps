@@ -8,6 +8,8 @@
 //! coverage exhaustive by construction: a new `.route(...)` is picked up and
 //! exercised on the next run, and shows up as a baseline addition.
 
+use systemprompt_web_admin_platform::routes::drive_user::USER_BASE_URL;
+
 use crate::app::{ADMIN_API_PREFIX, FARM_PUBLIC_PREFIX, SSR_PREFIX};
 
 const ADMIN_API_SRC: &str = include_str!("../../../../extensions/web/src/router/admin/api.rs");
@@ -66,6 +68,10 @@ const EXPORT_SRC: &str =
 // is exactly as much a contract change as a page that stops rendering.
 const SSR_REDIRECT_SRC: &str =
     include_str!("../../../../extensions/web/src/router/admin/redirects.rs");
+
+// The user-facing Drive pages, nested at `/drive` outside the admin plane.
+const DRIVE_USER_SRC: &str =
+    include_str!("../../../../extensions/web/admin/platform/src/routes/drive_user.rs");
 
 const METHODS: [&str; 5] = ["get", "post", "put", "patch", "delete"];
 
@@ -134,6 +140,7 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
         (FARM_FRAGMENTS_SRC, SSR_PREFIX),
         (FARM_API_SRC, ADMIN_API_PREFIX),
         (FARM_PUBLIC_SRC, FARM_PUBLIC_PREFIX),
+        (DRIVE_USER_SRC, USER_BASE_URL),
     ] {
         parse(src, prefix, &mut routes);
     }

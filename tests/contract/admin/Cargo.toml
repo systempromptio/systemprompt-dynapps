@@ -18,6 +18,8 @@ systemprompt-web-extension = { workspace = true }
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-security = { workspace = true }
+systemprompt-provider-contracts = { workspace = true }
+tempfile = { workspace = true }
 
 axum = { workspace = true }
 tower = { workspace = true }
