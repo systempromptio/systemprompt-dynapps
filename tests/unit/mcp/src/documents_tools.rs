@@ -1,4 +1,4 @@
-//! The `documents` MCP server: it advertises exactly core's eleven document
+//! The `documents` MCP server: it advertises exactly core's sixteen document
 //! tools under the `documents` server name, and its extension manifest and
 //! `services/mcp/documents.yaml` agree on the binary and the port, and that the
 //! server is declared with user-scoped OAuth and off by default.
@@ -9,14 +9,21 @@ use serde_yaml::Value;
 use systemprompt::runtime::documents::mcp::TOOL_NAMES;
 use systemprompt_mcp_documents::{SERVER_NAME, tool_names};
 
-const EXPECTED: [&str; 9] = [
+const EXPECTED: [&str; 16] = [
     "documents_list",
     "documents_search",
     "documents_create",
     "documents_read",
     "documents_edit",
+    "documents_comment",
     "documents_history",
+    "documents_proposals",
     "documents_share",
+    "documents_access",
+    "documents_copy",
+    "documents_update",
+    "documents_trash",
+    "documents_restore_document",
     "documents_export",
     "documents_guide",
 ];
