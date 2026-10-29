@@ -1,5 +1,7 @@
 //! The API over its loopback socket, as a browser or the bridge reaches it:
-//! a bearer per call, redirects reported rather than followed.
+//! a bearer per call, redirects reported rather than followed. A person's
+//! write goes as the web login's `access_token` cookie, since core counts
+//! only a cookie-borne browser session as the person.
 
 use reqwest::StatusCode;
 use serde_json::Value;
@@ -68,7 +70,7 @@ impl Rest {
         self.send(
             self.http
                 .request(method, format!("{}{path}", self.base))
-                .bearer_auth(bearer)
+                .header(reqwest::header::COOKIE, format!("access_token={bearer}"))
                 .json(body),
         )
         .await
