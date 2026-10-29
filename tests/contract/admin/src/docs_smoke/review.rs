@@ -119,11 +119,24 @@ pub(super) async fn propose_and_accept(
         unchanged.contains(&"draft".to_owned()),
         "a proposal leaves the head: {unchanged:?}"
     );
-    mcp.ok(
-        "documents_proposals",
-        json!({"action": "accept", "proposal_id": proposal, "note": "ship"}),
-    )
-    .await;
+    // Core refuses an agent's review, so the person accepts over REST.
+    let accept = rest
+        .json(
+            "POST",
+            &format!(
+                "/api/v1/documents/{}/proposals/{proposal}/accept",
+                document.as_str()
+            ),
+            token,
+            &json!({"note": "ship"}),
+        )
+        .await;
+    assert!(
+        accept.status.is_success(),
+        "{}: {}",
+        accept.status,
+        accept.body
+    );
     let accepted = head(service, owner, &document).await;
     assert!(
         accepted.contains(&"final".to_owned()),
