@@ -209,6 +209,8 @@ async fn owned_document(
                     attribution: RevisionAttribution::default(),
                 },
                 message: None,
+                content: None,
+                media: systemprompt::files::documents::model::Media::new(),
             },
             &TraceId::generate(),
         )

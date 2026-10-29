@@ -54,6 +54,7 @@ pub(crate) fn store(pool: &Arc<sqlx::PgPool>) -> Store {
         catalog,
         config: DocumentsConfig::default(),
         background_tasks: BackgroundTasks::new(),
+        unscoped_actor: None,
         database,
     });
     Store {
@@ -83,6 +84,10 @@ fn bridge_router(pool: &Arc<sqlx::PgPool>, service: &Arc<DocumentService>) -> ax
         systemprompt::api::routes::documents::drive::DriveState::new(
             Arc::clone(service),
             Arc::new(jwt),
+            Arc::new(systemprompt_security::DeploymentTokenAuthority::new(
+                globals::signing_keys().clone(),
+                globals::jwt_issuer(),
+            )),
         ),
     )
 }

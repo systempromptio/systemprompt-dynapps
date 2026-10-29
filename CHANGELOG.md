@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.75.0 — 2026-10-28
+
 ### Added
 
 - **User-facing Drive.** `/drive` lists a signed-in person's documents with core's `sp-document-browser` and creates one from an install template, and `/drive/{id}` shows the editor or preview by format with presence, comments, proposals, history and, for a person with `share` access, the share dialog. The document page asks core's document service for the viewer's access before it renders, so a person without a grant gets a 404. **My drive** sits in the sidebar's Account group while `files.documents.enabled` is on. The router reads the service from the extension context's dependencies and mounts `/drive` only when both are present. `docs/drive.md` describes the pages.
@@ -29,6 +31,7 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Built against published systemprompt-core 0.75.0.** The `[patch.crates-io]` blocks in `Cargo.toml` and `tests/Cargo.toml` are commented out, every `systemprompt*` pin names `0.75.0`, and `bridge/CORE_REF` is `v0.75.0`, so the image, CI and the bridge build from the released crates rather than the sibling checkout.
 - **An enabled but unusable Entra ID configuration refuses to serve.** Core's SSO discovery now
   fails on a provider factory error, so `entra_oidc::factory` returns `Ok(None)` while
   `services/web/config/entra-oidc.yaml` is absent or `enabled: false`, and an error naming the

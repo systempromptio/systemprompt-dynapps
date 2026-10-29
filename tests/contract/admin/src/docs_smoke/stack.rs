@@ -256,6 +256,8 @@ impl Stack {
                 client_id: None,
                 purpose: None,
                 plugin_id: None,
+                interaction: None,
+                browser_session: true,
             })
             .expect("mint the session token")
     }

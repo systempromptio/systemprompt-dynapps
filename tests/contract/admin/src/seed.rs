@@ -75,6 +75,8 @@ pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
         plugin_id: spec.plugin_id.map(systemprompt::identifiers::PluginId::new),
         purpose: None,
         act: None,
+        interaction: None,
+        browser_session: false,
     };
     let claims = JwtClaims { registered, custom };
 
