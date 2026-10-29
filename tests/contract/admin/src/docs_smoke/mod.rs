@@ -125,7 +125,15 @@ async fn docs_smoke_the_document_store_end_to_end() {
     flow::guarded_edits(&mut mcp, service, &owner, &document, &mut measured).await;
     review::comment_and_resolve(&mut mcp, &document).await;
     access::share_to_group(&rest, &viewers, &document).await;
-    review::propose_and_accept(&mut mcp, &rest, &owner_token, service, &owner).await;
+    review::propose_and_accept(
+        &mut mcp,
+        &rest,
+        &owner_token,
+        &member_token,
+        service,
+        &owner,
+    )
+    .await;
     access::drive_pages(&rest, &viewers, &document).await;
     let owner_side = access::Owner {
         service,

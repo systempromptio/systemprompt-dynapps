@@ -12,6 +12,8 @@ use super::flow::{edit, head, line, markdown, read, replace};
 use super::mcp::McpClient;
 use super::rest::Rest;
 
+use crate::principal::CONTRACT_GROUP as GROUP;
+
 pub(super) async fn comment_and_resolve(mcp: &mut McpClient, document: &DocumentId) {
     let (_, shown) = read(mcp, document).await;
     let gamma = line(&shown, "gamma three");
@@ -48,6 +50,7 @@ pub(super) async fn propose_and_accept(
     mcp: &mut McpClient,
     rest: &Rest,
     token: &str,
+    reviewer: &str,
     service: &DocumentService,
     owner: &AuthenticatedUser,
 ) {
@@ -119,7 +122,22 @@ pub(super) async fn propose_and_accept(
         unchanged.contains(&"draft".to_owned()),
         "a proposal leaves the head: {unchanged:?}"
     );
-    // Core refuses an agent's review, so the person accepts over REST.
+    // Core refuses an agent's review and a proposer reviewing their own
+    // proposal, so a second editor from the group accepts over REST.
+    let shared = rest
+        .json(
+            "POST",
+            &format!("/api/v1/documents/{}/grants", document.as_str()),
+            token,
+            &json!({"subject_kind": "group", "subject_value": GROUP, "level": "edit"}),
+        )
+        .await;
+    assert!(
+        shared.status.is_success(),
+        "{}: {}",
+        shared.status,
+        shared.body
+    );
     let accept = rest
         .json(
             "POST",
@@ -127,7 +145,7 @@ pub(super) async fn propose_and_accept(
                 "/api/v1/documents/{}/proposals/{proposal}/accept",
                 document.as_str()
             ),
-            token,
+            reviewer,
             &json!({"note": "ship"}),
         )
         .await;
