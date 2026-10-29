@@ -19,6 +19,7 @@
 
 pub mod authz_eval;
 pub mod authz_hook;
+pub mod document_agent_policy;
 mod export;
 pub mod gateway_entitlement;
 pub mod gateway_safety;
