@@ -122,6 +122,9 @@ const FIXTURE_PROFILE: &str = include_str!("../fixtures/profile.yaml");
 // `anthropic` must exist: core's services loader demotes a provider with no
 // credential to `surface: backend`, which hides both fixture routes from the
 // per-user catalog before any ACL rule is consulted.
+// `entra_oidc_client_secret` must exist: services/web/config/entra-oidc.yaml
+// is enabled, and core refuses to build the router for an enabled SSO
+// provider whose client secret is missing.
 fn fixture_secrets(database_url: &str) -> String {
     format!(
         r#"{{
@@ -130,7 +133,8 @@ fn fixture_secrets(database_url: &str) -> String {
   "mcp_credential_broker_secret": "contract-suite-broker-not-a-real-secret",
   "manifest_signing_secret_seed": "Y29udHJhY3Qtc3VpdGUtc2VlZC1ub3QtcmVhbC0wMDA=",
   "encryption_master_key": "{MASTER_KEY_HEX}",
-  "anthropic": "contract-suite-anthropic-key-not-a-real-secret"
+  "anthropic": "contract-suite-anthropic-key-not-a-real-secret",
+  "entra_oidc_client_secret": "contract-suite-entra-not-a-real-secret"
 }}"#
     )
 }

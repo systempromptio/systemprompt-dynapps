@@ -26,6 +26,7 @@ pub(crate) fn secrets_document(signing_key_pem: Option<&str>, extra: &[(&str, &s
         "oauth_at_rest_pepper": "secrets-fixture-pepper-not-a-real-secret",
         "manifest_signing_secret_seed": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "encryption_master_key": MASTER_KEY_HEX,
+        "entra_oidc_client_secret": "secrets-fixture-entra-not-a-real-secret",
         "signing_key_pem": signing_key_pem,
     });
     for (key, value) in extra {
