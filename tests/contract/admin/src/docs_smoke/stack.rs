@@ -13,8 +13,9 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
-use systemprompt::identifiers::{AccessTokenId, SessionId, UserId};
+use systemprompt::identifiers::{AccessTokenId, ClientId, SessionId, UserId};
 use systemprompt::models::auth::{AuthenticatedUser, JwtAudience, Permission, UserJwtRequest};
+use systemprompt::models::documents::DRIVE_SYNC_AUDIENCE;
 use systemprompt::system::AppContext;
 
 use systemprompt_security::keys::RsaSigningKey;
@@ -231,13 +232,7 @@ impl Stack {
     // A signed-in person's bearer: a live session row and a user token the
     // runtime mints with the run's key.
     pub(super) async fn token(&self, pool: &sqlx::PgPool, user: &UserId) -> String {
-        let session = SessionId::new(uuid::Uuid::new_v4().to_string());
-        sqlx::query("INSERT INTO user_sessions (session_id, user_id) VALUES ($1, $2)")
-            .bind(session.as_str())
-            .bind(user.as_str())
-            .execute(pool)
-            .await
-            .expect("seed the session");
+        let session = seed_session(pool, user).await;
         self.ctx
             .token_authority()
             .mint_user_jwt(&UserJwtRequest {
@@ -261,4 +256,43 @@ impl Stack {
             })
             .expect("mint the session token")
     }
+
+    // The bridge Drive routes take only a token whose sole audience is the
+    // Drive sync's, as the device's trade at /v1/bridge/drive/token mints it.
+    pub(super) async fn drive_token(&self, pool: &sqlx::PgPool, user: &UserId) -> String {
+        let session = seed_session(pool, user).await;
+        self.ctx
+            .token_authority()
+            .mint_user_jwt(&UserJwtRequest {
+                user: AuthenticatedUser::new_with_roles(
+                    user.clone(),
+                    user.as_str().to_owned(),
+                    format!("{}@contract.test", user.as_str()),
+                    vec![Permission::User],
+                    vec!["user".to_owned()],
+                ),
+                session_id: session,
+                jti: AccessTokenId::generate(),
+                permissions: vec![Permission::User],
+                audience: vec![JwtAudience::Resource(DRIVE_SYNC_AUDIENCE.to_owned())],
+                ttl: chrono::Duration::hours(1),
+                client_id: Some(ClientId::bridge()),
+                purpose: None,
+                plugin_id: None,
+                interaction: None,
+                browser_session: false,
+            })
+            .expect("mint the Drive sync token")
+    }
+}
+
+async fn seed_session(pool: &sqlx::PgPool, user: &UserId) -> SessionId {
+    let session = SessionId::new(uuid::Uuid::new_v4().to_string());
+    sqlx::query("INSERT INTO user_sessions (session_id, user_id) VALUES ($1, $2)")
+        .bind(session.as_str())
+        .bind(user.as_str())
+        .execute(pool)
+        .await
+        .expect("seed the session");
+    session
 }

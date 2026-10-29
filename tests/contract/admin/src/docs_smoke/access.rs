@@ -25,6 +25,7 @@ pub(super) struct Owner<'t> {
     pub(super) service: &'t DocumentService,
     pub(super) user: &'t AuthenticatedUser,
     pub(super) token: &'t str,
+    pub(super) drive: &'t str,
 }
 
 pub(super) struct Viewers<'t> {
@@ -185,8 +186,9 @@ pub(super) async fn bridge_round_trip(
         service,
         user: owner,
         token,
+        drive,
     } = *owner;
-    let manifest = rest.get("/v1/bridge/drive/manifest", Some(token)).await;
+    let manifest = rest.get("/v1/bridge/drive/manifest", Some(drive)).await;
     assert_eq!(manifest.status, StatusCode::OK, "{}", manifest.body);
     assert!(
         manifest.body.contains(document.as_str()),
@@ -207,7 +209,7 @@ pub(super) async fn bridge_round_trip(
     assert!(!agent.is_error, "{}", agent.raw);
     let (status, merged) = upload(
         rest,
-        token,
+        drive,
         document,
         &base,
         &edit_local(&local, "gamma three", "gamma by person"),
@@ -239,7 +241,7 @@ pub(super) async fn bridge_round_trip(
     assert!(!agent.is_error, "{}", agent.raw);
     let (status, conflict) = upload(
         rest,
-        token,
+        drive,
         document,
         &base,
         &edit_local(&local, "gamma by person", "gamma by hand"),

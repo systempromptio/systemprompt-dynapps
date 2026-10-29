@@ -8,6 +8,7 @@ use systemprompt::files::documents::DocumentService;
 use systemprompt::identifiers::DocumentId;
 use systemprompt::models::auth::AuthenticatedUser;
 
+use super::access::Viewers;
 use super::flow::{edit, head, line, markdown, read, replace};
 use super::mcp::McpClient;
 use super::rest::Rest;
@@ -49,11 +50,11 @@ pub(super) async fn comment_and_resolve(mcp: &mut McpClient, document: &Document
 pub(super) async fn propose_and_accept(
     mcp: &mut McpClient,
     rest: &Rest,
-    token: &str,
-    reviewer: &str,
+    viewers: &Viewers<'_>,
     service: &DocumentService,
     owner: &AuthenticatedUser,
 ) {
+    let (token, reviewer) = (viewers.owner, viewers.member);
     let folder = rest
         .json(
             "POST",

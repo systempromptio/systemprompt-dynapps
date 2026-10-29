@@ -109,6 +109,7 @@ async fn docs_smoke_the_document_store_end_to_end() {
     let owner_token = stack.token(&db.pool, &owner_id).await;
     let member_token = stack.token(&db.pool, &credentials.non_admin_user_id).await;
     let outsider_token = stack.token(&db.pool, &credentials.admin_user_id).await;
+    let drive_token = stack.drive_token(&db.pool, &owner_id).await;
     let viewers = access::Viewers {
         owner: &owner_token,
         member: &member_token,
@@ -125,20 +126,13 @@ async fn docs_smoke_the_document_store_end_to_end() {
     flow::guarded_edits(&mut mcp, service, &owner, &document, &mut measured).await;
     review::comment_and_resolve(&mut mcp, &document).await;
     access::share_to_group(&rest, &viewers, &document).await;
-    review::propose_and_accept(
-        &mut mcp,
-        &rest,
-        &owner_token,
-        &member_token,
-        service,
-        &owner,
-    )
-    .await;
+    review::propose_and_accept(&mut mcp, &rest, &viewers, service, &owner).await;
     access::drive_pages(&rest, &viewers, &document).await;
     let owner_side = access::Owner {
         service,
         user: &owner,
         token: &owner_token,
+        drive: &drive_token,
     };
     access::bridge_round_trip(&rest, &mut mcp, &owner_side, &document).await;
     lifecycle::note_from_provider(&mut mcp).await;
