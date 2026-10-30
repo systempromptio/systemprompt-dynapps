@@ -176,12 +176,14 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3 clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev gcc-mingw-w64-x86-64
       - run: rustup show
       - run: rustup toolchain install 1.96.0 --profile minimal
-      # One cache entry per job and pinned core ref, written only by pushes
-      # to next: PR runs restore it and never evict it with a branch-scoped
-      # copy the next push cannot read.
+      # One cache line per job, written only by pushes to next: PR runs
+      # restore it and never evict it with a branch-scoped copy the next push
+      # cannot read. The key carries no core ref, so after a core bump the
+      # lockfile-less restore prefix still matches the previous core's entry
+      # and only the changed crates rebuild.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          shared-key: lint-core-${{ hashFiles('bridge/CORE_REF') }}
+          shared-key: lint-core
           workspaces: |
             .
             tests
@@ -236,7 +238,7 @@ jobs:
           tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
+          shared-key: test-core
           workspaces: |
             .
             tests
@@ -293,7 +295,7 @@ jobs:
       # compiles are the ones that job's cache already holds.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
+          shared-key: test-core
           workspaces: tests
           save-if: false
       - run: just schema-ladder
@@ -340,7 +342,7 @@ jobs:
           tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
+          shared-key: test-core
           workspaces: |
             .
             tests
@@ -409,7 +411,7 @@ jobs:
           tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          shared-key: test-core-${{ hashFiles('bridge/CORE_REF') }}
+          shared-key: test-core
           workspaces: |
             .
             tests
