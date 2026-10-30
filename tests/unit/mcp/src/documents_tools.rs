@@ -9,7 +9,7 @@ use serde_yaml::Value;
 use systemprompt::runtime::documents::mcp::TOOL_NAMES;
 use systemprompt_mcp_documents::{SERVER_NAME, tool_names};
 
-const EXPECTED: [&str; 18] = [
+const EXPECTED: [&str; 19] = [
     "documents_list",
     "documents_search",
     "documents_create",
