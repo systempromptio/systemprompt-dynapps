@@ -1,6 +1,8 @@
-//! `/admin/drive` — the shared document store as an administrator sees it:
-//! folders and documents, and one document's preview, revisions, grants and
-//! live editors.
+//! The Drive pages. `/admin/drive` is the shared document store as an
+//! administrator sees it: folders with their agent edit policy, documents,
+//! and one document's preview, revisions, grants, comments, proposals and
+//! live editors. `/drive` is the same store as every signed-in person sees
+//! it, in `user`.
 //!
 //! The handlers render the page shell and the core API paths it reads. The
 //! rows come from core's `/api/v1/documents` routes, fetched by the page
@@ -9,9 +11,15 @@
 
 mod detail;
 mod list;
+mod people;
+mod templates;
+mod user;
 
 pub(crate) use detail::drive_document_page;
 pub(crate) use list::drive_page;
+pub(crate) use people::drive_people;
+pub use user::{DriveDocuments, USER_BASE_URL};
+pub(crate) use user::{user_drive_document_page, user_drive_page};
 
 use systemprompt::models::ApiPaths;
 

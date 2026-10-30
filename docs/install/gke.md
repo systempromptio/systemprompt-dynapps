@@ -13,9 +13,13 @@ installed on a real GKE project. Treat the first install as the test.
                  GKE external ALB  (/readyz health check, 600 s backend timeout)
                  /v1/*                         everything else
                    |                                 |
-        gateway Deployment (HPA, PDB)        admin Deployment (1 replica, Recreate)
-        server.role: gateway                 server.role: admin
-        /v1, bridge, OAuth, health           console, scheduler, MCP, agents
+        gateway Deployment (HPA, PDB)        api Deployment (replicas, PDB)
+        server.role: gateway                 server.role: api
+        /v1, bridge, OAuth, health           console, MCP/agent/content routes
+                   |                                 | MCP + agent traffic, pod IP
+                   |                         worker Deployment (1+, lease)
+                   |                         server.role: worker
+                   |                         scheduler, MCP + agent processes
                    \                                 /
            each pod: cloud-sql-proxy native sidecar -> Cloud SQL PG16 (private IP, IAM auth)
            each pod: secrets.json from Secret Manager (CSI), files in GCS (Workload Identity)
@@ -90,14 +94,16 @@ helm upgrade --install dynapps deploy/helm/systemprompt-dynapps \
    profile ConfigMap and SecretProviderClass, then runs the `migrate` Job. A
    failed Job stops the release, and the running pods are untouched. Read it
    with `kubectl -n dynapps logs job/dynapps-systemprompt-dynapps-migrate -c migrate`.
-2. **Admin.** The single admin pod is replaced with `Recreate`. The console
-   and scheduler are down for one pod start, typically one to two minutes.
-   Inference is not affected, because `/v1` is served by the gateway pods.
-3. **Gateway.** Rolling update with `maxUnavailable: 0`. Each new pod must
+2. **API.** Rolling update with `maxUnavailable: 0`, like the gateway; the
+   console stays up.
+3. **Worker.** Rolling update with `maxSurge: 1, maxUnavailable: 0`. The new
+   pod starts as a standby and takes the lease when the old one stops, so MCP
+   and agent traffic answers `503` only for the hand-over.
+4. **Gateway.** Rolling update with `maxUnavailable: 0`. Each new pod must
    pass `/readyz` before an old one is removed, and the PDB keeps two up
    during node maintenance.
 
-Helm applies all three in one `upgrade`. The Job runs first, and the two
+Helm applies all four in one `upgrade`. The Job runs first, and the three
 Deployments roll together after it.
 
 ## Rollback
@@ -121,10 +127,19 @@ gcloud sql backups create --instance=<instance> --description="pre-<tag>"
   minutes.
 - **Authorization runs in each pod.** The profile sets
   `governance.authz.hook.mode: extension`, so every gateway pod decides
-  entitlement in-process; no request hops to the admin pod's
+  entitlement in-process; no request hops to an api pod's
   `/api/public/govern/authz`.
-- **The admin pod** must be exactly one. Two would run the scheduler twice,
-  so the chart fixes `replicas: 1` and gives it no HPA and no PDB.
+- **API pods** serve the console, agent, MCP, content and static routes and
+  run no scheduler or processes, so `api.replicas` (or `api.autoscaling`)
+  scales them. They serve `web/dist` and the services cache read-only from
+  `pod.sharedWeb.existingClaim`, a ReadWriteMany claim the worker writes.
+  The claim is required: the chart fails to render api pods without it.
+- **Worker pods** run the scheduler and own the MCP and agent processes.
+  Workers compete for one lease, so `worker.replicas: 2` is a warm standby,
+  not double execution; scheduled jobs take a cluster lock. Each worker
+  advertises `http://<pod IP>:8080` (`server.advertise_url` from the
+  downward-API `POD_IP`), api pods forward MCP and agent traffic there, and
+  the worker port is on no load balancer.
 - **Load shedding.** Past `server.max_in_flight` a pod answers 503 with
   `Retry-After`, and `/readyz` answers `503 {"status":"saturated"}`. The
   load balancer health check and the readiness probe both use `/readyz`, so a
@@ -186,7 +201,7 @@ outside Google, such as the `api.anthropic.com` failover, needs
 
 | IT registry item | requirement | how the chart meets it |
 |---|---|---|
-| NFR-2.2 / UC-19 | gateway and admin role split | two Deployments, `server.role: gateway` scaled by HPA, `server.role: admin` fixed at one replica with `Recreate` |
+| NFR-2.2 / UC-19 | gateway, api and worker role split | three Deployments: `server.role: gateway` scaled by HPA, `server.role: api` scaled by replicas, `server.role: worker` lease-elected with an optional standby |
 | NFR-4.2 / UC-20 | Secret Manager mounted as files | `SecretProviderClass` for the GKE Secret Manager CSI add-on; `secrets.json` as a file; rotation by restart |
 | NFR-6.1 / UC-43 | Helm chart with probes, limits, HPA, PDB | startup, liveness (`/livez`) and readiness (`/readyz`) probes; requests and limits on every container; HPA on CPU plus an optional custom metric; PDB `minAvailable: 2` |
 | NFR-2.1 / UC-44 | GCS storage | `storage.backend: gcs` with `credentials: workload_identity` |
@@ -201,5 +216,5 @@ kubectl -n dynapps port-forward svc/dynapps-systemprompt-dynapps-gateway 8080:80
 deploy/self-host/verify-node.sh --url http://localhost:8080 --role gateway --version <tag>
 ```
 
-`verify-node.sh` also accepts `--role admin`. Without `--container` it runs
+`verify-node.sh` also accepts `--role api` and `--role worker`. Without `--container` it runs
 only its HTTP checks, which is what works against a port-forward.

@@ -14,7 +14,7 @@ use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparklin
 use systemprompt_web_admin_core::util::delta::Delta;
 
 use super::data::OverviewData;
-use super::kpi_tiles::{health_tiles, volume_tiles, work_tiles};
+use super::kpi_tiles::{documents_tile, health_tiles, volume_tiles, work_tiles};
 use super::view::OverviewRange;
 
 #[derive(Debug, Serialize)]
@@ -77,6 +77,12 @@ pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> OverviewKp
             .into_iter()
             .chain(work_tiles(&k, &inputs))
             .chain(health_tiles(&k, &inputs))
+            .chain(
+                data.documents
+                    .as_ref()
+                    .ok()
+                    .map(|touched| documents_tile(touched, &inputs)),
+            )
             .collect(),
     }
 }

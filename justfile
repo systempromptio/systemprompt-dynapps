@@ -371,7 +371,39 @@ _test-contract-uncoordinated *ARGS:
     # carries the governance privilege-escalation check. This turns that skip
     # into a failure, so a missing database can never be read as a pass.
     export SYSTEMPROMPT_REQUIRE_DB=1
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests)' "$@"
+    # Why: docs-smoke drives the running documents MCP binary and is its own
+    # recipe and Gates job; this tier stays a router-level contract.
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests) and not test(docs_smoke)' "$@"
+
+# The shared document store end to end on a throwaway database, against the
+# installation running: the runtime and API booted on a profile over that
+# database, and the documents MCP binary started as its own process. The
+# agent's steps are MCP tool calls to the binary (create from the install's
+# Word template, a stale guard, one-op, quote-target and Markdown edits,
+# history, comment and resolve, a proposal accepted); the people's steps are
+# REST calls (a group share and an outsider's refusal, the /drive pages, the
+# bridge Drive feed through a merged and a conflicting upload). The run holds
+# the tools to their size budget. A missing database or binary fails it.
+docs-smoke:
+    @scripts/build-coordinator.sh run docs-smoke "" -- {{just_executable()}} _docs-smoke-uncoordinated
+
+_docs-smoke-uncoordinated:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ] && [ -f .systemprompt/profiles/local/secrets.json ]; then
+        SYSTEMPROMPT_TEST_DATABASE_URL=$(python3 -c "
+    import json, urllib.parse as up
+    u = up.urlsplit(json.load(open('.systemprompt/profiles/local/secrets.json'))['database_url'])
+    print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
+        export SYSTEMPROMPT_TEST_DATABASE_URL
+    fi
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ]; then
+        echo "No test database. Set SYSTEMPROMPT_TEST_DATABASE_URL, or run \`just setup-local\`." >&2
+        exit 1
+    fi
+    export SYSTEMPROMPT_REQUIRE_DB=1
+    SQLX_OFFLINE=true cargo build -p systemprompt-mcp-documents
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p admin-contract-tests -E 'test(docs_smoke)'
 
 # All tests
 # Every tier runs even after one fails. As `just` dependencies they stopped

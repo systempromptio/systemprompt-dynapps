@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Documents a conversation created or edited: revisions that carry its\n-- context id (MCP fills it from the request, REST from `x-context-id`).\nWITH revisions AS (\n    SELECT r.document_id, r.created_at,\n           NOT EXISTS (SELECT 1 FROM report_document_revisions p\n                       WHERE p.document_id = r.document_id AND p.created_at < r.created_at) AS created\n    FROM report_document_revisions r\n    WHERE r.context_id = $1\n)\nSELECT r.document_id::text AS \"document_id!\", d.name AS \"name!\", d.format AS \"format!\",\n       BOOL_OR(r.created) AS \"created!\", COUNT(*)::bigint AS \"revisions!\",\n       MAX(r.created_at) AS \"last_at!\"\nFROM revisions r\nJOIN documents d ON d.id = r.document_id\nGROUP BY r.document_id, d.name, d.format\nORDER BY MAX(r.created_at) DESC\nLIMIT $2\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "document_id!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "documents",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "format!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "documents",
+            "name": "format"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "created!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "revisions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_at!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ffd7170abb9e79c83fe52e806705ab8292ea10d40aba958424a0248786d3f715"
+}

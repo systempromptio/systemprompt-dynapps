@@ -106,7 +106,7 @@ fn enrolment_and_disconnect_preserve_user_settings_and_standalone_profile() {
             r#"{"model":"user-choice","permissions":{"allow":["Read"]},"env":{"KEEP":"yes"}}"#,
         )
         .unwrap();
-        let ctx = BridgeContext::start(ProxyMode::Attach).unwrap();
+        let ctx = BridgeContext::start(ProxyMode::Attach, std::sync::Arc::new(|| None)).unwrap();
         let selection =
             Selection::Ids(vec![systemprompt_bridge::integration::HostKind::ClaudeCode]);
         for _ in 0..2 {
@@ -162,7 +162,7 @@ fn enrolment_reports_invalid_settings_and_forced_login_without_overwriting_them(
             "requires a standard-user test runner"
         );
         std::fs::create_dir_all(settings.parent().unwrap()).unwrap();
-        let ctx = BridgeContext::start(ProxyMode::Attach).unwrap();
+        let ctx = BridgeContext::start(ProxyMode::Attach, std::sync::Arc::new(|| None)).unwrap();
         let selection =
             Selection::Ids(vec![systemprompt_bridge::integration::HostKind::ClaudeCode]);
         for body in [

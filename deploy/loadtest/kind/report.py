@@ -87,7 +87,7 @@ def top(path):
             if len(p) < 4:
                 continue
             pod = p[1]
-            kind = "gateway" if "gateway" in pod else "admin" if "admin" in pod else pod.split("-")[0]
+            kind = "gateway" if "gateway" in pod else "api" if "-api-" in pod else "worker" if "worker" in pod else pod.split("-")[0]
             try:
                 cpu[kind].append(int(p[2].rstrip("m")))
                 mem[kind].append(int(p[3].rstrip("Mi")))

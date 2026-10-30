@@ -5,12 +5,15 @@
 use std::sync::Arc;
 
 use systemprompt::oauth::SessionCreationService;
-use systemprompt::sso::{SsoDriver, SsoHookContext};
+use systemprompt::sso::{SsoDriver, SsoHookContext, SsoProviderError};
 use systemprompt_web_admin_identity::SsoDeps;
 
 use super::pools::DbHandles;
 
-pub(super) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> SsoDeps {
+pub(super) fn build(
+    db: &DbHandles,
+    session_service: &Arc<SessionCreationService>,
+) -> Result<SsoDeps, SsoProviderError> {
     let ctx = SsoHookContext {
         db: Arc::clone(&db.db),
         config: Arc::clone(db.boot.config_arc()),
@@ -18,10 +21,10 @@ pub(super) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
         services_root: db.boot.active_services_root().clone(),
         secrets: Arc::clone(db.boot.secrets()),
     };
-    let driver = SsoDriver::discover(&ctx, db.oauth.oauth.clone(), Arc::clone(session_service));
-    SsoDeps {
+    let driver = SsoDriver::discover(&ctx, db.oauth.oauth.clone(), Arc::clone(session_service))?;
+    Ok(SsoDeps {
         driver: Some(driver),
         write_pool: Arc::clone(&db.write),
         session_service: Arc::clone(session_service),
-    }
+    })
 }

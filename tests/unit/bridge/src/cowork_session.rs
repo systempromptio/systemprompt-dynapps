@@ -49,7 +49,7 @@ fn an_abbreviated_or_full_org_dir_names_the_tenant() {
 #[test]
 fn the_tenant_session_wins_where_two_usable_sessions_were_ambiguous() {
     let s = Sessions::new();
-    let other = s.add("00000000", true);
+    let other = s.add("5d2a9f17", true);
     let tenant = s.add("e43527c1", true);
     let candidates = vec![other, tenant.clone()];
 
@@ -75,7 +75,7 @@ fn a_tenant_session_without_a_plugins_dir_is_not_chosen() {
 #[test]
 fn an_ambiguous_set_carries_every_usable_candidate_for_the_picker() {
     let s = Sessions::new();
-    let a = s.add("00000000", true);
+    let a = s.add("5d2a9f17", true);
     let b = s.add("f8e4d915", true);
     let unusable = s.add("a1b2c3d4", false);
     let candidates = vec![a.clone(), b.clone(), unusable];

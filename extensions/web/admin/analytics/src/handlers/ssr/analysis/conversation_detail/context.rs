@@ -125,5 +125,6 @@ pub(super) fn build_context(
         skill_count,
         safety: safety.into_iter().map(safety_view).collect(),
         safety_count,
+        documents: crate::handlers::ssr::analysis::documents_panel::DocumentsPanelView::default(),
     }
 }

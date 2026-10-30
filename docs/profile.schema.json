@@ -133,6 +133,31 @@
       "default": {
         "authority": {}
       }
+    },
+    "licence": {
+      "$ref": "#/$defs/LicenceConfig",
+      "default": {
+        "multi_tenant": false,
+        "licence_id": null,
+        "endpoint": "https://api.systemprompt.io/api/v1/licence/checkin",
+        "interval_secs": 21600
+      }
+    },
+    "notifications": {
+      "$ref": "#/$defs/NotificationsProfile",
+      "default": {
+        "retention_days": 90,
+        "max_audience": 500,
+        "unread_max_age_days": 180,
+        "failure_retention_days": 30,
+        "consumer": {
+          "batch": 64,
+          "poll_secs": 5,
+          "sweep_secs": 30,
+          "resolver_timeout_ms": 5000,
+          "channel_timeout_ms": 5000
+        }
+      }
     }
   },
   "additionalProperties": false,
@@ -205,7 +230,7 @@
       ]
     },
     "PoolConfig": {
-      "description": "Operator-tunable connection-pool sizing.\n\nOmitted fields fall back to the engine defaults (50 connections, 30s\nacquire, 300s idle, 1800s lifetime); set them to fit the pool to the\ndeployment's Postgres `max_connections` and replica count.\n`statement_cache_capacity` defaults to 100 prepared statements per\nconnection. 0 is accepted but leaks: sqlx still names every statement and\nnever closes one without a cache, so each backend grows until Postgres runs\nout of memory.\n\n`max_connections_by_role` overrides `max_connections` for the node's\n`server.role`, so one profile can size a horizontally scaled gateway pool\nsmall and the single admin node's pool larger. A Postgres primary must\nadmit `gateway_replicas × (gateway pool + 2) + admin × (admin pool + 2)`\nplus migration and operator sessions; the `+ 2` are the replica-identity\nclaim and the event listener sessions every node holds.\n`session_max_connections` sizes the separate session pool a\n`database_session_url` opens (10 by default): it holds only the claim,\nlistener, job-lock and migration sessions, so it never needs the main\npool's ceiling.\n[`crate::profile::Profile::validate`] range-checks the values at bootstrap.",
+      "description": "Operator-tunable connection-pool sizing.\n\nOmitted fields fall back to the engine defaults (50 connections, 30s\nacquire, 300s idle, 1800s lifetime); set them to fit the pool to the\ndeployment's Postgres `max_connections` and replica count.\n`statement_cache_capacity` defaults to 100 prepared statements per\nconnection. 0 is accepted but leaks: sqlx still names every statement and\nnever closes one without a cache, so each backend grows until Postgres runs\nout of memory.\n\n`max_connections_by_role` overrides `max_connections` for the node's\n`server.role`, so one profile can size a horizontally scaled gateway pool\nand `api` pools small and the worker pool larger. A Postgres primary must\nadmit `Σ replicas(role) × (pool(role) + 2)` over every role\nplus migration and operator sessions; the `+ 2` are the replica-identity\nclaim and the event listener sessions every node holds.\n`session_max_connections` sizes the separate session pool a\n`database_session_url` opens (10 by default): it holds only the claim,\nlistener, job-lock and migration sessions, so it never needs the main\npool's ceiling.\n[`crate::profile::Profile::validate`] range-checks the values at bootstrap.",
       "type": "object",
       "properties": {
         "max_connections": {
@@ -289,7 +314,15 @@
           "format": "uint32",
           "minimum": 0
         },
-        "admin": {
+        "api": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "worker": {
           "type": [
             "integer",
             "null"
@@ -374,6 +407,12 @@
         "role": {
           "$ref": "#/$defs/NodeRole",
           "default": "all"
+        },
+        "advertise_url": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "max_in_flight": {
           "type": [
@@ -475,12 +514,13 @@
       ]
     },
     "NodeRole": {
-      "description": "The part of the platform a node serves.\n\n`all` is a single-node deployment: every surface, every worker, and the\nextensions' runner services, so one node runs the whole product.\n`gateway` serves only the AI gateway,\nthe bridge consumer surface and the OAuth/discovery routes they depend on,\nand runs no scheduler, MCP or agent processes, so it scales horizontally.\n`admin` serves everything except the gateway and runs the workers.\n`runner` serves only the health, readiness and metrics probes, runs no\nscheduler, MCP or agent processes, and starts the extensions' runner\nservices, so long-running work scales on its own Deployment.",
+      "description": "The part of the platform a node serves.\n\n`all` is a single-node deployment: every surface, every worker, and the\nextensions' runner services, so one node runs the whole product.\n`gateway` serves only the AI gateway,\nthe bridge consumer surface and the OAuth/discovery routes they depend on,\nand runs no scheduler, MCP or agent processes, so it scales horizontally.\n`api` serves everything except the gateway, runs no scheduler and\nsupervises no MCP or agent process — it forwards that traffic to the\nworker that owns the process — so it scales horizontally.\n`worker` runs the scheduler and owns the MCP and agent processes; it\nserves the probes plus the MCP and agent routes `api` nodes forward to.\n`runner` serves only the health, readiness and metrics probes, runs no\nscheduler, MCP or agent processes, and starts the extensions' runner\nservices, so long-running work scales on its own Deployment.",
       "type": "string",
       "enum": [
         "all",
         "gateway",
-        "admin",
+        "api",
+        "worker",
         "runner"
       ]
     },
@@ -791,6 +831,12 @@
           "minimum": 0,
           "default": 50
         },
+        "notifications_per_second": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 50
+        },
         "gateway_per_second": {
           "type": "integer",
           "format": "uint64",
@@ -893,12 +939,46 @@
             "null"
           ]
         },
+        "provider": {
+          "$ref": "#/$defs/HostingProvider",
+          "default": "systemprompt"
+        },
         "validation": {
           "$ref": "#/$defs/CloudValidationMode",
           "default": "strict"
+        },
+        "deploy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DeployConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "operator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperatorAuthConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
+    },
+    "HostingProvider": {
+      "description": "Where a tenant runs and who operates it.\n\n`Systemprompt` is the managed cloud reached through the control plane;\nevery other provider is self-managed and never synced with it.",
+      "type": "string",
+      "enum": [
+        "systemprompt",
+        "kubernetes",
+        "gke",
+        "docker_local"
+      ]
     },
     "CloudValidationMode": {
       "type": "string",
@@ -906,6 +986,88 @@
         "strict",
         "warn",
         "skip"
+      ]
+    },
+    "DeployConfig": {
+      "description": "Registry and `GitOps` target for `cloud deploy` on a self-managed provider.",
+      "type": "object",
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "gitops": {
+          "$ref": "#/$defs/GitOpsConfig"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "registry",
+        "repository",
+        "gitops"
+      ]
+    },
+    "GitOpsConfig": {
+      "description": "The ops-repository working copy and the values-file key that carries the\ntenant's image digest.",
+      "type": "object",
+      "properties": {
+        "repo_path": {
+          "type": "string"
+        },
+        "values_file": {
+          "type": "string"
+        },
+        "image_digest_key": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "commit_message": {
+          "type": "string",
+          "default": "deploy({tenant}): {digest}"
+        },
+        "push": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "repo_path",
+        "values_file",
+        "image_digest_key",
+        "branch"
+      ]
+    },
+    "OperatorAuthConfig": {
+      "description": "The OIDC issuer operators sign in against for self-managed tenants.",
+      "type": "object",
+      "properties": {
+        "issuer": {
+          "type": "string"
+        },
+        "client_id": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "openid",
+            "email",
+            "profile"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "issuer",
+        "client_id"
       ]
     },
     "SecretsConfig": {
@@ -1690,12 +1852,118 @@
       "additionalProperties": false
     },
     "PlaneAuthority": {
-      "description": "The authority a profile names for one plane under\n`config_planes.authority`.",
+      "description": "The authority a profile names for one plane under\n`config_planes.authority`; a plane the profile does not name is `db`.",
       "type": "string",
       "enum": [
         "file",
         "db"
       ]
+    },
+    "LicenceConfig": {
+      "description": "Where and how often a multi-tenant deployment reports its licence check-in.",
+      "type": "object",
+      "properties": {
+        "multi_tenant": {
+          "type": "boolean",
+          "default": false
+        },
+        "licence_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "endpoint": {
+          "type": "string",
+          "default": "https://api.systemprompt.io/api/v1/licence/checkin"
+        },
+        "interval_secs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 21600
+        }
+      },
+      "additionalProperties": false
+    },
+    "NotificationsProfile": {
+      "description": "The `notifications:` profile block; every field has a default.",
+      "type": "object",
+      "properties": {
+        "retention_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 90
+        },
+        "max_audience": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 500
+        },
+        "unread_max_age_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 180
+        },
+        "failure_retention_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 30
+        },
+        "consumer": {
+          "$ref": "#/$defs/ConsumerProfile",
+          "default": {
+            "batch": 64,
+            "poll_secs": 5,
+            "sweep_secs": 30,
+            "resolver_timeout_ms": 5000,
+            "channel_timeout_ms": 5000
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ConsumerProfile": {
+      "description": "How the notifications outbox consumer drains.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 64
+        },
+        "poll_secs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 5
+        },
+        "sweep_secs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 30
+        },
+        "resolver_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 5000
+        },
+        "channel_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 5000
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

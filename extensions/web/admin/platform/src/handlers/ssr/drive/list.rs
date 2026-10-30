@@ -14,6 +14,29 @@ use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 use super::BASE_URL;
 
+// Why: the document API lists no templates, so "New document" names the ids of
+// core's services catalog (`services/documents/templates/`) and the compiled-in
+// `dynapps-note`; the branded Word document comes first as the default.
+const NEW_DOCUMENT_TEMPLATES: [TemplateOption; 5] = [
+    TemplateOption::new("dynapps-word", "Word document"),
+    TemplateOption::new("dynapps-sheet", "Spreadsheet"),
+    TemplateOption::new("dynapps-deck", "Presentation"),
+    TemplateOption::new("dynapps-html", "Web page"),
+    TemplateOption::new("dynapps-note", "Markdown note"),
+];
+
+#[derive(Debug, Clone, Copy, Serialize)]
+struct TemplateOption {
+    id: &'static str,
+    label: &'static str,
+}
+
+impl TemplateOption {
+    const fn new(id: &'static str, label: &'static str) -> Self {
+        Self { id, label }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct DriveQuery {
     folder: Option<String>,
@@ -27,7 +50,9 @@ struct DrivePage {
     folder_id: Option<DocumentFolderId>,
     list_api: String,
     documents_api: &'static str,
+    folders_api: &'static str,
     base_url: &'static str,
+    templates: [TemplateOption; 5],
 }
 
 pub(crate) async fn drive_page(
@@ -67,7 +92,9 @@ pub(crate) async fn drive_page(
         folder_id,
         list_api,
         documents_api: ApiPaths::DOCUMENTS,
+        folders_api: ApiPaths::DOCUMENT_FOLDERS,
         base_url: BASE_URL,
+        templates: NEW_DOCUMENT_TEMPLATES,
     };
     Ok(render_page_with_faults(
         &shell.engine,

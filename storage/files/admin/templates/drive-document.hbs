@@ -1,27 +1,49 @@
 {{#> layout page_title=title page_id=page}}
+    {{#*inline "head_extra"}}
+    <link rel="stylesheet" href="/assets/documents/css/documents.css?v={{css_version}}">
+    <link rel="stylesheet" href="/assets/documents/css/documents-panels.css?v={{css_version}}">
+    {{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="One shared document: its rendered preview, revision history, grants and live editors."}}
+    {{#> components/page-header title=title subtitle="One shared document: read it as a page, edit it block by block, and see its revisions, grants, comments, proposals and live editors."}}
         {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{content_url}}" download>Download</a>
         {{/inline}}
     {{/components/page-header}}
 
-    <div class="sp-p-drive" data-drive-document="{{document_api}}" data-revisions-api="{{revisions_api}}" data-grants-api="{{grants_api}}" data-presence-api="{{presence_api}}">
+    <div class="sp-p-drive" data-drive-document="{{document_api}}" data-revisions-api="{{revisions_api}}" data-grants-api="{{grants_api}}" data-presence-api="{{presence_api}}" data-preview-api="{{preview_url}}" data-projection-api="{{projection_api}}" data-edits-api="{{edits_api}}" data-people-api="{{people_api}}">
     <dl class="sp-kv-list">
         <div class="sp-kv-row"><dt>Name</dt><dd data-field="name"></dd></div>
         <div class="sp-kv-row"><dt>Document id</dt><dd class="sp-u-mono">{{document_id}}</dd></div>
         <div class="sp-kv-row"><dt>Format</dt><dd class="sp-u-mono" data-field="format"></dd></div>
         <div class="sp-kv-row"><dt>Folder</dt><dd data-field="folder"></dd></div>
-        <div class="sp-kv-row"><dt>Owner</dt><dd class="sp-u-mono" data-field="owner"></dd></div>
+        <div class="sp-kv-row"><dt>Owner</dt><dd data-field="owner"></dd></div>
         <div class="sp-kv-row"><dt>Head revision</dt><dd class="sp-u-mono" data-field="head"></dd></div>
         <div class="sp-kv-row"><dt>Updated</dt><dd data-field="updated"></dd></div>
         <div class="sp-kv-row"><dt>Editing now</dt><dd data-field="editors"></dd></div>
     </dl>
 
-    <section class="sp-section" aria-label="Preview">
-    <h2 class="sp-section__title">Preview</h2>
-    <iframe class="sp-p-drive__preview" src="{{preview_url}}" sandbox title="Document preview" loading="lazy"></iframe>
+    <section class="sp-section" aria-label="Document">
+    <div class="sp-p-drive__bar">
+        <h2 class="sp-section__title">Document</h2>
+        <div class="sp-p-drive__modes" role="group" aria-label="Mode">
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-view" aria-pressed="true">View</button>
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-edit" aria-pressed="false">Edit</button>
+        </div>
+    </div>
+    <div class="sp-p-drive__desk" data-slot="drive-view">
+        <iframe class="sp-p-drive__paper" sandbox title="Document" data-slot="drive-paper"></iframe>
+    </div>
+    <form class="sp-p-drive__editor" data-slot="drive-editor" hidden>
+        <ol class="sp-p-drive__blocks" data-slot="drive-blocks"></ol>
+        <div class="sp-p-drive__save">
+            <label class="sp-u-sr-only" for="drive-edit-message">Revision message</label>
+            <input class="sp-field-input" id="drive-edit-message" name="message" placeholder="Describe the change (optional)" maxlength="200">
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-discard">Discard</button>
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Save revision</button>
+        </div>
+        <p class="sp-field-hint" data-slot="drive-editor-note"></p>
+    </form>
     </section>
 
     <section class="sp-section" aria-label="Revisions">
@@ -45,12 +67,27 @@
       <tbody data-slot="grant-rows"></tbody>
     {{/components/table}}
     </section>
+
+    <section class="sp-section" aria-label="Sharing">
+    <h2 class="sp-section__title">Sharing</h2>
+    <sp-share-dialog document-id="{{document_id}}"></sp-share-dialog>
+    </section>
+
+    <section class="sp-section" aria-label="Comments">
+    <h2 class="sp-section__title">Comments</h2>
+    <sp-comments document-id="{{document_id}}"></sp-comments>
+    </section>
+
+    <section class="sp-section" aria-label="Proposals">
+    <h2 class="sp-section__title">Proposals</h2>
+    <sp-proposal-list document-id="{{document_id}}"></sp-proposal-list>
+    </section>
     </div>
 
     <template data-template="drive-revision-row">
       <tr>
-        <td class="sp-u-mono" data-field="id"></td>
-        <td class="sp-u-mono" data-field="author"></td>
+        <td class="sp-u-mono" data-field="id" title=""></td>
+        <td data-field="author"></td>
         <td data-field="actor"></td>
         <td data-field="origin"></td>
         <td data-field="message"></td>
@@ -61,13 +98,25 @@
       <tr>
         <td class="sp-u-mono" data-field="subject"></td>
         <td data-field="level"></td>
-        <td class="sp-u-mono" data-field="granted_by"></td>
+        <td data-field="granted_by"></td>
         <td class="sp-col-date" data-field="valid_until"></td>
         <td class="sp-col-date" data-field="created"></td>
       </tr>
     </template>
+    <template data-template="drive-block">
+      <li class="sp-p-drive__block">
+        <span class="sp-p-drive__kind" data-field="kind"></span>
+        <textarea class="sp-field-input sp-p-drive__text" rows="1" data-field="text"></textarea>
+        <span class="sp-p-drive__tools">
+          <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="drive-add-paragraph" title="Add a paragraph below">+ Paragraph</button>
+          <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="drive-add-heading" title="Add a heading below">+ Heading</button>
+          <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="drive-remove" title="Remove this block">Remove</button>
+        </span>
+      </li>
+    </template>
     {{/inline}}
     {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/assets/documents/js/documents.js?v={{css_version}}"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-drive-document.js?v={{css_version}}"></script>
     {{/inline}}
 {{/layout}}

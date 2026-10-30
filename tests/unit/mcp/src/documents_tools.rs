@@ -9,7 +9,7 @@ use serde_yaml::Value;
 use systemprompt::runtime::documents::mcp::TOOL_NAMES;
 use systemprompt_mcp_documents::{SERVER_NAME, tool_names};
 
-const EXPECTED: [&str; 16] = [
+const EXPECTED: [&str; 19] = [
     "documents_list",
     "documents_search",
     "documents_create",
@@ -23,9 +23,12 @@ const EXPECTED: [&str; 16] = [
     "documents_copy",
     "documents_update",
     "documents_trash",
-    "documents_restore_document",
+    "documents_untrash",
     "documents_export",
+    "documents_upload",
     "documents_guide",
+    "documents_people",
+    "documents_inbox",
 ];
 
 fn repo_file(rel: &str) -> Value {

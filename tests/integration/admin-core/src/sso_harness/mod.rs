@@ -157,11 +157,10 @@ impl SsoApp {
             Arc::from(boot.secrets().oauth_at_rest_pepper()),
         );
         let deps = SsoDeps {
-            driver: Some(systemprompt::sso::SsoDriver::discover(
-                &hook,
-                oauth,
-                Arc::clone(&sessions),
-            )),
+            driver: Some(
+                systemprompt::sso::SsoDriver::discover(&hook, oauth, Arc::clone(&sessions))
+                    .expect("SSO provider discovery"),
+            ),
             write_pool: Arc::clone(pool),
             session_service: sessions,
         };

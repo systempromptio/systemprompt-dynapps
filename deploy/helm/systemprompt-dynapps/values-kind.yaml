@@ -2,7 +2,8 @@
 # Same chart as GKE; only the cloud attachments are swapped for in-cluster
 # stand-ins: Postgres is a Deployment, inference is the core mock, secrets are
 # inline (rendered by `just loadtest-kind-secrets`), storage is the pod's own
-# emptyDir. Never use these values anywhere real.
+# emptyDir, and the shared web volume is a hostPath-backed ReadWriteMany claim
+# (deploy/loadtest/kind/manifests/15-shared-web.yaml). Never use these values anywhere real.
 #
 #   helm upgrade --install dynapps deploy/helm/systemprompt-dynapps -n loadtest \
 #     -f deploy/helm/systemprompt-dynapps/values-kind.yaml \
@@ -80,7 +81,21 @@ gateway:
     prometheus.io/scrape: "true"
     prometheus.io/port: "9090"
 
-admin:
+api:
+  replicas: 1
+  resources:
+    requests: {cpu: 250m, memory: 1Gi}
+    limits: {cpu: "2", memory: 3Gi}
+  pdb:
+    enabled: false
+  topologySpread: false
+  nodeSelector: {loadtest/role: app}
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+
+worker:
+  replicas: 1
   resources:
     requests: {cpu: 250m, memory: 1Gi}
     limits: {cpu: "2", memory: 3Gi}
@@ -90,6 +105,8 @@ admin:
     prometheus.io/port: "9090"
 
 pod:
+  sharedWeb:
+    existingClaim: shared-web
   preStopSleepSeconds: 5
   terminationGracePeriodSeconds: 30
   volumes:

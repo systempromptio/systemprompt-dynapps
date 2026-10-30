@@ -35,7 +35,7 @@ cd deploy/self-host
 ## 2b. Prove the inputs before starting anything
 
 ```bash
-./preflight.sh --image ghcr.io/systempromptio/systemprompt-dynapps:0.74.0 \
+./preflight.sh --image ghcr.io/systempromptio/systemprompt-dynapps:0.76.0 \
   --profile-dir ./profile --external-url https://ai.example.com
 ```
 
@@ -44,7 +44,7 @@ Every line must pass; a failure names the stage and the fix.
 ## 3. Start
 
 ```bash
-export SYSTEMPROMPT_TAG=0.74.0 POSTGRES_PASSWORD='<db-password>'
+export SYSTEMPROMPT_TAG=0.76.0 POSTGRES_PASSWORD='<db-password>'
 docker compose -f docker-compose.single.yml pull
 docker compose -f docker-compose.single.yml run --rm app migrate   # schema + admin user, once
 docker compose -f docker-compose.single.yml up -d          # own database: add `app` at the end
@@ -68,7 +68,7 @@ docker compose -f docker-compose.single.yml exec \
 ## 4. Check
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.74.0
+./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.76.0
 ```
 
 Then configure Microsoft Entra ID (OpenID Connect) SSO (`/documentation/entra-id-sso-setup`), sign in at

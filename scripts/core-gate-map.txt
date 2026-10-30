@@ -58,3 +58,4 @@ lint-sql-vocab            n/a: core's script reads core's sql-vocabularies.txt r
 lint-core-globals         install:lint-globals.sh
 lint-serde-aliases        wrapper
 check-removed-config-names  install:check-removed-config-names.sh
+check-no-vendor  n/a: an install vendors frontend code and the vendor/ plugin submodule on purpose

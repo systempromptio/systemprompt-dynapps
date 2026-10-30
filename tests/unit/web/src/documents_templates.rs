@@ -7,7 +7,7 @@ use systemprompt_provider_contracts::documents::{
     DocumentFormat, DocumentTemplateProvider, TemplateParams, TemplateSource,
     registered_template_providers,
 };
-use systemprompt_web_extension::documents_templates::{
+use systemprompt_web_shared::documents_templates::{
     DYNAPPS_TEMPLATE_PRIORITY, DynappsTemplateProvider,
 };
 

@@ -3,7 +3,8 @@
 //! p95 latency, completion), the invocations split by model, client, group,
 //! project, person, marketplace version and outcome, and the conversations
 //! that invoked it with the same columns the Conversations page shows, and
-//! its timed runs with each kit release's success rate and run time.
+//! its timed runs with each kit release's success rate and run time, and the
+//! documents its runs created or edited.
 //!
 //! Invocations are hook events; everything else is read from the
 //! `conversation_facts` rollup through the harness session. The skill itself
@@ -38,6 +39,8 @@ use systemprompt_web_admin_core::catalog_index::inventory_index::{
 };
 use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
+use super::documents_panel::documents_panel;
+use crate::repositories::analysis::documents::list_skill_documents;
 use context::{SkillRead, build_context};
 
 pub(super) const PAGE_SIZE: i64 = 25;
@@ -175,7 +178,7 @@ pub(crate) async fn skill_page(
         marketplace: None,
         skill: Some(skill.skill.clone()),
     };
-    let (facts, daily, breakdown, conversations, audience, runs) = tokio::join!(
+    let (facts, daily, breakdown, conversations, audience, runs, documents) = tokio::join!(
         find_skill_facts(&pool, &window, &skill.skill),
         list_skill_daily(&pool, &window, &skill.skill),
         list_skill_breakdown(&pool, &window, &skill.skill, query.by()),
@@ -188,6 +191,7 @@ pub(crate) async fn skill_page(
         ),
         get_marketplace_audience(&pool, &services, &index.marketplaces),
         list_skill_runs(&pool, &window, &run_filter, RUNS_READ_FOR_MEDIANS),
+        list_skill_documents(&pool, &window, &skill.skill),
     );
     let (facts, daily, breakdown, (conversations, total), audience, runs) =
         (facts?, daily?, breakdown?, conversations?, audience?, runs?);
@@ -195,7 +199,7 @@ pub(crate) async fn skill_page(
     let row = facts
         .as_ref()
         .map(|f| super::skills::skill_row_view(f, &audience, &index, today));
-    let context = build_context(
+    let mut context = build_context(
         &query,
         &skill,
         &index,
@@ -210,6 +214,7 @@ pub(crate) async fn skill_page(
             can_judge: shell.user.is_console && !super::judge_mode::automatic(&boot),
         },
     );
+    context.documents = documents_panel(&documents?);
     Ok(
         systemprompt_web_admin_core::ssr::helpers::render_typed_page(
             &shell.engine,

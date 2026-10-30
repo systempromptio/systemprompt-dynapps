@@ -28,6 +28,11 @@ use crate::principal::{Credentials, Principal};
 
 pub(crate) const ADMIN_API_PREFIX: &str = "/api/public/admin";
 pub(crate) const SSR_PREFIX: &str = "/admin";
+
+pub(crate) struct DocumentsMount {
+    pub drive: platform::routes::drive_user::DriveDocuments,
+    pub bridge: Router,
+}
 pub(crate) const FARM_PUBLIC_PREFIX: &str = "/api/public/agent-farm";
 
 pub(crate) struct App {
@@ -65,11 +70,10 @@ fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
         Arc::from(globals::OAUTH_PEPPER),
     );
     identity::SsoDeps {
-        driver: Some(systemprompt::sso::SsoDriver::discover(
-            &ctx,
-            oauth,
-            Arc::clone(&sessions),
-        )),
+        driver: Some(
+            systemprompt::sso::SsoDriver::discover(&ctx, oauth, Arc::clone(&sessions))
+                .expect("SSO provider discovery"),
+        ),
         write_pool: Arc::clone(pool),
         session_service: sessions,
     }
@@ -118,6 +122,25 @@ fn core_planes(
 
 impl App {
     pub(crate) fn new(pool: &Arc<PgPool>, credentials: Credentials) -> Self {
+        Self::build(pool, credentials, None)
+    }
+
+    // The document store's routes beside the admin plane: the user-facing
+    // `/drive` pages and core's bridge Drive feed, nested where the server
+    // nests them.
+    pub(crate) fn with_documents(
+        pool: &Arc<PgPool>,
+        credentials: Credentials,
+        documents: DocumentsMount,
+    ) -> Self {
+        Self::build(pool, credentials, Some(documents))
+    }
+
+    fn build(
+        pool: &Arc<PgPool>,
+        credentials: Credentials,
+        documents: Option<DocumentsMount>,
+    ) -> Self {
         let database = Arc::new(Database::from_pools(
             Arc::clone(pool),
             Some(Arc::clone(pool)),
@@ -178,7 +201,7 @@ impl App {
         )
         .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>))
         .layer(axum::Extension(Arc::clone(&farm_state)));
-        let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
+        let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine.clone());
 
         // Core layers the governance engine and artifact ingest onto every
         // extension router; hooks, secrets and share sit outside the route
@@ -202,7 +225,21 @@ impl App {
         let secrets = admin::secrets_router(Arc::clone(pool));
         let share = admin::share_manifest_router(Arc::clone(pool));
 
-        let router = Router::new()
+        let mut router = Router::new();
+        if let Some(documents) = documents {
+            router = router
+                .nest_service(
+                    platform::routes::drive_user::USER_BASE_URL,
+                    admin::drive_ssr_router(
+                        Arc::clone(pool),
+                        engine.with_documents_enabled(true),
+                        globals::boot().clone(),
+                        documents.drive,
+                    ),
+                )
+                .nest_service("/v1", documents.bridge);
+        }
+        let router = router
             .nest_service(SSR_PREFIX, ssr)
             .nest_service("/bridge-auth", bridge_auth)
             .nest("/api/public", api)

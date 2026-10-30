@@ -16,9 +16,13 @@
 //! - [`BrandingConfig`] — branding fields parsed from
 //!   `services/web/config.yaml`.
 //! - [`html_escape`] — escape helper for template-bound strings.
+//! - [`documents_templates`] — the compiled-in `dynapps-note` document
+//!   template, registered with core's inventory by every binary that links this
+//!   crate: the server and the documents MCP server alike.
 
 pub mod config;
 pub mod config_errors;
+pub mod documents_templates;
 pub mod error;
 pub mod format;
 pub mod ids;

@@ -9,6 +9,7 @@ the same test on GKE.
 |---|---|---|
 | `postgres` Deployment, pg16, `pg_stat_statements`, lock-wait logging, exporter sidecar | Cloud SQL | `manifests/20-postgres.yaml` |
 | `mock-primary`, `mock-eu` (core `crates/tests/mock-inference`) | Vertex Claude global + europe-west1 | `manifests/30-mock-inference.yaml`, `Dockerfile.mock` |
+| hostPath PersistentVolume + `shared-web` ReadWriteMany claim over one host directory both app workers mount | Filestore (`pod.sharedWeb.existingClaim`) | `manifests/15-shared-web.yaml`, `kind-config.yaml` |
 | Prometheus with pod discovery on `prometheus.io/*` annotations | Managed Prometheus | `manifests/40-prometheus.yaml` |
 | inline Secret rendered by `deploy/self-host/render-profile.sh` | Secret Manager CSI | `cluster.sh secrets` |
 | `services/` ConfigMap mounted through `pod.extraVolumes` | the image's provider catalog, routes and policies | `services/` |
@@ -115,7 +116,7 @@ These were all found on first boot, and every one of them also applies to GKE.
   creates the directory tree in the init container, and the entrypoint
   refills it from `/app/share`.
 - **The authz hook runs in-process** (`governance.authz.hook.mode: extension`)
-  on every role, so no inference request crosses the admin pod.
+  on every role, so no inference request crosses an api pod.
 - **`render-profile.sh` does not generate `encryption_master_key`.** The rig
   passes the key in with `--secret`.
 - **Plain-http provider endpoints need `SYSTEMPROMPT_TRUSTED_HTTP_HOSTS`.** The

@@ -80,7 +80,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --trusted-proxies 10.10.0.0/16,10.20.0.0/16,10.30.0.0/16 \
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --image ghcr.io/systempromptio/systemprompt-dynapps:0.74.0     # validates the result in the image
+  --image ghcr.io/systempromptio/systemprompt-dynapps:0.76.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -129,7 +129,7 @@ On every node, with `/etc/dynapps/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.74.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
+export SYSTEMPROMPT_TAG=0.76.0 DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml run --rm app migrate   # node 1 only, once
@@ -152,7 +152,7 @@ balancer, so capacity never drops to zero. Run the checklist on each node
 once it is `healthy`, passing the node's `server.role`:
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.74.0 --role all
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.76.0 --role all
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its
@@ -209,8 +209,8 @@ With this profile's `paths`:
 | `storage.files` | `/app/storage/files` | per node, or shared; see below |
 | `storage.exports` | `/app/storage/exports` | per node; the weekly and monthly retention archives are not kept here but in the `storage:` backend under `exports/` |
 | `storage.data` | `/app/storage/data` (scratch under `data/scratch`) | per node, already `app_storage_data` |
-| `web.dist` | `/app/web/dist` | per node, already under `app_web` (admin and all roles) |
-| `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (admin and all roles) |
+| `web.dist` | `/app/web/dist` | per node, already under `app_web` (all and worker write it; api reads the worker's copy) |
+| `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (all and worker write it; api reads the worker's copy) |
 | CLI session store | `/app/.systemprompt/sessions` | per node, ephemeral (`emptyDir`) |
 
 The CLI session store is not a server root: the entrypoint's `admin
@@ -238,13 +238,18 @@ The Helm chart `deploy/helm/systemprompt-dynapps/` implements everything below; 
   uploaded and generated files live in one bucket every pod sees.
   `paths.storage` still needs a per-pod volume for the journal, exports and
   scratch space.
-- **Role split:** run exactly one `admin` Deployment (`server.role: admin`,
-  `replicas: 1`): it runs the scheduler, MCP and agent reconciliation and the
-  console. Run the gateway pods as a separate Deployment with `server.role:
-  gateway`, scaled freely; they mount only the gateway, bridge, OAuth and
-  health routes and run no workers, and they need neither `web.dist` nor
-  `services.cache_dir`. Two `admin` replicas would run the scheduler twice.
-  Check a node with `verify-node.sh --role gateway` or `--role admin`.
+- **Role split:** three Deployments from one image. `server.role: gateway`
+  pods mount only the gateway, bridge, OAuth and health routes, run no
+  scheduler or processes, need neither `web.dist` nor `services.cache_dir`,
+  and scale freely. `server.role: api` pods serve the console, agent, MCP,
+  content and static routes, run no scheduler and own no MCP or agent
+  process, and scale freely too; they read `web.dist` and
+  `services.cache_dir` from a volume the worker writes. `server.role: worker`
+  pods run the scheduler and own the MCP and agent processes; they compete
+  for one lease, so a second replica is a warm standby, and each sets
+  `server.advertise_url` to an address the api pods reach (its pod IP) and
+  stays off the public balancer. Check a node with `verify-node.sh --role
+  gateway`, `--role api` or `--role worker`.
 - **Migrations:** a Job running the image with argument `migrate`, before the
   rollout; no pod migrates on boot.
 

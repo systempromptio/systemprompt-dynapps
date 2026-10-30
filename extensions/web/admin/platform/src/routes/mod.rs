@@ -5,6 +5,7 @@
 //! relative to the mount point the root nests them under.
 
 pub mod api;
+pub mod drive_user;
 pub mod platform_ssr;
 pub mod public;
 pub mod ssr_bridge;

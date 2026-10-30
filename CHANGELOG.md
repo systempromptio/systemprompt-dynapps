@@ -20,6 +20,38 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.76.0 — 2026-10-29
+
+### Added
+
+- **User-facing Drive.** `/drive` lists a signed-in person's documents with core's `sp-document-browser` and creates one from an install template, and `/drive/{id}` shows the editor or preview by format with presence, comments, proposals, history and, for a person with `share` access, the share dialog. The document page asks core's document service for the viewer's access before it renders, so a person without a grant gets a 404. **My drive** sits in the sidebar's Account group while `files.documents.enabled` is on. The router reads the service from the extension context's dependencies and mounts `/drive` only when both are present. `docs/drive.md` describes the pages.
+- **Drive administration.** `/admin/drive` gains an **Agent edits** control per folder that sets `agent_edit_policy` (`direct` or `propose`) and a **New document** form that creates one from a template, `dynapps-word` first. `/admin/drive/{id}` reads the document as a page in a Dynapps-branded sheet, offers an **Edit** mode that commits block edits against the loaded revision and reloads the head when a save is refused, shows owners, authors, grants and editors by name through `/admin/drive/people`, and gains sharing, comments and proposals through core's components. `storage/documents/`, the local blob store, is ignored.
+- **Document analytics.** The skill and conversation analysis pages show the documents their runs created or edited, read from core's `report_document_revisions` view (`extensions/web/admin/analytics/src/repositories/analysis/documents/`). A conversation owns a revision carrying its context id, and a skill owns the revisions of the conversations its harness sessions ran, the sessions read from `analysis_skill_version_events` and joined through `conversation_facts`. The overview gains a **Documents touched** tile.
+- **Drive sync saves under core 0.75's agent policy.** Core 0.75 denies every document agent capability unless a registered policy allows it, and the bridge Drive sync is an agent on the `drive_sync` channel whose commit is a `replace_content`. `systemprompt-web-admin-governance` registers `dynapps-drive-sync-saves` (`document_agent_policy.rs`), which allows exactly that capability on that channel and denies the rest, so uploads from a synced folder keep landing.
+- **`just docs-smoke`.** The document store end to end against the installation running: the runtime and API boot on a profile over a throwaway database, and the `systemprompt-mcp-documents` binary runs as its own process. The agent's steps are MCP tool calls to the binary: a memo created from `dynapps-word` in one `documents_create`, a stale node guard refused as `guard_mismatch`, a one-op edit, a find-and-replace plus the next paragraph in one `documents_edit`, a Markdown append, a three-revision history, a comment resolved, an agent edit under a `propose` folder turned into a proposal and accepted, a note created from the compiled-in `dynapps-note` provider, and `documents_trash` refused as `agent_forbidden`, since core lets no agent trash a document. The people's steps are REST calls: the owner trashing the memo and bringing it back, with the agent's read in between refused as `trashed`, a group share, with the refusals before it and for an outsider carrying `error_key: not_found`, `/drive/{id}` per viewer, and the bridge Drive feed through a merged and a conflicting upload. The run fails when `tools/list` exceeds 7168 bytes (core 0.76 adds `documents_inbox`, 6659 bytes in all), a one-op edit result 400 bytes or a three-revision history 800 bytes. The Gates workflow runs it as the `docs-smoke` job, which `Gates passed` requires; `test-contract` no longer runs it.
+
+### Changed
+
+- **Built against published systemprompt-core 0.76.0.** The `[patch.crates-io]` blocks in `Cargo.toml` and `tests/Cargo.toml` are commented out, every `systemprompt*` pin names `0.76.0`, and `bridge/CORE_REF` is `v0.76.0`, so the image, CI and the bridge build from the released crates rather than the sibling checkout.
+- **The bridge discovers its identity path and hosts from the gateway.** Core 0.76 removes `register_identity_source!` and `suppress_host_app!`; a shared bridge binary reads them from the instance's `/.well-known/systemprompt-bridge` document. `services/ai/gateway.yaml` gains `gateway.bridge_instance`, naming `/bridge-auth/device-link`, the Dynapps identity envelope at `/api/public/bridge/whoami` and the `Dynapps` display name, and the hosts shown before the first sync follow `services/external_agents`, where `codex_cli` is off. `bridge/src/main.rs` and `bridge/src/registry.rs` drop the macro calls.
+- **Folder rules bind documents inside nested folders.** The governance extension's authorization decision (`extensions/web/admin/governance/src/authz_eval/mod.rs`) loads the rules of every ancestor folder a document-access request names and passes them to core's resolver, as core's own rule-based hook does, so a deny on an outer folder reaches a document in a subfolder. A failure to load an ancestor's rules answers `authorization_unavailable`.
+- **An enabled but unusable Entra ID configuration refuses to serve.** Core's SSO discovery now
+  fails on a provider factory error, so `entra_oidc::factory` returns `Ok(None)` while
+  `services/web/config/entra-oidc.yaml` is absent or `enabled: false`, and an error naming the
+  cause (`EntraSetupError::Incomplete` or `ClientSecretMissing`, an unreadable file, or a
+  provider that could not be built) when it is enabled. The web extension's router is then not
+  mounted and the error is logged, where it used to serve with the provider silently off.
+- **Built against systemprompt-core `next` at fdcb4d434.** Both `[patch.crates-io]` blocks are
+  active again and `bridge/CORE_REF` names that commit, which carries the document store past
+  0.74.0: the `documents` server lists `documents_untrash` where 0.74.0 listed
+  `documents_restore_document`, a refused tool result carries its code in structured content,
+  and a refused document request answers the HTTP envelope with that code as `error_key` and
+  the typed detail under `detail`. `tests/unit/mcp/src/documents_tools.rs` asserts the list.
+- **The `dynapps-note` provider lives in `systemprompt-web-shared`.** `extensions/web/shared/src/documents_templates.rs`
+  registers it with core's inventory, and `systemprompt-mcp-documents` links that crate, so the
+  template a person sees in Drive is the one the documents MCP server instantiates. The web
+  extension re-exports nothing for it; `docs-smoke` creates a note from it through the binary.
+
 ## 0.74.0 — 2026-10-27
 
 ### Breaking

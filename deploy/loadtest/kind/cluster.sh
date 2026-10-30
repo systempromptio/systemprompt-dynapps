@@ -44,6 +44,8 @@ load_image() {
 
 cmd_up() {
     if ! kind get clusters 2>/dev/null | grep -qx "$CLUSTER"; then
+        mkdir -p /tmp/dynapps-loadtest-shared-web
+        chmod 0777 /tmp/dynapps-loadtest-shared-web
         kind create cluster --config "$HERE/kind-config.yaml" --wait 120s
     fi
     cap_cpus
@@ -111,7 +113,8 @@ cmd_deploy() {
         --set-file secrets.inline.json="$SECRETS" \
         "${sets[@]+"${sets[@]}"}" --wait --timeout 15m
     k -n "$NS" rollout status deploy/dynapps-gateway --timeout 300s
-    k -n "$NS" rollout status deploy/dynapps-admin --timeout 300s
+    k -n "$NS" rollout status deploy/dynapps-api --timeout 300s
+    k -n "$NS" rollout status deploy/dynapps-worker --timeout 300s
 }
 
 cmd_image_local() {

@@ -35,7 +35,7 @@ pub use secrets_fixture::{
 };
 pub use services::{
     empty_services_view, extension_services, fixture_secret_store, offline_extension_services,
-    secret_store_without_master_key, services_view,
+    secret_store_without_master_key, services_view, subject_source,
 };
 pub use skip::{ci, skip_or_panic};
 pub use sso::{FakeOidcIdp, HeaderSpec, IdTokenSpec, KidForm, TestIdpKeys, TokenForm};

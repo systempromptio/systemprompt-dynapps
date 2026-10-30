@@ -17,11 +17,6 @@ use systemprompt_bridge::brand::{Brand, BrandAssets};
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 mod registry;
 
-// Why: core's stock `/v1/bridge/whoami` answers only id, email, name and roles;
-// this envelope adds the SSO issuer, directory groups, department and seat, and
-// core forwards the unknown keys verbatim.
-systemprompt_bridge::register_identity_source!("/api/public/bridge/whoami");
-
 static DYNAPPS_BRAND: Brand = Brand {
     app_name: "Dynapps Bridge",
     binary_name: "dynapps-bridge",

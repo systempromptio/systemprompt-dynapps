@@ -144,6 +144,8 @@ impl PortalEnv {
             plugin_id: None,
             purpose: None,
             act: None,
+            interaction: None,
+            browser_session: false,
         };
         let claims = JwtClaims { registered, custom };
         let mut header = Header::new(Algorithm::RS256);

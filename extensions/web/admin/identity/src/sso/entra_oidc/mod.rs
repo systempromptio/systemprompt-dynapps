@@ -26,7 +26,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use systemprompt::sso::{
     CookieSameSite, ExternalIdentity, SsoError, SsoHookContext, SsoIdentityPolicy, SsoPaths,
-    SsoProtocol, SsoProvider, SsoRedirect, SsoReturn, SsoStart, SsoStateContext, SsoStateSeed,
+    SsoProtocol, SsoProvider, SsoProviderError, SsoRedirect, SsoReturn, SsoStart, SsoStateContext,
+    SsoStateSeed,
 };
 
 pub use authorize::{
@@ -38,6 +39,7 @@ pub use discovery::OidcDiscovery;
 pub use token::ClientSecretSource;
 pub use verify::{identity_from_claims, resolve_issuer_template};
 
+use super::error::EntraSetupError;
 use authorize::random_b64url;
 use discovery::DiscoverySource;
 use token::{CodeRedemption, redeem_code};
@@ -83,38 +85,32 @@ impl EntraOidcProvider {
 
 // Why: core calls this hook once at discovery; only the client secret's
 // presence is checked, its value is re-read at every code redemption.
-pub fn factory(ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
+pub fn factory(ctx: &SsoHookContext) -> Result<Option<Arc<dyn SsoProvider>>, SsoProviderError> {
     let services_root = &ctx.services_root.path;
     let cfg = EntraOidcConfig::load(services_root, &ctx.config.api_external_url)
-        .inspect_err(|error| tracing::error!(%error, "Entra OIDC config rejected; provider off"))
-        .ok()
-        .map(Arc::new)?;
+        .map(Arc::new)
+        .map_err(|e| SsoProviderError::config(ID, e))?;
+    if !cfg.enabled {
+        return Ok(None);
+    }
     if !cfg.is_usable() {
-        if cfg.enabled {
-            tracing::warn!(
-                "Entra OIDC enabled but tenant_id, client_id or redirect_uri is unset; provider off"
-            );
-        }
-        return None;
+        return Err(SsoProviderError::config(ID, EntraSetupError::Incomplete));
     }
     let secret = ClientSecretSource::Store {
         store: Arc::clone(&ctx.secrets),
         key: cfg.client_secret_secret.clone(),
     };
     if secret.current().is_none() {
-        tracing::warn!(
-            key = %cfg.client_secret_secret,
-            "Entra OIDC client secret missing from the secrets store; provider off"
-        );
-        return None;
+        return Err(SsoProviderError::config(
+            ID,
+            EntraSetupError::ClientSecretMissing {
+                key: cfg.client_secret_secret.clone(),
+            },
+        ));
     }
-    match EntraOidcProvider::new(cfg, secret) {
-        Ok(provider) => Some(Arc::new(provider)),
-        Err(e) => {
-            tracing::warn!(error = %e, "Entra OIDC provider could not be built; provider off");
-            None
-        },
-    }
+    let provider = EntraOidcProvider::new(cfg, secret)
+        .map_err(|e| SsoProviderError::config(ID, EntraSetupError::Build(e)))?;
+    Ok(Some(Arc::new(provider)))
 }
 
 #[async_trait]

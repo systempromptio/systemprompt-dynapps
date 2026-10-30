@@ -31,7 +31,7 @@ use systemprompt_web_admin_farm::routes::{farm_fragments, farm_ssr};
 use systemprompt_web_admin_governance::routes::ssr_governance;
 use systemprompt_web_admin_identity::SsoDeps;
 use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as sign_in};
-use systemprompt_web_admin_platform::routes::{platform_ssr, ssr_bridge};
+use systemprompt_web_admin_platform::routes::{drive_user, platform_ssr, ssr_bridge};
 use systemprompt_web_admin_platform::service_accounts::ServiceAccounts;
 
 pub struct AdminSsrDeps {
@@ -167,6 +167,36 @@ fn platform_routes() -> Router<Arc<PgPool>> {
         .merge(platform_ssr::sync_routes())
         .merge(platform_ssr::drive_routes())
         .merge(observability_ssr::routes())
+}
+
+pub fn drive_ssr_router(
+    pool: Arc<PgPool>,
+    engine: AdminTemplateEngine,
+    boot: systemprompt_web_admin_core::extension_boot::ExtensionBoot,
+    documents: drive_user::DriveDocuments,
+) -> Router {
+    let inner = drive_user::routes()
+        .layer(Extension(engine))
+        .layer(Extension(boot))
+        .layer(Extension(documents))
+        .layer(axum_middleware::from_fn_with_state(
+            Arc::clone(&pool),
+            marketplace_context::marketplace_context_middleware,
+        ))
+        .layer(axum_middleware::from_fn(
+            systemprompt_web_admin_core::middleware::gates::require_user_middleware,
+        ))
+        .layer(axum_middleware::from_fn_with_state(
+            Arc::clone(&pool),
+            middleware::user_context_middleware,
+        ))
+        .with_state(pool);
+
+    Router::new().fallback_service(
+        tower::ServiceBuilder::new()
+            .layer(NormalizePathLayer::trim_trailing_slash())
+            .service(inner),
+    )
 }
 
 pub fn bridge_auth_ssr_router(pool: Arc<PgPool>, engine: AdminTemplateEngine) -> Router {

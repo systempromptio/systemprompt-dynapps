@@ -159,6 +159,7 @@ pub(super) fn build_context(
             &format!("skill={}&days={}", urlencoding::encode(key), query.days()),
         ),
         help: crate::handlers::ssr::analysis::help::skill_detail_help(),
+        documents: crate::handlers::ssr::analysis::documents_panel::DocumentsPanelView::default(),
     }
 }
 

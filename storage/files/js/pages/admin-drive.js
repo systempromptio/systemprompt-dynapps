@@ -1,8 +1,11 @@
 // Drive listing: one folder's subfolders and documents, read from the
 // document API page by page, with each document's live editors filled in
-// after its row is on screen.
+// after its row is on screen. Each folder's agent edit policy is editable, and
+// "New document" creates one from a template.
 import { cloneRow, editorsLabel, formatDate, loadEditors, readJson, shortId } from '../services/drive-rows.js';
 import { on, initDelegation } from '../services/events.js';
+import { rawFetch } from '../services/api.js';
+import { showToast } from '../services/toast.js';
 
 const enc = encodeURIComponent;
 
@@ -13,7 +16,26 @@ const folderRow = (folder, baseUrl) => {
   const link = row.querySelector('[data-field="link"]');
   link.textContent = folder.name;
   link.href = `${baseUrl}?folder=${enc(folder.id)}`;
+  const policy = row.querySelector('[data-action="drive-policy"]');
+  policy.dataset.folderId = folder.id;
+  policy.value = folder.agent_edit_policy ?? 'direct';
+  policy.dataset.saved = policy.value;
   return row;
+};
+
+const savePolicy = async (evt, select) => {
+  const { foldersApi } = state.root.dataset;
+  try {
+    await rawFetch(`${foldersApi}/${enc(select.dataset.folderId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ agent_edit_policy: select.value }),
+    });
+    select.dataset.saved = select.value;
+    showToast('Agent edit policy saved.', 'success');
+  } catch (err) {
+    select.value = select.dataset.saved;
+    showToast(err.message, 'error');
+  }
 };
 
 const fillEditors = async (row, documentsApi, id) => {
@@ -69,11 +91,37 @@ const loadSafely = async () => {
   }
 };
 
+const createDocument = async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const { driveCreate, baseUrl, folderId } = form.dataset;
+  const name = form.elements.name.value.trim();
+  if (!name) return;
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const created = await rawFetch(driveCreate, {
+      method: 'POST',
+      body: JSON.stringify({
+        template_id: form.elements.template_id.value,
+        name,
+        folder_id: folderId ?? null,
+        params: { values: { title: name } },
+      }),
+    });
+    window.location.assign(`${baseUrl}/${enc(created.document.id)}`);
+  } catch {
+    button.disabled = false;
+  }
+};
+
 export const init = () => {
+  document.querySelector('[data-drive-create]')?.addEventListener('submit', createDocument);
   state.root = document.querySelector('[data-drive-list]');
   if (!state.root) return;
   initDelegation();
   on('click', '[data-action="drive-more"]', loadSafely);
+  on('change', '[data-action="drive-policy"]', savePolicy);
   loadSafely();
 };
 

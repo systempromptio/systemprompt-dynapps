@@ -1,0 +1,9 @@
+<section class="sp-section sp-aconv-block" aria-label="Documents">
+{{#> components/table caption=(concat documents.created " created, " documents.edited " edited in the shared document store") modifier="sp-aconv-table"}}
+<thead><tr><th scope="col">Document</th><th scope="col">Format</th><th scope="col">Action</th><th scope="col" class="sp-table__cell--num">Revisions</th><th scope="col" class="sp-col-date">Last</th></tr></thead>
+<tbody>
+{{#each documents.rows}}<tr><td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}">{{name}}</a></td><td class="sp-u-mono">{{format}}</td><td>{{action}}</td><td class="sp-table__cell--num sp-u-num">{{revisions}}</td><td class="sp-col-date" title="{{last_title}}">{{last_display}}</td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="5">{{> components/empty-state heading="No documents" message="No revision in the document store is attributed to this."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Distinct documents that gained a revision in the window, by an author in\n-- scope.\nSELECT COUNT(DISTINCT r.document_id)::bigint AS \"touched!\"\nFROM report_document_revisions r\nWHERE r.created_at >= $1 AND r.created_at < $2\n  AND ($3::text[] IS NULL OR r.author_user_id = ANY($3))\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "touched!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "79c67e7cc9e22eeeac999a7de96f8335df2f76ab6bdc0270635b4d186f210851"
+}

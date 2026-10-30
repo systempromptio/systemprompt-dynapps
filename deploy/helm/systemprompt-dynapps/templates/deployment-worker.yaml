@@ -1,0 +1,46 @@
+{{- $fullname := include "dynapps.fullname" . -}}
+{{- $sel := dict "ctx" . "component" "worker" -}}
+# worker role: the scheduler and the MCP and agent processes. Replicas compete
+# for one lease; the holder supervises every process and the rest stand by, so
+# a rolling update hands the lease to the new pod instead of stopping both.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-worker
+  labels:
+    {{- include "dynapps.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  selector:
+    matchLabels:
+      {{- include "dynapps.selectorLabels" $sel | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "dynapps.labels" . | nindent 8 }}
+        {{- include "dynapps.selectorLabels" $sel | nindent 8 }}
+      annotations:
+        checksum/profile: {{ include "dynapps.profile" (dict "ctx" . "role" "worker") | sha256sum }}
+        checksum/secrets-source: {{ toJson .Values.secrets | sha256sum }}
+        {{- with .Values.worker.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "dynapps.podSpec" (dict "ctx" . "role" "worker" "component" "worker" "profileConfigMap" (printf "%s-profile-worker" $fullname) "serviceAccount" (include "dynapps.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "dynapps.secretName" .) "job" false "args" list "resources" .Values.worker.resources) | nindent 6 }}
+      {{- with .Values.worker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

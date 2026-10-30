@@ -18,12 +18,15 @@ systemprompt-web-extension = { workspace = true }
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-security = { workspace = true }
+systemprompt-provider-contracts = { workspace = true }
+tempfile = { workspace = true }
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 
 axum = { workspace = true }
 tower = { workspace = true }
 http-body-util = { workspace = true }
 chrono = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "process", "time"] }
 sqlx = { workspace = true }
 uuid = { workspace = true }
 base64 = { workspace = true }

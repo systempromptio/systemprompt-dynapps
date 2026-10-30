@@ -35,7 +35,7 @@ done
 echo "users ok" >&2
 INNER
 )
-$K exec deploy/dynapps-admin -c server -- sh -c "$inner" sh "$N" "$SET" "$PROJECTS"
+$K exec deploy/dynapps-worker -c server -- sh -c "$inner" sh "$N" "$SET" "$PROJECTS"
 
 proj_array="'$(echo "$PROJECTS" | sed "s/,/','/g")'"
 $K exec deploy/postgres -c postgres -- psql -U postgres -d systemprompt -q -c "
@@ -72,7 +72,7 @@ INNER
 )
 $K exec deploy/postgres -c postgres -- psql -U postgres -d systemprompt -Atc \
     "SELECT id FROM users WHERE name LIKE 'lt-$SET-%' ORDER BY name" \
-    | $K exec -i deploy/dynapps-admin -c server -- sh -c "$keys" sh "$SET" > "$OUT"
+    | $K exec -i deploy/dynapps-worker -c server -- sh -c "$keys" sh "$SET" > "$OUT"
 chmod 600 "$OUT"
 $K create secret generic "loadtest-tokens-$SET" --from-file=tokens.csv="$OUT" \
     --dry-run=client -o yaml | $K apply -f - >/dev/null

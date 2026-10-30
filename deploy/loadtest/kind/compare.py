@@ -59,7 +59,7 @@ def cells(r):
         f"{pod(r, 'postgres', 'cpu_m_avg')}/{pod(r, 'postgres', 'cpu_m_max')}",
         f"{pod(r, 'postgres', 'mem_mi_max')}",
         f"{pod(r, 'gateway', 'cpu_m_avg')}",
-        f"{pod(r, 'admin', 'cpu_m_avg')}",
+        f"{pod(r, 'worker', 'cpu_m_avg')}",
         f"{r.get('statements_per_request', 'n/a')}",
         f"{r['meta'].get('pg_restarts', 'n/a')}",
     ]
@@ -138,7 +138,7 @@ def main():
         rp = p.get(f"{k}-c{cp.get(k)}") if isinstance(cp.get(k), int) else None
         print(f"| {k} | {cb.get(k)} | {cp.get(k)} | {rb and rb['rps']} → {rp and rp['rps']} |")
     hdr = ("| run | image | rps | errors | e2e p50/p99 ms | overhead p50/p99 ms | PG CPU avg/max m | "
-           "PG mem max Mi | gateway CPU avg m | admin CPU avg m | DB stmts/req | PG restarts |")
+           "PG mem max Mi | gateway CPU avg m | worker CPU avg m | DB stmts/req | PG restarts |")
     print("\n### Per scenario\n")
     print(hdr)
     print("|" + "---|" * 12)

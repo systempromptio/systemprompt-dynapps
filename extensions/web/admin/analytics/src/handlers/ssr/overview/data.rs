@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
+use crate::repositories::analysis::documents::count_documents_touched;
 use crate::repositories::analytics::site::SiteScope;
 use crate::repositories::analytics::site::models::{ModelStatsRow, list_model_stats};
 use crate::repositories::overview::dimension_series::{DimensionBucket, OverviewDimension};
@@ -34,6 +35,25 @@ const TOP_ANOMALIES: i64 = 5;
 
 type Loaded<T> = Result<T, sqlx::Error>;
 
+#[derive(Debug, Clone, Copy, Default)]
+pub(super) struct DocumentsTouched {
+    pub current: i64,
+    pub previous: i64,
+}
+
+async fn load_documents_touched(pool: &PgPool, range: OverviewRange) -> Loaded<DocumentsTouched> {
+    let window = range.time_range();
+    let span = window.to - window.from;
+    let (current, previous) = tokio::join!(
+        count_documents_touched(pool, window.from, window.to, None),
+        count_documents_touched(pool, window.from - span, window.from, None),
+    );
+    Ok(DocumentsTouched {
+        current: current?,
+        previous: previous?,
+    })
+}
+
 pub(super) struct OverviewData {
     pub kpis: Loaded<OverviewKpis>,
     pub series: Loaded<Vec<OverviewSeriesPoint>>,
@@ -45,6 +65,7 @@ pub(super) struct OverviewData {
     pub groups: Loaded<Vec<ScopeCostRow>>,
     pub models: Loaded<Vec<ModelStatsRow>>,
     pub overhead: Loaded<Vec<GatewayOverheadDay>>,
+    pub documents: Loaded<DocumentsTouched>,
 }
 
 pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> OverviewData {
@@ -61,6 +82,7 @@ pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> O
         groups,
         models,
         overhead,
+        documents,
     ) = tokio::join!(
         kpis::get_overview_kpis(pool, window),
         series::list_overview_series(pool, window),
@@ -72,6 +94,7 @@ pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> O
         scopes::list_top_scopes_by_cost(pool, ScopeKind::Group, window, TOP_SCOPES),
         list_model_stats(pool, window, &scope),
         list_gateway_overhead_days(pool, OVERHEAD_DAYS),
+        load_documents_touched(pool, range),
     );
 
     OverviewData {
@@ -85,5 +108,6 @@ pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> O
         groups,
         models,
         overhead,
+        documents,
     }
 }

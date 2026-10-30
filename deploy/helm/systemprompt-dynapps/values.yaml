@@ -38,6 +38,12 @@ profile:
   maxInFlight: 512
   maxConcurrentStreams: 256
   logLevel: normal
+  # database.pool.max_connections_by_role. Postgres must admit
+  # sum(replicas(role) x (pool(role) + 2)) plus migration and operator sessions.
+  maxConnectionsByRole:
+    gateway: 20
+    api: 20
+    worker: 40
   # Uploaded and generated files. GKE uses one bucket every pod sees, reached
   # through Workload Identity (the GSA needs roles/storage.objectAdmin on it).
   storage:
@@ -218,14 +224,52 @@ gateway:
   podAnnotations: {}
 
 # ---------------------------------------------------------------------------
-# Admin role: console, scheduler, MCP servers, agents. Exactly ONE replica:
-# two would run the scheduler twice. Recreate strategy, so an upgrade never
-# overlaps two admins. No PDB (a 1-replica PDB blocks node drains).
+# API role: the console, agent, MCP, content, stream, messaging, extension and
+# static routes. No scheduler and no MCP or agent processes: MCP and agent
+# requests are forwarded to the worker that owns them. Scales horizontally.
+# An api pod serves web/dist and the services cache read-only and never
+# renders them; see pod.sharedWeb.
 # ---------------------------------------------------------------------------
-admin:
+api:
+  replicas: 2
   resources:
     requests: {cpu: "1", memory: 2Gi}
     limits: {cpu: "2", memory: 4Gi}
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 65
+    customMetric:
+      enabled: false
+      name: http_in_flight_saturation
+      targetAverageValue: "0.7"
+    behavior: {}
+  pdb:
+    enabled: true
+    minAvailable: 1
+  topologySpread: true
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# Worker role: the scheduler and the MCP server and agent processes. Workers
+# compete for one lease: the holder owns every process, the others stand by
+# and take over when it goes. 1 replica is enough; 2 gives a warm standby.
+# Each pod advertises http://<pod IP>:<service.port> to the api replicas
+# (server.advertise_url from the downward-API POD_IP); the worker port is on
+# no load balancer. No PDB by default (a 1-replica PDB blocks node drains).
+# ---------------------------------------------------------------------------
+worker:
+  replicas: 1
+  resources:
+    requests: {cpu: "1", memory: 2Gi}
+    limits: {cpu: "2", memory: 4Gi}
+  pdb:
+    enabled: false
+    minAvailable: 1
   nodeSelector: {}
   tolerations: []
   affinity: {}
@@ -246,7 +290,14 @@ pod:
     tmp: 1Gi           # memory-backed /tmp for MCP children
     home: 512Mi        # /home/app: LibreOffice profile for document exports
   extraEnv: []
-  # Extra volumes and mounts, added to the gateway, admin and migrate pods.
+  # An existing ReadWriteMany PVC (e.g. Filestore) holding web/ and
+  # services-cache/: the worker renders the public site and composes the
+  # services bundle cache into it and the api pods mount it read-only.
+  # Required whenever api pods run (api.replicas > 0 or api.autoscaling):
+  # the render fails without it, since an api pod never renders the site.
+  sharedWeb:
+    existingClaim: ""
+  # Extra volumes and mounts, added to the gateway, api, worker and migrate pods.
   # Typical use: a ConfigMap mounted over single files under /app/services
   # (subPath) to override ai/providers.yaml or gateway/policies.yaml without
   # rebuilding the image.
@@ -284,7 +335,7 @@ metrics:
 # ---------------------------------------------------------------------------
 # North-south traffic. Choose ONE of ingress (GKE Ingress + BackendConfig) or
 # gatewayApi (GKE Gateway controller). /v1 goes to the gateway pods, everything
-# else to the admin pod.
+# else to the api pods.
 # ---------------------------------------------------------------------------
 routing:
   host: ""              # REQUIRED, e.g. ai.example.com

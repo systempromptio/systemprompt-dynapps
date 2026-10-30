@@ -1,4 +1,4 @@
-{{- range $role := list "gateway" "admin" }}
+{{- range $role := list "gateway" "api" "worker" }}
 ---
 apiVersion: v1
 kind: ConfigMap

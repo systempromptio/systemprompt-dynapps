@@ -3,7 +3,7 @@
 {{- if and .Values.cloudSqlProxy.enabled (not $np.cloudSqlCidrs) }}
 {{- fail "networkPolicy.cloudSqlCidrs is required when the Cloud SQL proxy and the NetworkPolicy are both enabled" }}
 {{- end }}
-# Default-deny for every pod of this release (gateway, admin, migrate), then
+# Default-deny for every pod of this release (gateway, api, worker, migrate), then
 # an explicit allow-list. The Cloud SQL proxy is in the same pod, so the app's
 # 127.0.0.1:5432 never crosses the policy; the proxy's own egress does.
 apiVersion: networking.k8s.io/v1
@@ -25,6 +25,13 @@ spec:
         {{- end }}
       ports:
         - {port: {{ .Values.service.port }}, protocol: TCP}
+    # api replicas forward MCP and agent traffic to the worker's pod IP.
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "dynapps.selectorLabels" (dict "ctx" . "component" "api") | nindent 14 }}
+      ports:
+        - {port: {{ .Values.service.port }}, protocol: TCP}
     {{- if .Values.metrics.enabled }}
     - from:
         - namespaceSelector:
@@ -34,6 +41,12 @@ spec:
         - {port: {{ .Values.metrics.port }}, protocol: TCP}
     {{- end }}
   egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "dynapps.selectorLabels" (dict "ctx" . "component" "worker") | nindent 14 }}
+      ports:
+        - {port: {{ .Values.service.port }}, protocol: TCP}
     # DNS
     - to:
         - namespaceSelector: {}

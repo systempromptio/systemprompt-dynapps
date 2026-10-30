@@ -1,5 +1,5 @@
-//! One document: its preview, a download of the head revision, the revision
-//! history, the grants on it and who is editing it now.
+//! One document: its page view, the block editor, a download of the head
+//! revision, the revision history, the grants on it and who is editing it now.
 
 use axum::extract::Path;
 use axum::response::Response;
@@ -26,6 +26,9 @@ struct DriveDocumentPage {
     revisions_api: String,
     grants_api: String,
     presence_api: String,
+    projection_api: String,
+    edits_api: String,
+    people_api: String,
 }
 
 pub(crate) async fn drive_document_page(
@@ -53,6 +56,9 @@ pub(crate) async fn drive_document_page(
         revisions_api: format!("{api}/revisions"),
         grants_api: format!("{api}/grants"),
         presence_api: format!("{api}/presence"),
+        projection_api: format!("{api}/projection"),
+        edits_api: format!("{api}/edits"),
+        people_api: format!("{BASE_URL}/people"),
         document_api: api,
         document_id,
     };
