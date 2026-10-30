@@ -20,6 +20,12 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **Notification bell.** The admin top bar carries a bell over core's notification feed (`/api/v1/notifications`): mentions, shares and stream items, newest first, with an unread count kept live from `notification.created`, `notification.read` and `notification.escalated` on core's per-user AG-UI stream (`/api/v1/stream/agui`) and re-read when the stream reconnects. An entry marks itself read and opens the item's `open_url`; items at `human` attention are labelled "Needs you". Read state is core's, so the bell, the bridge and `documents_inbox` agree. A binary without the notifications feature answers 404 and the bell hides.
+- **Group notification audiences.** `systemprompt-web-admin-identity` registers a `NotificationAudienceResolver` (`dynapps-groups`) for `group:<id>` subjects over the effective membership in `user_groups`, active users only, so streams, rules and subscriptions can name groups. Without a database pool the resolver fails, and core withholds the subject instead of delivering to nobody.
+- **Notification declarations.** `services/notifications/` adds an `announcements` stream (everyone, silent, admins publish) and an `engineering` stream (the `staff` group) beside `issues`, a rule that caps document events written by agents at `agent`, evening quiet hours (Europe/Madrid) on `engineering`, and a subscription that brings admins into `engineering` as an hourly digest.
+
 ## 0.76.0 — 2026-10-29
 
 ### Added

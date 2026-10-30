@@ -1,0 +1,21 @@
+# Declared notification rules, applied to every recipient in priority order
+# before each recipient's own rules.
+rules:
+  - id: 3ec60908-34d6-40bf-a780-b122cbd7f506
+    name: Agents never interrupt
+    priority: 10
+    match:
+      kinds: ['document.*']
+      actor_is_agent: true
+    action:
+      cap: agent
+  - id: b1678f02-cd18-4c95-81af-c6eb54f2a361
+    name: Quiet evenings on engineering
+    priority: 50
+    match:
+      streams: [engineering]
+    action:
+      quiet_hours:
+        start: '19:00'
+        end: '08:00'
+        tz: Europe/Madrid

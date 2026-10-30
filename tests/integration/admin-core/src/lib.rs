@@ -152,6 +152,8 @@ mod groups_usage;
 #[cfg(test)]
 mod member_subscriptions;
 #[cfg(test)]
+mod notifications_group_audience;
+#[cfg(test)]
 mod projects_crud;
 #[cfg(test)]
 mod projects_members;

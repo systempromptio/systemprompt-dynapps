@@ -7,3 +7,29 @@ streams:
     audience: [role:admin]
     attention:
       default: agent
+
+  # Company-wide announcements: everyone follows, admins publish. Items
+  # arrive silently in the feed and the bell; nothing toasts.
+  - id: announcements
+    name: Announcements
+    description: Company-wide news from the platform team
+    audience: [everyone]
+    publishers: [role:admin]
+    attention:
+      default: silent
+      floor: silent
+      ceiling: agent
+    retention_days: 60
+
+  # Platform news for Dynapps staff, resolved through group membership. A
+  # rule may raise an item to `human` up to the ceiling.
+  - id: engineering
+    name: Engineering
+    description: Releases, gate failures and platform changes for developers
+    audience: [group:staff]
+    publishers: [role:admin]
+    attention:
+      default: silent
+      floor: silent
+      ceiling: human
+    coalesce_window_secs: 300
