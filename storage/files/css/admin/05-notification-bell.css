@@ -108,6 +108,11 @@
   white-space: nowrap;
 }
 
+.sp-bell__text {
+  font-size: var(--sp-text-sm);
+  overflow-wrap: anywhere;
+}
+
 .sp-bell__meta {
   display: flex;
   gap: var(--sp-space-2);

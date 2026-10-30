@@ -4,6 +4,7 @@
 // and the documents MCP inbox show one unread count.
 import { rawFetch, rawResponse } from './api.js';
 import { cloneRow, formatDate } from './drive-rows.js';
+import { initDelegation, onOutsideClick } from './events.js';
 
 const LIST_LIMIT = 20;
 const UNREAD_CAP = 1000;
@@ -138,7 +139,7 @@ const createBell = (root) => {
     toggle(false);
     button.focus();
   });
-  document.addEventListener('click', (evt) => {
+  onOutsideClick((evt) => {
     if (!panel.hidden && !root.contains(evt.target)) toggle(false);
   });
   root.querySelector('[data-action="bell-read-all"]').addEventListener('click', async () => {
@@ -153,6 +154,7 @@ const createBell = (root) => {
 export const initNotificationBell = () => {
   const root = document.querySelector('[data-notification-bell]');
   if (!root) return;
+  initDelegation();
   const bell = createBell(root);
   bell.load().catch(() => undefined);
   if (root.dataset.liveStream) listen(root.dataset.liveStream, bell.onEvent);
