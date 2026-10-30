@@ -52,6 +52,10 @@ Conventions (strict — hold every entry to them):
   template a person sees in Drive is the one the documents MCP server instantiates. The web
   extension re-exports nothing for it; `docs-smoke` creates a note from it through the binary.
 
+### Fixed
+
+- **The Docker image boots with Entra ID enabled.** `services/web/config/entra-oidc.yaml` ships `enabled: true`, and core refuses to start an enabled SSO provider without its client secret, which `admin setup` does not mint, so a first boot of the image crash-looped. `docker/entrypoint.sh` writes `ENTRA_OIDC_CLIENT_SECRET` into the secrets file on first boot, `docs/install/docker.md` lists it, and the release workflow's upgrade-boot gate passes a placeholder.
+
 ## 0.74.0 — 2026-10-27
 
 ### Breaking
