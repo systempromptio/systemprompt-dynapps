@@ -247,7 +247,8 @@ jobs:
       - name: Focused emergency hotfix gate
         if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
         run: just test-hotfix
-        timeout-minutes: 60
+        # Why: a PR into main cannot restore next's caches, so this build is cold.
+        timeout-minutes: 90
       - run: just test
         if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'hotfix/')
         timeout-minutes: 90
