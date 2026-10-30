@@ -28,7 +28,7 @@ use systemprompt::models::auth::{AuthenticatedUser, Permission};
 
 use crate::{globals, principal};
 
-const TOOLS_LIST_MAX_BYTES: usize = 6144;
+const TOOLS_LIST_MAX_BYTES: usize = 7168;
 const ONE_OP_EDIT_MAX_BYTES: usize = 400;
 const HISTORY_MAX_BYTES: usize = 800;
 

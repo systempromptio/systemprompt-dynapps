@@ -142,6 +142,22 @@
         "endpoint": "https://api.systemprompt.io/api/v1/licence/checkin",
         "interval_secs": 21600
       }
+    },
+    "notifications": {
+      "$ref": "#/$defs/NotificationsProfile",
+      "default": {
+        "retention_days": 90,
+        "max_audience": 500,
+        "unread_max_age_days": 180,
+        "failure_retention_days": 30,
+        "consumer": {
+          "batch": 64,
+          "poll_secs": 5,
+          "sweep_secs": 30,
+          "resolver_timeout_ms": 5000,
+          "channel_timeout_ms": 5000
+        }
+      }
     }
   },
   "additionalProperties": false,
@@ -810,6 +826,12 @@
           "default": 100
         },
         "content_per_second": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 50
+        },
+        "notifications_per_second": {
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
@@ -1861,6 +1883,84 @@
           "format": "uint64",
           "minimum": 0,
           "default": 21600
+        }
+      },
+      "additionalProperties": false
+    },
+    "NotificationsProfile": {
+      "description": "The `notifications:` profile block; every field has a default.",
+      "type": "object",
+      "properties": {
+        "retention_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 90
+        },
+        "max_audience": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 500
+        },
+        "unread_max_age_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 180
+        },
+        "failure_retention_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 30
+        },
+        "consumer": {
+          "$ref": "#/$defs/ConsumerProfile",
+          "default": {
+            "batch": 64,
+            "poll_secs": 5,
+            "sweep_secs": 30,
+            "resolver_timeout_ms": 5000,
+            "channel_timeout_ms": 5000
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ConsumerProfile": {
+      "description": "How the notifications outbox consumer drains.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 64
+        },
+        "poll_secs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 5
+        },
+        "sweep_secs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 30
+        },
+        "resolver_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 5000
+        },
+        "channel_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 5000
         }
       },
       "additionalProperties": false

@@ -28,6 +28,7 @@ const EXPECTED: [&str; 18] = [
     "documents_upload",
     "documents_guide",
     "documents_people",
+    "documents_inbox",
 ];
 
 fn repo_file(rel: &str) -> Value {
