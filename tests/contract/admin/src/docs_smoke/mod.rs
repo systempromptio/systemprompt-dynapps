@@ -136,7 +136,7 @@ async fn docs_smoke_the_document_store_end_to_end() {
     };
     access::bridge_round_trip(&rest, &mut mcp, &owner_side, &document).await;
     lifecycle::note_from_provider(&mut mcp).await;
-    lifecycle::trash_and_untrash(&mut mcp, &document).await;
+    lifecycle::trash_and_untrash(&mut mcp, &rest, &owner_token, &document).await;
 
     println!("docs-smoke measurements: {measured:?}");
     measured.assert_within_budget();

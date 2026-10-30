@@ -8,8 +8,11 @@
 #   scripts/sync-core-version.sh --check         # verify against the root pin
 #
 # Covered pins:
-#   Cargo.toml            systemprompt/-security/-extension
-#   tests/Cargo.toml      systemprompt/-security/-api (separate workspace)
+#   Cargo.toml            systemprompt/-security/-extension/-provider-contracts
+#   tests/Cargo.toml      systemprompt/-security/-api/-provider-contracts/-cli
+#                         (separate workspace)
+#   tests/unit/bridge, bridge/  path deps into the sibling core checkout at
+#                         bridge/CORE_REF, so CORE_REF is their pin
 #   any other systemprompt* pin in a Cargo.toml (residual sweep)
 #   bridge/CORE_REF       v<version>, when [patch.crates-io] is inactive
 #
@@ -62,6 +65,11 @@ check_or_apply Cargo.toml \
     "^systemprompt-extension = \\{ version = \"$VERSION\"" \
     "systemprompt-extension core pin"
 
+check_or_apply Cargo.toml \
+    "s|^systemprompt-provider-contracts = { version = \"[0-9.]*\"|systemprompt-provider-contracts = { version = \"$VERSION\"|" \
+    "^systemprompt-provider-contracts = \\{ version = \"$VERSION\"" \
+    "systemprompt-provider-contracts core pin"
+
 # tests/Cargo.toml — the test workspace is excluded from the root workspace and
 # carries its own copies of the same pins. Nothing else rewrites them, and a
 # stale pin here silently disables the test workspace's [patch.crates-io].
@@ -77,6 +85,15 @@ check_or_apply tests/Cargo.toml \
     "s|^systemprompt-api = { version = \"[0-9.]*\"|systemprompt-api = { version = \"$VERSION\"|" \
     "^systemprompt-api = \\{ version = \"$VERSION\"" \
     "systemprompt-api core pin (test workspace)"
+
+check_or_apply tests/Cargo.toml \
+    "s|^systemprompt-provider-contracts = { version = \"[0-9.]*\"|systemprompt-provider-contracts = { version = \"$VERSION\"|" \
+    "^systemprompt-provider-contracts = \\{ version = \"$VERSION\"" \
+    "systemprompt-provider-contracts core pin (test workspace)"
+check_or_apply tests/Cargo.toml \
+    "s|^systemprompt-cli = { version = \"[0-9.]*\"|systemprompt-cli = { version = \"$VERSION\"|" \
+    "^systemprompt-cli = \\{ version = \"$VERSION\"" \
+    "systemprompt-cli core pin (test workspace)"
 
 # Residual sweep: any core pin in any manifest that the rules above do not
 # already move. A pin added to a new crate would otherwise sit stale forever,

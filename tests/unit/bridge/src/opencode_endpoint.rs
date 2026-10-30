@@ -41,8 +41,13 @@ fn with_gateway_config(f: impl FnOnce()) {
 }
 
 fn base_url_for(loopback: &LoopbackEndpoint) -> String {
-    let facts = ProfileFacts::load(loopback, &McpRegistry::new(), ModelProtocolOverrides::new())
-        .expect("profile facts");
+    let facts = ProfileFacts::load(
+        loopback,
+        &McpRegistry::new(),
+        ModelProtocolOverrides::new(),
+        None,
+    )
+    .expect("profile facts");
     let inputs = facts.inputs_for(HostKind::OpenCode);
     let host = find_host_by_id(HostKind::OpenCode).expect("opencode host");
     let generated = host
@@ -72,6 +77,7 @@ fn a_proxy_that_never_started_renders_nothing_rather_than_the_gateway() {
             &loopback,
             &McpRegistry::new(),
             ModelProtocolOverrides::new(),
+            None,
         );
         assert!(
             facts.is_err(),

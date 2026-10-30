@@ -10,6 +10,15 @@ gateway:
   automatic_prompt_caching: true
   auth_scheme: bearer
   inference_path_prefix: /v1
+  # The bridge discovers these at /.well-known/systemprompt-bridge. The identity
+  # path is the Dynapps envelope (SSO issuer, directory groups, department,
+  # seat) rather than core's stock /v1/bridge/whoami, and the hosts it shows
+  # before the first sync follow services/external_agents (codex_cli is off).
+  bridge_instance:
+    device_link_path: /bridge-auth/device-link
+    identity_path: /api/public/bridge/whoami
+    branding:
+      display_name: Dynapps
   bridge_releases:
     repo: systempromptio/systemprompt-dynapps
     token_secret: DYNAPPS_RELEASE_TOKEN

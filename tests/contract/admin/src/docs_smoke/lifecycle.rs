@@ -1,14 +1,17 @@
 //! The lifecycle half of the agent's run over the binary: a note created
 //! from the compiled-in `dynapps-note` provider, which proves the binary
-//! links the crate that registers it, and the memo trashed and brought back
-//! with `documents_trash` and `documents_untrash`, a read in between refused
-//! as `trashed`.
+//! links the crate that registers it, and the memo trashed and brought back:
+//! the agent's `documents_trash` refused as `agent_forbidden`, the owner's
+//! REST trash and untrash, and the agent's read in between refused as
+//! `trashed`.
 
+use reqwest::StatusCode;
 use serde_json::json;
 use systemprompt::identifiers::DocumentId;
 
 use super::flow::read;
 use super::mcp::McpClient;
+use super::rest::Rest;
 
 pub(super) async fn note_from_provider(mcp: &mut McpClient) -> DocumentId {
     let created = mcp
@@ -40,11 +43,24 @@ pub(super) async fn note_from_provider(mcp: &mut McpClient) -> DocumentId {
     document
 }
 
-pub(super) async fn trash_and_untrash(mcp: &mut McpClient, document: &DocumentId) {
-    let trashed = mcp
-        .ok("documents_trash", json!({"document_id": document}))
+pub(super) async fn trash_and_untrash(
+    mcp: &mut McpClient,
+    rest: &Rest,
+    owner: &str,
+    document: &DocumentId,
+) {
+    let forbidden = mcp
+        .call("documents_trash", json!({"document_id": document}))
         .await;
-    assert_eq!(trashed.payload["trashed"], true, "{}", trashed.raw);
+    assert!(forbidden.is_error, "an agent trashes: {}", forbidden.raw);
+    assert_eq!(
+        forbidden.payload["code"], "agent_forbidden",
+        "{}",
+        forbidden.raw
+    );
+    let path = format!("/api/v1/documents/{}", document.as_str());
+    let trashed = rest.json("DELETE", &path, owner, &json!({})).await;
+    assert_eq!(trashed.status, StatusCode::NO_CONTENT, "{}", trashed.body);
     let refused = mcp
         .call(
             "documents_read",
@@ -58,16 +74,10 @@ pub(super) async fn trash_and_untrash(mcp: &mut McpClient, document: &DocumentId
     );
     assert_eq!(refused.payload["code"], "trashed", "{}", refused.raw);
     assert_eq!(refused.payload["trashed"], true, "{}", refused.raw);
-    let back = mcp
-        .ok("documents_untrash", json!({"document_id": document}))
+    let back = rest
+        .json("POST", &format!("{path}/untrash"), owner, &json!({}))
         .await;
-    assert_eq!(
-        back.payload["document_id"],
-        document.as_str(),
-        "{}",
-        back.raw
-    );
-    assert!(back.payload.get("trashed").is_none(), "{}", back.raw);
+    assert_eq!(back.status, StatusCode::OK, "{}", back.body);
     let (_, shown) = read(mcp, document).await;
     assert!(
         shown.iter().any(|line| line.text == "alpha by agent"),

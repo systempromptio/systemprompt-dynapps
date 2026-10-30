@@ -254,6 +254,7 @@ async fn deny_reason(
             facts: DecisionFacts {
                 model: Some(&row.model),
                 provider: None,
+                folder_ancestors: &[],
             },
         },
     );

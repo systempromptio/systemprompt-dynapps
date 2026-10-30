@@ -8,13 +8,16 @@ use std::sync::Arc;
 
 use systemprompt::database::{Database, DbPool};
 use systemprompt::events::{EventBroadcasters, EventRouter};
-use systemprompt::files::DocumentsConfig;
 use systemprompt::files::documents::DocumentService;
 use systemprompt::files::documents::templates::load_catalog;
+use systemprompt::files::issues::{IssueReportRepository, IssueService};
+use systemprompt::files::{DocumentsConfig, IssuesConfig};
 use systemprompt::governance::authz::{AccessControlRepository, AllowAllHook};
+use systemprompt::identifiers::InstanceId;
 use systemprompt::runtime::documents::{
-    DocumentsRuntime, DocumentsRuntimeParts, UserSubjectDirectory,
+    DocumentsRuntime, DocumentsRuntimeParts, ExtensionAudiences, UserSubjectDirectory,
 };
+use systemprompt::system::notification_sink;
 use systemprompt::traits::BackgroundTasks;
 use systemprompt::users::UserRepository;
 use systemprompt_web_admin_platform::routes::drive_user::DriveDocuments;
@@ -49,10 +52,17 @@ pub(crate) fn store(pool: &Arc<sqlx::PgPool>) -> Store {
         directory: Arc::new(UserSubjectDirectory::new(
             Arc::new(UserRepository::new(&database)),
             Vec::new(),
+            ExtensionAudiences::default(),
         )),
         event_router: EventRouter::local_only(Arc::new(EventBroadcasters::new())),
+        notifications: notification_sink(&database, InstanceId::new("documents-fixture")),
         catalog,
         config: DocumentsConfig::default(),
+        issues: Arc::new(IssueService::new(
+            IssueReportRepository::new(&database),
+            notification_sink(&database, InstanceId::new("documents-fixture")),
+            IssuesConfig::default(),
+        )),
         background_tasks: BackgroundTasks::new(),
         unscoped_actor: None,
         database,

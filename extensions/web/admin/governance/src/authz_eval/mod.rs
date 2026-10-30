@@ -26,9 +26,10 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use sqlx::PgPool;
+use systemprompt::governance::authz::resolver::ResolveParent;
 use systemprompt::governance::authz::{
     AccessControlRepository, AuthzDecision, AuthzRequest, ChainSources, Decision, DecisionFacts,
-    DenyReason, EntityKind, ParentChainIndex, ResolveBase, SubjectAttributes,
+    DenyReason, EntityKind, EntityRef, ParentChainIndex, ResolveBase, SubjectAttributes,
 };
 use systemprompt::identifiers::{ModelId, ProviderId, UserId};
 use systemprompt_web_admin_core::authz::caches;
@@ -43,6 +44,7 @@ struct Unavailable;
 
 struct Subject {
     grant: EntityGrant,
+    folder_ancestors: Vec<(EntityRef, EntityGrant)>,
     chains: ParentChainIndex,
     attributes: SubjectAttributes,
     roles: Vec<String>,
@@ -114,6 +116,30 @@ async fn parent_chains(
     Ok(chains)
 }
 
+async fn folder_ancestors(
+    pool: &Arc<PgPool>,
+    req: &AuthzRequest,
+) -> Result<Vec<(EntityRef, EntityGrant)>, Unavailable> {
+    if req.entity.kind() != EntityKind::Folder {
+        return Ok(Vec::new());
+    }
+    let ids = req.context.document_access_ancestors().map_err(|error| {
+        tracing::error!(%error, "authorization_unavailable: folder ancestors");
+        Unavailable
+    })?;
+    let mut loaded = Vec::with_capacity(ids.len());
+    for id in ids {
+        let grant = entity_grant(pool, EntityKind::Folder, id.as_str())
+            .await
+            .map_err(|error| {
+                tracing::error!(%error, %id, "authorization_unavailable: folder ancestor rules");
+                Unavailable
+            })?;
+        loaded.push((EntityRef::Folder(id), grant));
+    }
+    Ok(loaded)
+}
+
 async fn read_subject(
     pool: &Arc<PgPool>,
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
@@ -126,6 +152,7 @@ async fn read_subject(
             tracing::error!(%error, %id, "authorization_unavailable: entity rules");
             Unavailable
         })?;
+    let folder_ancestors = folder_ancestors(pool, req).await?;
     let chains = parent_chains(pool, services).await?;
     let attributes = (services).subject_attributes(&req.user_id)
         .await
@@ -139,6 +166,7 @@ async fn read_subject(
     })?;
     Ok(Subject {
         grant,
+        folder_ancestors,
         chains,
         attributes,
         roles,
@@ -205,6 +233,15 @@ async fn decide(
     let (entity, rules) = &subject.grant;
     let model = req.context.gateway_invocation_model();
     let provider = req.context.gateway_invocation_provider();
+    let ancestor_parents: Vec<ResolveParent<'_>> = subject
+        .folder_ancestors
+        .iter()
+        .map(|(entity, (row, rules))| ResolveParent {
+            entity,
+            rules,
+            default_included: row.as_ref().map(|e| e.default_included),
+        })
+        .collect();
     let decision = subject.chains.resolve(
         req.entity.kind(),
         req.entity.id_str(),
@@ -218,6 +255,7 @@ async fn decide(
             facts: DecisionFacts {
                 model: model.as_ref().map(ModelId::as_str),
                 provider: provider.as_ref().map(ProviderId::as_str),
+                folder_ancestors: &ancestor_parents,
             },
         },
     );
