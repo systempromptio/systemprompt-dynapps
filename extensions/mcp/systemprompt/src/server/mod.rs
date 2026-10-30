@@ -4,6 +4,7 @@
 //! Per-call logic (RBAC, auditing, CLI-to-artifact conversion) lives in
 //! the `tool` submodule.
 
+mod issues;
 mod overflow;
 #[doc(hidden)]
 pub mod tool;
@@ -38,6 +39,7 @@ use systemprompt::mcp::services::ui_renderer::registry::create_default_registry;
 
 use crate::cli::CliLocation;
 
+pub use issues::IssueTools;
 use systemprompt::mcp::client_profile_from_peer;
 use tool::dispatch_tool;
 
@@ -50,6 +52,7 @@ pub struct SystempromptServer {
     artifact_ingest: Arc<ArtifactIngest>,
     cli: CliLocation,
     renderers: Arc<UiRendererRegistry>,
+    issues: IssueTools,
 }
 
 impl std::fmt::Debug for SystempromptServer {
@@ -85,7 +88,14 @@ impl SystempromptServer {
             artifact_ingest,
             cli,
             renderers: Arc::new(create_default_registry()),
+            issues: IssueTools::default(),
         }
+    }
+
+    #[must_use]
+    pub fn with_issues(mut self, issues: IssueTools) -> Self {
+        self.issues = issues;
+        self
     }
 }
 
@@ -121,7 +131,8 @@ impl ServerHandler for SystempromptServer {
              conversations, active days, skills, titles), conversation_list (one row per \
              conversation), usage_by_user (spend per user), request_log (requests by user/window, cursor-paged), \
              conversation_audit (one request's transcript, paged and bounded), users (roster), \
-             admin_report (dashboard). The 'systemprompt' tool runs any other CLI command: \
+             admin_report (dashboard). report_issue files a bug or feedback report about this \
+             platform when issue reports are on. The 'systemprompt' tool runs any other CLI command: \
              'core skills list', 'core skills show <id>', 'admin users role promote <id>'. \
              Never pass --json or --export. Full documentation: {WEBSITE_URL}/docs"
         ))
@@ -141,7 +152,8 @@ impl ServerHandler for SystempromptServer {
         _request: Option<PaginatedRequestParams>,
         _ctx: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListToolsResult, McpError>> + MaybeSendFuture + '_ {
-        let tool_list = tools::list_tools();
+        let mut tool_list = tools::list_tools();
+        tool_list.extend(self.issues.list());
         std::future::ready(Ok(build_tool_list_result(tool_list)))
     }
 
@@ -185,6 +197,13 @@ impl ServerHandler for SystempromptServer {
         .await;
 
         let client = client_profile_from_peer(&ctx);
+        if let Some(result) = self
+            .issues
+            .call(&self.executor, &request, &request_context, &client)
+            .await
+        {
+            return result.map(Into::into);
+        }
         dispatch_tool(
             &tool::Dispatch {
                 service_id: &self.service_id,

@@ -15,6 +15,7 @@
 //!   administrator-only `all` scope, and `farm_dashboard`'s JSON shape against
 //!   the fields its dashboard artifact reads
 //! - the `documents` server's tool surface and its manifest/services yaml
+//! - the issue report tools on the `systemprompt` server and their config
 
 #[cfg(test)]
 mod access_policy;
@@ -41,6 +42,8 @@ mod bounds;
 mod documents_tools;
 #[cfg(test)]
 mod farm_dashboard_shape;
+#[cfg(test)]
+mod issues_tools;
 #[cfg(test)]
 mod typed_activity;
 #[cfg(test)]

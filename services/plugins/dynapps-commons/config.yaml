@@ -17,6 +17,7 @@ plugin:
     source: explicit
     include:
       - who_am_i
+      - report_issue
   agents:
     source: explicit
     include: []

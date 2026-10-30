@@ -1,0 +1,9 @@
+# Issue reports: core announces each new bug or feedback report on the
+# `issues` stream; this declaration names who triages them.
+streams:
+  - id: issues
+    name: Issue reports
+    description: New bug and feedback reports from users and their agents
+    audience: [role:admin]
+    attention:
+      default: agent
