@@ -16,8 +16,8 @@ plugin:
   skills:
     source: explicit
     include:
-      - who_am_i
       - report_issue
+      - who_am_i
   agents:
     source: explicit
     include: []

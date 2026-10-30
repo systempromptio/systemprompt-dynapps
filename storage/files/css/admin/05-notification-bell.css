@@ -77,13 +77,16 @@
 
 .sp-bell__list { margin: 0; padding: 0; list-style: none; }
 
+.sp-bell__item { border-bottom: 1px solid var(--sp-border-subtle); }
+
+.sp-bell__item:last-child { border-bottom: none; }
+
 .sp-bell__link {
   display: grid;
   gap: var(--sp-space-1);
   padding: var(--sp-space-2) var(--sp-space-3);
   color: var(--sp-text-primary);
   text-decoration: none;
-  border-bottom: 1px solid var(--sp-border-subtle);
 }
 
 .sp-bell__link:hover { background: var(--sp-bg-surface-alt); }
