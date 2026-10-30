@@ -38,6 +38,7 @@ Edit `.env`:
 | `POSTGRES_PASSWORD`, `HTTP_PORT`, `PG_PORT` | no | bundled Postgres and port mapping |
 | `DATABASE_URL` | remote DB only | see below |
 | `DATABASE_WRITE_URL` | read/write split only | primary for writes when `DATABASE_URL` is a read replica; core refuses a standby as write target |
+| `ENTRA_OIDC_CLIENT_SECRET` | while `services/web/config/entra-oidc.yaml` is `enabled: true` | the Entra ID app registration's client secret, written to the secrets file on first boot; core refuses to start an enabled SSO provider without it |
 
 ## 3. Run
 

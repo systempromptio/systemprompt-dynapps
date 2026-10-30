@@ -92,6 +92,13 @@ else
             jq --arg db "$DATABASE_WRITE_URL" '.database_write_url = $db' "$SECRETS_FILE" \
                 > "$SECRETS_FILE.tmp" && mv "$SECRETS_FILE.tmp" "$SECRETS_FILE"
         fi
+        # 2b'. services/web/config/entra-oidc.yaml ships enabled, and core
+        #      refuses to build the router while an enabled SSO provider has no
+        #      client secret; setup does not mint one.
+        if [ -n "${ENTRA_OIDC_CLIENT_SECRET:-}" ]; then
+            jq --arg s "$ENTRA_OIDC_CLIENT_SECRET" '.entra_oidc_client_secret = $s' "$SECRETS_FILE" \
+                > "$SECRETS_FILE.tmp" && mv "$SECRETS_FILE.tmp" "$SECRETS_FILE"
+        fi
         # 2c. The gateway accounting journal and at-rest sealing refuse to
         #     start without encryption_master_key, and setup does not mint it.
         if [ -z "$(jq -r '.encryption_master_key // empty' "$SECRETS_FILE")" ]; then
