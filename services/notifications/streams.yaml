@@ -5,6 +5,7 @@ streams:
     name: Issue reports
     description: New bug and feedback reports from users and their agents
     audience: [role:admin]
+    publishers: [role:admin]
     attention:
       default: agent
 

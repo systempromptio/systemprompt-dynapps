@@ -1,6 +1,6 @@
 22d52cf9b5c5852fe67cf82a2927166829c15be9c6bfda0e0e4ab9233e96cd04  .github/workflows/gates.yml
 2f02086b4967335ad575ca17c5dc87b4c8fe315ea607464cdb3e8b270839d458  .github/workflows/coverage.yml
-31dc4b106b2b5945e1e2e44af92ca261faad8cd58658502f6b72ebd7490e5458  .github/workflows/release.yml
+0f9275dd13916ce8cac24334634d173e5e921a3c41189e9993af8d78326c44b6  .github/workflows/release.yml
 bc97803953def32ef6ac70314174148ec28b53f90d4bb9271e0349ba0f1ca3df  .github/actions/core-checkout/action.yml
 65f00903ace1375b47dc141b7b2cc44327df5ffef858fe5e238bad0b61d02c55  .github/actions/apple-signing/action.yml
 a66c6143be0015d6a40c591335e5725aa1fb249dcc327b2eda5585b053630c27  .github/actions/free-disk/action.yml

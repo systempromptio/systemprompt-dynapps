@@ -18,6 +18,12 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
+
+### Fixed
+
+- **The `issues` notification stream declares its publishers.** Core requires a non-empty `publishers` on every stream; boot refused `services/notifications/streams.yaml` without it.
+- **A hotfix release no longer rebuilds a tree its PR already proved.** `release.yml` checks the merged hotfix PR's Gates proof and skips the cold static/clippy/test-hotfix pass when it is green; `scripts/check-hotfix-green.sh` matches the merged PR by head and base, because GitHub empties a run's `pull_requests` once the PR merges. The cold fallback installs `gcc-mingw-w64-x86-64` for the bridge's Windows clippy and has 150 minutes.
+- **The macOS bridge builds on `macos-15`.** `macos-14` runners are in brownout and retire on 2026-11-02.
 ## Unreleased
 
 ### Added

@@ -11,9 +11,13 @@ get_proof() {
     gh api -X GET "repos/$repo/actions/workflows/gates.yml/runs" -f event=pull_request -f branch="$ref" -f head_sha="$head" -f per_page=1
 }
 proof="$(get_proof)"
-identity="$(jq -er --arg head "$head" --arg ref "$ref" --arg base "$base" '
+# Why: GitHub empties a run's pull_requests once its PR merges, so after the
+# merge the PR itself is matched by head branch, head and base instead.
+merged="$(gh api -X GET "repos/$repo/pulls" -f state=closed -f head="${repo%%/*}:$ref" -f base=main -f per_page=5 |
+    jq --arg head "$head" --arg base "$base" '[.[] | select(.merged_at != null and .head.sha == $head and .base.sha == $base)] | length')"
+identity="$(jq -er --arg head "$head" --arg ref "$ref" --arg base "$base" --argjson merged "${merged:-0}" '
     .workflow_runs[0] | select(.event == "pull_request" and .head_branch == $ref and .head_sha == $head and .status == "completed" and .conclusion == "success") |
-    select(any(.pull_requests[]; .base.ref == "main" and .base.sha == $base and .head.sha == $head)) |
+    select(any(.pull_requests[]; .base.ref == "main" and .base.sha == $base and .head.sha == $head) or (.pull_requests == [] and $merged == 1)) |
     [.id,.run_attempt] | @tsv' <<<"$proof")" || die 'latest exact hotfix PR run is missing, pending, or unsuccessful'
 IFS=$'\t' read -r run_id attempt <<<"$identity"
 [[ "$run_id" =~ ^[0-9]+$ && "$attempt" =~ ^[1-9][0-9]*$ ]] || die 'missing run identity'
