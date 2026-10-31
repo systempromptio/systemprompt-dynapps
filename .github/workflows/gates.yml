@@ -352,6 +352,62 @@ jobs:
       - run: just docs-smoke
         timeout-minutes: 90
 
+  # The PR's own runtime image, booted over the newest recorded release
+  # schema with the real services/ tree: the one check that starts the server
+  # the way production does before release.yml's upgrade-boot.
+  boot:
+    if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
+    name: Boot (image over the newest release schema)
+    runs-on: ubuntu-latest
+    # Why: a PR into main cannot restore next's caches, so this build is cold.
+    timeout-minutes: 100
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      SQLX_OFFLINE: "true"
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: ./.github/actions/free-disk
+      - uses: ./.github/actions/core-checkout
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev postgresql-client jq
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: test-core
+          save-if: false
+      - name: Build the server binaries the image ships
+        timeout-minutes: 75
+        run: |
+          set -euo pipefail
+          bins=$(sed -n 's/^CI_SERVER_BINS=//p' .github/ci-params.env)
+          args=(); for b in $bins; do args+=(--bin "$b"); done
+          cargo build --workspace "${args[@]}"
+          mkdir -p .release-bin/amd64
+          for b in $bins; do cp "target/debug/$b" .release-bin/amd64/; done
+      - name: Build the runtime image from those binaries
+        run: docker build --build-arg BIN_STAGE=prebuilt -t boot-gate:pr .
+      - name: Boot over the newest release schema
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          export RELEASE_GATE_EMAIL=$(sed -n 's/^CI_RELEASE_GATE_EMAIL=//p' .github/ci-params.env)
+          bash scripts/boot-image-over-rung.sh boot-gate:pr "$(ls tests/fixtures/schema/release-baseline-*.sql | sort -V | tail -1)"
+
   # cargo-deny and cargo-audit over every workspace (root, tests/, bridge/).
   # Advisory databases are fetched under a retry, then checked offline, so a
   # flaky fetch is retried and a real finding fails once.
@@ -428,7 +484,7 @@ jobs:
     name: Gates passed
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [promotion, hotfix, static, lint, test, schema-ladder, docs-smoke, supply-chain]
+    needs: [promotion, hotfix, static, lint, test, schema-ladder, docs-smoke, boot, supply-chain]
     if: always()
     steps:
       - env:
@@ -436,14 +492,14 @@ jobs:
           IS_HOTFIX: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/') }}
           IS_PROMOTION: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
-          tiers='.static.result == "%s" and .lint.result == "%s" and .test.result == "%s" and .["schema-ladder"].result == "%s" and .["docs-smoke"].result == "%s" and .["supply-chain"].result == "%s"'
+          tiers='.static.result == "%s" and .lint.result == "%s" and .test.result == "%s" and .["schema-ladder"].result == "%s" and .["docs-smoke"].result == "%s" and .boot.result == "%s" and .["supply-chain"].result == "%s"'
           if [ "$IS_PROMOTION" = true ]; then
             # shellcheck disable=SC2059
-            jq -e ".promotion.result == \"success\" and $(printf "$tiers" skipped skipped skipped skipped skipped skipped)" <<<"$NEEDS_JSON" >/dev/null
+            jq -e ".promotion.result == \"success\" and $(printf "$tiers" skipped skipped skipped skipped skipped skipped skipped)" <<<"$NEEDS_JSON" >/dev/null
           elif [ "$IS_HOTFIX" = true ]; then
             # shellcheck disable=SC2059
-            jq -e ".hotfix.result == \"success\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success success)" <<<"$NEEDS_JSON" >/dev/null
+            jq -e ".hotfix.result == \"success\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success success success)" <<<"$NEEDS_JSON" >/dev/null
           else
             # shellcheck disable=SC2059
-            jq -e ".hotfix.result == \"skipped\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success success)" <<<"$NEEDS_JSON" >/dev/null
+            jq -e ".hotfix.result == \"skipped\" and .promotion.result == \"skipped\" and $(printf "$tiers" success success success success success success success)" <<<"$NEEDS_JSON" >/dev/null
           fi
