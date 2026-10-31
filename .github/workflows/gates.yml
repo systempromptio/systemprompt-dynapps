@@ -358,7 +358,9 @@ jobs:
   boot:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Boot (image over the newest release schema)
-    runs-on: ubuntu-latest
+    # Why: the runtime image is Debian bookworm (glibc 2.36); binaries linked
+    # on ubuntu-latest need glibc 2.39. release.yml's server job uses 22.04 too.
+    runs-on: ubuntu-22.04
     # Why: a PR into main cannot restore next's caches, so this build is cold.
     timeout-minutes: 100
     env:
