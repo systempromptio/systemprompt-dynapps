@@ -1,0 +1,28 @@
+[package]
+name = "dynwork-relay-integration-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+dynwork-relay = { workspace = true }
+# The throwaway database for the Postgres store suite (db_or_skip!).
+dynapps-test-common = { workspace = true }
+systemprompt = { workspace = true }
+systemprompt-security = { workspace = true }
+# Core's middleware, applied around the relay router as the server applies it.
+systemprompt-api = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+http-body-util = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+sqlx = { workspace = true }

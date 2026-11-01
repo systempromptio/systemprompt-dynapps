@@ -20,6 +20,7 @@ members = [
     "extensions/cli/kit-export",
     "extensions/cli/farm-worker",
     "extensions/secrets/onepassword",
+    "extensions/dynwork-relay",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
 # when these extension crates are consumed as dependencies. Run it explicitly:
@@ -72,6 +73,7 @@ systemprompt-web-site = { path = "extensions/web/site" }
 systemprompt-web-jobs = { path = "extensions/web/jobs" }
 systemprompt-mcp-shared = { path = "extensions/mcp/shared" }
 systemprompt-secrets-onepassword = { path = "extensions/secrets/onepassword" }
+dynwork-relay = { path = "extensions/dynwork-relay" }
 serde_jcs = "0.1"
 
 # Core runtime dependencies
@@ -266,6 +268,8 @@ systemprompt = { workspace = true, features = ["full", "slack", "teams"] }
 
 # Local extensions
 systemprompt-web-extension = { workspace = true }
+# The DynWork relay; linked for its `register_extension!` entry.
+dynwork-relay = { workspace = true }
 
 # Runtime
 tokio = { workspace = true }

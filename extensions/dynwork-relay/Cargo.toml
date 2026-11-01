@@ -1,0 +1,47 @@
+[package]
+name = "dynwork-relay"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "DynWork relay for the Dynapps instance: routes end-to-end-encrypted envelopes between a user's DynWork desktops and phones over WebSocket, pairs phones and revokes them. It never holds a key that opens what it routes."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+# extension_migrations!() expands to ::systemprompt_extension paths; machete
+# cannot see macro-expansion usage.
+[package.metadata.cargo-machete]
+ignored = ["systemprompt-extension"]
+
+[lints]
+workspace = true
+
+[dependencies]
+# Audit: uses extension, models (auth), identifiers, traits (BackgroundTasks)
+# and database — the workspace's `core`, `database` and `config` features.
+systemprompt = { workspace = true }
+# Direct dep so the `extension_migrations!()` expansion resolves.
+systemprompt-extension = { workspace = true }
+
+# WebSockets are enabled for this crate only (axum's `ws` feature).
+axum = { workspace = true, features = ["ws"] }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+async-trait = { workspace = true }
+futures-util = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+sha2 = { workspace = true }
+hex = { workspace = true }
+base64 = { workspace = true }
+rand = { workspace = true }
+
+[build-dependencies]
+systemprompt-extension = { workspace = true }
