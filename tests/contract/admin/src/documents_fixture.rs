@@ -55,16 +55,17 @@ pub(crate) fn store(pool: &Arc<sqlx::PgPool>) -> Store {
             ExtensionAudiences::default(),
         )),
         event_router: EventRouter::local_only(Arc::new(EventBroadcasters::new())),
-        notifications: notification_sink(&database, InstanceId::new("documents-fixture")),
+        notifications: notification_sink(&database, &InstanceId::new("documents-fixture")),
         catalog,
         config: DocumentsConfig::default(),
         issues: Arc::new(IssueService::new(
             IssueReportRepository::new(&database),
-            notification_sink(&database, InstanceId::new("documents-fixture")),
+            notification_sink(&database, &InstanceId::new("documents-fixture")),
             IssuesConfig::default(),
         )),
         background_tasks: BackgroundTasks::new(),
-        unscoped_actor: None,
+        unscoped_actor: Some(systemprompt::files::documents::agents::DocumentActor::Human),
+        brain: Arc::new(systemprompt::runtime::documents::BrainUnavailableSink),
         database,
     });
     Store {

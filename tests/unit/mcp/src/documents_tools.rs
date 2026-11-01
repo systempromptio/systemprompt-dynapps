@@ -1,4 +1,4 @@
-//! The `documents` MCP server: it advertises exactly core's sixteen document
+//! The `documents` MCP server: it advertises exactly core's nineteen document
 //! tools under the `documents` server name, and its extension manifest and
 //! `services/mcp/documents.yaml` agree on the binary and the port, and that the
 //! server is declared with user-scoped OAuth and off by default.

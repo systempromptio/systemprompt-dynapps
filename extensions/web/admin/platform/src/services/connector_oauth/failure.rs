@@ -50,7 +50,7 @@ impl FailureKind {
 #[derive(Debug)]
 pub(crate) struct FlowFailure {
     pub(crate) kind: FailureKind,
-    pub(crate) error: AdminError,
+    pub(crate) error: Box<AdminError>,
 }
 
 pub(crate) type FlowResult<T> = Result<T, FlowFailure>;
@@ -66,15 +66,21 @@ impl FlowFailure {
             },
             FailureKind::Outage | FailureKind::InvalidResponse => AdminError::Upstream(message),
         };
-        Self { kind, error }
+        Self {
+            kind,
+            error: Box::new(error),
+        }
     }
 
-    pub(crate) const fn verification(error: AdminError) -> Self {
+    pub(crate) fn verification(error: AdminError) -> Self {
         let kind = match error {
             AdminError::Unauthorized(_) | AdminError::Forbidden(_) => FailureKind::Permission,
             _ => FailureKind::Outage,
         };
-        Self { kind, error }
+        Self {
+            kind,
+            error: Box::new(error),
+        }
     }
 }
 

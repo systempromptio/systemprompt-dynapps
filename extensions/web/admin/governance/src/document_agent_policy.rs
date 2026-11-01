@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use systemprompt::database::DbPool;
 use systemprompt::files::documents::agents::{
-    AgentAccessPolicy, AgentActor, AgentCapability, AgentChannel, DocumentContext,
+    AgentAccessPolicy, AgentActor, AgentCap, AgentCapability, AgentChannel, DocumentContext,
 };
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -30,6 +30,10 @@ pub const fn allows(capability: AgentCapability, channel: AgentChannel) -> bool 
 impl AgentAccessPolicy for DriveSyncSavesPolicy {
     fn name(&self) -> &'static str {
         "dynapps-drive-sync-saves"
+    }
+
+    async fn cap(&self, _doc: &DocumentContext, _agent: &AgentActor) -> AgentCap {
+        AgentCap::Edit
     }
 
     async fn allows(

@@ -19,19 +19,29 @@ Conventions (strict — hold every entry to them):
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
 
-### Fixed
-
-- **Gates boot the PR's own image.** A `boot` job builds the runtime image from `Dockerfile` with the PR's server binaries (`CI_SERVER_BINS`) and boots it over the newest recorded release schema with the real `services/` tree (`scripts/boot-image-over-rung.sh`), and `Gates passed` requires it. Before, only `release.yml`'s upgrade-boot started the server.
-- **The `issues` notification stream declares its publishers.** Core requires a non-empty `publishers` on every stream; boot refused `services/notifications/streams.yaml` without it.
-- **A hotfix release no longer rebuilds a tree its PR already proved.** `release.yml` checks the merged hotfix PR's Gates proof and skips the cold static/clippy/test-hotfix pass when it is green; `scripts/check-hotfix-green.sh` matches the merged PR by head and base, because GitHub empties a run's `pull_requests` once the PR merges. The cold fallback installs `gcc-mingw-w64-x86-64` for the bridge's Windows clippy and has 150 minutes.
-- **The macOS bridge builds on `macos-15`.** `macos-14` runners are in brownout and retire on 2026-11-02.
 ## Unreleased
+
+## 0.77.0 — 2026-11-01
 
 ### Added
 
 - **Notification bell.** The admin top bar carries a bell over core's notification feed (`/api/v1/notifications`): mentions, shares and stream items, newest first, with an unread count kept live from `notification.created`, `notification.read` and `notification.escalated` on core's per-user AG-UI stream (`/api/v1/stream/agui`) and re-read when the stream reconnects. An entry marks itself read and opens the item's `open_url`; items at `human` attention are labelled "Needs you". Read state is core's, so the bell, the bridge and `documents_inbox` agree. A binary without the notifications feature answers 404 and the bell hides.
 - **Group notification audiences.** `systemprompt-web-admin-identity` registers a `NotificationAudienceResolver` (`dynapps-groups`) for `group:<id>` subjects over the effective membership in `user_groups`, active users only, so streams, rules and subscriptions can name groups. Without a database pool the resolver fails, and core withholds the subject instead of delivering to nobody.
 - **Notification declarations.** `services/notifications/` adds an `announcements` stream (everyone, silent, admins publish) and an `engineering` stream (the `staff` group) beside `issues`, a rule that caps document events written by agents at `agent`, evening quiet hours (Europe/Madrid) on `engineering`, and a subscription that brings admins into `engineering` as an hourly digest.
+
+### Changed
+
+- **Built against published systemprompt-core 0.77.0.** Every `systemprompt*` pin in `Cargo.toml` and `tests/Cargo.toml` names `0.77.0` and `bridge/CORE_REF` is `v0.77.0`; the `[patch.crates-io]` blocks stay commented out, so the image, CI and the bridge build from the released crates.
+- **The Drive sync policy answers an agent cap.** Core 0.77 makes `AgentAccessPolicy::cap` required; `dynapps-drive-sync-saves` (`extensions/web/admin/governance/src/document_agent_policy.rs`) answers `edit`, as core's default does, so the cap of a document agents reach is unchanged and only the `replace_content` grant on the `drive_sync` channel differs from core.
+- **The `documents` MCP server advertises tools only.** Core 0.77's `DocumentsMcpTools` no longer serves resources, so `extensions/mcp/documents/src/server/mod.rs` drops `list_resources`/`read_resource` and the resources capability; the server lists core's nineteen document tools.
+- **Connector OAuth failures box their admin error.** `FlowFailure::error` is a `Box<AdminError>`; the error grew with core 0.77 past the size a `Result` error variant should carry.
+
+### Fixed
+
+- **Gates boot the PR's own image.** A `boot` job builds the runtime image from `Dockerfile` with the PR's server binaries (`CI_SERVER_BINS`) and boots it over the newest recorded release schema with the real `services/` tree (`scripts/boot-image-over-rung.sh`), and `Gates passed` requires it. Before, only `release.yml`'s upgrade-boot started the server.
+- **The `issues` notification stream declares its publishers.** Core requires a non-empty `publishers` on every stream; boot refused `services/notifications/streams.yaml` without it.
+- **A hotfix release no longer rebuilds a tree its PR already proved.** `release.yml` checks the merged hotfix PR's Gates proof and skips the cold static/clippy/test-hotfix pass when it is green; `scripts/check-hotfix-green.sh` matches the merged PR by head and base, because GitHub empties a run's `pull_requests` once the PR merges. The cold fallback installs `gcc-mingw-w64-x86-64` for the bridge's Windows clippy and has 150 minutes.
+- **The macOS bridge builds on `macos-15`.** `macos-14` runners are in brownout and retire on 2026-11-02.
 
 ## 0.76.0 — 2026-10-29
 

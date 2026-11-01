@@ -15,7 +15,7 @@ async fn request_with_client(
 ) -> FlowResult<()> {
     super::generic::validate_grant(services, grant).map_err(|error| FlowFailure {
         kind: FailureKind::Configuration,
-        error,
+        error: Box::new(error),
     })?;
     let body = {
         let mut form = url::form_urlencoded::Serializer::new(String::new());
@@ -147,7 +147,7 @@ pub async fn exchange(
 ) -> AdminResult<()> {
     exchange_classified(services, config, grant, code)
         .await
-        .map_err(|failure| failure.error)
+        .map_err(|failure| *failure.error)
 }
 
 pub(crate) async fn exchange_classified(
@@ -176,7 +176,7 @@ pub async fn exchange_with_client(
 ) -> AdminResult<()> {
     exchange_request(services, grant, code, callback, http)
         .await
-        .map_err(|failure| failure.error)
+        .map_err(|failure| *failure.error)
 }
 
 async fn exchange_request(
@@ -222,7 +222,7 @@ pub async fn refresh_with_client(
 ) -> AdminResult<()> {
     refresh_classified(services, grant, http)
         .await
-        .map_err(|failure| failure.error)
+        .map_err(|failure| *failure.error)
 }
 
 pub(super) async fn refresh_classified(
@@ -234,7 +234,7 @@ pub(super) async fn refresh_classified(
         .await
         .map_err(|error| FlowFailure {
             kind: FailureKind::Configuration,
-            error,
+            error: Box::new(error),
         })?;
     let token = grant
         .refresh_token

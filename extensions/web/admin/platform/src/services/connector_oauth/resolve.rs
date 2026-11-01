@@ -92,7 +92,7 @@ impl<'a> TokenResolver<'a> {
         let mut tx = pool.begin().await?;
         let mut account = accounts::get_locked_account(&mut tx, user, provider.slug()).await?;
         if account.error_code.as_deref() == Some(FailureKind::RefreshUncertain.code()) {
-            return Err(FlowFailure::new(FailureKind::RefreshUncertain).error);
+            return Err(*FlowFailure::new(FailureKind::RefreshUncertain).error);
         }
         let row = repo::lock(&mut tx, user, provider.slug()).await?;
         let mode = AccessMode { probe };
@@ -185,7 +185,7 @@ impl Resolution<'_> {
             )
             .await?;
             tx.commit().await?;
-            return Err(error.error);
+            return Err(*error.error);
         }
         self.persist(&mut tx, account, &grant, plan).await?;
         tx.commit().await?;
@@ -237,7 +237,11 @@ async fn refresh_and_verify(
     match outcome {
         Ok(detail) => report.record("token", started, &Ok(detail)),
         Err(failure) => {
-            report.record("token", started, &Err(FlowFailure::new(failure.kind).error));
+            report.record(
+                "token",
+                started,
+                &Err(*FlowFailure::new(failure.kind).error),
+            );
             return Err(failure);
         },
     }
