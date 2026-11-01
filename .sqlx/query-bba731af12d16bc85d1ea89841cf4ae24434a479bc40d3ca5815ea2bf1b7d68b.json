@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dynwork_relay_pairings WHERE expires_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bba731af12d16bc85d1ea89841cf4ae24434a479bc40d3ca5815ea2bf1b7d68b"
+}

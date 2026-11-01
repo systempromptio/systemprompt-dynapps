@@ -4,4 +4,5 @@
 //! Extensions are automatically discovered via the `inventory` crate.
 
 pub use systemprompt::{cli, *};
+pub use dynwork_relay as relay;
 pub use systemprompt_web_extension as web;

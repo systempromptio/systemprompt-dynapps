@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynwork_relay_devices\n             (id, user_id, kind, peer_id, name, credential_hash, created_at, last_seen_at)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, $7)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e451418f3da552ba1195d426383528ff621a6380afb7f5136d06c7fdf2bbd8a2"
+}

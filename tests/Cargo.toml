@@ -14,6 +14,7 @@ members = [
     "unit/web",
     "unit/bridge",
     "unit/secrets",
+    "unit/dynwork-relay",
     "integration/admin-config",
     "integration/mcp",
     "integration/web",
@@ -22,6 +23,7 @@ members = [
     "integration/gateway",
     "integration/harness",
     "integration/schema-upgrade",
+    "integration/dynwork-relay",
     "contract/admin",
 ]
 resolver = "2"
@@ -167,6 +169,7 @@ systemprompt-secrets-onepassword = { path = "../extensions/secrets/onepassword" 
 systemprompt-web-extension = { path = "../extensions/web" }
 systemprompt-web-site = { path = "../extensions/web/site" }
 systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
+dynwork-relay = { path = "../extensions/dynwork-relay" }
 
 # Core facade — DbPool / Database / identifiers for the integration crate.
 # The contract crate additionally enables `full`, which links the core
@@ -191,6 +194,8 @@ reqwest = { version = "0.13", default-features = false }
 wiremock = "0.6"
 bytes = "1"
 futures-util = "0.3"
+# WebSocket client for the relay suites; the version axum's `ws` feature links.
+tokio-tungstenite = "0.29"
 
 # Template-rendering and error plumbing the migrated admin/front-end gates use.
 handlebars = "6"
