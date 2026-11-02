@@ -97,19 +97,35 @@ fn mint(
     })
 }
 
-pub async fn discovery(State(state): State<RelayState>) -> Json<serde_json::Value> {
-    Json(json!({
-        "version": 1,
-        "display_name": state.branding.display_name,
-        "redirect_uri": REDIRECT_URI,
-        "authorize_path": format!("{MOBILE_BASE_PATH}/authorize"),
-        "token_path": format!("{MOBILE_BASE_PATH}/token"),
-        "refresh_path": format!("{MOBILE_BASE_PATH}/refresh"),
-        "session_path": format!("{MOBILE_BASE_PATH}/session"),
-        "revoke_path": format!("{MOBILE_BASE_PATH}/revoke"),
-        "device_socket_path": format!("{BASE_PATH}/device"),
-        "code_challenge_methods": ["S256"],
-    }))
+/// The discovery document the phone reads before it signs in: the instance's
+/// display name and where each mobile route lives.
+#[derive(Debug, Serialize)]
+pub struct Discovery {
+    pub version: u8,
+    pub display_name: String,
+    pub redirect_uri: &'static str,
+    pub authorize_path: String,
+    pub token_path: String,
+    pub refresh_path: String,
+    pub session_path: String,
+    pub revoke_path: String,
+    pub device_socket_path: String,
+    pub code_challenge_methods: [&'static str; 1],
+}
+
+pub async fn discovery(State(state): State<RelayState>) -> Json<Discovery> {
+    Json(Discovery {
+        version: 1,
+        display_name: state.branding.display_name.clone(),
+        redirect_uri: REDIRECT_URI,
+        authorize_path: format!("{MOBILE_BASE_PATH}/authorize"),
+        token_path: format!("{MOBILE_BASE_PATH}/token"),
+        refresh_path: format!("{MOBILE_BASE_PATH}/refresh"),
+        session_path: format!("{MOBILE_BASE_PATH}/session"),
+        revoke_path: format!("{MOBILE_BASE_PATH}/revoke"),
+        device_socket_path: format!("{BASE_PATH}/device"),
+        code_challenge_methods: ["S256"],
+    })
 }
 
 #[derive(Debug, Deserialize)]
