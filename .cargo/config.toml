@@ -9,6 +9,14 @@
 #
 #   export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 
+# Why: several agents build one checkout against a core that moves daily, and
+# cargo never prunes stale incremental sessions; target/debug/incremental grew
+# to 66G here. CI already builds with CARGO_INCREMENTAL=0. This covers every
+# workspace under the repo (root, tests/, bridge/); `CARGO_INCREMENTAL=1`
+# opts one shell back in.
+[build]
+incremental = false
+
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
 

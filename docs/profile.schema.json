@@ -158,6 +158,59 @@
           "channel_timeout_ms": 5000
         }
       }
+    },
+    "brain": {
+      "$ref": "#/$defs/BrainProfile",
+      "default": {
+        "enabled": false,
+        "recall": {
+          "budget_tokens": 800,
+          "deadline_ms": 50,
+          "scopes": [
+            "user",
+            "project",
+            "group",
+            "org"
+          ],
+          "clients": {
+            "claude-code": true,
+            "claude-desktop": true
+          },
+          "stale": "withhold"
+        },
+        "capture": {
+          "sources": [
+            "document",
+            "comment",
+            "session",
+            "entered"
+          ],
+          "auto_confirm": {
+            "document": "project_policy",
+            "others": "never"
+          }
+        },
+        "extraction": {
+          "provider": null,
+          "model": null,
+          "max_output_tokens": 2048,
+          "timeout_ms": 60000,
+          "daily_token_budget": 1000000
+        },
+        "lifecycle": {
+          "review_after_days": 90,
+          "retired_retention_days": 365,
+          "recalls_retention_days": 90,
+          "results_retention_days": 30,
+          "correction_window_days": 14
+        },
+        "consumer": {
+          "batch": 32,
+          "poll_secs": 5,
+          "sweep_secs": 300,
+          "source_timeout_ms": 5000
+        }
+      }
     }
   },
   "additionalProperties": false,
@@ -758,7 +811,7 @@
       "additionalProperties": false
     },
     "RateLimitsConfig": {
-      "description": "Per-route-group request budgets, in requests per second.\n\nEach `*_per_second` field governs one route group:\n\n- `oauth_public` — `/api/v1/core/oauth` public endpoints,\n  `/auth/link-passkey`, and the public gateway session routes under\n  `/api/public/gateway`.\n- `oauth_auth` — the authenticated half of `/api/v1/core/oauth`, plus\n  `/api/v1/core/users`.\n- `contexts` — `/api/v1/core/contexts` and the inbound `/api/v1/webhook`\n  mount.\n- `tasks` — `/api/v1/core/tasks`.\n- `artifacts` — `/api/v1/core/artifacts`.\n- `agent_registry` — `/api/v1/agents/registry`, discovery only, kept apart\n  from `agents_per_second` so listing agents cannot spend an execution\n  budget.\n- `agents` — `/api/v1/agents` execution, and the Slack and Teams inbound\n  mounts that dispatch to an agent.\n- `mcp_registry` — `/api/v1/mcp/registry`, the MCP server catalog, discovery\n  only.\n- `mcp` — `/api/v1/mcp` tool calls, the busiest protocol route group.\n- `stream` — `/api/v1/stream`, long-lived SSE connections, so this is a\n  connection budget rather than a request one and is set high.\n- `content` — `/api/v1/content`, `/api/v1/sync`, `/api/v1/marketplace`,\n  `/api/v1/analytics` and `/track/engagement`.\n- `gateway` — inference traffic under `/v1`: `/v1/messages` and the\n  OpenAI-shaped `/v1/chat/completions`.\n- `bridge_auth` — `/v1/auth/bridge/*`, deliberately separate from\n  `gateway_per_second`: sign-in is low-volume and must stay reachable on an\n  instance whose inference traffic is saturating its own budget. Sharing one\n  bucket let a busy gateway lock every user out of authenticating.\n\n`per_second_budgets` projects those fields as a list; both validators\niterate it rather than naming the fields themselves, which had already let\nthem drift apart and let a zero in an unnamed field through.",
+      "description": "Per-route-group request budgets, in requests per second.\n\nEach `*_per_second` field governs one route group:\n\n- `oauth_public` — `/api/v1/core/oauth` public endpoints,\n  `/auth/link-passkey`, and the public gateway session routes under\n  `/api/public/gateway`.\n- `oauth_auth` — the authenticated half of `/api/v1/core/oauth`, plus\n  `/api/v1/core/users`.\n- `contexts` — `/api/v1/core/contexts` and the inbound `/api/v1/webhook`\n  mount.\n- `tasks` — `/api/v1/core/tasks`.\n- `artifacts` — `/api/v1/core/artifacts`.\n- `agent_registry` — `/api/v1/agents/registry`, discovery only, kept apart\n  from `agents_per_second` so listing agents cannot spend an execution\n  budget.\n- `agents` — `/api/v1/agents` execution, and the Slack and Teams inbound\n  mounts that dispatch to an agent.\n- `mcp_registry` — `/api/v1/mcp/registry`, the MCP server catalog, discovery\n  only.\n- `mcp` — `/api/v1/mcp` tool calls, the busiest protocol route group.\n- `stream` — `/api/v1/stream`, long-lived SSE connections, so this is a\n  connection budget rather than a request one and is set high.\n- `content` — `/api/v1/content`, `/api/v1/sync`, `/api/v1/marketplace`,\n  `/api/v1/analytics` and `/track/engagement`.\n- `brain` — `/api/v1/brain` and `/api/v1/admin/brain`, fact reads,\n  governance and the recall simulator.\n- `gateway` — inference traffic under `/v1`: `/v1/messages` and the\n  OpenAI-shaped `/v1/chat/completions`.\n- `bridge_auth` — `/v1/auth/bridge/*`, deliberately separate from\n  `gateway_per_second`: sign-in is low-volume and must stay reachable on an\n  instance whose inference traffic is saturating its own budget. Sharing one\n  bucket let a busy gateway lock every user out of authenticating.\n\n`per_second_budgets` projects those fields as a list; both validators\niterate it rather than naming the fields themselves, which had already let\nthem drift apart and let a zero in an unnamed field through.",
       "type": "object",
       "properties": {
         "disabled": {
@@ -832,6 +885,12 @@
           "default": 50
         },
         "notifications_per_second": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 50
+        },
+        "brain_per_second": {
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
@@ -966,6 +1025,16 @@
               "type": "null"
             }
           ]
+        },
+        "image": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeImageConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1069,6 +1138,25 @@
         "issuer",
         "client_id"
       ]
+    },
+    "RuntimeImageConfig": {
+      "description": "`cloud.image`: the base image and the extra apt packages of the runtime\nimage.",
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "SecretsConfig": {
       "type": "object",
@@ -1957,6 +2045,309 @@
           "default": 5000
         },
         "channel_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 5000
+        }
+      },
+      "additionalProperties": false
+    },
+    "BrainProfile": {
+      "description": "The `brain:` profile block; every field has a default.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "recall": {
+          "$ref": "#/$defs/BrainRecallProfile",
+          "default": {
+            "budget_tokens": 800,
+            "deadline_ms": 50,
+            "scopes": [
+              "user",
+              "project",
+              "group",
+              "org"
+            ],
+            "clients": {
+              "claude-code": true,
+              "claude-desktop": true
+            },
+            "stale": "withhold"
+          }
+        },
+        "capture": {
+          "$ref": "#/$defs/BrainCaptureProfile",
+          "default": {
+            "sources": [
+              "document",
+              "comment",
+              "session",
+              "entered"
+            ],
+            "auto_confirm": {
+              "document": "project_policy",
+              "others": "never"
+            }
+          }
+        },
+        "extraction": {
+          "$ref": "#/$defs/BrainExtractionProfile",
+          "default": {
+            "provider": null,
+            "model": null,
+            "max_output_tokens": 2048,
+            "timeout_ms": 60000,
+            "daily_token_budget": 1000000
+          }
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/BrainLifecycleProfile",
+          "default": {
+            "review_after_days": 90,
+            "retired_retention_days": 365,
+            "recalls_retention_days": 90,
+            "results_retention_days": 30,
+            "correction_window_days": 14
+          }
+        },
+        "consumer": {
+          "$ref": "#/$defs/BrainConsumerProfile",
+          "default": {
+            "batch": 32,
+            "poll_secs": 5,
+            "sweep_secs": 300,
+            "source_timeout_ms": 5000
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "BrainRecallProfile": {
+      "description": "Gateway recall: the token budget and deadline, the scopes searched, the\nclients recall is on for (keyed by `x-systemprompt-client` name; an\nunlisted client is off) and what happens to stale facts.",
+      "type": "object",
+      "properties": {
+        "budget_tokens": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 800
+        },
+        "deadline_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 50
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ScopeLevel"
+          },
+          "default": [
+            "user",
+            "project",
+            "group",
+            "org"
+          ]
+        },
+        "clients": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "default": {
+            "claude-code": true,
+            "claude-desktop": true
+          }
+        },
+        "stale": {
+          "$ref": "#/$defs/StalePolicy",
+          "default": "withhold"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScopeLevel": {
+      "description": "The level of a [`FactScope`], as profiles and recall filters name it.",
+      "type": "string",
+      "enum": [
+        "user",
+        "project",
+        "group",
+        "org"
+      ]
+    },
+    "StalePolicy": {
+      "description": "Whether stale facts are withheld or injected with a marker.",
+      "type": "string",
+      "enum": [
+        "withhold",
+        "marker"
+      ]
+    },
+    "BrainCaptureProfile": {
+      "description": "What the brain captures and how it confirms.",
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CaptureSource"
+          },
+          "default": [
+            "document",
+            "comment",
+            "session",
+            "entered"
+          ]
+        },
+        "auto_confirm": {
+          "$ref": "#/$defs/AutoConfirmPolicy",
+          "default": {
+            "document": "project_policy",
+            "others": "never"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CaptureSource": {
+      "description": "A pathway the brain captures from.",
+      "type": "string",
+      "enum": [
+        "document",
+        "comment",
+        "session",
+        "entered"
+      ]
+    },
+    "AutoConfirmPolicy": {
+      "description": "Auto-confirmation for document-sourced facts and for every other source.",
+      "type": "object",
+      "properties": {
+        "document": {
+          "$ref": "#/$defs/AutoConfirm",
+          "default": "project_policy"
+        },
+        "others": {
+          "$ref": "#/$defs/AutoConfirm",
+          "default": "never"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AutoConfirm": {
+      "description": "When a new fact is confirmed without a person.",
+      "type": "string",
+      "enum": [
+        "never",
+        "project_policy",
+        "always"
+      ]
+    },
+    "BrainExtractionProfile": {
+      "description": "The extraction model call: an optional pinned provider and model, its\noutput cap and timeout, and the daily token budget of the brain's\nservice principal.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 2048
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 60000
+        },
+        "daily_token_budget": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 1000000
+        }
+      },
+      "additionalProperties": false
+    },
+    "BrainLifecycleProfile": {
+      "description": "Review and retention windows.",
+      "type": "object",
+      "properties": {
+        "review_after_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 90
+        },
+        "retired_retention_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 365
+        },
+        "recalls_retention_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 90
+        },
+        "results_retention_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 30
+        },
+        "correction_window_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 14
+        }
+      },
+      "additionalProperties": false
+    },
+    "BrainConsumerProfile": {
+      "description": "How the brain outbox consumer drains.",
+      "type": "object",
+      "properties": {
+        "batch": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 32
+        },
+        "poll_secs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 5
+        },
+        "sweep_secs": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 300
+        },
+        "source_timeout_ms": {
           "type": "integer",
           "format": "uint64",
           "minimum": 0,

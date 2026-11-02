@@ -32,6 +32,8 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         client_id: None,
         provider: "anthropic".into(),
         hop: None,
+        actor: systemprompt::models::auth::RequestActor::Human,
+        memory: systemprompt::models::origin::MemoryPreference::Default,
         model: "test-model".into(),
         requested_model: None,
         max_tokens: Some(16),

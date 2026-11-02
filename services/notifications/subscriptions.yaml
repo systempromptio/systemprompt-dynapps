@@ -1,0 +1,7 @@
+# Declared subscriptions. People add their own through the API, the
+# dashboard and the documents MCP server.
+subscriptions:
+  - subject: role:admin
+    target: {stream: engineering}
+    attention_ceiling: agent
+    digest: {every_secs: 3600}

@@ -15,6 +15,7 @@ import { initFlash } from './flash.js';
 import { initFormConfirm } from './form-confirm.js';
 import { showToast } from './toast.js';
 import { initHelp } from '../components/sp-help.js';
+import { initNotificationBell } from './notification-bell.js';
 
 const run = (init) => {
   try {
@@ -45,6 +46,7 @@ for (const init of [
   initFlash,
   initFormConfirm,
   initHelp,
+  initNotificationBell,
   initLogout,
   initUserDisplay,
   getUserContext

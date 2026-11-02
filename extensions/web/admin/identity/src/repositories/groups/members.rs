@@ -173,3 +173,40 @@ pub async fn replace_directory_group_memberships(
     .await?;
     Ok(())
 }
+
+pub async fn list_active_member_ids(
+    pool: &PgPool,
+    group_id: &GroupId,
+    limit: i64,
+) -> Result<Vec<UserId>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT ug.user_id AS "user_id!: UserId"
+           FROM user_groups ug
+           JOIN users u ON u.id = ug.user_id
+           WHERE ug.group_id = $1 AND u.status = 'active'
+           ORDER BY ug.user_id
+           LIMIT $2"#,
+        group_id.as_str(),
+        limit.max(1)
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn is_active_member(
+    pool: &PgPool,
+    group_id: &GroupId,
+    user_id: &UserId,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT EXISTS (
+               SELECT 1 FROM user_groups ug
+               JOIN users u ON u.id = ug.user_id
+               WHERE ug.group_id = $1 AND ug.user_id = $2 AND u.status = 'active'
+           ) AS "member!""#,
+        group_id.as_str(),
+        user_id.as_str()
+    )
+    .fetch_one(pool)
+    .await
+}

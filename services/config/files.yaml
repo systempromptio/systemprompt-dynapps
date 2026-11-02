@@ -1,0 +1,8 @@
+# Read directly by core from services/config/files.yaml (not an `includes:`
+# entry). Issue reports are on: the `systemprompt` server serves core's
+# report_issue / issue_attachment / issues_list / issue_status tools while this
+# is set, and omits them otherwise. Attachments need `documents` on as well,
+# so until the document store is enabled a report carries no files.
+files:
+  issues:
+    enabled: true

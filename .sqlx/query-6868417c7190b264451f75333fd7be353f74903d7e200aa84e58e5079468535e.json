@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ug.user_id AS \"user_id!: UserId\"\n           FROM user_groups ug\n           JOIN users u ON u.id = ug.user_id\n           WHERE ug.group_id = $1 AND u.status = 'active'\n           ORDER BY ug.user_id\n           LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_groups",
+            "name": "user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6868417c7190b264451f75333fd7be353f74903d7e200aa84e58e5079468535e"
+}

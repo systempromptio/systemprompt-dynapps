@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (\n               SELECT 1 FROM user_groups ug\n               JOIN users u ON u.id = ug.user_id\n               WHERE ug.group_id = $1 AND ug.user_id = $2 AND u.status = 'active'\n           ) AS \"member!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "member!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c38018b7e38040162f1542e19aee596be1681c5ae3957cf090cc8b07514c97a8"
+}

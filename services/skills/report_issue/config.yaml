@@ -1,0 +1,12 @@
+id: report_issue
+name: Report an Issue
+description: File a bug or feedback report about this platform, once per problem, with the call's own
+  trace recorded for triage; attach diagnostics when they help, and follow the report's status.
+enabled: true
+file: SKILL.md
+tags:
+- commons
+- support
+- feedback
+category: productivity
+display_category: Commons

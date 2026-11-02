@@ -15,6 +15,7 @@
 //! - [`authz`] — the group, project and role subject-attribute providers.
 //! - [`services`] — the bridge profile the profile page renders.
 //! - [`sign_out`] — ending the browser session a sign-out request carries.
+//! - [`notifications`] — the `group:<id>` notification audience resolver.
 //!
 //! The three providers, the SSO provider and their event sink, the
 //! `groups` sync plane and the users, groups and
@@ -24,6 +25,7 @@
 pub mod authz;
 mod export;
 pub(crate) mod handlers;
+pub mod notifications;
 pub mod repositories;
 pub mod routes;
 pub mod services;

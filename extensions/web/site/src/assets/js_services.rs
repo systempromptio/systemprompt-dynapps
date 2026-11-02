@@ -79,6 +79,7 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
         svc_js!(p, "header-search-list.js"),
         svc_js!(p, "header-search.js"),
         svc_js!(p, "nav-groups.js"),
+        svc_js!(p, "notification-bell.js"),
         svc_js!(p, "scope.js"),
         svc_js!(p, "sidebar.js"),
         svc_js!(p, "table-cards.js"),

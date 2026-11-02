@@ -61,7 +61,11 @@ async fn complete(
                 .map_err(FlowFailure::verification)
         },
         Err(failure) => {
-            report.record("token", started, &Err(FlowFailure::new(failure.kind).error));
+            report.record(
+                "token",
+                started,
+                &Err(*FlowFailure::new(failure.kind).error),
+            );
             Err(failure)
         },
     };

@@ -164,7 +164,7 @@ pub async fn refresh_at(
     let previous = std::mem::replace(&mut grant.token_endpoint, endpoint.to_owned());
     let result = transport::refresh(services, grant)
         .await
-        .map_err(|failure| failure.error);
+        .map_err(|failure| *failure.error);
     grant.token_endpoint = previous;
     result
 }

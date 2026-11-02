@@ -181,8 +181,8 @@ async fn owned_document(
     store: &documents_fixture::Store,
     owner: &systemprompt::identifiers::UserId,
 ) -> systemprompt::identifiers::DocumentId {
-    use systemprompt::files::documents::models::RevisionAttribution;
-    use systemprompt::files::documents::service::{Author, CreateRequest, RevisionOrigin};
+    use systemprompt::files::documents::models::{RevisionAttribution, RevisionOrigin};
+    use systemprompt::files::documents::service::{Author, CreateRequest};
     use systemprompt::identifiers::{DocumentTemplateId, TraceId};
     use systemprompt::models::auth::{AuthenticatedUser, Permission};
     use systemprompt::models::documents::ActorKind;

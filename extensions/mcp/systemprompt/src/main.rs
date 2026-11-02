@@ -9,6 +9,7 @@ use systemprompt::identifiers::McpServerId;
 use systemprompt::loader::BootContext;
 use systemprompt::system::AppContext;
 use systemprompt_mcp_agent::SystempromptServer;
+use systemprompt_mcp_agent::server::IssueTools;
 // Why: core discovers the governance authz hook, the connection snapshot
 // source and the group/project/role subject providers through inventory, so
 // the crates that register them must be linked into this binary or rules on
@@ -130,7 +131,8 @@ async fn main() -> Result<()> {
         },
         ctx.artifact_ingest_arc(),
         systemprompt_mcp_agent::CliLocation::from_profile(ctx.profile()),
-    );
+    )
+    .with_issues(IssueTools::from_context(&ctx, service_id.clone()));
     let router = systemprompt::mcp::create_router(
         server,
         Arc::clone(ctx.mcp_session_repository()),

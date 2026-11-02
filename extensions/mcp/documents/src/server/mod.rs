@@ -5,8 +5,7 @@ use std::future::Future;
 
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, Icon, Implementation, InitializeRequestParams,
-    InitializeResult, ListResourcesResult, ListToolsResult, PaginatedRequestParams,
-    ProtocolVersion, ReadResourceRequestParams, ReadResourceResponse, ServerCapabilities,
+    InitializeResult, ListToolsResult, PaginatedRequestParams, ProtocolVersion, ServerCapabilities,
     ServerConfig,
 };
 use rmcp::service::{MaybeSendFuture, RequestContext, RoleServer};
@@ -61,27 +60,22 @@ impl DocumentsServer {
 
 impl ServerHandler for DocumentsServer {
     fn get_info(&self) -> ServerConfig {
-        ServerConfig::new(
-            ServerCapabilities::builder()
-                .enable_tools()
-                .enable_resources()
-                .build(),
-        )
-        .with_protocol_version(ProtocolVersion::V_2026_07_28)
-        .with_server_info(
-            Implementation::new(
-                format!("Documents ({})", self.service_id),
-                env!("CARGO_PKG_VERSION"),
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
+            .with_protocol_version(ProtocolVersion::V_2026_07_28)
+            .with_server_info(
+                Implementation::new(
+                    format!("Documents ({})", self.service_id),
+                    env!("CARGO_PKG_VERSION"),
+                )
+                .with_title("Documents")
+                .with_icons(vec![
+                    Icon::new(format!("{WEBSITE_URL}/files/images/favicon-32x32.png"))
+                        .with_mime_type("image/png")
+                        .with_sizes(vec!["32x32".to_owned()]),
+                ])
+                .with_website_url(WEBSITE_URL),
             )
-            .with_title("Documents")
-            .with_icons(vec![
-                Icon::new(format!("{WEBSITE_URL}/files/images/favicon-32x32.png"))
-                    .with_mime_type("image/png")
-                    .with_sizes(vec!["32x32".to_owned()]),
-            ])
-            .with_website_url(WEBSITE_URL),
-        )
-        .with_instructions(INSTRUCTIONS.to_owned())
+            .with_instructions(INSTRUCTIONS.to_owned())
     }
 
     fn initialize(
@@ -141,21 +135,5 @@ impl ServerHandler for DocumentsServer {
             })
             .await
             .map(Into::into)
-    }
-
-    fn list_resources(
-        &self,
-        _request: Option<PaginatedRequestParams>,
-        _ctx: RequestContext<RoleServer>,
-    ) -> impl Future<Output = Result<ListResourcesResult, McpError>> + MaybeSendFuture + '_ {
-        std::future::ready(Ok(self.tools.list_resources()))
-    }
-
-    fn read_resource(
-        &self,
-        request: ReadResourceRequestParams,
-        _ctx: RequestContext<RoleServer>,
-    ) -> impl Future<Output = Result<ReadResourceResponse, McpError>> + MaybeSendFuture + '_ {
-        std::future::ready(self.tools.read_resource(&request).map(Into::into))
     }
 }
