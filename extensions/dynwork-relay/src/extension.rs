@@ -10,7 +10,8 @@ use std::sync::{Arc, OnceLock};
 use systemprompt::database::Database;
 use systemprompt::extension::prelude::*;
 
-use crate::router::{BASE_PATH, relay_router};
+use crate::mobile_auth::Branding;
+use crate::router::{EXTENSION_BASE_PATH, extension_router};
 use crate::state::RelayState;
 use crate::store::postgres::PgRelayStore;
 use crate::{schema, sweeper};
@@ -38,6 +39,7 @@ impl RelayExtension {
         };
         let store = Arc::new(PgRelayStore::new(database.write_pool()));
         let built = RelayState::builder(store, ctx.token_authority(), ctx.background_tasks())
+            .branding(Branding::load(&ctx.services_root().path))
             .build()
             .inspect_err(|error| tracing::error!(%error, "dynwork relay limits refused"))
             .ok()?;
@@ -75,6 +77,9 @@ impl Extension for RelayExtension {
 
     fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
         let state = self.state(ctx)?;
-        Some(ExtensionRouter::public(relay_router(state), BASE_PATH))
+        Some(ExtensionRouter::public(
+            extension_router(state),
+            EXTENSION_BASE_PATH,
+        ))
     }
 }

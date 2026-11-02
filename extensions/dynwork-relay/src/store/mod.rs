@@ -1,10 +1,13 @@
-//! Persistence behind one trait: devices and pairings.
+//! Persistence behind one trait: devices, pairings and, through its
+//! [`MobileAuthStore`] supertrait, the mobile sign-in.
 //!
 //! The server runs over [`postgres::PgRelayStore`]; the trait is the seam the
 //! test suites use to run the relay over an in-memory store. Every time the
 //! store compares against "now" it takes it as an argument, so expiry follows
 //! the injected clock.
 
+pub mod mobile_auth;
+mod mobile_auth_pg;
 pub mod postgres;
 mod rows;
 mod types;
@@ -17,6 +20,11 @@ use systemprompt::identifiers::UserId;
 
 use crate::credential::CredentialHash;
 use crate::ids::{DeviceId, PairingId, PeerId, PeerKind};
+
+pub use mobile_auth::{
+    Account, CodeRedemption, DecisionOutcome, GrantDecision, GrantOutcome, MobileAuthStore,
+    NewGrant, RedeemOutcome,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -109,7 +117,7 @@ pub struct RevokedDevice {
 }
 
 #[async_trait]
-pub trait RelayStore: Send + Sync + Debug {
+pub trait RelayStore: MobileAuthStore + Send + Sync + Debug {
     async fn register_desktop(
         &self,
         registration: &DesktopRegistration,

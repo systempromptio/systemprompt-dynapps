@@ -4,9 +4,10 @@
 use systemprompt::extension::prelude::{Migration, SchemaDefinition, extension_migrations};
 
 pub fn schema_definitions() -> Vec<SchemaDefinition> {
-    vec![SchemaDefinition::sql_only(include_str!(
-        "../schema/01_dynwork_relay.sql"
-    ))]
+    vec![
+        SchemaDefinition::sql_only(include_str!("../schema/01_dynwork_relay.sql")),
+        SchemaDefinition::sql_only(include_str!("../schema/02_dynwork_mobile_auth.sql")),
+    ]
 }
 
 #[expect(

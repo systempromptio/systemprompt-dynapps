@@ -1,5 +1,5 @@
-//! What the relay routes and stores by: peer ids, device ids, pairing ids
-//! and the kind of end a socket belongs to.
+//! What the relay routes and stores by: peer ids, device ids, pairing ids,
+//! mobile sign-in grant ids and the kind of end a socket belongs to.
 //!
 //! A peer id is the first 16 bytes of SHA-256 of a peer's static X25519
 //! public key. The relay never sees the key, only the id, which travels as 32
@@ -21,6 +21,8 @@ pub enum IdError {
     DeviceId,
     #[error("a pairing id is a UUID")]
     PairingId,
+    #[error("a mobile sign-in grant id is a UUID")]
+    GrantId,
     #[error("the device kind is `desktop` or `phone`")]
     Kind,
 }
@@ -114,6 +116,7 @@ macro_rules! uuid_id {
 
 uuid_id!(DeviceId, IdError::DeviceId);
 uuid_id!(PairingId, IdError::PairingId);
+uuid_id!(GrantId, IdError::GrantId);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

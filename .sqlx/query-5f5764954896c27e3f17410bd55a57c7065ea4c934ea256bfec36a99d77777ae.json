@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, user_id, code_challenge, device_name, expires_at, redeemed_at, device_id\n             FROM dynwork_relay_mobile_grants WHERE code_hash = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_relay_mobile_grants",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_relay_mobile_grants",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "code_challenge",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_relay_mobile_grants",
+            "name": "code_challenge"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "device_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_relay_mobile_grants",
+            "name": "device_name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_relay_mobile_grants",
+            "name": "expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "redeemed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_relay_mobile_grants",
+            "name": "redeemed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "device_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_relay_mobile_grants",
+            "name": "device_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "5f5764954896c27e3f17410bd55a57c7065ea4c934ea256bfec36a99d77777ae"
+}

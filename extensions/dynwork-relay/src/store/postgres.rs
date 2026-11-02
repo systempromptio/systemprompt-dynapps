@@ -22,7 +22,7 @@ use crate::ids::{DeviceId, PairingId, PeerKind};
 
 #[derive(Debug, Clone)]
 pub struct PgRelayStore {
-    pool: Arc<PgPool>,
+    pub(super) pool: Arc<PgPool>,
 }
 
 impl PgRelayStore {

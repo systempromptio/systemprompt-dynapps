@@ -27,6 +27,8 @@ mod ids;
 #[cfg(test)]
 mod limits;
 #[cfg(test)]
+mod mobile_auth;
+#[cfg(test)]
 mod pairing_token;
 #[cfg(test)]
 mod rate;

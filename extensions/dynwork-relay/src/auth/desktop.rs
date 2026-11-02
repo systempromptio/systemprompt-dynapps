@@ -24,7 +24,7 @@ pub struct DesktopIdentity {
     pub expires_at: DateTime<Utc>,
 }
 
-const fn person(claims: &JwtClaims) -> Result<(), AuthError> {
+pub(crate) const fn person(claims: &JwtClaims) -> Result<(), AuthError> {
     let custom = &claims.custom;
     if !matches!(custom.user_type, UserType::User | UserType::Admin) {
         return Err(AuthError::NotAPerson);

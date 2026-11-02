@@ -23,6 +23,7 @@ pub mod extension;
 pub mod http;
 pub mod hub;
 pub mod ids;
+pub mod mobile_auth;
 pub mod router;
 pub mod schema;
 pub mod state;
@@ -32,7 +33,9 @@ pub mod ws;
 
 pub use config::RelayLimits;
 pub use extension::RelayExtension;
-pub use router::{BASE_PATH, relay_router};
+pub use router::{
+    BASE_PATH, EXTENSION_BASE_PATH, MOBILE_BASE_PATH, extension_router, relay_router,
+};
 pub use state::{RelayState, RelayStateBuilder};
 
 systemprompt::extension::register_extension!(RelayExtension);
