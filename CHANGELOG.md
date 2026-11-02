@@ -21,6 +21,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.77.1 — 2026-11-02
+
 ### Added
 
 - **DynWork relay (`extensions/dynwork-relay`).** A new extension, linked into the server binary from `src/lib.rs`, that lets DynWork Mobile drive a DynWork desktop with no inbound port. The desktop and the phone each hold one WebSocket to `/api/dynwork/relay/v1/{desktop,device}`, and the relay routes their end-to-end-encrypted envelopes by peer id: only within one user, only phone to desktop and back, in order per pair, with the sender's id stamped by the relay. It never holds a key that opens them.

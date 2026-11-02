@@ -41,7 +41,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.77.0"
+version = "0.77.1"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
