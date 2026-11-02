@@ -35,11 +35,30 @@ pub(super) struct Stack {
     _binary: Child,
 }
 
-// Why: the services config refuses an MCP server port outside 5000-5999.
+fn declared_mcp_ports() -> Vec<u16> {
+    let dir = globals::repo_root().join("services/mcp");
+    std::fs::read_dir(&dir)
+        .expect("read services/mcp")
+        .map(|entry| entry.expect("list services/mcp").path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "yaml"))
+        .flat_map(|path| {
+            std::fs::read_to_string(&path)
+                .expect("read an MCP server config")
+                .lines()
+                .filter_map(|line| line.trim().strip_prefix("port:")?.trim().parse().ok())
+                .collect::<Vec<u16>>()
+        })
+        .collect()
+}
+
+// Why: the services config refuses an MCP server port outside 5000-5999 and a
+// port another configured server declares.
 fn free_mcp_port() -> u16 {
+    let declared = declared_mcp_ports();
     let start = 5000 + u16::try_from(std::process::id() % 1000).unwrap_or(0);
     (0..1000u16)
         .map(|step| 5000 + (start - 5000 + step) % 1000)
+        .filter(|port| !declared.contains(port))
         .find(|port| std::net::TcpListener::bind(("127.0.0.1", *port)).is_ok())
         .expect("a free port in the MCP range")
 }
