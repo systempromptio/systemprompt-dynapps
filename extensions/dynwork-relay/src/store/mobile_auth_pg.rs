@@ -20,8 +20,8 @@ use super::rows::{NewDevice, count_live_devices, find_live_peer, insert_device, 
 use super::types::corrupt;
 use crate::ids::{DeviceId, PeerKind};
 
-async fn select_account<'e>(
-    executor: impl PgExecutor<'e>,
+async fn select_account(
+    executor: impl PgExecutor<'_>,
     user: &UserId,
 ) -> Result<Option<Account>, StoreError> {
     let row = sqlx::query!(
