@@ -98,6 +98,9 @@ pub enum RedeemOutcome {
     PeerTaken,
 }
 
+/// The mobile sign-in half of the relay's storage. `#[async_trait]` because it
+/// is reached through `dyn RelayStore`, its supertrait's object, which the
+/// relay state holds.
 #[async_trait]
 pub trait MobileAuthStore: Send + Sync {
     async fn insert_grant(&self, grant: &NewGrant) -> Result<GrantOutcome, StoreError>;

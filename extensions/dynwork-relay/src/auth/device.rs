@@ -20,6 +20,8 @@ pub struct VerifiedDevice {
     pub expires_at: Option<DateTime<Utc>>,
 }
 
+/// Checks a phone's bearer credential. `#[async_trait]` because the relay state
+/// holds every sign-in path's verifier as an `Arc<dyn DeviceVerifier>`.
 #[async_trait]
 pub trait DeviceVerifier: Send + Sync + Debug {
     async fn verify(&self, token: &str) -> Result<Option<VerifiedDevice>, AuthError>;

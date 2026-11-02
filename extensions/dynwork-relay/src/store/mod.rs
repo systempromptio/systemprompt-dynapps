@@ -116,6 +116,9 @@ pub struct RevokedDevice {
     pub revoked_at: DateTime<Utc>,
 }
 
+/// The relay's storage: devices, pairings and revocations. `#[async_trait]`
+/// because the relay state holds it as an `Arc<dyn RelayStore>` (Postgres in
+/// production, memory in tests).
 #[async_trait]
 pub trait RelayStore: MobileAuthStore + Send + Sync + Debug {
     async fn register_desktop(
