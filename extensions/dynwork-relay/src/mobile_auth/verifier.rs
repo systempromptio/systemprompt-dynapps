@@ -1,8 +1,8 @@
 //! The device verifier for mobile credentials (`dwm1_`).
 //!
-//! It is the second link in the chain [`crate::auth::device::verify_device`] runs, so
-//! a phone signed in through the instance opens the device socket like a
-//! paired one.
+//! It is the second link in the chain [`crate::auth::device::verify_device`]
+//! runs, so a phone signed in through the instance opens the device socket like
+//! a paired one.
 
 use std::sync::Arc;
 
