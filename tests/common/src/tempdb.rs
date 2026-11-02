@@ -15,6 +15,7 @@ use systemprompt::database::{Database, DbPool, MigrationConfig, install_extensio
 use systemprompt::extension::ExtensionRegistry;
 use url::Url;
 
+use dynwork_relay as _;
 use systemprompt_web_extension as _;
 
 use crate::skip::skip_or_panic;
