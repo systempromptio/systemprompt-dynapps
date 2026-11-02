@@ -29,14 +29,16 @@ struct Pairing {
 }
 
 #[derive(Debug, Default)]
-struct Mem {
-    users: HashSet<UserId>,
-    devices: Vec<(DeviceRecord, Option<CredentialHash>)>,
+pub(crate) struct Mem {
+    pub(crate) users: HashSet<UserId>,
+    pub(crate) inactive: HashSet<UserId>,
+    pub(crate) devices: Vec<(DeviceRecord, Option<CredentialHash>)>,
     pairings: HashMap<CredentialHash, Pairing>,
+    pub(crate) grants: Vec<crate::memory_mobile::Grant>,
 }
 
 impl Mem {
-    fn live(&self, user: &UserId) -> impl Iterator<Item = &DeviceRecord> {
+    pub(crate) fn live(&self, user: &UserId) -> impl Iterator<Item = &DeviceRecord> {
         self.devices
             .iter()
             .map(|(device, _)| device)
@@ -46,7 +48,7 @@ impl Mem {
 
 #[derive(Debug, Default)]
 pub(crate) struct MemoryStore {
-    mem: Mutex<Mem>,
+    pub(crate) mem: Mutex<Mem>,
 }
 
 impl MemoryStore {

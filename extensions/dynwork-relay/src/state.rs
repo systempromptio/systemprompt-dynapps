@@ -12,6 +12,7 @@ use crate::auth::{CredentialVerifier, DeviceVerifier};
 use crate::clock::{Clock, SystemClock};
 use crate::config::{LimitsError, RelayLimits};
 use crate::hub::Hub;
+use crate::mobile_auth::{Branding, MobileCredentialVerifier};
 use crate::store::RelayStore;
 
 #[derive(Debug)]
@@ -25,6 +26,7 @@ pub struct Shared {
     pub audit: Arc<dyn AuditSink>,
     pub clock: Arc<dyn Clock>,
     pub tunnels: Arc<Semaphore>,
+    pub branding: Branding,
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +54,7 @@ impl RelayState {
             audit: Arc::new(TracingAudit),
             clock: Arc::new(SystemClock),
             extra_verifiers: Vec::new(),
+            branding: Branding::default(),
         }
     }
 }
@@ -65,6 +68,7 @@ pub struct RelayStateBuilder {
     audit: Arc<dyn AuditSink>,
     clock: Arc<dyn Clock>,
     extra_verifiers: Vec<Arc<dyn DeviceVerifier>>,
+    branding: Branding,
 }
 
 impl RelayStateBuilder {
@@ -83,6 +87,11 @@ impl RelayStateBuilder {
         self
     }
 
+    pub fn branding(mut self, branding: Branding) -> Self {
+        self.branding = branding;
+        self
+    }
+
     pub fn device_verifier(mut self, verifier: Arc<dyn DeviceVerifier>) -> Self {
         self.extra_verifiers.push(verifier);
         self
@@ -90,8 +99,10 @@ impl RelayStateBuilder {
 
     pub fn build(self) -> Result<RelayState, LimitsError> {
         self.limits.validate()?;
-        let mut device_verifiers: Vec<Arc<dyn DeviceVerifier>> =
-            vec![Arc::new(CredentialVerifier::new(Arc::clone(&self.store)))];
+        let mut device_verifiers: Vec<Arc<dyn DeviceVerifier>> = vec![
+            Arc::new(CredentialVerifier::new(Arc::clone(&self.store))),
+            Arc::new(MobileCredentialVerifier::new(Arc::clone(&self.store))),
+        ];
         device_verifiers.extend(self.extra_verifiers);
         Ok(RelayState(Arc::new(Shared {
             hub: Arc::new(Hub::new(self.limits.ring, self.limits.outbound_queue)),
@@ -103,6 +114,7 @@ impl RelayStateBuilder {
             tasks: self.tasks,
             audit: self.audit,
             clock: self.clock,
+            branding: self.branding,
         })))
     }
 }

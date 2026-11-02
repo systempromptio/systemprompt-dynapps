@@ -1,6 +1,9 @@
-//! Audit events: `connect`, `disconnect`, `pair`, `revoke` and the pairing
-//! token's creation. They carry ids, kinds, counts and reasons only — never a
-//! token, a credential or a byte of ciphertext.
+//! Audit events of the relay and the mobile sign-in.
+//!
+//! `connect`, `disconnect`, `pair`, `revoke`, the pairing token's creation,
+//! and the mobile sign-in's consent and sign-in. They carry
+//! ids, kinds, counts and reasons only — never a token, a credential or a byte
+//! of ciphertext.
 
 use std::fmt::Debug;
 
@@ -42,6 +45,14 @@ pub enum AuditEvent {
         user: UserId,
         device: DeviceId,
     },
+    MobileConsent {
+        user: UserId,
+        approved: bool,
+    },
+    MobileSignIn {
+        user: UserId,
+        device: DeviceId,
+    },
 }
 
 impl AuditEvent {
@@ -52,6 +63,8 @@ impl AuditEvent {
             Self::Connect { .. } => "connect",
             Self::Disconnect { .. } => "disconnect",
             Self::Revoke { .. } => "revoke",
+            Self::MobileConsent { .. } => "mobile_consent",
+            Self::MobileSignIn { .. } => "mobile_sign_in",
         }
     }
 }
@@ -82,7 +95,9 @@ impl<'a> Fields<'a> {
                 | AuditEvent::Pair { user, .. }
                 | AuditEvent::Connect { user, .. }
                 | AuditEvent::Disconnect { user, .. }
-                | AuditEvent::Revoke { user, .. } => user,
+                | AuditEvent::Revoke { user, .. }
+                | AuditEvent::MobileConsent { user, .. }
+                | AuditEvent::MobileSignIn { user, .. } => user,
             },
             device: None,
             pairing: None,
@@ -116,7 +131,12 @@ impl<'a> Fields<'a> {
                 fields.reason = Some(reason);
                 fields.stats = Some(*stats);
             },
-            AuditEvent::Revoke { device, .. } => fields.device = Some(device.to_string()),
+            AuditEvent::Revoke { device, .. } | AuditEvent::MobileSignIn { device, .. } => {
+                fields.device = Some(device.to_string());
+            },
+            AuditEvent::MobileConsent { approved, .. } => {
+                fields.reason = Some(if *approved { "approved" } else { "denied" });
+            },
         }
         fields
     }

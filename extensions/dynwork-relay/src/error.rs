@@ -33,6 +33,10 @@ pub enum RelayError {
     Overloaded,
     #[error("a desktop is removed by signing it out, not by revoking it")]
     DesktopNotRevocable,
+    #[error("the code is unknown, expired, already used or not for this verifier")]
+    InvalidGrant,
+    #[error("token signing failed")]
+    Signing,
     #[error("relay store failure")]
     Store(#[from] StoreError),
 }
@@ -41,13 +45,13 @@ impl RelayError {
     const fn status(&self) -> StatusCode {
         match self {
             Self::Auth(error) => error.status(),
-            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::BadRequest(_) | Self::InvalidGrant => StatusCode::BAD_REQUEST,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::PairingUsed | Self::PairingExpired | Self::PairingUnknown => StatusCode::GONE,
             Self::DeviceLimit | Self::PeerTaken | Self::DesktopNotRevocable => StatusCode::CONFLICT,
             Self::TooManyPairings => StatusCode::TOO_MANY_REQUESTS,
             Self::Overloaded => StatusCode::SERVICE_UNAVAILABLE,
-            Self::Store(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Store(_) | Self::Signing => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -64,7 +68,8 @@ impl RelayError {
             Self::DesktopNotRevocable => "desktop_not_revocable",
             Self::TooManyPairings => "too_many_pairings",
             Self::Overloaded => "overloaded",
-            Self::Store(_) => "internal",
+            Self::InvalidGrant => "invalid_grant",
+            Self::Store(_) | Self::Signing => "internal",
         }
     }
 }

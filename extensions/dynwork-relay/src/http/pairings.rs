@@ -84,7 +84,7 @@ pub struct Claimed {
     pub credential: String,
 }
 
-fn device_name(raw: &str) -> Result<String, RelayError> {
+pub(crate) fn device_name(raw: &str) -> Result<String, RelayError> {
     let name = raw.trim();
     if name.chars().any(char::is_control) || name.chars().count() > MAX_NAME_CHARS {
         return Err(RelayError::BadRequest(

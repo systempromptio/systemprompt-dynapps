@@ -69,8 +69,47 @@ hex digits. The relay never sees a key.
 
 `GET /device` checks the bearer token against a chain of `auth::DeviceVerifier`s. The first verifier that recognises
 the token decides, and a token none recognises is refused. The relay ships `CredentialVerifier` for `dwr1_`
-credentials. A later sign-in path (the mobile sign-in) adds its verifier with `RelayStateBuilder::device_verifier`,
-and the socket code does not change.
+credentials. A later sign-in path adds its verifier with `RelayStateBuilder::device_verifier`, and the socket code does not
+change. The mobile sign-in's `MobileCredentialVerifier` (`dwm1_`) is the second link of the chain by default.
+
+## Mobile sign-in (path 1)
+
+`mobile_auth/` signs the DynWork phone app in the way the desktop signs in: through the system browser and this
+instance's own login, so no passkey is needed. Its routes sit under `/api/dynwork/mobile/v1`, beside the relay's; the
+extension mounts both under `/api/dynwork` (`extension_router`). The contract, with every answer, is section 11 of the
+fork's `dynwork/packages/sp-client/PROTOCOL.md`.
+
+| Route | Auth | Does |
+| --- | --- | --- |
+| `GET /discovery` | none | tells the app path 1 is offered, and its paths |
+| `GET /authorize` | browser session cookie | consent page; signed out: `307` to `/admin/login?redirect=…` |
+| `POST /authorize/decision` | browser session cookie | Allow: `303` to `dynwork://auth/callback?code&state`; Deny: `?error=access_denied&state` |
+| `POST /token` | none (code + PKCE verifier) | a `dwm1_` mobile credential, a one-hour JWT, the device and the account |
+| `POST /refresh` | `dwm1_` credential | a fresh JWT |
+| `GET /session` | mobile JWT | the account and device, while the device is live |
+| `POST /revoke` | `dwm1_` credential | the phone signs itself out |
+
+- **Session.** Only the `access_token` cookie core's sign-in sets is read, verified as a session cookie, and it must be
+  a browser session of a person (no anonymous visitor, `act`, plugin scope or purpose). An `Authorization` header is
+  never read on the consent routes.
+- **Consent.** Showing the page opens a grant (`dynwork_relay_mobile_grants`) bound to the person, the PKCE challenge,
+  the `state` and the device name, keyed by the SHA-256 of a `dwq1_` request token that only the page's form carries.
+  That token is the CSRF guard: a decision for an unknown token, another person's grant, or an answered or expired one
+  is refused. At most 10 grants per person are open at once.
+- **Code.** `dwa1_`, ten minutes from Allow, single use, bound to the S256 challenge. Unknown, used, expired and
+  wrong-verifier codes all answer `400 invalid_grant`; a wrong verifier burns the code; a code presented again revokes
+  the device its first use created.
+- **Credential.** The exchange creates a `phone` device row with the `dwm1_` credential's SHA-256, in the same
+  transaction that redeems the code, under the device limit. It is listed and revoked like a paired phone. Signing in
+  again with the same peer id revokes that peer's previous phone row.
+- **JWT.** Minted by the instance's token authority, one hour, audience `dynwork-mobile` only and purpose
+  `dynwork-mobile`: core's session middleware, the bridge and MCP routes and the relay's desktop routes refuse it. The
+  device id is its session id, so `GET /session` refuses it once the device is revoked. `/refresh` re-reads the
+  account and refuses a suspended or deleted one.
+- **Page.** Server-rendered, no script, every value escaped, in the instance's branding (`branding.display_name`,
+  `theme_color` and `logo_light` from `web/config/theme.yaml`, each dropped for a default when unsafe). It forbids
+  framing, allows forms to post only here and to redirect only to `dynwork:`, is never cached and sends no referrer.
+  All copy is in `mobile_auth/copy.rs`.
 
 ## Routing
 
@@ -174,7 +213,7 @@ itself, with the tunnel limit above.
 
 ## Tables
 
-The schema is in `schema/01_dynwork_relay.sql`. Migrations, when one is needed, go in
+The schema is in `schema/01_dynwork_relay.sql` and `schema/02_dynwork_mobile_auth.sql`. Migrations, when one is needed, go in
 `schema/migrations/NNN_<name>.sql`.
 
 - `dynwork_relay_devices`: id, user, kind (`desktop`/`phone`), peer id, name, the credential's SHA-256 (phones
@@ -183,13 +222,17 @@ The schema is in `schema/01_dynwork_relay.sql`. Migrations, when one is needed, 
 - `dynwork_relay_pairings`: id, user, the token's SHA-256 (unique), created, expires, claimed, the device it
   created. Rows that expired a day ago are deleted by the revocation watch, which also drops rings whose envelopes
   have all aged out.
+- `dynwork_relay_mobile_grants`: id, user, the consent request token's SHA-256, the code's SHA-256 once allowed, the
+  PKCE challenge, `state`, device name, created, expires, decided, approved, redeemed, the device it created. Purged a
+  day after expiry like pairings.
 
-Both tables cascade from `users`. The relay stores peer ids, hashes and timestamps: no keys, no ciphertext, no
+All three tables cascade from `users`. The relay stores peer ids, hashes and timestamps: no keys, no ciphertext, no
 session content.
 
 ## Audit
 
-`connect`, `disconnect` (with its reason and envelope counts), `pair`, `revoke` and `pairing_created`. They go to the
+`connect`, `disconnect` (with its reason and envelope counts), `pair`, `revoke`, `pairing_created`, and for the
+mobile sign-in `mobile_consent` (`approved` or `denied`) and `mobile_sign_in`. They go to the
 `dynwork_relay::audit` tracing target and carry ids only.
 
 ## Single replica

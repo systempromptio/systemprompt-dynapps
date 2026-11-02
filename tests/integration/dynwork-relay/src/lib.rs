@@ -13,9 +13,19 @@
 //! - drain through core's `BackgroundTasks` and `StreamDrain`
 //! - the router inside core's middleware stack, including `load_shed`
 //! - the Postgres store against a throwaway database
+//! - the mobile sign-in: consent behind the instance session, the code and PKCE
+//!   exchange, refresh, the device socket, revocation
 
 #[cfg(test)]
+mod memory_mobile;
+#[cfg(test)]
 mod memory_store;
+#[cfg(test)]
+mod mobile_auth;
+#[cfg(test)]
+mod mobile_support;
+#[cfg(test)]
+mod postgres_mobile;
 #[cfg(test)]
 mod support;
 

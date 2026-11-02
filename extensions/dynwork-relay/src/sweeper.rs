@@ -3,8 +3,8 @@
 //! Every `revocation_poll` it reads the devices revoked since the last look
 //! and cuts their tunnels, so a revocation made by any path (another route,
 //! an operator, a later sign-in flow) lands within seconds. It also deletes
-//! pairings that expired a day ago, and drops ring buffers whose envelopes
-//! have all aged out.
+//! pairings and mobile sign-in grants that expired a day ago, and drops ring
+//! buffers whose envelopes have all aged out.
 
 use std::time::Duration;
 
@@ -77,5 +77,17 @@ async fn purge(state: &RelayState) {
     {
         Ok(deleted) => tracing::debug!(deleted, "dynwork relay expired pairings deleted"),
         Err(error) => tracing::warn!(error = %error, "dynwork relay pairing purge failed"),
+    }
+    purge_grants(state).await;
+}
+
+async fn purge_grants(state: &RelayState) {
+    match state
+        .store
+        .delete_expired_grants(state.clock.now() - PAIRING_RETENTION)
+        .await
+    {
+        Ok(deleted) => tracing::debug!(deleted, "dynwork mobile expired grants deleted"),
+        Err(error) => tracing::warn!(error = %error, "dynwork mobile grant purge failed"),
     }
 }

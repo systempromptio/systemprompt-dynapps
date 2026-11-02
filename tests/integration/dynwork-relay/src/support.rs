@@ -13,7 +13,7 @@ use dynwork_relay::audit::{AuditEvent, AuditSink};
 use dynwork_relay::clock::Clock;
 use dynwork_relay::ids::PeerId;
 use dynwork_relay::ws::PEER_HEADER;
-use dynwork_relay::{BASE_PATH, RelayLimits, RelayState, relay_router};
+use dynwork_relay::{BASE_PATH, EXTENSION_BASE_PATH, RelayLimits, RelayState, extension_router};
 use futures_util::{SinkExt, StreamExt};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -211,7 +211,7 @@ impl Relay {
         let audit = Arc::new(RecordingAudit::default());
         let tasks = BackgroundTasks::new();
         let state = state(&store, &clock, &audit, &tasks);
-        let router = Router::new().nest(BASE_PATH, relay_router(state.clone()));
+        let router = Router::new().nest(EXTENSION_BASE_PATH, extension_router(state.clone()));
         let addr = serve(router.clone()).await;
         Self {
             state,
