@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_relay_mobile_grants SET redeemed_at = $2 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9bb1baa95b7b11fd82c43d936a3ad22ba5e469402851516cb5690e2f710e2d0e"
+}

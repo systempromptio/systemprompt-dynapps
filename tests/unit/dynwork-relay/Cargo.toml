@@ -1,0 +1,17 @@
+[package]
+name = "dynwork-relay-unit-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+dynwork-relay = { workspace = true }
+systemprompt = { workspace = true }
+systemprompt-security = { workspace = true }
+axum = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }

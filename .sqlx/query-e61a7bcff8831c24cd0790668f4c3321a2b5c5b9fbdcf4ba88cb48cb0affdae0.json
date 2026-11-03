@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_relay_devices SET revoked_at = $3\n             WHERE id = $1 AND user_id = $2 AND kind = 'phone' AND revoked_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e61a7bcff8831c24cd0790668f4c3321a2b5c5b9fbdcf4ba88cb48cb0affdae0"
+}

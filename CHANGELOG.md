@@ -21,6 +21,20 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.77.1 — 2026-11-02
+
+### Added
+
+- **DynWork relay (`extensions/dynwork-relay`).** A new extension, linked into the server binary from `src/lib.rs`, that lets DynWork Mobile drive a DynWork desktop with no inbound port. The desktop and the phone each hold one WebSocket to `/api/dynwork/relay/v1/{desktop,device}`, and the relay routes their end-to-end-encrypted envelopes by peer id: only within one user, only phone to desktop and back, in order per pair, with the sender's id stamped by the relay. It never holds a key that opens them.
+  - **Credentials.** A desktop presents its DynWork JWT: audience `bridge` or `api`, user type `user` or `admin`, and no delegation, plugin scope or purpose, so core's anonymous site session is refused. A phone presents a `dwr1_` device credential, stored only as its SHA-256. `POST /pairings` mints an opaque, one-time, 5-minute `dwp1_` pairing token, also stored only as a hash, and `POST /pairings/claim` redeems it once from the request body, never the URI. `GET /devices` lists the devices. `DELETE /devices/{id}` revokes a phone: its tunnel is cut at once, or within 2 s when the revocation comes from any other path. A desktop answers `409 desktop_not_revocable`.
+  - **Delivery.** Each desktop holds a bounded ring of encrypted envelopes for a peer that is offline. The relay tells a user's desktops when a phone attaches or goes away, with a 34-byte presence message (version `0xFF`).
+  - **Limits.** Devices per user, open pairings, envelope size, a per-socket rate, a tunnel cap, a heartbeat, and a 50-minute close with a reconnect hint, under Envoy's 3600 s.
+  - **Shutdown and audit.** Tunnels run on core's `BackgroundTasks` and close with `1012` on shutdown or `StreamDrain`. Audit events (`connect`, `disconnect`, `pair`, `revoke`) carry ids only.
+  - **Mobile sign-in.** `/api/dynwork/mobile/v1` signs the DynWork phone app in through the system browser and this instance's own login: a consent page in the instance's branding, then `dynwork://auth/callback` with a ten-minute, single-use code bound to a PKCE S256 challenge and the app's `state`. The code becomes a revocable `dwm1_` device credential (a phone in the same devices list, accepted on the device socket) and a one-hour JWT whose only audience is `dynwork-mobile`; `/refresh`, `/session` and `/revoke` complete it.
+  - **Storage.** The tables are `dynwork_relay_devices`, `dynwork_relay_pairings` and `dynwork_relay_mobile_grants`, all cascading from `users`.
+  - **Limitation.** One replica only; `extensions/dynwork-relay/README.md` documents the API, the limits and this limitation.
+  - **Tests.** `tests/unit/dynwork-relay` and `tests/integration/dynwork-relay`. The integration suite includes a run of the router inside core's middleware stack, which shows that an open tunnel holds no `server.max_in_flight` permit. `scripts/lint-layers.sh` places the crate at the entry tier.
+
 ## 0.77.0 — 2026-11-01
 
 ### Added

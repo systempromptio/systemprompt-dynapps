@@ -322,6 +322,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31b698c5f9a010f6573133b09e0de5408834d0c82f8d7475a89fc1867a71cd90"
 dependencies = [
  "axum-core",
+ "base64 0.22.1",
  "bytes",
  "form_urlencoded",
  "futures-util",
@@ -341,8 +342,10 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
+ "sha1 0.10.7",
  "sync_wrapper",
  "tokio",
+ "tokio-tungstenite",
  "tower",
  "tower-layer",
  "tower-service",
@@ -1475,6 +1478,31 @@ name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
+name = "dynwork-relay"
+version = "0.77.1"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "futures-util",
+ "hex",
+ "rand 0.9.5",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.10.9",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "ecdsa"
@@ -5327,6 +5355,17 @@ dependencies = [
 
 [[package]]
 name = "sha1"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.2.17",
+ "digest 0.10.7",
+]
+
+[[package]]
+name = "sha1"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aacc4cc499359472b4abe1bf11d0b12e688af9a805fa5e3016f9a386dc2d0214"
@@ -5660,7 +5699,7 @@ dependencies = [
  "percent-encoding",
  "rust_decimal",
  "serde",
- "sha1",
+ "sha1 0.11.0",
  "sha2 0.11.1",
  "sqlx-core",
  "thiserror 2.0.21",
@@ -6440,7 +6479,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dev-login"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -6455,9 +6494,10 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dynapps"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "anyhow",
+ "dynwork-relay",
  "systemprompt",
  "systemprompt-web-extension",
  "tokio",
@@ -6512,7 +6552,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-farm-worker"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6711,7 +6751,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-kit-export"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -6889,7 +6929,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -6914,7 +6954,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent-farm"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -6942,7 +6982,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-documents"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -6961,7 +7001,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-shared"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "jsonschema",
  "rmcp",
@@ -7227,7 +7267,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-secrets-onepassword"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "reqwest",
@@ -7429,7 +7469,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-analytics"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7454,7 +7494,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-catalog"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7476,7 +7516,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-core"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7508,7 +7548,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-farm"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7537,7 +7577,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-governance"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7563,7 +7603,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-identity"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7592,7 +7632,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-platform"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7623,7 +7663,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-content"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "axum",
  "chrono",
@@ -7642,7 +7682,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-extension"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -7673,7 +7713,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-jobs"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -7703,7 +7743,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-shared"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "axum",
  "chrono",
@@ -7722,7 +7762,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-site"
-version = "0.77.0"
+version = "0.77.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -7987,6 +8027,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-tungstenite"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f72a05e828585856dacd553fba484c242c46e391fb0e58917c942ee9202915c"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite",
+]
+
+[[package]]
 name = "tokio-util"
 version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8186,6 +8238,22 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
+
+[[package]]
+name = "tungstenite"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c01152af293afb9c7c2a57e4b559c5620b421f6d133261c60dd2d0cdb38e6b8"
+dependencies = [
+ "bytes",
+ "data-encoding",
+ "http",
+ "httparse",
+ "log",
+ "rand 0.9.5",
+ "sha1 0.10.7",
+ "thiserror 2.0.21",
+]
 
 [[package]]
 name = "twox-hash"
