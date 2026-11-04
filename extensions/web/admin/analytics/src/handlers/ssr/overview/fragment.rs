@@ -37,7 +37,7 @@ pub(crate) async fn overview_fragment(
     }
 
     let range = OverviewRange::from_query(query.preset.as_deref());
-    let loaded = data::load_overview(&pool, range).await;
+    let loaded = data::load_overview(&pool, range, engine.documents_enabled()).await;
     let page = view::overview_page(range, &loaded);
     let html = engine.render(LIVE_BODY_PARTIAL, &page)?;
 

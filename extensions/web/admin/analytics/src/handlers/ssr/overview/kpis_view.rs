@@ -80,7 +80,7 @@ pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> OverviewKp
             .chain(
                 data.documents
                     .as_ref()
-                    .ok()
+                    .and_then(|loaded| loaded.as_ref().ok())
                     .map(|touched| documents_tile(touched, &inputs)),
             )
             .collect(),

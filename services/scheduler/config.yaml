@@ -386,6 +386,48 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Drains core's `event_outbox_backlog` projection: the consumers an
+    # upgrade queued for a recount of their pending outbox rows, which
+    # `/health/detail` reads for the notifications backlog. The triggers that
+    # fill it run on every install, so this runs with the brain off too.
+    - name: outbox_backlog_rollup
+      extension: core
+      owner: admin
+      enabled: true
+
+    # The brain (organisational memory). Each job returns at once with zero
+    # stats while `brain.enabled` is false in the profile, so declaring them
+    # is inert on this install and keeps the boot free of unlisted-job warnings.
+    - name: brain_review
+      extension: core
+      owner: admin
+      schedule: "0 */30 * * * *"
+      enabled: true
+
+    - name: brain_retention
+      extension: core
+      owner: admin
+      schedule: "0 */10 * * * *"
+      enabled: true
+
+    - name: brain_analysis
+      extension: core
+      owner: admin
+      schedule: "0 15 3 * * *"
+      enabled: true
+
+    - name: brain_usage
+      extension: core
+      owner: admin
+      schedule: "0 45 2 * * *"
+      enabled: true
+
+    - name: brain_consolidate
+      extension: core
+      owner: admin
+      schedule: "0 45 3 * * *"
+      enabled: true
+
     # Render sub-steps. site_render runs each of these in dependency order;
     # scheduling them independently would double-run them, so they are
     # disabled here (an explicit entry also records the decision and silences

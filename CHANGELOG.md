@@ -21,6 +21,14 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Changed
+
+- **The scheduler declares core's outbox rollup and brain jobs.** `services/scheduler/config.yaml` names `outbox_backlog_rollup`, which compacts `event_outbox_backlog` on every install, and the five `brain_*` jobs, which return at once while `brain.enabled` is false, so the boot logs no unlisted-job warning for them.
+
+### Fixed
+
+- **The overview hides the Documents touched tile while the document store is off.** The tile linked to `/admin/drive`, which answers 404 when `files.documents.enabled` is false; `load_overview` now skips the count and the tile in that case.
+
 ## 0.77.1 — 2026-11-02
 
 ### Added

@@ -321,3 +321,5 @@ workspace = true
 # systemprompt-oauth-issuance = { path = "../systemprompt-core/crates/app/oauth-issuance" }
 # systemprompt-storage = { path = "../systemprompt-core/crates/infra/storage" }
 # systemprompt-wire = { path = "../systemprompt-core/crates/shared/wire" }
+# systemprompt-brain = { path = "../systemprompt-core/crates/domain/brain" }
+# systemprompt-notifications = { path = "../systemprompt-core/crates/domain/notifications" }
