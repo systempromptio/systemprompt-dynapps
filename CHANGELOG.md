@@ -21,8 +21,11 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.78.0 — 2026-11-04
+
 ### Changed
 
+- **Built against published systemprompt-core 0.78.0.** Every `systemprompt*` pin in `Cargo.toml` and `tests/Cargo.toml` names `0.78.0` and `bridge/CORE_REF` is `v0.78.0`; the `[patch.crates-io]` blocks stay commented out and also list the new `systemprompt-brain` and `systemprompt-notifications` crates. Core's brain stays off here: no profile sets `brain.enabled`, so no consumer starts, no recall is wired and its routes answer 404. Core's new tables and migrations install regardless.
 - **The scheduler declares core's outbox rollup and brain jobs.** `services/scheduler/config.yaml` names `outbox_backlog_rollup`, which compacts `event_outbox_backlog` on every install, and the five `brain_*` jobs, which return at once while `brain.enabled` is false, so the boot logs no unlisted-job warning for them.
 
 ### Fixed
