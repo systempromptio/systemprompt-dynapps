@@ -1,6 +1,6 @@
 //! Server-rendered platform pages.
 //!
-//! The configuration, code-sync and drive pages in the Platform group, the
+//! The configuration and code-sync pages in the Platform group, the
 //! device credentials and service-account pages in People, and the connect,
 //! connectors and setup pages every signed-in user reaches from their account.
 
@@ -41,16 +41,6 @@ pub fn device_routes() -> Router<Arc<PgPool>> {
         .route(
             "/devices/certs/{id}",
             axum::routing::delete(handlers::devices::revoke_cert),
-        )
-}
-
-pub fn drive_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route("/drive", get(handlers::ssr::drive_page))
-        .route("/drive/people", get(handlers::ssr::drive_people))
-        .route(
-            "/drive/{document_id}",
-            get(handlers::ssr::drive_document_page),
         )
 }
 

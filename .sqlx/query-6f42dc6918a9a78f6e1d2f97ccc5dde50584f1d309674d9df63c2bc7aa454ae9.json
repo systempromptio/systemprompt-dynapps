@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                (SELECT c.class_id FROM document_classes c\n                  WHERE c.target_kind = 'folder' AND c.target_id = f.id) AS own,\n                f.ancestor_ids AS \"folder_ids!\",\n                NULL::text AS created_by_agent\n             FROM document_folders f\n            WHERE f.id = $1 AND f.deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "own",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "folder_ids!",
+        "type_info": "UuidArray",
+        "origin": {
+          "Table": {
+            "table": "document_folders",
+            "name": "ancestor_ids"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_by_agent",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      null
+    ]
+  },
+  "hash": "6f42dc6918a9a78f6e1d2f97ccc5dde50584f1d309674d9df63c2bc7aa454ae9"
+}

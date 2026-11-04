@@ -1,0 +1,11 @@
+<dialog class="sp-ws__palette" data-slot="ws-palette" aria-label="Command palette">
+    <label class="sp-u-sr-only" for="ws-palette-input">Command</label>
+    <input class="sp-field-input sp-ws__palette-input" id="ws-palette-input" type="search" placeholder="Type a command…" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="ws-palette-list">
+    <ul class="sp-ws__palette-list" id="ws-palette-list" role="listbox" data-slot="ws-palette-list"></ul>
+</dialog>
+<template data-template="ws-palette-item">
+    <li class="sp-ws__palette-item" role="option" aria-selected="false"><span data-field="label"></span><kbd class="sp-ws__kbd" data-field="keys"></kbd></li>
+</template>
+<template data-template="ws-menu-item">
+    <li role="none"><button class="sp-ws__menu-item" type="button" role="menuitem"><span data-field="label"></span><kbd class="sp-ws__kbd" data-field="keys"></kbd></button></li>
+</template>

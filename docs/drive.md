@@ -30,17 +30,18 @@ Beside the body sit `sp-presence-bar`, `sp-comments`, `sp-proposal-list` and
 `/assets/documents/`. This install sends no `Content-Security-Policy`, so the
 editor's WebAssembly needs no `wasm-unsafe-eval` exception.
 
-## Administrators
+## The workspace
 
-`/admin/drive` lists folders and documents. Each folder row has an **Agent
-edits** control that sets the folder's `agent_edit_policy` through
+`/drive` is the one listing for every signed-in person; `/admin/drive` paths
+redirect to it. Administrators also get an **Agent edits** control on each
+folder row, which sets `agent_edit_policy` through
 `PATCH /api/v1/document-folders/{id}`: `direct` lands an agent's edits, and
-`propose` turns them into proposals for review. `/admin/drive/{id}` adds
-sharing, comments and proposals beside the document itself, which reads as a
-page in a Dynapps-branded sheet and switches to an **Edit** mode that commits
-block edits against the loaded revision. Owners, authors, grants and editors
-show names through `/admin/drive/people`. **New document** on the listing
-creates one from a template, `dynapps-word` first.
+`propose` turns them into proposals for review. `/drive/{id}` opens the
+full-screen multiplayer workspace (Word, Excel, PowerPoint); its name menu
+reaches the block editor at `/drive/{id}/blocks`. Vendored editor code is
+allowlisted in `services/web/vendor.yaml` (`scripts/check-vendor.sh`). Names
+come from `/drive/people`. **New document** creates one from a template,
+`dynapps-word` first.
 
 ## Analytics
 

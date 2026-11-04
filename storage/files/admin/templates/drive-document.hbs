@@ -1,122 +1,85 @@
 {{#> layout page_title=title page_id=page}}
-    {{#*inline "head_extra"}}
-    <link rel="stylesheet" href="/assets/documents/css/documents.css?v={{css_version}}">
-    <link rel="stylesheet" href="/assets/documents/css/documents-panels.css?v={{css_version}}">
-    {{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="One shared document: read it as a page, edit it block by block, and see its revisions, grants, comments, proposals and live editors."}}
-        {{#*inline "header_actions"}}
+
+    <div class="sp-p-doc" data-drive-document="{{document_api}}" data-document-api="{{document_api}}" data-documents-api="{{documents_api}}" data-revisions-api="{{revisions_api}}" data-presence-api="{{presence_api}}" data-preview-api="{{preview_url}}" data-projection-api="{{projection_api}}" data-edits-api="{{edits_api}}" data-people-api="{{people_api}}" data-content-url="{{content_url}}" data-user-id="{{user_id}}" data-my-access="{{my_access}}" data-can-edit="{{can_edit}}" data-can-share="{{can_share}}">
+
+    <header class="sp-p-doc__head">
+        <div class="sp-p-doc__ident">
+            <span class="sp-p-doc__badge" data-slot="doc-badge">…</span>
+            <label class="sp-u-sr-only" for="doc-name">Document name</label>
+            <input class="sp-p-doc__name" id="doc-name" data-slot="doc-name" maxlength="200" autocomplete="off" spellcheck="false">
+            <span class="sp-p-doc__status" data-slot="doc-status" data-field="save" aria-live="polite">Loading…</span>
+        </div>
+        <div class="sp-p-doc__actions">
+            <div class="sp-p-doc__editors" data-slot="doc-editors" aria-label="People in this document"></div>
+            <div class="sp-p-doc__modes" role="group" aria-label="Mode">
+                <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="doc-edit" aria-pressed="true">Edit</button>
+                <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="doc-preview" aria-pressed="false">Preview</button>
+            </div>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{content_url}}" download>Download</a>
-        {{/inline}}
-    {{/components/page-header}}
-
-    <div class="sp-p-drive" data-drive-document="{{document_api}}" data-revisions-api="{{revisions_api}}" data-grants-api="{{grants_api}}" data-presence-api="{{presence_api}}" data-preview-api="{{preview_url}}" data-projection-api="{{projection_api}}" data-edits-api="{{edits_api}}" data-people-api="{{people_api}}">
-    <dl class="sp-kv-list">
-        <div class="sp-kv-row"><dt>Name</dt><dd data-field="name"></dd></div>
-        <div class="sp-kv-row"><dt>Document id</dt><dd class="sp-u-mono">{{document_id}}</dd></div>
-        <div class="sp-kv-row"><dt>Format</dt><dd class="sp-u-mono" data-field="format"></dd></div>
-        <div class="sp-kv-row"><dt>Folder</dt><dd data-field="folder"></dd></div>
-        <div class="sp-kv-row"><dt>Owner</dt><dd data-field="owner"></dd></div>
-        <div class="sp-kv-row"><dt>Head revision</dt><dd class="sp-u-mono" data-field="head"></dd></div>
-        <div class="sp-kv-row"><dt>Updated</dt><dd data-field="updated"></dd></div>
-        <div class="sp-kv-row"><dt>Editing now</dt><dd data-field="editors"></dd></div>
-    </dl>
-
-    <section class="sp-section" aria-label="Document">
-    <div class="sp-p-drive__bar">
-        <h2 class="sp-section__title">Document</h2>
-        <div class="sp-p-drive__modes" role="group" aria-label="Mode">
-            <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-view" aria-pressed="true">View</button>
-            <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-edit" aria-pressed="false">Edit</button>
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--ghost" data-action="doc-rail" aria-pressed="true" aria-controls="doc-rail">Details</button>
         </div>
+    </header>
+
+    <div class="sp-p-doc__body">
+        <section class="sp-p-doc__stage" aria-label="Document">
+            <p class="sp-p-doc__banner" data-slot="doc-banner" hidden>
+                <span data-slot="doc-banner-text"></span>
+                <button type="button" class="sp-btn sp-btn--xs sp-btn--outline" data-action="doc-current">Back to current</button>
+            </p>
+            <div class="sp-p-doc__desk">
+                <div class="sp-p-doc__canvas" data-slot="doc-canvas"></div>
+                <iframe class="sp-p-doc__frame" sandbox title="Document preview" data-slot="doc-frame" hidden></iframe>
+            </div>
+            <p class="sp-p-doc__hint" data-slot="doc-hint"></p>
+        </section>
+
+        <aside class="sp-p-doc__rail" id="doc-rail" aria-label="Document details">
+            <section class="sp-p-doc__card" aria-labelledby="doc-details-title">
+                <h2 class="sp-p-doc__card-title" id="doc-details-title">Details</h2>
+                <dl class="sp-p-doc__facts">
+                    <div><dt>Owner</dt><dd data-field="owner">—</dd></div>
+                    <div><dt>Location</dt><dd data-field="folder">—</dd></div>
+                    <div><dt>Created</dt><dd data-field="created">—</dd></div>
+                    <div><dt>Updated</dt><dd data-field="updated">—</dd></div>
+                    <div><dt>Template</dt><dd data-field="template">—</dd></div>
+                    <div><dt>Document id</dt><dd class="sp-u-mono" data-field="id">{{document_id}}</dd></div>
+                </dl>
+            </section>
+            <section class="sp-p-doc__card" aria-labelledby="doc-activity-title">
+                <h2 class="sp-p-doc__card-title" id="doc-activity-title">Activity</h2>
+                <ol class="sp-p-doc__feed" data-slot="doc-activity"></ol>
+            </section>
+            <section class="sp-p-doc__card" aria-labelledby="doc-sharing-title">
+                <h2 class="sp-p-doc__card-title" id="doc-sharing-title">Sharing</h2>
+                <div class="sp-ws__pane" data-pane-mount="sharing"></div>
+            </section>
+            <section class="sp-p-doc__card" aria-labelledby="doc-comments-title">
+                <h2 class="sp-p-doc__card-title" id="doc-comments-title">Comments</h2>
+                <div class="sp-ws__pane" data-pane-mount="comments"></div>
+            </section>
+            <section class="sp-p-doc__card" aria-labelledby="doc-proposals-title">
+                <h2 class="sp-p-doc__card-title" id="doc-proposals-title">Proposals</h2>
+                <div class="sp-ws__pane" data-pane-mount="proposals"></div>
+            </section>
+        </aside>
     </div>
-    <div class="sp-p-drive__desk" data-slot="drive-view">
-        <iframe class="sp-p-drive__paper" sandbox title="Document" data-slot="drive-paper"></iframe>
-    </div>
-    <form class="sp-p-drive__editor" data-slot="drive-editor" hidden>
-        <ol class="sp-p-drive__blocks" data-slot="drive-blocks"></ol>
-        <div class="sp-p-drive__save">
-            <label class="sp-u-sr-only" for="drive-edit-message">Revision message</label>
-            <input class="sp-field-input" id="drive-edit-message" name="message" placeholder="Describe the change (optional)" maxlength="200">
-            <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="drive-discard">Discard</button>
-            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Save revision</button>
-        </div>
-        <p class="sp-field-hint" data-slot="drive-editor-note"></p>
-    </form>
-    </section>
-
-    <section class="sp-section" aria-label="Revisions">
-    <h2 class="sp-section__title">Revisions</h2>
-    {{#> components/table caption="Revisions"}}
-      <thead><tr>
-        <th scope="col">Revision</th><th scope="col">Author</th><th scope="col">Actor</th>
-        <th scope="col">Origin</th><th scope="col">Message</th><th scope="col" class="sp-col-date">Created</th>
-      </tr></thead>
-      <tbody data-slot="revision-rows"></tbody>
-    {{/components/table}}
-    </section>
-
-    <section class="sp-section" aria-label="Grants">
-    <h2 class="sp-section__title">Grants</h2>
-    {{#> components/table caption="Grants"}}
-      <thead><tr>
-        <th scope="col">Subject</th><th scope="col">Level</th><th scope="col">Granted by</th>
-        <th scope="col" class="sp-col-date">Valid until</th><th scope="col" class="sp-col-date">Created</th>
-      </tr></thead>
-      <tbody data-slot="grant-rows"></tbody>
-    {{/components/table}}
-    </section>
-
-    <section class="sp-section" aria-label="Sharing">
-    <h2 class="sp-section__title">Sharing</h2>
-    <sp-share-dialog document-id="{{document_id}}"></sp-share-dialog>
-    </section>
-
-    <section class="sp-section" aria-label="Comments">
-    <h2 class="sp-section__title">Comments</h2>
-    <sp-comments document-id="{{document_id}}"></sp-comments>
-    </section>
-
-    <section class="sp-section" aria-label="Proposals">
-    <h2 class="sp-section__title">Proposals</h2>
-    <sp-proposal-list document-id="{{document_id}}"></sp-proposal-list>
-    </section>
     </div>
 
-    <template data-template="drive-revision-row">
-      <tr>
-        <td class="sp-u-mono" data-field="id" title=""></td>
-        <td data-field="author"></td>
-        <td data-field="actor"></td>
-        <td data-field="origin"></td>
-        <td data-field="message"></td>
-        <td class="sp-col-date" data-field="created"></td>
-      </tr>
-    </template>
-    <template data-template="drive-grant-row">
-      <tr>
-        <td class="sp-u-mono" data-field="subject"></td>
-        <td data-field="level"></td>
-        <td data-field="granted_by"></td>
-        <td class="sp-col-date" data-field="valid_until"></td>
-        <td class="sp-col-date" data-field="created"></td>
-      </tr>
-    </template>
-    <template data-template="drive-block">
-      <li class="sp-p-drive__block">
-        <span class="sp-p-drive__kind" data-field="kind"></span>
-        <textarea class="sp-field-input sp-p-drive__text" rows="1" data-field="text"></textarea>
-        <span class="sp-p-drive__tools">
-          <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="drive-add-paragraph" title="Add a paragraph below">+ Paragraph</button>
-          <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="drive-add-heading" title="Add a heading below">+ Heading</button>
-          <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="drive-remove" title="Remove this block">Remove</button>
+    <template data-template="doc-activity-item">
+      <li class="sp-p-doc__event">
+        <span class="sp-p-doc__avatar" data-field="initials"></span>
+        <span class="sp-p-doc__event-body">
+          <span class="sp-p-doc__event-who" data-field="who"></span>
+          <span class="sp-p-doc__event-what" data-field="what"></span>
+          <span class="sp-p-doc__event-when" data-field="when"></span>
         </span>
+        <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="doc-revision">View</button>
       </li>
     </template>
     {{/inline}}
     {{#*inline "scripts"}}
-    <script data-cfasync="false" type="module" src="/assets/documents/js/documents.js?v={{css_version}}"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-drive-document.js?v={{css_version}}"></script>
     {{/inline}}
 {{/layout}}

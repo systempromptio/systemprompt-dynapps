@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO document_classes\n                (target_kind, target_id, class_id, set_by, reason, loosened, set_at)\n           VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)\n           ON CONFLICT (target_kind, target_id) DO UPDATE\n              SET class_id = EXCLUDED.class_id,\n                  set_by = EXCLUDED.set_by,\n                  reason = EXCLUDED.reason,\n                  loosened = EXCLUDED.loosened,\n                  set_at = EXCLUDED.set_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Varchar",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "539afc668b9210e081558d88b94ef1342ee92ada4b5e4da37070acd950f68ed9"
+}

@@ -1,0 +1,24 @@
+<aside class="sp-ws__drawer" data-slot="ws-drawer" aria-label="Details" hidden>
+    <div class="sp-ws__tabs" role="tablist" aria-label="Details" data-slot="ws-tabs"></div>
+</aside>
+<template data-template="ws-tab">
+    <button class="sp-ws__tab" type="button" role="tab" aria-selected="false"></button>
+</template>
+<template data-template="ws-pane-details">
+    <dl class="sp-kv-list">
+        <div class="sp-kv-row"><dt>Format</dt><dd class="sp-u-mono" data-field="d-format"></dd></div>
+        <div class="sp-kv-row"><dt>Owner</dt><dd data-field="d-owner"></dd></div>
+        <div class="sp-kv-row"><dt>Folder</dt><dd data-field="d-folder"></dd></div>
+        <div class="sp-kv-row"><dt>Head revision</dt><dd class="sp-u-mono" data-field="d-head"></dd></div>
+        <div class="sp-kv-row"><dt>Created</dt><dd data-field="d-created"></dd></div>
+        <div class="sp-kv-row"><dt>Updated</dt><dd data-field="d-updated"></dd></div>
+        <div class="sp-kv-row"><dt>Your access</dt><dd data-field="d-access"></dd></div>
+    </dl>
+    <p class="sp-ws__muted" data-field="d-access-why"></p>
+    <div class="sp-ws__class" data-slot="ws-class-row">
+        <label class="sp-form-label" for="ws-class">Class</label>
+        <select class="sp-select" id="ws-class" data-slot="ws-class" disabled></select>
+        <p class="sp-ws__muted" data-field="d-agents"></p>
+        <p class="sp-ac-form-error" data-field="d-class-status" role="alert"></p>
+    </div>
+</template>

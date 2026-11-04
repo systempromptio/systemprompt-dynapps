@@ -7655,6 +7655,7 @@ dependencies = [
  "systemprompt-security",
  "systemprompt-web-admin-core",
  "systemprompt-web-shared",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "url",

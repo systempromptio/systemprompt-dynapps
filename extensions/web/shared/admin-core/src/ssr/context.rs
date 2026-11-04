@@ -9,6 +9,7 @@ use crate::numeric;
 use crate::ssr::faults::Fault;
 use crate::ssr::helpers::Viewer;
 use crate::types::{MarketplaceContext, UserContext};
+use crate::vendor::VendorHead;
 
 use crate::ssr::demo_help::demo_help_text;
 
@@ -103,6 +104,9 @@ pub(crate) struct PageShell<'a, T> {
     app_version: &'static str,
     access_attention: usize,
     documents_enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vendor: Option<VendorHead>,
+    workspace: bool,
     unavailable: &'a [Fault],
     #[serde(flatten)]
     page: &'a T,
@@ -113,6 +117,7 @@ pub(crate) struct PageChrome<'a> {
     pub(crate) page_id: Option<&'a str>,
     pub(crate) unavailable: &'a [Fault],
     pub(crate) documents_enabled: bool,
+    pub(crate) workspace: bool,
 }
 
 impl<'a, T: Serialize> PageShell<'a, T> {
@@ -126,6 +131,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             page_id,
             unavailable,
             documents_enabled,
+            workspace,
         } = chrome;
         let help = page_id.map(demo_help_text);
         Self {
@@ -144,9 +150,24 @@ impl<'a, T: Serialize> PageShell<'a, T> {
                 0
             },
             documents_enabled,
+            vendor: workspace.then(workspace_vendor_head).flatten(),
+            workspace,
             unavailable,
             page,
         }
+    }
+}
+
+// Why: fail-soft-ok: vendor.yaml is compiled in and parsed by the
+// vendor_allowlist test, so a failure here is a build that skipped the gate;
+// the workspace page renders without its editor rather than not at all.
+fn workspace_vendor_head() -> Option<VendorHead> {
+    match crate::vendor::workspace_head() {
+        Ok(head) => Some(head),
+        Err(error) => {
+            tracing::error!(%error, "Vendor manifest unusable; workspace renders without it");
+            None
+        },
     }
 }
 

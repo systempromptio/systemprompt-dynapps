@@ -38,6 +38,9 @@ uuid = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
+# Error handling
+thiserror = { workspace = true }
+
 # Crypto & encoding (connector PKCE and broker check, identity JWTs)
 sha2 = { workspace = true }
 jsonwebtoken = { workspace = true }

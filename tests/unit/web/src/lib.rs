@@ -444,7 +444,15 @@ mod farm_eval_judge_config;
 #[cfg(test)]
 mod catalogue_integrity;
 #[cfg(test)]
+mod document_classes;
+#[cfg(test)]
+mod drive_actor;
+#[cfg(test)]
+mod drive_extension_points;
+#[cfg(test)]
 mod drive_pages;
+#[cfg(test)]
+mod vendor_allowlist;
 #[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]

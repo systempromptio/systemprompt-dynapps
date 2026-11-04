@@ -1,0 +1,38 @@
+# Document classes: how far an agent may act on a document.
+#
+# Classes are listed from least to most strict; that order is the
+# strictness ladder. A folder carries a class and everything under it
+# inherits it. An owner may set a stricter class on a document or subfolder,
+# never a looser one; only an admin may loosen, and must record a reason.
+#
+# `attended` applies to an agent working inside a person's live session
+# (Claude Code, the composer); `unattended` to an agent running on its own
+# (a scheduled or workflow run). Caps: none < read < comment < suggest < edit.
+#
+# Read by systemprompt-web-admin-platform (document_class::catalog) at build
+# time; the class assigned to each folder and document lives in
+# `document_classes`.
+document_classes:
+  default_for_people: internal
+  default_for_agents: agent-workspace
+  classes:
+    - id: agent-workspace
+      label: Agent workspace
+      reason: Drafts agents create and own; agents may edit, trash and restore them.
+      attended: edit
+      unattended: edit
+    - id: internal
+      label: Internal
+      reason: Ordinary working documents; an unattended agent proposes rather than edits.
+      attended: edit
+      unattended: suggest
+    - id: confidential
+      label: Confidential
+      reason: Sensitive material; every agent change is a suggestion a person accepts.
+      attended: suggest
+      unattended: suggest
+    - id: restricted
+      label: Restricted
+      reason: Regulated or privileged material; attended agents may read, unattended agents see nothing.
+      attended: read
+      unattended: none

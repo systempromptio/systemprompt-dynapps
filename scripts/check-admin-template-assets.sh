@@ -16,7 +16,7 @@
 # relative ES-module imports between the JS modules themselves.
 #
 # The manifest corpus is every served path advertised by web_assets(): macro
-# invocations (`page_js!` -> js/pages/, `svc_js!` -> js/services/, `css!` ->
+# invocations (`page_js!` -> js/pages/, `svc_js!` -> js/services/, `ws_js!` -> js/workspace/, `css!` ->
 # css/) plus plain `AssetDefinition::js(..., "served/path")` literals.
 #
 # Exemption: list a served path (one per line, `#` comments) in
@@ -49,8 +49,8 @@ if p.exists():
 # Manifest corpus: the served path of every asset web_assets() advertises. Each
 # macro hard-codes its own `concat!` prefix, so a bare file name resolves only
 # once the macro it appears in is known.
-MACRO_PREFIX = {'page_js': 'js/pages/', 'svc_js': 'js/services/', 'site_js': 'js/site/', 'css': 'css/'}
-MACRO = re.compile(r'\b(page_js|svc_js|site_js|css)!\s*\([^,]+,\s*"([^"]+)"')
+MACRO_PREFIX = {'page_js': 'js/pages/', 'svc_js': 'js/services/', 'ws_js': 'js/workspace/', 'site_js': 'js/site/', 'css': 'css/'}
+MACRO = re.compile(r'\b(page_js|svc_js|ws_js|site_js|css)!\s*\([^,]+,\s*"([^"]+)"')
 DIRECT = re.compile(r'AssetDefinition::(?:js|css|builder)\s*\([^,]+,\s*"([^"]+)"')
 
 served = set()

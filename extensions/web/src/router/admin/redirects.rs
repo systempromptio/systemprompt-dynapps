@@ -43,7 +43,8 @@ pub(super) fn legacy_routes() -> Router<Arc<PgPool>> {
         entity_redirects()
             .merge(demo_and_report_redirects())
             .merge(governance_redirects())
-            .merge(analysis_redirects()),
+            .merge(analysis_redirects())
+            .merge(drive_redirects()),
     )
 }
 
@@ -102,6 +103,30 @@ fn demo_and_report_redirects() -> Router<Arc<PgPool>> {
 
 fn governance_redirects() -> Router<Arc<PgPool>> {
     Router::new().route("/governance/warnings", get(governance_warnings))
+}
+
+fn drive_redirects() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route("/drive", get(drive))
+        .route("/drive/people", get(drive_people))
+        .route("/drive/{document_id}", get(drive_document))
+        .route("/drive/{document_id}/blocks", get(drive_blocks))
+}
+
+async fn drive(RawQuery(q): RawQuery) -> Redirect {
+    with_query("/drive", q)
+}
+
+async fn drive_people(RawQuery(q): RawQuery) -> Redirect {
+    with_query("/drive/people", q)
+}
+
+async fn drive_document(Path(id): Path<String>, RawQuery(q): RawQuery) -> Redirect {
+    with_query(&format!("/drive/{id}"), q)
+}
+
+async fn drive_blocks(Path(id): Path<String>, RawQuery(q): RawQuery) -> Redirect {
+    with_query(&format!("/drive/{id}/blocks"), q)
 }
 
 fn analysis_redirects() -> Router<Arc<PgPool>> {

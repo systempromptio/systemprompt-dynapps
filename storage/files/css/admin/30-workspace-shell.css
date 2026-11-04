@@ -1,0 +1,195 @@
+@layer components {
+
+/* The full-screen document workspace: top bar, navigation rail, editor
+   canvas and details drawer, with no console sidebar or top bar. */
+
+.sp-ws-body {
+  margin: 0;
+  background: var(--sp-bg-canvas);
+  color: var(--sp-text-primary);
+  font-family: var(--sp-font-body);
+}
+
+.sp-ws {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100dvh;
+}
+
+.sp-ws__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  padding: var(--sp-space-2) var(--sp-space-4);
+  background: var(--sp-bg-surface);
+  border-bottom: 1px solid var(--sp-border-subtle);
+}
+
+.sp-ws__home {
+  display: inline-flex;
+  padding: var(--sp-space-2);
+  border-radius: var(--sp-radius-sm);
+  color: var(--sp-text-secondary);
+}
+
+.sp-ws__home:hover,
+.sp-ws__name:hover {
+  background: var(--sp-bg-surface-alt);
+}
+
+.sp-ws__title {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.sp-ws__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-1);
+  max-inline-size: 40ch;
+  padding: var(--sp-space-1) var(--sp-space-2);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--sp-font-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sp-ws__menu {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  z-index: var(--sp-z-dropdown);
+  min-inline-size: 16rem;
+  margin: var(--sp-space-1) 0 0;
+  padding: var(--sp-space-1);
+  list-style: none;
+  background: var(--sp-bg-surface-raised);
+  border: 1px solid var(--sp-border-default);
+  border-radius: var(--sp-radius-md);
+  box-shadow: var(--sp-shadow-elevated);
+}
+
+.sp-ws__menu-item {
+  display: flex;
+  justify-content: space-between;
+  inline-size: 100%;
+  padding: var(--sp-space-2) var(--sp-space-3);
+  border: 0;
+  border-radius: var(--sp-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--sp-text-sm);
+  text-align: start;
+  cursor: pointer;
+}
+
+.sp-ws__menu-item:hover,
+.sp-ws__menu-item:focus-visible {
+  background: var(--sp-accent-surface);
+}
+
+.sp-ws__kbd {
+  color: var(--sp-text-tertiary);
+  font-size: var(--sp-text-xs);
+}
+
+.sp-ws__badge {
+  padding: 0 var(--sp-space-2);
+  border-radius: var(--sp-radius-full);
+  background: var(--sp-bg-surface-alt);
+  color: var(--sp-text-secondary);
+  font-size: var(--sp-text-xs);
+  font-weight: var(--sp-font-semibold);
+}
+
+.sp-ws__save,
+.sp-ws__muted {
+  color: var(--sp-text-tertiary);
+  font-size: var(--sp-text-xs);
+}
+
+.sp-ws__class {
+  display: grid;
+  gap: var(--sp-space-1);
+  margin-block-start: var(--sp-space-3);
+}
+
+.sp-ws__spacer {
+  flex: 1;
+}
+
+.sp-ws__presence {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-ws__person + .sp-ws__person {
+  margin-inline-start: calc(var(--sp-space-1) * -1);
+}
+
+.sp-ws__person--assistant .sp-avatar {
+  outline: 1.5px dashed var(--sp-avatar-tone);
+  outline-offset: 1px;
+  font-size: var(--sp-text-2xs);
+  letter-spacing: var(--sp-tracking-tight);
+}
+
+.sp-ws__body {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.sp-ws__canvas {
+  display: grid;
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.sp-ws__paper {
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+}
+
+@media (max-width: 48rem) {
+  .sp-ws__body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .sp-ws__bar {
+    flex-wrap: wrap;
+  }
+
+  /* On a phone the rail is one scrolling strip of entries above the
+     canvas, never a column that pushes the document off the screen. */
+  .sp-ws__rail {
+    display: flex;
+    gap: var(--sp-space-2);
+    align-items: center;
+    padding: var(--sp-space-1) var(--sp-space-3);
+    overflow-x: auto;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--sp-border-subtle);
+  }
+
+  .sp-ws__rail-title { display: none; }
+  .sp-ws__rail .sp-ws__outline { display: flex; gap: var(--sp-space-1); }
+  .sp-ws__rail .sp-ws__outline-item { padding-inline-start: 0; margin-block-start: 0; }
+  .sp-ws__rail .sp-ws__outline-link { border-inline-start: 0; border-radius: var(--sp-radius-sm); }
+}
+
+}

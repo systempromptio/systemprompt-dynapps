@@ -1,9 +1,10 @@
 // The notification bell: the signed-in user's feed from core's notification
-// fabric (mentions, shares and stream items), kept live from core's per-user
-// AG-UI stream (`data-live-stream`). Read state is stored per user in core, so this bell, the bridge
+// fabric (mentions, shares and stream items), kept live from the AG-UI
+// stream. Read state is stored per user in core, so this bell, the bridge
 // and the documents MCP inbox show one unread count.
 import { rawFetch, rawResponse } from './api.js';
 import { cloneRow, formatDate } from './drive-rows.js';
+import { REOPENED, onDocumentEvent } from './doc-events.js';
 import { initDelegation, onOutsideClick } from './events.js';
 
 const LIST_LIMIT = 20;
@@ -23,29 +24,6 @@ const textOf = (n) => {
   const folded = n.coalesce_count > 1 ? ` (${n.coalesce_count})` : '';
   if (n.kind === 'stream.published') return `${actorOf(n)} posted in #${n.stream}${folded}`;
   return `${actorOf(n)} ${KIND_TEXT[n.kind] ?? n.kind}${folded}`;
-};
-
-// EventSource reconnects by itself, but a frame sent while it was down is
-// lost, so every open after the first re-reads the feed.
-const REOPENED = 'stream.reopened';
-
-const listen = (url, onEvent) => {
-  const stream = new EventSource(url);
-  let opened = false;
-  stream.addEventListener('message', (message) => {
-    let event;
-    try {
-      event = JSON.parse(message.data);
-    } catch {
-      return;
-    }
-    if (event?.type !== 'CUSTOM' || !String(event.name).startsWith('notification.')) return;
-    onEvent(event.name, event.value);
-  });
-  stream.addEventListener('open', () => {
-    if (opened) onEvent(REOPENED, null);
-    opened = true;
-  });
 };
 
 const ATTENTION_TEXT = { human: 'Needs you', agent: 'For your agent', silent: '' };
@@ -156,6 +134,6 @@ export const initNotificationBell = () => {
   if (!root) return;
   initDelegation();
   const bell = createBell(root);
+  onDocumentEvent(bell.onEvent);
   bell.load().catch(() => undefined);
-  if (root.dataset.liveStream) listen(root.dataset.liveStream, bell.onEvent);
 };

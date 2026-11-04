@@ -1,0 +1,75 @@
+@layer components {
+
+/* A spreadsheet fills the editor column edge to edge and scrolls inside it;
+   a deck sits on a solid desk that fills the column, with the rail turned
+   into a filmstrip of slide thumbnails. Every surface is solid, because the
+   workspace page ground is a warm tint that must never show through paper. */
+
+.sp-ws-sheet {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  block-size: 100%;
+  min-block-size: 60vh;
+  background: var(--sp-doc-paper);
+}
+
+.sp-ws--slides .sp-ws__canvas,
+.sp-ws--sheet .sp-ws__canvas { background: var(--sp-doc-desk); }
+
+.sp-ws--slides .sp-ws__rail { background: var(--sp-doc-desk); }
+
+.sp-ws--slides .sp-ws__outline { counter-reset: sp-ws-slide; gap: var(--sp-space-3); }
+
+.sp-ws--slides .sp-ws__outline-item {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  align-items: start;
+  counter-increment: sp-ws-slide;
+}
+
+.sp-ws--slides .sp-ws__outline-item::before {
+  content: counter(sp-ws-slide);
+  padding-block-start: var(--sp-space-1);
+  color: var(--sp-doc-muted);
+  font-size: var(--sp-text-xs);
+  text-align: end;
+  padding-inline-end: var(--sp-space-2);
+}
+
+.sp-ws--slides .sp-ws__outline-link {
+  box-sizing: border-box;
+  aspect-ratio: 16 / 9;
+  padding: var(--sp-space-2);
+  overflow: hidden;
+  border: 1px solid var(--sp-doc-rule);
+  border-radius: var(--sp-radius-xs);
+  background: var(--sp-doc-paper);
+  color: var(--sp-doc-ink);
+  box-shadow: var(--sp-doc-shadow);
+  font-size: var(--sp-text-2xs);
+  font-weight: var(--sp-font-semibold);
+  line-height: 1.25;
+  text-align: start;
+  vertical-align: top;
+}
+
+.sp-ws--slides .sp-ws__outline-link:hover { background: var(--sp-doc-paper); border-color: var(--sp-office-slides); }
+
+.sp-ws--slides .sp-ws__outline-link[aria-current="true"] {
+  outline: 3px solid var(--sp-office-slides);
+  outline-offset: 1px;
+}
+
+.sp-ws--sheet .sp-ws__format { background: var(--sp-office-sheets-tint); color: var(--sp-office-sheets-ink); }
+.sp-ws--slides .sp-ws__format { background: var(--sp-office-slides-tint); color: var(--sp-office-slides-ink); }
+.sp-ws--doc .sp-ws__format { background: var(--sp-office-docs-tint); color: var(--sp-office-docs-ink); }
+
+.sp-ws--slides .sp-ws__present {
+  border-color: var(--sp-office-slides);
+  background: var(--sp-office-slides);
+  color: var(--sp-doc-ink);
+}
+
+.sp-ws--slides .sp-ws__present:hover { background: var(--sp-office-slides-tint); }
+
+}

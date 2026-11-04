@@ -102,6 +102,11 @@
   box-shadow: inset 3px 0 0 var(--sp-accent);
 }
 
+.sp-bell__text {
+  font-size: var(--sp-text-sm);
+  overflow-wrap: anywhere;
+}
+
 .sp-bell__excerpt {
   overflow: hidden;
   color: var(--sp-text-secondary);
@@ -109,11 +114,6 @@
   font-weight: var(--sp-font-normal);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.sp-bell__text {
-  font-size: var(--sp-text-sm);
-  overflow-wrap: anywhere;
 }
 
 .sp-bell__meta {

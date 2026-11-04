@@ -31,6 +31,7 @@ use systemprompt_web_admin_farm::routes::{farm_fragments, farm_ssr};
 use systemprompt_web_admin_governance::routes::ssr_governance;
 use systemprompt_web_admin_identity::SsoDeps;
 use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as sign_in};
+use systemprompt_web_admin_platform::document_class::DeclaredClasses;
 use systemprompt_web_admin_platform::routes::{drive_user, platform_ssr, ssr_bridge};
 use systemprompt_web_admin_platform::service_accounts::ServiceAccounts;
 
@@ -165,7 +166,6 @@ fn platform_routes() -> Router<Arc<PgPool>> {
         .merge(platform_ssr::configuration_routes())
         .merge(catalog_ssr::lifecycle_routes())
         .merge(platform_ssr::sync_routes())
-        .merge(platform_ssr::drive_routes())
         .merge(observability_ssr::routes())
 }
 
@@ -179,6 +179,7 @@ pub fn drive_ssr_router(
         .layer(Extension(engine))
         .layer(Extension(boot))
         .layer(Extension(documents))
+        .layer(Extension(DeclaredClasses::load()))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),
             marketplace_context::marketplace_context_middleware,

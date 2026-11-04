@@ -238,7 +238,7 @@ pub(super) fn documents_tile(d: &DocumentsTouched, i: &TileInputs<'_>) -> KpiTil
                 "{} distinct documents gained a revision in the shared document store",
                 d.current
             ),
-            href: "/admin/drive".to_owned(),
+            href: "/drive".to_owned(),
             tone: "",
         },
         i.comparable.then(|| delta(d.current, d.previous, true)),

@@ -24,10 +24,27 @@ export const cloneRow = (name, fields) => {
   return row;
 };
 
-export const editorsLabel = (editors) => {
+export const editorsLabel = (editors, names = new Map()) => {
   if (!editors.length) return 'Nobody';
-  const names = editors.map(({ user_id: userId, state }) => `${userId} (${state})`);
-  return names.join(', ');
+  const labels = editors.map(({ user_id: userId, state }) => `${names.get(userId) ?? userId} (${state})`);
+  return labels.join(', ');
+};
+
+const PEOPLE_API = '/drive/people';
+const people = new Map();
+
+// Display names for user ids, read once per id from the Drive people route,
+// an id the route cannot name keeps showing as itself.
+export const loadPeople = async (ids) => {
+  const wanted = [...new Set(ids)].filter((id) => id && !people.has(id));
+  if (wanted.length) {
+    const body = await readJson(`${PEOPLE_API}?ids=${encodeURIComponent(wanted.join(','))}`);
+    for (const person of body?.people ?? []) {
+      people.set(person.user_id, person.display_name ?? person.email ?? person.user_id);
+    }
+    for (const id of wanted) if (!people.has(id)) people.set(id, id);
+  }
+  return people;
 };
 
 export const loadEditors = async (presenceApi) => {

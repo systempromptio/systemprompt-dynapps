@@ -1,0 +1,40 @@
+@layer components {
+
+/* Drive document canvases: how each format looks while it is edited in place. */
+
+.sp-doc-page {
+  box-sizing: border-box;
+  max-inline-size: 51rem;
+  min-block-size: 66rem;
+  margin: var(--sp-space-8) auto;
+  padding: var(--sp-space-20) var(--sp-space-24);
+  background: var(--sp-doc-paper);
+  color: var(--sp-doc-ink);
+  box-shadow: var(--sp-shadow-md);
+  font-family: var(--sp-font-body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+@media (width < 48rem) {
+  .sp-doc-page { padding: var(--sp-space-8); }
+}
+
+}
+
+.sp-doc-page--html {
+  max-inline-size: 60rem;
+  min-block-size: 0;
+  margin: 0 auto;
+  padding: var(--sp-space-10) var(--sp-space-8) var(--sp-space-16);
+  box-shadow: none;
+  font-size: 1rem;
+@media (width < 48rem) {
+  .sp-doc-page { padding: var(--sp-space-8); }
+}
+
+}
+
+@media (width < 48rem) {
+  .sp-doc-page { padding: var(--sp-space-8); }
+}
+
+}
