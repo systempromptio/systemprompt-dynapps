@@ -9,9 +9,9 @@
 //! Callers path-qualify (`repositories::devices::pats::…`); nothing is
 //! re-exported, so the module path is the only name a symbol has.
 
-pub mod document_classes;
 pub mod connectors;
 pub mod devices;
+pub mod document_classes;
 pub mod drive_people;
 pub mod jobs;
 pub mod service_account_group;

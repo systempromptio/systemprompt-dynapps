@@ -131,11 +131,7 @@ pub(super) async fn person_actor_middleware(
     if !claims.as_ref().is_ok_and(is_browser_session) {
         return reauth(&boot, &request);
     }
-    if !may_act_from(
-        request.method(),
-        request.headers(),
-        &site_origins(&boot),
-    ) {
+    if !may_act_from(request.method(), request.headers(), &site_origins(&boot)) {
         return (
             StatusCode::FORBIDDEN,
             "a browser session acts only from this site's pages",

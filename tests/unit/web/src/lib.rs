@@ -452,8 +452,6 @@ mod drive_extension_points;
 #[cfg(test)]
 mod drive_pages;
 #[cfg(test)]
-mod vendor_allowlist;
-#[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]
 mod farm_egress;
@@ -469,3 +467,5 @@ mod farm_tool_policy;
 mod farm_tool_tally;
 #[cfg(test)]
 mod personal_upstream_headers;
+#[cfg(test)]
+mod vendor_allowlist;

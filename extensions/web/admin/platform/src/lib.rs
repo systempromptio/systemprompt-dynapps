@@ -25,8 +25,8 @@
 //! crate. The agent access policy registers the same way, so a binary that
 //! serves documents must link it too.
 
-pub(crate) mod handlers;
 pub mod document_class;
+pub(crate) mod handlers;
 pub mod repositories;
 pub mod routes;
 pub(crate) mod services;
@@ -35,10 +35,10 @@ pub use routes::public::{bridge_identity_router, connector_api_router};
 pub use services::{connector_oauth, identity_token, machine_credentials, service_accounts};
 
 pub mod test_support {
-    pub use crate::routes::drive_actor::{
-        REAUTH_KEY, cookie_token, is_browser_session, may_act_from, wants_html,
-    };
     pub use crate::handlers::ssr::ssr_connectors_cards::{
         ConnectorCardView, card as connector_card,
+    };
+    pub use crate::routes::drive_actor::{
+        REAUTH_KEY, cookie_token, is_browser_session, may_act_from, wants_html,
     };
 }
