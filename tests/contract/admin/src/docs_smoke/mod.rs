@@ -117,7 +117,8 @@ async fn docs_smoke_the_document_store_end_to_end() {
     };
     let rest = rest::Rest::new(&stack.api);
     let service = stack.ctx.documents().service();
-    let mut mcp = mcp::McpClient::connect(&stack.mcp, &owner_token, owner_id.as_str()).await;
+    let agent_token = stack.agent_token(&db.pool, &owner_id).await;
+    let mut mcp = mcp::McpClient::connect(&stack.mcp, &agent_token, owner_id.as_str()).await;
     let mut measured = Measured {
         tools_list_bytes: tools_list_bytes(&mcp.list_tools().await),
         ..Measured::default()

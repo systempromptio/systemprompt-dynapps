@@ -6,3 +6,7 @@ storage/files/js/components/sp-confirm-dialog.js:alert-confirm-prompt
 # receives.
 storage/files/css/admin/10-print.css:important
 
+# The vendored document client (taken from core when core stopped serving it)
+# envelope into DocumentsApiError and needs a keepalive fetch on page unload.
+# is the one HTTP seam for core's document routes: it parses core's error
+storage/files/js/documents/documents-api.js:raw-fetch

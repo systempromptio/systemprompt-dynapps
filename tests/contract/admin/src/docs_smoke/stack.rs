@@ -14,7 +14,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use systemprompt::identifiers::{AccessTokenId, ClientId, SessionId, UserId};
-use systemprompt::models::auth::{AuthenticatedUser, JwtAudience, Permission, UserJwtRequest};
+use systemprompt::models::auth::{
+    AuthenticatedUser, JwtAudience, Permission, TokenInteraction, UserJwtRequest,
+};
 use systemprompt::models::documents::DRIVE_SYNC_AUDIENCE;
 use systemprompt::system::AppContext;
 
@@ -274,6 +276,34 @@ impl Stack {
                 browser_session: true,
             })
             .expect("mint the session token")
+    }
+
+    // An attended agent's bearer, as Claude Code holds it: document classes cap
+    // an unattended one at suggest.
+    pub(super) async fn agent_token(&self, pool: &sqlx::PgPool, user: &UserId) -> String {
+        let session = seed_session(pool, user).await;
+        self.ctx
+            .token_authority()
+            .mint_user_jwt(&UserJwtRequest {
+                user: AuthenticatedUser::new_with_roles(
+                    user.clone(),
+                    user.as_str().to_owned(),
+                    format!("{}@contract.test", user.as_str()),
+                    vec![Permission::User],
+                    vec!["user".to_owned()],
+                ),
+                session_id: session,
+                jti: AccessTokenId::generate(),
+                permissions: vec![Permission::User],
+                audience: JwtAudience::standard(),
+                ttl: chrono::Duration::hours(1),
+                client_id: None,
+                purpose: None,
+                plugin_id: None,
+                interaction: Some(TokenInteraction::Interactive),
+                browser_session: false,
+            })
+            .expect("mint the agent token")
     }
 
     // The bridge Drive routes take only a token whose sole audience is the

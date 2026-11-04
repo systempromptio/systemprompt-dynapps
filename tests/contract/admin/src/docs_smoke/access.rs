@@ -75,12 +75,13 @@ pub(super) async fn drive_pages(rest: &Rest, viewers: &Viewers<'_>, document: &D
     for (who, token) in [("owner", viewers.owner), ("member", viewers.member)] {
         let page = rest.get(&path, Some(token)).await;
         assert_eq!(page.status, StatusCode::OK, "the {who} opens the page");
-        for element in ["<sp-comments", "<sp-proposal-list", "<sp-history"] {
-            assert!(
-                page.body.contains(element),
-                "{element} missing for the {who}"
-            );
+        for marker in ["data-ws-root", "data-people-api=\"/drive/people\""] {
+            assert!(page.body.contains(marker), "{marker} missing for the {who}");
         }
+        assert!(
+            !page.body.contains("<sp-"),
+            "the {who}'s page mounts core's retired components"
+        );
     }
     let outsider = rest.get(&path, Some(viewers.outsider)).await;
     assert_eq!(
@@ -96,9 +97,17 @@ pub(super) async fn drive_pages(rest: &Rest, viewers: &Viewers<'_>, document: &D
     );
     let listing = rest.get("/drive", Some(viewers.member)).await;
     assert_eq!(listing.status, StatusCode::OK);
+    for marker in [
+        "data-drive-list",
+        "data-template=\"drive-document-row\"",
+        "data-template=\"drive-row-menu\"",
+        "data-drive-create",
+    ] {
+        assert!(listing.body.contains(marker), "the listing lacks {marker}");
+    }
     assert!(
-        listing.body.contains("<sp-document-browser"),
-        "the listing mounts the browser"
+        listing.body.contains("<td data-admin-only>"),
+        "the agent edit policy cell is not marked admin-only"
     );
     assert!(
         listing.body.contains("value=\"dynapps-word\""),

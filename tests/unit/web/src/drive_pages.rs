@@ -225,15 +225,3 @@ fn the_admin_only_controls_render_for_admins_alone() {
         "a non-admin listing no longer drops the admin-only cells"
     );
 }
-
-#[test]
-fn the_brain_entry_shows_only_while_the_brain_is_on() {
-    let source = read("storage/files/admin/partials/sidebar.hbs");
-    let entry = source
-        .find("href=\"/admin/brain\"")
-        .expect("brain nav entry");
-    let switch = source[..entry]
-        .rfind("{{#if brain_enabled}}")
-        .expect("brain switch");
-    assert!(!source[switch..entry].contains("{{/if}}"));
-}

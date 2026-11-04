@@ -48,7 +48,7 @@ fn the_server_lists_exactly_cores_document_tools() {
 }
 
 #[test]
-fn manifest_and_services_yaml_agree_and_the_server_is_off_by_default() {
+fn manifest_and_services_yaml_agree_and_the_server_is_on_by_default() {
     let manifest = &repo_file("extensions/mcp/documents/manifest.yaml")["extension"];
     let server = &repo_file("services/mcp/documents.yaml")["mcp_servers"][SERVER_NAME];
 
@@ -60,7 +60,7 @@ fn manifest_and_services_yaml_agree_and_the_server_is_off_by_default() {
     assert_eq!(server["binary"], manifest["binary"]);
     assert_eq!(server["port"], manifest["port"]);
     assert_eq!(server["port"].as_u64(), Some(5012));
-    assert_eq!(server["enabled"].as_bool(), Some(false));
+    assert_eq!(server["enabled"].as_bool(), Some(true));
     assert_eq!(manifest["enabled"].as_bool(), Some(true));
     assert_eq!(server["server_type"].as_str(), Some("internal"));
     assert_eq!(server["oauth"]["required"].as_bool(), Some(true));
