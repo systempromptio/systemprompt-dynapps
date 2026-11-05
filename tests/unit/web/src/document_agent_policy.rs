@@ -1,6 +1,7 @@
 //! The installation's document agent policy grants the Drive sync its
-//! whole-file saves and nothing else: every other capability, and the same
-//! capability on any other channel, stays denied as core's default denies it.
+//! whole-file saves and trashes and nothing else: every other capability, and
+//! the same capability on any other channel, stays denied as core's default
+//! denies it.
 
 use systemprompt::files::documents::agents::{AgentCapability, AgentChannel};
 use systemprompt_web_admin_governance::document_agent_policy::allows;
@@ -18,15 +19,17 @@ const CAPABILITIES: [AgentCapability; 9] = [
 ];
 
 #[test]
-fn only_drive_sync_replace_content_is_allowed() {
+fn only_drive_sync_replace_content_and_trash_are_allowed() {
     for channel in [
         AgentChannel::Direct,
         AgentChannel::DriveSync,
         AgentChannel::LiveCheckpoint,
     ] {
         for capability in CAPABILITIES {
-            let expected =
-                capability == AgentCapability::ReplaceContent && channel == AgentChannel::DriveSync;
+            let expected = matches!(
+                capability,
+                AgentCapability::ReplaceContent | AgentCapability::Trash
+            ) && channel == AgentChannel::DriveSync;
             assert_eq!(
                 allows(capability, channel),
                 expected,

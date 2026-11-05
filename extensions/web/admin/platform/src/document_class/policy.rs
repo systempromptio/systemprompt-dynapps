@@ -13,13 +13,14 @@
 //!
 //! Trash (which core's `Trash` capability pairs with restore-from-trash) is
 //! an agent's own business only in a draft that same agent created inside
-//! `agent-workspace`. Core names an agent that sent no name `agent`, so
-//! unnamed agents share their drafts. `ReplaceContent` is allowed only on
-//! core's Drive-sync and live-checkpoint channels, whose whole-file saves and
-//! checkpoints core files under it, and only where the class lets that agent
-//! edit: a checkpoint persists edits already authorized one by one. Under
-//! `suggest` core writes the save as a proposal instead. Direct agent calls
-//! stay denied, as does every other hard-rule capability.
+//! `agent-workspace`, or a file its person deleted from a synced Drive folder
+//! where the class lets that device edit. Core names an agent that sent no name
+//! `agent`, so unnamed agents share their drafts. `ReplaceContent` is allowed
+//! only on core's Drive-sync and live-checkpoint channels, whose whole-file
+//! saves and checkpoints core files under it, and only where the class lets
+//! that agent edit: a checkpoint persists edits already authorized one by one.
+//! Under `suggest` core writes the save as a proposal instead. Direct agent
+//! calls stay denied, as does every other hard-rule capability.
 
 use std::sync::Arc;
 
@@ -119,7 +120,9 @@ pub fn allows_in(
                 r.class.id == AGENT_WORKSPACE && !matches!(r.source, ClassSource::Unknown(_))
             });
             let own_draft = chain.created_by_agent.as_deref() == Some(agent.name.as_str());
-            in_workspace && own_draft
+            let device_delete = agent.channel == AgentChannel::DriveSync
+                && cap_in(catalog, chain, agent) == AgentCap::Edit;
+            (in_workspace && own_draft) || device_delete
         },
         AgentCapability::ReplaceContent => {
             matches!(

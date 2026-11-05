@@ -5,7 +5,8 @@
 //! registered policy allows it. The Drive sync is an agent on the
 //! [`AgentChannel::DriveSync`] channel, and its commit is a
 //! `replace_content`, so without this policy every upload from a synced
-//! folder is refused. Only that capability on that channel is granted; an
+//! folder is refused, and a file the user deletes there is a `trash`. Only
+//! those capabilities on that channel are granted; an
 //! agent on any other path, and every other capability, stays denied.
 
 use std::sync::Arc;
@@ -22,7 +23,10 @@ pub struct DriveSyncSavesPolicy;
 pub const fn allows(capability: AgentCapability, channel: AgentChannel) -> bool {
     matches!(
         (capability, channel),
-        (AgentCapability::ReplaceContent, AgentChannel::DriveSync)
+        (
+            AgentCapability::ReplaceContent | AgentCapability::Trash,
+            AgentChannel::DriveSync
+        )
     )
 }
 

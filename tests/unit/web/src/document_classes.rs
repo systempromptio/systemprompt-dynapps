@@ -305,6 +305,21 @@ fn only_sync_and_checkpoints_replace_content_and_only_where_it_may_edit() {
 }
 
 #[test]
+fn a_synced_folder_trashes_only_where_the_device_may_edit() {
+    let sync = on_channel(true, AgentChannel::DriveSync);
+    let headless_sync = on_channel(false, AgentChannel::DriveSync);
+    let live = on_channel(true, AgentChannel::LiveCheckpoint);
+    let internal = chain(Some("internal"), &[], false);
+    let confidential = chain(Some("confidential"), &[], false);
+    let trash =
+        |c: &ClassChain, who: &AgentActor| allows_in(&DECLARED, c, AgentCapability::Trash, who);
+    assert!(trash(&internal, &sync));
+    assert!(!trash(&internal, &headless_sync));
+    assert!(!trash(&confidential, &sync));
+    assert!(!trash(&internal, &live));
+}
+
+#[test]
 fn only_an_attended_agent_rewrites_broadly_and_only_where_it_may_edit() {
     let broad = |class: &str, who: &AgentActor| {
         let doc = chain(Some(class), &[], false);
