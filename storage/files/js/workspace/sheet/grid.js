@@ -16,8 +16,14 @@ const place = (node, x, y) => {
 };
 
 const applyLook = (node, look) => {
-  if (look.fill) node.style.setProperty('--sp-sheet-fill', look.fill);
-  if (look.ink) node.style.setProperty('--sp-sheet-ink', look.ink);
+  if (look.fill) {
+    node.style.setProperty('--sp-sheet-fill', look.fill);
+    node.classList.add('sp-sheet__cell--filled');
+  }
+  if (look.ink) {
+    node.style.setProperty('--sp-sheet-ink', look.ink);
+    node.classList.add('sp-sheet__cell--inked');
+  }
   node.classList.toggle('sp-sheet__cell--bold', look.bold);
   node.classList.toggle('sp-sheet__cell--italic', look.italic);
   node.classList.toggle('sp-sheet__cell--underline', look.underline);

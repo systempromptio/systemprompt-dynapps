@@ -96,13 +96,15 @@
 }
 
 .sp-sheet__cell--number { text-align: end; font-variant-numeric: tabular-nums; }
-.sp-sheet__cell { background: var(--sp-sheet-fill, transparent); color: var(--sp-sheet-ink, inherit); }
+.sp-sheet__cell--filled { background: var(--sp-sheet-fill); }
+.sp-sheet__cell--inked { color: var(--sp-sheet-ink); }
 .sp-sheet__cell--bold { font-weight: var(--sp-font-bold); }
 .sp-sheet__cell--italic { font-style: italic; }
 .sp-sheet__cell--underline { text-decoration: underline; }
 .sp-sheet__cell--strike { text-decoration: line-through; }
 .sp-sheet__cell--underline.sp-sheet__cell--strike { text-decoration: underline line-through; }
-.sp-sheet__cell.is-selected { background: color-mix(in oklch, var(--sp-office-sheets-tint) 70%, var(--sp-sheet-fill, transparent)); }
+.sp-sheet__cell.is-selected { background: var(--sp-office-sheets-tint); }
+.sp-sheet__cell--filled.is-selected { background: color-mix(in oklch, var(--sp-office-sheets-tint) 70%, var(--sp-sheet-fill)); }
 
 .sp-sheet__head {
   color: var(--sp-doc-muted);
