@@ -52,7 +52,12 @@ fn holds(pdf: &[u8], needle: &str) -> bool {
 #[test]
 fn the_pdf_embeds_subset_fonts_with_a_unicode_map() {
     let pdf = pdf();
-    for needle in ["+DejaVuSans-Bold", "/ToUnicode", "/FontFile2", "/Identity-H"] {
+    for needle in [
+        "+DejaVuSans-Bold",
+        "/ToUnicode",
+        "/FontFile2",
+        "/Identity-H",
+    ] {
         assert!(holds(&pdf, needle), "{needle} missing");
     }
     assert!(!holds(&pdf, "Helvetica"));
@@ -62,7 +67,10 @@ fn the_pdf_embeds_subset_fonts_with_a_unicode_map() {
 fn the_pdf_draws_a_held_image_and_only_that() {
     let pdf = pdf();
     // The picture and its soft mask.
-    assert_eq!(pdf.windows(14).filter(|w| *w == b"/Subtype /Imag").count(), 2);
+    assert_eq!(
+        pdf.windows(14).filter(|w| *w == b"/Subtype /Imag").count(),
+        2
+    );
     assert!(!holds(&pdf, "remote.test"));
 }
 
