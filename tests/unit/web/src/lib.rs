@@ -452,6 +452,8 @@ mod drive_extension_points;
 #[cfg(test)]
 mod drive_pages;
 #[cfg(test)]
+mod drive_pdf;
+#[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]
 mod farm_egress;
