@@ -21,6 +21,26 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.79.0 — 2026-11-06
+
+### Added
+
+- **Live document workspace.** Drive opens documents, sheets and decks in a multiplayer editor, ported from the reference client. The document store and documents MCP server default on, so a deployment needs persistent storage before upgrading.
+- **Desktop sync sends deletes and renames to Drive.** A file absent for two cycles and 15 seconds moves to the Drive trash, and the same bytes under a new name move the document. Nothing is trashed when the folder is empty or missing, or when a bulk threshold is passed; `drive deletes apply` and `drive deletes restore` decide held deletes.
+- **Insert image on decks, Markdown export, readable proposals.** Decks accept uploaded PNG, JPEG, GIF and WebP (WebP is saved as PNG). Export as Markdown reports what it left out. Proposals show a plain before and after.
+- **A folder picker for Move to folder**, which can also return a document to the top level.
+
+### Changed
+
+- **Built against published systemprompt-core 0.79.0.** Every core pin in `Cargo.toml` and `tests/Cargo.toml` and `bridge/CORE_REF` moved, and the schema ladder gained the 0.79.0 rung.
+- **Export as PDF uses core's rich renderer.** Limits are stated in core's `documentation/documents.md`: no CJK or right-to-left text, and decks and sheets are simplified.
+- **The scheduler now runs core's eight `document_*` jobs.** They were never declared here. Trash purge and blob cleanup run for the first time on upgrade, so check what they would remove on an existing deployment.
+
+### Fixed
+
+- **The sheet grid draws cell fill, font colour and text styles** for xlsx, including theme colours.
+- **Deck pictures and tables can be moved and resized**, and the document toolbar draws SVG icons instead of symbol glyphs.
+
 ## 0.78.0 — 2026-11-04
 
 ### Changed
