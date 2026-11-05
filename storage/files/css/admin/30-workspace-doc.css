@@ -177,3 +177,23 @@
 .sp-doc-caret--tone-agent, .sp-doc-select--tone-agent { --sp-tone: var(--sp-accent); }
 
 }
+
+.sp-doc-tool__icon {
+  display: block;
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin-inline: auto;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sp-ws-folders { inline-size: min(28rem, 90vw); padding: var(--sp-space-4); border: 1px solid var(--sp-border-subtle); border-radius: var(--sp-radius-sm); }
+.sp-ws-folders__title { margin: 0 0 var(--sp-space-2); font-size: var(--sp-text-base); }
+.sp-ws-folders__body { min-block-size: 10rem; max-block-size: 50vh; overflow: auto; }
+.sp-ws-folders__trail { display: flex; flex-wrap: wrap; gap: var(--sp-space-1); }
+.sp-ws-folders__list { margin: var(--sp-space-2) 0; padding: 0; list-style: none; }
+.sp-ws-folders__row { inline-size: 100%; padding: var(--sp-space-2); text-align: start; color: inherit; background: transparent; border: 0; border-radius: var(--sp-radius-sm); cursor: pointer; }
+.sp-ws-folders__row:hover, .sp-ws-folders__row:focus-visible { background: var(--sp-bg-surface-alt); }

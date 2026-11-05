@@ -57,6 +57,7 @@ fn the_scripts_set_text_and_never_html() {
         "storage/files/js/workspace/commands.js",
         "storage/files/js/workspace/drawer.js",
         "storage/files/js/workspace/editors.js",
+        "storage/files/js/workspace/folder-picker.js",
         "storage/files/js/workspace/palette.js",
         "storage/files/js/workspace/people.js",
         "storage/files/js/workspace/rail.js",

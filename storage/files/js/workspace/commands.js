@@ -6,6 +6,7 @@ import { rawFetch } from '../services/api.js';
 import { showConfirmDialog, showPromptDialog } from '../services/confirm.js';
 import { showToast } from '../services/toast.js';
 import { toggleDrawer } from './drawer.js';
+import { pickFolder } from './folder-picker.js';
 import { registerCommand } from './registry.js';
 
 const enc = encodeURIComponent;
@@ -31,18 +32,30 @@ const duplicate = async (root, ctx) => {
   go(`${root.dataset.baseUrl}/${enc(created.document.id)}`);
 };
 
-const move = (root, ctx) => showPromptDialog('Move to folder', 'Folder id (leave empty for the top level)', ctx.doc.folder_id ?? '', async (raw) => {
-  const folder = raw.trim();
-  await patch(root, { folder_id: folder || null });
-  ctx.refresh();
-});
+const move = async (root, ctx) => {
+  const folder = await pickFolder({ title: `Move “${ctx.doc.name}”`, currentId: ctx.doc.folder_id });
+  if (folder === undefined) return;
+  try {
+    await patch(root, { folder_id: folder });
+    ctx.refresh();
+    showToast('Moved', 'success');
+  } catch (error) {
+    showToast(error.message ?? 'The document could not be moved.', 'error');
+  }
+};
 
 const download = (root) => {
   const link = Object.assign(document.createElement('a'), { href: root.dataset.contentUrl, download: '' });
   link.click();
 };
 
-const exportLater = () => showToast('Export to PDF and Markdown arrives with the core export route.', 'info');
+const exportPdf = (root) => {
+  const link = Object.assign(document.createElement('a'), { href: `${root.dataset.contentUrl}?format=pdf`, download: '' });
+  link.click();
+};
+
+// Core renders every format to PDF except an opaque file, which has no text.
+const canRenderPdf = (ctx) => ctx.doc?.format !== 'file';
 
 const trash = (root, ctx) => showConfirmDialog('Move to trash', `“${ctx.doc.name}” moves to the trash and can be restored.`, 'Move to trash', async () => {
   await rawFetch(root.dataset.documentApi, { method: 'DELETE' });
@@ -63,8 +76,7 @@ const present = (root) => root.querySelector('[data-slot="ws-editor"]').requestF
   { id: 'duplicate', label: 'Make a copy', menu: true, when: canEdit, run: duplicate },
   { id: 'move', label: 'Move to folder', menu: true, when: isOwner, run: move },
   { id: 'download', label: 'Download', menu: true, run: download },
-  { id: 'export-pdf', label: 'Export as PDF', menu: true, run: exportLater },
-  { id: 'export-md', label: 'Export as Markdown', menu: true, run: exportLater },
+  { id: 'export-pdf', label: 'Export as PDF', menu: true, when: canRenderPdf, run: exportPdf },
   { id: 'history', label: 'Version history', menu: true, run: (root) => toggleDrawer(root, 'versions', true) },
   { id: 'share', label: 'Share', menu: true, when: (ctx) => ctx.canShare, run: (root) => toggleDrawer(root, 'sharing', true) },
   { id: 'details', label: 'Details', keys: '⌘I', menu: true, run: (root) => toggleDrawer(root, 'details') },

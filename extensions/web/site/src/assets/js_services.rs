@@ -100,6 +100,7 @@ fn workspace_js(p: &Path) -> Vec<AssetDefinition> {
         ws_js!(p, "drawer-versions.js"),
         ws_js!(p, "drawer.js"),
         ws_js!(p, "editors.js"),
+        ws_js!(p, "folder-picker.js"),
         ws_js!(p, "palette.js"),
         ws_js!(p, "people-picker.js"),
         ws_js!(p, "people.js"),

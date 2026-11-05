@@ -13,9 +13,34 @@ const GROUPS = [
   ['bullet', 'numbered', 'outdent', 'indent'],
   ['divider', 'page_break', 'table', 'clear'],
 ];
-const GLYPHS = {
-  undo: '↶', redo: '↷', bold: 'B', italic: 'I', underline: 'U', strike: 'S', code: '</>', link: '🔗',
-  bullet: '•', numbered: '1.', outdent: '⇤', indent: '⇥', divider: '—', page_break: '⤓', table: '▦', clear: '⌫',
+// Letter tools stay type, styled by the stylesheet; the rest are 16px stroke
+// icons, so no tool depends on the viewer's emoji or symbol fonts.
+const LETTERS = { bold: 'B', italic: 'I', underline: 'U', strike: 'S' };
+const ICONS = {
+  undo: 'M6 3 3 6l3 3M3 6h6.5a3.5 3.5 0 0 1 0 7H6',
+  redo: 'M10 3l3 3-3 3M13 6H6.5a3.5 3.5 0 0 0 0 7H10',
+  code: 'M6 4 2 8l4 4M10 4l4 4-4 4',
+  link: 'M6.5 9.5l3-3M7 4.5l1-1a3 3 0 0 1 4.2 4.2l-1 1M9 11.5l-1 1a3 3 0 0 1-4.2-4.2l1-1',
+  bullet: 'M6 4h8M6 8h8M6 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01',
+  numbered: 'M7 4h7M7 8h7M7 12h7M2.5 3 3.5 2.5V6M2.5 10.2c.6-.8 2-.5 2 .4 0 .8-2 1.6-2 2.4h2',
+  outdent: 'M3 3h10M8 7h5M8 10h5M3 13h10M5.5 6.5 3 8.5l2.5 2',
+  indent: 'M3 3h10M8 7h5M8 10h5M3 13h10M3 6.5 5.5 8.5 3 10.5',
+  divider: 'M2 8h12',
+  page_break: 'M3 2v3h10V2M3 14v-3h10v3M2 8h2M6 8h4M12 8h2',
+  table: 'M2.5 3h11v10h-11zM2.5 6.5h11M2.5 10h11M8 3v10',
+  clear: 'M4 3h9M8.5 3 6.5 13M3 13h6M11 10l3 3M14 10l-3 3',
+};
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const icon = (id) => {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('class', 'sp-doc-tool__icon');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', ICONS[id]);
+  svg.append(path);
+  return svg;
 };
 
 const button = (id, label, onRun) => {
@@ -25,7 +50,8 @@ const button = (id, label, onRun) => {
   el.dataset.tool = id;
   el.title = label;
   el.setAttribute('aria-label', label);
-  el.textContent = GLYPHS[id] ?? label;
+  if (ICONS[id]) el.append(icon(id));
+  else el.textContent = LETTERS[id] ?? label;
   el.addEventListener('mousedown', (event) => {
     event.preventDefault();
     onRun(id);

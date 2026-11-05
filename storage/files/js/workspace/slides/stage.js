@@ -1,8 +1,8 @@
 // The stage: the current slide at full width, each shape absolutely placed
 // from its EMU frame and edited through its own ProseMirror view. A redraw
 // keeps the views of shapes that still exist, so a remote change never
-// steals the local caret. Image and table shapes carry no text in the replica,
-// so they are placed and labelled but never edited here.
+// steals the local caret. Image and table shapes carry no text in the replica:
+// they move, resize and delete like any shape, and their content stays as is.
 import { frameOf, indexOfId, isTitle, shapesOf } from './deck.js';
 import { placeFrame, wireFrames } from './frames.js';
 import { mountShapeText } from './shape-text.js';
@@ -25,14 +25,14 @@ const lockedEl = (shape) => {
   el.dataset.shape = shape.get('id');
   el.dataset.kind = shape.get('kind');
   el.textContent = lockedKind(shape);
-  el.title = `${lockedKind(shape)}: edit it in the original application`;
+  el.title = `${lockedKind(shape)}: drag to move or resize. Its content is edited in the original application.`;
   const src = shape.get('src');
   if (shape.get('kind') === 'image' && typeof src === 'string' && src && mediaBase) {
     const img = Object.assign(document.createElement('img'), {
       className: 'sp-deck-shape__image', alt: '', src: `${mediaBase}?ref=${encodeURIComponent(src)}`,
     });
     // A part the media route cannot serve leaves the labelled placeholder.
-    img.addEventListener('load', () => el.replaceChildren(img, ...el.querySelectorAll('[data-remove]')), { once: true });
+    img.addEventListener('load', () => el.replaceChildren(img, ...el.querySelectorAll('[data-frame], [data-remove]')), { once: true });
     img.addEventListener('error', () => img.remove(), { once: true });
   }
   return el;
@@ -65,7 +65,7 @@ export const createStage = (host, { session, onSelect, onEdit }) => {
   const shapeEl = (shape) => {
     if (lockedKind(shape)) {
       const el = lockedEl(shape);
-      if (session.state.mode === 'edit') el.append(removeButton());
+      if (session.state.mode === 'edit') el.append(grip('move', 'Drag to move'), grip('resize', 'Drag to resize'), removeButton());
       views.set(shape.get('id'), { el, view: null });
       return el;
     }
