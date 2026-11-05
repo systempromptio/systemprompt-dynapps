@@ -12,6 +12,45 @@
 scheduler:
   enabled: true
   jobs:
+    - name: document_collab_reaper
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: document_presence_sweep
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: document_collab_update_sweep
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: document_node_ids_backfill
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: document_upload_expiry
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: document_agent_read_retention
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: document_blob_gc
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: document_trash_purge
+      extension: core
+      owner: admin
+      enabled: true
     # Core jobs (defined in systemprompt-core)
     - name: managed_inventory_refresh
       extension: core

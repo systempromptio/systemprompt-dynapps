@@ -15,6 +15,15 @@ const place = (node, x, y) => {
   return node;
 };
 
+const applyLook = (node, look) => {
+  if (look.fill) node.style.setProperty('--sp-sheet-fill', look.fill);
+  if (look.ink) node.style.setProperty('--sp-sheet-ink', look.ink);
+  node.classList.toggle('sp-sheet__cell--bold', look.bold);
+  node.classList.toggle('sp-sheet__cell--italic', look.italic);
+  node.classList.toggle('sp-sheet__cell--underline', look.underline);
+  node.classList.toggle('sp-sheet__cell--strike', look.strike);
+};
+
 const measure = (layer) => {
   const probe = el('div', 'sp-sheet__cell');
   layer.append(probe);
@@ -39,11 +48,12 @@ export const createGrid = ({ viewport, layer, colHeads, rowHeads, sizer }, sourc
   };
 
   const cell = (row, col, range) => {
-    const { text, isNumber } = source.cell(row, col);
+    const { text, isNumber, look } = source.cell(row, col);
     const node = place(el('div', 'sp-sheet__cell'), col * size.col, row * size.row);
     node.textContent = text;
     node.dataset.ref = `${columnName(col)}${row + 1}`;
     if (isNumber) node.classList.add('sp-sheet__cell--number');
+    if (look) applyLook(node, look);
     if (inRange(range, row, col)) node.classList.add('is-selected');
     return node;
   };

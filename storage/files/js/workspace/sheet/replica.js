@@ -46,6 +46,18 @@ const cellsOf = (map) => {
   return out;
 };
 
+const looksOf = (map) => {
+  const out = new Map();
+  const cells = map.get('cells');
+  if (!cells) return out;
+  for (const key of cells.keys()) {
+    const cell = cells.get(key);
+    const style = cell instanceof LoroMap ? cell.get('style') : null;
+    if (typeof style === 'string' && style) out.set(key, style);
+  }
+  return out;
+};
+
 export const readSheets = (doc) => {
   const list = sheetList(doc);
   const out = [];
@@ -58,6 +70,7 @@ export const readSheets = (doc) => {
       rows: ids(map.get('rows')),
       cols: ids(map.get('cols')),
       cells: cellsOf(map),
+      looks: looksOf(map),
     });
   }
   return out;
@@ -125,6 +138,13 @@ export const inputAt = (sheet, row, col) => {
   const colId = sheet.cols[col];
   if (rowId == null || colId == null) return '';
   return sheet.cells.get(cellKey(rowId, colId)) ?? '';
+};
+
+export const styleAt = (sheet, row, col) => {
+  const rowId = sheet.rows[row];
+  const colId = sheet.cols[col];
+  if (rowId == null || colId == null) return null;
+  return sheet.looks.get(cellKey(rowId, colId)) ?? null;
 };
 
 // A re-join's unsent edits, merged over the new snapshot in `carried`, are

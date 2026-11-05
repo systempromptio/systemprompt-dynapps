@@ -128,6 +128,7 @@ fn editor_js(p: &Path) -> Vec<AssetDefinition> {
         ws_js!(p, "sheet/projection.js"),
         ws_js!(p, "sheet/replica.js"),
         ws_js!(p, "sheet/selection.js"),
+        ws_js!(p, "sheet/style.js"),
         ws_js!(p, "slides/editor.js"),
         ws_js!(p, "slides/cursors.js"),
         ws_js!(p, "slides/deck.js"),

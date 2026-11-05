@@ -2,7 +2,7 @@
 // needs, so the name menu, the toolbar buttons, the palette and the shortcuts
 // offer only what the viewer may do, and one id always means one behaviour.
 // Core's levels: rename and copy need edit; move and trash need ownership.
-import { rawFetch } from '../services/api.js';
+import { errorMessage, rawFetch, rawResponse } from '../services/api.js';
 import { showConfirmDialog, showPromptDialog } from '../services/confirm.js';
 import { showToast } from '../services/toast.js';
 import { toggleDrawer } from './drawer.js';
@@ -54,9 +54,21 @@ const exportPdf = (root) => {
   link.click();
 };
 
-const exportMarkdown = (root) => {
-  const link = Object.assign(document.createElement('a'), { href: `${root.dataset.documentApi}/export/markdown`, download: '' });
-  link.click();
+const fileNameOf = (response) => /filename="?([^";]+)"?/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? 'export.md';
+
+// Fetched rather than linked, because a link cannot read the header naming
+// what the file left out, and the person must be told.
+const exportMarkdown = async (root) => {
+  const response = await rawResponse(`${root.dataset.documentApi}/export/markdown`, { credentials: 'same-origin' });
+  if (!response.ok) {
+    showToast(await errorMessage(response), 'error');
+    return;
+  }
+  const url = URL.createObjectURL(await response.blob());
+  Object.assign(document.createElement('a'), { href: url, download: fileNameOf(response) }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const leftOut = response.headers.get('x-export-left-out');
+  if (leftOut) showToast(`Exported. Markdown could not hold: ${leftOut}.`, 'info');
 };
 
 const SHEETS = new Set(['xlsx', 'ods']);

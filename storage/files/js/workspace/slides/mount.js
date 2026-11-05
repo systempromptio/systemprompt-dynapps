@@ -40,6 +40,19 @@ const carryOver = (doc, carried) => {
 };
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
+const PICKABLE = [...IMAGE_TYPES, 'image/webp'];
+
+// Office releases do not all open WebP inside a pptx, so it is saved as PNG.
+const placeable = async (file) => {
+  if (IMAGE_TYPES.includes(file.type)) return file;
+  const bitmap = await createImageBitmap(file);
+  const canvas = Object.assign(document.createElement('canvas'), { width: bitmap.width, height: bitmap.height });
+  canvas.getContext('2d').drawImage(bitmap, 0, 0);
+  bitmap.close();
+  const blob = await new Promise((resolve) => { canvas.toBlob(resolve, 'image/png'); });
+  if (!blob) throw new Error('The picture could not be converted.');
+  return new File([blob], `${file.name.replace(/\.[^.]+$/, '')}.png`, { type: 'image/png' });
+};
 
 const fittedFrame = async (file) => {
   const bitmap = await createImageBitmap(file);
@@ -51,7 +64,7 @@ const fittedFrame = async (file) => {
 };
 
 const pickImage = () => new Promise((resolve) => {
-  const input = Object.assign(document.createElement('input'), { type: 'file', accept: IMAGE_TYPES.join(','), hidden: true });
+  const input = Object.assign(document.createElement('input'), { type: 'file', accept: PICKABLE.join(','), hidden: true });
   input.dataset.deckImage = '';
   input.addEventListener('change', () => { input.remove(); resolve(input.files[0] ?? null); }, { once: true });
   input.addEventListener('cancel', () => { input.remove(); resolve(null); }, { once: true });
@@ -136,14 +149,15 @@ export const mount = async (slot, { root, readOnly }) => {
     redraw();
   };
   ui.film.actions.image = async () => {
-    const file = await pickImage();
+    const picked = await pickImage();
     const slide = ui.stage.current();
-    if (!file || !slide) return;
-    if (!IMAGE_TYPES.includes(file.type)) {
-      showToast('A slide holds PNG, JPEG or GIF pictures.', 'error');
+    if (!picked || !slide) return;
+    if (!PICKABLE.includes(picked.type)) {
+      showToast('A slide holds PNG, JPEG, GIF or WebP pictures.', 'error');
       return;
     }
     try {
+      const file = await placeable(picked);
       const frame = await fittedFrame(file);
       const { sha256 } = await uploadFile(file, { mime: file.type });
       rememberLocalImage(sha256, URL.createObjectURL(file));

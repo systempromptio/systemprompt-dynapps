@@ -6,9 +6,10 @@
 import { loadEngine } from '../doc/loro.js';
 import { createSession } from '../doc/session.js';
 import { loadCalc, createCalc } from './formula.js';
-import { readSheets, addSheet, writeCells, inputAt, carryCells } from './replica.js';
+import { readSheets, addSheet, writeCells, inputAt, styleAt, carryCells } from './replica.js';
 import { createSelection } from './selection.js';
 import { createGrid } from './grid.js';
+import { cellLook } from './style.js';
 import { createCellEditor } from './cell-editor.js';
 import { bindInput } from './keys.js';
 import { bindClipboard } from './clipboard.js';
@@ -85,7 +86,11 @@ export const mount = async (slot, { root, readOnly }) => {
     input: (row, col) => (sheet() ? inputAt(sheet(), row, col) : ''),
     cell: (row, col) => {
       const text = calc.display(view.active, row, col);
-      return { text, isNumber: text !== '' && calc.isNumber(text) };
+      return {
+        text,
+        isNumber: text !== '' && calc.isNumber(text),
+        look: sheet() ? cellLook(styleAt(sheet(), row, col)) : null,
+      };
     },
     write: (writes) => {
       if (!sheet() || !source.canEdit()) return;
