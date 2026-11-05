@@ -54,6 +54,16 @@ const exportPdf = (root) => {
   link.click();
 };
 
+const exportMarkdown = (root) => {
+  const link = Object.assign(document.createElement('a'), { href: `${root.dataset.documentApi}/export/markdown`, download: '' });
+  link.click();
+};
+
+const SHEETS = new Set(['xlsx', 'ods']);
+const isSheet = (ctx) => SHEETS.has(ctx.doc?.format);
+const isDeck = (ctx) => DECKS.has(ctx.doc?.format);
+const isText = (ctx) => canRenderPdf(ctx) && !isSheet(ctx) && !isDeck(ctx);
+
 // Core renders every format to PDF except an opaque file, which has no text.
 const canRenderPdf = (ctx) => ctx.doc?.format !== 'file';
 
@@ -77,6 +87,9 @@ const present = (root) => root.querySelector('[data-slot="ws-editor"]').requestF
   { id: 'move', label: 'Move to folder', menu: true, when: isOwner, run: move },
   { id: 'download', label: 'Download', menu: true, run: download },
   { id: 'export-pdf', label: 'Export as PDF', menu: true, when: canRenderPdf, run: exportPdf },
+  { id: 'export-md', label: 'Export as Markdown', menu: true, when: isText, run: exportMarkdown },
+  { id: 'export-md-tables', label: 'Export as Markdown (one table per sheet)', menu: true, when: isSheet, run: exportMarkdown },
+  { id: 'export-md-outline', label: 'Export as Markdown (text outline of the slides)', menu: true, when: isDeck, run: exportMarkdown },
   { id: 'history', label: 'Version history', menu: true, run: (root) => toggleDrawer(root, 'versions', true) },
   { id: 'share', label: 'Share', menu: true, when: (ctx) => ctx.canShare, run: (root) => toggleDrawer(root, 'sharing', true) },
   { id: 'details', label: 'Details', keys: '⌘I', menu: true, run: (root) => toggleDrawer(root, 'details') },

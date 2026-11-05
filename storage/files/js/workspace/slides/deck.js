@@ -75,6 +75,17 @@ export const insertTextBox = (slide) => addShape(slide.get('shapes'), 'text', {
   x: SLIDE_W / 4, y: SLIDE_H / 3, w: SLIDE_W / 2, h: SLIDE_H / 6,
 }, 'Text');
 
+// A picture's `src` is its upload's hash until a checkpoint writes the part.
+export const insertImage = (slide, sha256, frame) => {
+  const shapes = slide.get('shapes');
+  const shape = shapes.insertContainer(shapes.length, new LoroMap());
+  shape.set('id', freshId());
+  shape.set('kind', 'image');
+  shape.set('src', sha256);
+  setFrame(shape, frame);
+  shape.setContainer('paragraphs', new LoroMovableList());
+};
+
 const copyBlock = (list, at, block) => {
   const kind = block.get('kind');
   const copy = newBlock(list, at, freshId(), JSON.parse(kind ?? '{"type":"paragraph"}'));

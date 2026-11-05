@@ -1,13 +1,36 @@
 // The Proposals tab: changes an agent or a reviewer-gated folder held back for
 // review. Open proposals first, then the decided ones; each shows its message,
-// who proposed it and when, its changed lines on request, and, for an editor,
+// who proposed it and when, a plain before and after on request, and, for an editor,
 // Accept or Reject with an optional note. Hidden when proposals are off.
 import { decideProposal, getProposal, listProposals } from '../documents/documents-api.js';
 import { person, resolvePeople } from './people.js';
-import { alertLine, attempt, button, el, lineList, relativeTime } from './pane-dom.js';
+import { alertLine, attempt, button, el, relativeTime } from './pane-dom.js';
 import { paneUnavailable, registerDrawerTab } from './registry.js';
 
 const panes = new WeakMap();
+
+const KIND_LABEL = { added: 'Added', changed: 'Changed', removed: 'Removed' };
+
+const textBlock = (label, text) => {
+  const row = el('div', `sp-ws-change__text sp-ws-change__text--${label.toLowerCase()}`);
+  row.append(el('span', 'sp-ws__muted', label), el('p', null, text || '(no text)'));
+  return row;
+};
+
+const changeRow = (change) => {
+  const item = el('li', `sp-ws-change sp-ws-change--${change.kind}`);
+  item.append(el('span', 'sp-ws-change__kind', KIND_LABEL[change.kind] ?? change.kind));
+  if (change.kind !== 'added') item.append(textBlock('Before', change.before));
+  if (change.kind !== 'removed') item.append(textBlock('After', change.after));
+  return item;
+};
+
+const changeList = (changes) => {
+  if (!changes?.length) return el('p', 'sp-ws__muted', 'No changed blocks');
+  const list = el('ul', 'sp-ws-changes');
+  list.append(...changes.map(changeRow));
+  return list;
+};
 
 const changesToggle = (proposal, ctx, state, reload) => {
   const open = state.changes.has(proposal.id);
@@ -18,12 +41,12 @@ const changesToggle = (proposal, ctx, state, reload) => {
       return;
     }
     attempt(state.alert, async () => {
-      const { lines } = await getProposal(ctx.documentId, proposal.id);
-      state.changes.set(proposal.id, lines);
+      const { changes } = await getProposal(ctx.documentId, proposal.id);
+      state.changes.set(proposal.id, changes);
     }, reload);
   });
   toggle.setAttribute('aria-expanded', String(open));
-  return open ? [toggle, lineList(state.changes.get(proposal.id), 'No changed blocks')] : [toggle];
+  return open ? [toggle, changeList(state.changes.get(proposal.id))] : [toggle];
 };
 
 const decision = (proposal, ctx, state, reload) => {

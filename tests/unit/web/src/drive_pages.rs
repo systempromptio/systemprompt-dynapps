@@ -226,3 +226,20 @@ fn the_admin_only_controls_render_for_admins_alone() {
         "a non-admin listing no longer drops the admin-only cells"
     );
 }
+
+#[test]
+fn each_markdown_export_says_what_it_produces() {
+    let commands = read("storage/files/js/workspace/commands.js");
+    for label in ["one table per sheet", "text outline of the slides"] {
+        assert!(commands.contains(label), "no menu label says {label}");
+    }
+    assert!(commands.contains("/export/markdown"));
+}
+
+#[test]
+fn a_proposal_shows_before_and_after_rather_than_hashlines() {
+    let drawer = read("storage/files/js/workspace/drawer-proposals.js");
+    assert!(drawer.contains("textBlock('Before'"));
+    assert!(drawer.contains("textBlock('After'"));
+    assert!(!drawer.contains("lineList"));
+}

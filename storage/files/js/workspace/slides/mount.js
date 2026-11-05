@@ -5,10 +5,12 @@
 import { loadEngine } from '../doc/loro.js';
 import { createSession } from '../doc/session.js';
 import {
-  frameOf, indexOfId, insertTextBox, itemsOf, setFrame, shapesOf, slideList,
+  SLIDE_H, SLIDE_W, frameOf, indexOfId, insertImage, insertTextBox, itemsOf, setFrame, shapesOf, slideList,
 } from './deck.js';
 import { readParagraphs, writeParagraphs } from './paragraphs.js';
-import { createStage, setDeckMediaBase } from './stage.js';
+import { createStage, rememberLocalImage, setDeckMediaBase } from './stage.js';
+import { uploadFile } from '../upload/session.js';
+import { showToast } from '../../services/toast.js';
 import { createFilmstrip } from './filmstrip.js';
 import { createCursors } from './cursors.js';
 import { present } from './present.js';
@@ -36,6 +38,26 @@ const carryOver = (doc, carried) => {
   }
   doc.commit();
 };
+
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
+
+const fittedFrame = async (file) => {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min((SLIDE_W / 2) / bitmap.width, (SLIDE_H / 2) / bitmap.height);
+  const w = bitmap.width * scale;
+  const h = bitmap.height * scale;
+  bitmap.close();
+  return { x: (SLIDE_W - w) / 2, y: (SLIDE_H - h) / 2, w, h };
+};
+
+const pickImage = () => new Promise((resolve) => {
+  const input = Object.assign(document.createElement('input'), { type: 'file', accept: IMAGE_TYPES.join(','), hidden: true });
+  input.dataset.deckImage = '';
+  input.addEventListener('change', () => { input.remove(); resolve(input.files[0] ?? null); }, { once: true });
+  input.addEventListener('cancel', () => { input.remove(); resolve(null); }, { once: true });
+  document.body.append(input);
+  input.click();
+});
 
 const el = (tag, className) => Object.assign(document.createElement(tag), { className });
 
@@ -112,6 +134,25 @@ export const mount = async (slot, { root, readOnly }) => {
     insertTextBox(slide);
     session.state.doc.commit();
     redraw();
+  };
+  ui.film.actions.image = async () => {
+    const file = await pickImage();
+    const slide = ui.stage.current();
+    if (!file || !slide) return;
+    if (!IMAGE_TYPES.includes(file.type)) {
+      showToast('A slide holds PNG, JPEG or GIF pictures.', 'error');
+      return;
+    }
+    try {
+      const frame = await fittedFrame(file);
+      const { sha256 } = await uploadFile(file, { mime: file.type });
+      rememberLocalImage(sha256, URL.createObjectURL(file));
+      insertImage(slide, sha256, frame);
+      session.state.doc.commit();
+      redraw();
+    } catch (error) {
+      showToast(error.message ?? 'The picture could not be added.', 'error');
+    }
   };
   root.addEventListener('ws:reveal', (event) => {
     const at = indexOfId(slideList(session.state.doc), event.detail?.node ?? '');

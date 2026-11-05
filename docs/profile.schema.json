@@ -177,8 +177,7 @@
             "claude-code": true,
             "claude-desktop": true
           },
-          "stale": "withhold",
-          "working_set": true
+          "stale": "withhold"
         },
         "capture": {
           "sources": [
@@ -2086,8 +2085,7 @@
               "claude-code": true,
               "claude-desktop": true
             },
-            "stale": "withhold",
-            "working_set": true
+            "stale": "withhold"
           }
         },
         "capture": {
@@ -2148,7 +2146,7 @@
       "additionalProperties": false
     },
     "BrainRecallProfile": {
-      "description": "Gateway recall settings.\n\nThe token budget and deadline, the scopes searched, the clients recall\nis on for (keyed by `x-systemprompt-client` name; an unlisted client is\noff), what happens to stale facts, and whether the tiers read the\nprecomputed working set.",
+      "description": "Gateway recall settings.\n\nThe token budget and deadline, the scopes searched, the clients recall\nis on for (keyed by `x-systemprompt-client` name; an unlisted client is\noff), and what happens to stale facts.",
       "type": "object",
       "properties": {
         "budget_tokens": {
@@ -2195,11 +2193,6 @@
         "stale": {
           "$ref": "#/$defs/StalePolicy",
           "default": "withhold"
-        },
-        "working_set": {
-          "description": "Run the tiers over the precomputed brain_working_set (true) or the previous scope-predicate SQL (false; removed in the next release).",
-          "type": "boolean",
-          "default": true
         }
       },
       "additionalProperties": false

@@ -19,6 +19,24 @@ const LOCKED_LABEL = { image: 'Image', table: 'Table', other: 'Embedded object' 
 
 export const lockedKind = (shape) => LOCKED_LABEL[shape.get('kind')] ?? null;
 
+// A picture just placed reaches the media route at the next checkpoint, so a
+// failed load is tried again for a while, and its uploader sees it at once.
+const IMAGE_RETRIES = 12;
+const IMAGE_RETRY_MS = 5000;
+const localImages = new Map();
+
+export const rememberLocalImage = (sha256, url) => localImages.set(sha256, url);
+
+const drawImage = (el, src, attempt) => {
+  const img = Object.assign(document.createElement('img'), {
+    className: 'sp-deck-shape__image', alt: '', src: localImages.get(src) ?? `${mediaBase}?ref=${encodeURIComponent(src)}`,
+  });
+  img.addEventListener('load', () => el.replaceChildren(img, ...el.querySelectorAll('[data-frame], [data-remove]')), { once: true });
+  img.addEventListener('error', () => {
+    if (attempt < IMAGE_RETRIES && el.isConnected) setTimeout(() => drawImage(el, src, attempt + 1), IMAGE_RETRY_MS);
+  }, { once: true });
+};
+
 const lockedEl = (shape) => {
   const el = document.createElement('div');
   el.className = 'sp-deck-shape sp-deck-shape--locked';
@@ -27,14 +45,7 @@ const lockedEl = (shape) => {
   el.textContent = lockedKind(shape);
   el.title = `${lockedKind(shape)}: drag to move or resize. Its content is edited in the original application.`;
   const src = shape.get('src');
-  if (shape.get('kind') === 'image' && typeof src === 'string' && src && mediaBase) {
-    const img = Object.assign(document.createElement('img'), {
-      className: 'sp-deck-shape__image', alt: '', src: `${mediaBase}?ref=${encodeURIComponent(src)}`,
-    });
-    // A part the media route cannot serve leaves the labelled placeholder.
-    img.addEventListener('load', () => el.replaceChildren(img, ...el.querySelectorAll('[data-frame], [data-remove]')), { once: true });
-    img.addEventListener('error', () => img.remove(), { once: true });
-  }
+  if (shape.get('kind') === 'image' && typeof src === 'string' && src && mediaBase) drawImage(el, src, 0);
   return el;
 };
 

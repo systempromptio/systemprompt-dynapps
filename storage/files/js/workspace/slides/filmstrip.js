@@ -42,7 +42,7 @@ export const createFilmstrip = (host, { session, onPick, onPresent }) => {
   const bar = document.createElement('div');
   bar.className = 'sp-deck-film__bar';
   const editing = session.state.mode === 'edit';
-  if (editing) bar.append(button('add', '+ Slide'), button('duplicate', 'Duplicate'), button('delete', 'Delete'), button('text', '+ Text'));
+  if (editing) bar.append(button('add', '+ Slide'), button('duplicate', 'Duplicate'), button('delete', 'Delete'), button('text', '+ Text'), button('image', '+ Image'));
   bar.append(button('present', 'Present'));
   const list = document.createElement('ol');
   list.className = 'sp-deck-film__list';
