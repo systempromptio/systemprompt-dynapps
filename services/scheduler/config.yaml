@@ -51,6 +51,23 @@ scheduler:
       extension: core
       owner: admin
       enabled: true
+
+    - name: issue_report_retention
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: notification_retention
+      extension: core
+      owner: admin
+      enabled: true
+
+    # Agent-run working directories (systemprompt-agent-runs), nightly. Without
+    # `enforce` it only reports what it would remove.
+    - name: agent_run_dirs_cleanup
+      extension: core
+      owner: admin
+      enabled: true
     # Core jobs (defined in systemprompt-core)
     - name: managed_inventory_refresh
       extension: core
