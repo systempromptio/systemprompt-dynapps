@@ -65,10 +65,14 @@ pub(super) struct OverviewData {
     pub groups: Loaded<Vec<ScopeCostRow>>,
     pub models: Loaded<Vec<ModelStatsRow>>,
     pub overhead: Loaded<Vec<GatewayOverheadDay>>,
-    pub documents: Loaded<DocumentsTouched>,
+    pub documents: Option<Loaded<DocumentsTouched>>,
 }
 
-pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> OverviewData {
+pub(super) async fn load_overview(
+    pool: &Arc<PgPool>,
+    range: OverviewRange,
+    documents_enabled: bool,
+) -> OverviewData {
     let window = range.time_range();
     let scope = SiteScope::new(SubjectScope::All);
     let (
@@ -94,7 +98,13 @@ pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> O
         scopes::list_top_scopes_by_cost(pool, ScopeKind::Group, window, TOP_SCOPES),
         list_model_stats(pool, window, &scope),
         list_gateway_overhead_days(pool, OVERHEAD_DAYS),
-        load_documents_touched(pool, range),
+        async {
+            if documents_enabled {
+                Some(load_documents_touched(pool, range).await)
+            } else {
+                None
+            }
+        },
     );
 
     OverviewData {

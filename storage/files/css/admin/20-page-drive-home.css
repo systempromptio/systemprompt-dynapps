@@ -1,0 +1,66 @@
+@layer components {
+
+/* Drive home: the filter toolbar, the drop hint and the grid layout of the
+   folder and document rows. */
+
+.sp-p-drive__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-space-2);
+}
+
+.sp-p-drive__scopes,
+.sp-p-drive__modes {
+  display: flex;
+  gap: var(--sp-space-1);
+}
+
+.sp-p-drive__scopes [aria-pressed="true"],
+.sp-p-drive__toolbar [data-view][aria-pressed="true"] {
+  background: var(--sp-accent-surface);
+  border-color: var(--sp-accent);
+  color: var(--sp-accent-text);
+}
+
+.sp-p-drive__search {
+  flex: 1 1 14rem;
+}
+
+.sp-p-drive__upload {
+  cursor: pointer;
+}
+
+.sp-p-drive__drop {
+  padding: var(--sp-space-6);
+  border: 2px dashed var(--sp-accent);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-accent-surface);
+  text-align: center;
+}
+
+.sp-p-drive--grid thead {
+  display: none;
+}
+
+.sp-p-drive--grid tbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--sp-space-3);
+}
+
+.sp-p-drive--grid tr {
+  display: grid;
+  gap: var(--sp-space-1);
+  padding: var(--sp-space-3);
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-bg-surface);
+}
+
+.sp-p-drive--grid td {
+  padding: 0;
+  border: 0;
+}
+
+}

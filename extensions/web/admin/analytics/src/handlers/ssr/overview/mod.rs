@@ -52,7 +52,7 @@ pub(crate) async fn overview_page(
     }
 
     let range = OverviewRange::from_query(query.preset.as_deref());
-    let loaded = data::load_overview(&pool, range).await;
+    let loaded = data::load_overview(&pool, range, engine.documents_enabled()).await;
     let page = view::overview_page(range, &loaded);
 
     Ok(

@@ -1,0 +1,174 @@
+@layer components {
+
+/* Drive document page: a header strip, the document canvas, and a side rail. */
+
+.sp-p-doc {
+  display: grid;
+  gap: var(--sp-space-4);
+}
+
+.sp-p-doc__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+  padding: var(--sp-space-3) var(--sp-space-4);
+  background: var(--sp-bg-surface);
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-md);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+.sp-p-doc__ident {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+  min-inline-size: 0;
+  flex: 1 1 20rem;
+}
+
+.sp-p-doc__badge {
+  flex: none;
+  padding: var(--sp-space-05) var(--sp-space-2);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-accent-surface);
+  color: var(--sp-accent-text);
+  font-size: var(--sp-text-xs);
+  font-weight: var(--sp-font-semibold);
+  letter-spacing: 0.03em;
+}
+
+.sp-p-doc__badge[data-format="xlsx"],
+.sp-p-doc__badge[data-format="ods"] {
+  background: var(--sp-success-dim);
+  color: var(--sp-success-strong);
+}
+
+.sp-p-doc__badge[data-format="pptx"],
+.sp-p-doc__badge[data-format="odp"] {
+  background: var(--sp-warning-dim);
+  color: var(--sp-warning-strong);
+}
+
+.sp-p-doc__name {
+  flex: 1;
+  min-inline-size: 0;
+  padding: var(--sp-space-1) var(--sp-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--sp-radius-sm);
+  background: transparent;
+  color: var(--sp-text-primary);
+  font: inherit;
+  font-size: var(--sp-text-lg);
+  font-weight: var(--sp-font-semibold);
+}
+
+.sp-p-doc__name:hover,
+.sp-p-doc__name:focus {
+  border-color: var(--sp-border-default);
+  background: var(--sp-bg-input);
+  outline: none;
+}
+
+.sp-p-doc__status {
+  flex: none;
+  color: var(--sp-text-tertiary);
+  font-size: var(--sp-text-xs);
+}
+
+.sp-p-doc__status[data-tone="busy"] { color: var(--sp-info); }
+.sp-p-doc__status[data-tone="ok"] { color: var(--sp-success); }
+.sp-p-doc__status[data-tone="warn"] { color: var(--sp-warning-strong); }
+
+.sp-p-doc__actions,
+.sp-p-doc__modes,
+.sp-p-doc__editors {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+}
+
+.sp-p-doc__modes { gap: 0; }
+
+.sp-p-doc__modes .sp-btn:first-child { border-start-end-radius: 0; border-end-end-radius: 0; }
+.sp-p-doc__modes .sp-btn:last-child { border-start-start-radius: 0; border-end-start-radius: 0; margin-inline-start: -1px; }
+
+.sp-p-doc__modes [aria-pressed="true"],
+.sp-p-doc__actions [data-action="doc-rail"][aria-pressed="true"] {
+  background: var(--sp-accent-surface);
+  border-color: var(--sp-accent);
+  color: var(--sp-accent-text);
+}
+
+.sp-p-doc__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--sp-space-4);
+  align-items: start;
+}
+
+.sp-p-doc--rail-closed .sp-p-doc__body { grid-template-columns: minmax(0, 1fr); }
+.sp-p-doc--rail-closed .sp-p-doc__rail { display: none; }
+
+.sp-p-doc__stage {
+  display: grid;
+  gap: var(--sp-space-2);
+  min-inline-size: 0;
+}
+
+.sp-p-doc__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+  margin: 0;
+  padding: var(--sp-space-2) var(--sp-space-3);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg-warning);
+  color: var(--sp-text-primary);
+  font-size: var(--sp-text-sm);
+}
+
+.sp-p-doc__desk {
+  min-block-size: 70vh;
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-md);
+  background: var(--sp-doc-desk);
+  overflow: auto;
+}
+
+.sp-p-doc__desk[data-format="pptx"],
+.sp-p-doc__desk[data-format="odp"] {
+  background: var(--sp-primitive-warm-800);
+}
+
+.sp-p-doc__desk[data-format="html"],
+.sp-p-doc__desk[data-format="markdown"] {
+  background: var(--sp-doc-paper);
+}
+
+.sp-p-doc__frame {
+  display: block;
+  inline-size: 100%;
+  block-size: 78vh;
+  border: 0;
+}
+
+.sp-p-doc__hint {
+  margin: 0;
+  color: var(--sp-text-tertiary);
+  font-size: var(--sp-text-xs);
+}
+
+.sp-p-doc__canvas {
+  min-block-size: 70vh;
+}
+
+}
+
+.sp-p-doc__banner[hidden],
+.sp-p-doc__frame[hidden] { display: none; }

@@ -1,0 +1,196 @@
+@layer components {
+
+/* The live spreadsheet grid. Cells, headers and range boxes are absolutely
+   placed by --sp-sheet-x/-y (and -w/-h for boxes), which the grid sets from
+   its measured row and column size; the size itself is fixed here, once, on
+   .sp-sheet__cell. Header tracks sit outside the scroller and are shifted by
+   --sp-sheet-sx/-sy, so both stay pinned while the cells scroll. */
+
+.sp-sheet {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  block-size: 100%;
+  min-block-size: 70vh;
+  background: var(--sp-doc-paper);
+  color: var(--sp-doc-ink);
+  font-size: var(--sp-text-sm);
+}
+
+.sp-sheet__bar {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  border-block-end: 1px solid var(--sp-doc-rule);
+}
+
+.sp-sheet__ref {
+  padding: var(--sp-space-1) var(--sp-space-2);
+  border-inline-end: 1px solid var(--sp-doc-rule);
+  font-weight: var(--sp-font-medium);
+  text-align: center;
+}
+
+.sp-sheet__formula {
+  padding: var(--sp-space-1) var(--sp-space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-family: var(--sp-font-mono);
+}
+
+.sp-sheet__formula:focus-visible { outline: 2px solid var(--sp-office-sheets); outline-offset: -2px; }
+
+.sp-sheet__body {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  grid-template-rows: 1.75rem minmax(0, 1fr);
+  min-block-size: 0;
+}
+
+.sp-sheet__corner,
+.sp-sheet__cols,
+.sp-sheet__rows {
+  position: relative;
+  overflow: hidden;
+  background: var(--sp-doc-header);
+}
+
+.sp-sheet__corner { border-inline-end: 1px solid var(--sp-doc-rule); border-block-end: 1px solid var(--sp-doc-rule); }
+
+.sp-sheet__track { position: absolute; inset: 0; }
+.sp-sheet__track--cols { translate: var(--sp-sheet-sx) 0; }
+.sp-sheet__track--rows { translate: 0 var(--sp-sheet-sy); }
+
+.sp-sheet__viewport {
+  position: relative;
+  overflow: auto;
+  outline: none;
+}
+
+.sp-sheet__viewport:focus-visible { box-shadow: inset 0 0 0 1px var(--sp-office-sheets); }
+
+.sp-sheet__sizer {
+  position: relative;
+  inline-size: var(--sp-sheet-w);
+  block-size: var(--sp-sheet-h);
+}
+
+.sp-sheet__layer { position: absolute; inset: 0; cursor: cell; user-select: none; }
+
+.sp-sheet__cell,
+.sp-sheet__head {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  translate: var(--sp-sheet-x) var(--sp-sheet-y);
+  box-sizing: border-box;
+  inline-size: 6.5rem;
+  block-size: 1.75rem;
+  padding: 0 var(--sp-space-2);
+  overflow: hidden;
+  border-inline-end: 1px solid var(--sp-doc-rule);
+  border-block-end: 1px solid var(--sp-doc-rule);
+  line-height: 1.75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sp-sheet__cell--number { text-align: end; font-variant-numeric: tabular-nums; }
+.sp-sheet__cell--filled { background: var(--sp-sheet-fill); }
+.sp-sheet__cell--inked { color: var(--sp-sheet-ink); }
+.sp-sheet__cell--bold { font-weight: var(--sp-font-bold); }
+.sp-sheet__cell--italic { font-style: italic; }
+.sp-sheet__cell--underline { text-decoration: underline; }
+.sp-sheet__cell--strike { text-decoration: line-through; }
+.sp-sheet__cell--underline.sp-sheet__cell--strike { text-decoration: underline line-through; }
+.sp-sheet__cell.is-selected { background: var(--sp-office-sheets-tint); }
+.sp-sheet__cell--filled.is-selected { background: color-mix(in oklch, var(--sp-office-sheets-tint) 70%, var(--sp-sheet-fill)); }
+
+.sp-sheet__head {
+  color: var(--sp-doc-muted);
+  font-size: var(--sp-text-xs);
+  font-weight: var(--sp-font-medium);
+  text-align: center;
+}
+
+.sp-sheet__head--row { inline-size: 3rem; }
+
+.sp-sheet__head.is-active {
+  background: var(--sp-doc-header-active);
+  color: var(--sp-doc-ink);
+  font-weight: var(--sp-font-semibold);
+}
+
+.sp-sheet__range,
+.sp-sheet__active,
+.sp-sheet__peer,
+.sp-sheet__input {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  translate: var(--sp-sheet-x) var(--sp-sheet-y);
+  box-sizing: border-box;
+  inline-size: var(--sp-sheet-w);
+  block-size: var(--sp-sheet-h);
+  pointer-events: none;
+}
+
+.sp-sheet__range { border: 1px solid var(--sp-office-sheets); }
+.sp-sheet__active { z-index: var(--sp-z-raised); border: 2px solid var(--sp-office-sheets); }
+
+.sp-sheet__peer { border: 2px solid var(--sp-tone); }
+
+.sp-sheet__peer::after {
+  content: attr(data-name);
+  position: absolute;
+  inset-block-end: 100%;
+  inset-inline-start: -2px;
+  padding: 0 var(--sp-space-1);
+  background: var(--sp-tone);
+  color: var(--sp-doc-paper);
+  font-size: var(--sp-text-xs);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.sp-sheet__input {
+  z-index: var(--sp-z-sticky);
+  padding: 0 var(--sp-space-2);
+  border: 2px solid var(--sp-office-sheets);
+  background: var(--sp-doc-paper);
+  color: inherit;
+  font: inherit;
+  pointer-events: auto;
+}
+
+.sp-sheet__input[hidden] { display: none; }
+
+.sp-sheet__tabs {
+  display: flex;
+  gap: var(--sp-space-1);
+  padding: 0 var(--sp-space-2);
+  border-block-start: 1px solid var(--sp-doc-rule);
+  background: var(--sp-doc-desk);
+}
+
+.sp-sheet__tab {
+  padding: var(--sp-space-2) var(--sp-space-4);
+  border: 0;
+  border-block-start: 3px solid transparent;
+  background: transparent;
+  color: var(--sp-doc-muted);
+  font: inherit;
+  font-weight: var(--sp-font-medium);
+  cursor: pointer;
+}
+
+.sp-sheet__tab:hover { background: var(--sp-doc-header-active); }
+.sp-sheet__tab:focus-visible { outline: 2px solid var(--sp-office-sheets); outline-offset: -2px; }
+
+.sp-sheet__tab[aria-selected="true"] {
+  border-block-start-color: var(--sp-office-sheets);
+  background: var(--sp-office-sheets-tint);
+  color: var(--sp-office-sheets);
+}
+
+}

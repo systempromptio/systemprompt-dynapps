@@ -1,0 +1,44 @@
+@layer components {
+
+.sp-upload-list {
+  display: grid;
+  gap: var(--sp-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-upload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6rem, 12rem) auto auto;
+  align-items: center;
+  gap: var(--sp-space-3);
+  padding: var(--sp-space-2) var(--sp-space-3);
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-md);
+}
+
+.sp-upload-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-upload-row__bar {
+  width: 100%;
+  accent-color: var(--sp-accent);
+}
+
+.sp-upload-row__status {
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-upload-row--done .sp-upload-row__status {
+  color: var(--sp-success-strong);
+}
+
+.sp-upload-row--failed .sp-upload-row__status {
+  color: var(--sp-danger-strong);
+}
+
+}

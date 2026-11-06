@@ -10,11 +10,12 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="/css/core/fonts.css?v={{css_version}}">
     <link rel="stylesheet" href="/css/admin-bundle.css?v={{css_version}}">
+    {{#if vendor}}{{> vendor-head}}{{/if}}
     {{#> head_extra}}{{/head_extra}}
 </head>
 <body>
     <a href="#main" class="sp-skip-link">Skip to main content</a>
-    <div class="sp-shell" data-section="{{page_id}}">
+    <div class="sp-shell" data-section="{{page_id}}" data-doc-stream="/api/v1/stream/agui">
         {{> sidebar page=page_id}}
         <div class="sp-sidebar-overlay" id="sp-sidebar-overlay" aria-hidden="true"></div>
         <main class="sp-shell__main" id="main">

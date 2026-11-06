@@ -41,7 +41,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.77.1"
+version = "0.79.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -51,10 +51,10 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.77.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.77.0" }
-systemprompt-extension = { version = "0.77.0" }
-systemprompt-provider-contracts = { version = "0.77.0" }
+systemprompt = { version = "0.79.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.79.0" }
+systemprompt-extension = { version = "0.79.0" }
+systemprompt-provider-contracts = { version = "0.79.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -321,3 +321,5 @@ workspace = true
 # systemprompt-oauth-issuance = { path = "../systemprompt-core/crates/app/oauth-issuance" }
 # systemprompt-storage = { path = "../systemprompt-core/crates/infra/storage" }
 # systemprompt-wire = { path = "../systemprompt-core/crates/shared/wire" }
+# systemprompt-brain = { path = "../systemprompt-core/crates/domain/brain" }
+# systemprompt-notifications = { path = "../systemprompt-core/crates/domain/notifications" }

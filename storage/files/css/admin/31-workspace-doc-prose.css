@@ -1,0 +1,93 @@
+@layer components {
+
+/* The document itself, laid out pageless: the canvas is white edge to edge
+   and scrolls the whole document; the text sits in one readable measure in
+   the middle, and a table may run wider than the text, up to the canvas. */
+
+.sp-ws--doc .sp-ws__canvas {
+  display: block;
+  background: var(--sp-doc-paper);
+}
+
+.sp-ws__canvas .sp-doc-page {
+  --sp-doc-measure: 46rem;
+  position: relative;
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: none;
+  min-block-size: 0;
+  margin: 0;
+  padding: var(--sp-space-10) var(--sp-space-6) var(--sp-space-24);
+  background: var(--sp-doc-paper);
+  color: var(--sp-doc-ink);
+  box-shadow: none;
+}
+
+.sp-ws__canvas .sp-doc-page .sp-doc-prose > *,
+.sp-ws__canvas .sp-doc-page .sp-doc-source {
+  max-inline-size: var(--sp-doc-measure);
+  margin-inline: auto;
+}
+
+.sp-ws__canvas .sp-doc-page .sp-doc-prose > .sp-doc-prose .tableWrapper {
+  margin-block: var(--sp-space-2) var(--sp-space-5);
+  overflow-x: auto;
+  border: 1px solid var(--sp-border-subtle);
+  border-radius: var(--sp-radius-sm);
+}
+
+.sp-doc-prose table {
+  inline-size: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--sp-text-sm);
+  line-height: var(--sp-leading-normal);
+}
+
+.sp-doc-prose :is(td, th) {
+  position: relative;
+  padding: var(--sp-space-2) var(--sp-space-3);
+  text-align: start;
+  vertical-align: top;
+  border: 1px solid var(--sp-border-subtle);
+}
+
+.sp-doc-prose :is(td, th) > :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre) { margin: 0; }
+
+.sp-doc-prose th {
+  color: var(--sp-text-secondary);
+  font-weight: var(--sp-font-semibold);
+  background: var(--sp-bg-surface-alt);
+}
+
+.sp-doc-prose .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: color-mix(in oklch, var(--sp-office-docs) 14%, transparent);
+}
+
+.sp-doc-prose .column-resize-handle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -2px;
+  inline-size: 4px;
+  pointer-events: none;
+  background: var(--sp-office-docs);
+}
+
+.sp-doc-prose.resize-cursor { cursor: col-resize; }
+
+.sp-doc__figure { margin-block: var(--sp-space-2) var(--sp-space-5); margin-inline: 0; }
+
+.sp-doc__image {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--sp-radius-sm);
+}
+
+.ProseMirror-selectednode.sp-doc__figure { outline: 2px solid var(--sp-accent); outline-offset: 1px; }
+
+}

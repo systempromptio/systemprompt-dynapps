@@ -6,3 +6,14 @@
 files:
   issues:
     enabled: true
+  documents:
+    enabled: true
+    # Live sessions: snapshot cadence and the owner lease. Each replica
+    # advertises its own address: FLY_PRIVATE_IP on Fly, loopback locally,
+    # SYSTEMPROMPT_COLLAB_ADVERTISE_URL overrides both.
+    collab:
+      snapshotAfterSecs: 30
+      snapshotAfterUpdates: 200
+      owner:
+        enabled: true
+        advertisePort: 8080

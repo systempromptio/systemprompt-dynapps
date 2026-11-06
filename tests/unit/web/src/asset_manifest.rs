@@ -180,7 +180,11 @@ fn templates_contain_no_inline_code() {
         let is_critical_css_shell = name.ends_with("partials/head-assets.html") || is_fouc_shell;
         for (idx, line) in content.lines().enumerate() {
             let has_open = line.contains("<script") && !line.contains("src=");
-            let is_data = line.contains("application/ld+json") || line.contains("application/json");
+            let is_import_map =
+                name.ends_with("partials/vendor-head.hbs") && line.contains("type=\"importmap\"");
+            let is_data = line.contains("application/ld+json")
+                || line.contains("application/json")
+                || is_import_map;
             if has_open && !is_data && !is_fouc_shell {
                 violations.push(format!("{name}:{} inline <script>", idx + 1));
             }
@@ -213,7 +217,8 @@ fn source_files_respect_line_limits() {
     for (files, limit) in [(&js, 250usize), (&css, 400usize)] {
         for file in files {
             let rel = file.strip_prefix(&root).unwrap_or(file);
-            if GENERATED.iter().any(|g| rel.to_string_lossy().ends_with(g)) {
+            let vendored = rel.starts_with("storage/files/js/vendor");
+            if vendored || GENERATED.iter().any(|g| rel.to_string_lossy().ends_with(g)) {
                 continue;
             }
             let content = std::fs::read_to_string(file)

@@ -27,3 +27,4 @@ pub mod templates;
 pub mod ttl_cache;
 pub mod types;
 pub mod util;
+pub mod vendor;

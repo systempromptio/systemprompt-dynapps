@@ -1,5 +1,8 @@
-//! Display names for the user ids a drive page shows: document owners,
-//! revision authors, grant subjects and live editors.
+//! Display names for the user ids a drive page shows.
+//!
+//! Document owners, revision authors, grant subjects and live editors.
+//! People only: a service
+//! account is never listed, matching core's sharing subject search.
 
 use serde::Serialize;
 use sqlx::PgPool;
@@ -23,7 +26,7 @@ pub async fn list_drive_people(
                 COALESCE(u.display_name, u.full_name, u.name) AS display_name,
                 u.email AS "email?: Email"
             FROM users u
-            WHERE u.id = ANY($1)"#,
+            WHERE u.id = ANY($1) AND u.account_kind <> 'service'"#,
         user_ids,
     )
     .fetch_all(pool)

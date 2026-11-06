@@ -22,6 +22,7 @@ pub fn admin_assets(paths: &dyn AssetPaths) -> Vec<AssetDefinition> {
     let storage_js = paths.storage_files().join("js");
 
     let mut assets = page_js_assets(&storage_js);
+    assets.extend(crate::vendor::assets::vendor_assets(&storage_js));
     assets.push(admin_bundle_css(&storage_css));
     assets.push(AssetDefinition::css(
         storage_css.join("requirements-review.css"),
@@ -49,10 +50,8 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
         page_js!(&pages, "admin-approvals.js"),
         page_js!(&pages, "admin-contexts.js"),
         page_js!(&pages, "admin-devices.js"),
-        page_js!(&pages, "admin-drive.js"),
         page_js!(&pages, "admin-drive-document.js"),
-        page_js!(&pages, "my-drive.js"),
-        page_js!(&pages, "my-drive-document.js"),
+        page_js!(&pages, "drive.js"),
         page_js!(&pages, "admin-entity-access.js"),
         page_js!(&pages, "admin-farm-agent.js"),
         page_js!(&pages, "admin-farm-evals.js"),

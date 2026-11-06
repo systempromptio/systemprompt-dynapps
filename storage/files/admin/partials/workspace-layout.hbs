@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>{{page_title}} - {{default branding.domain "dynapps.es"}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/css/core/fonts.css?v={{css_version}}">
+    <link rel="stylesheet" href="/css/admin-bundle.css?v={{css_version}}">
+    {{#if vendor}}{{> vendor-head}}{{/if}}
+    {{#> head_extra}}{{/head_extra}}
+</head>
+<body class="sp-ws-body">
+    <a href="#main" class="sp-skip-link">Skip to the document</a>
+    {{> content}}
+    <div class="sp-notice-region" id="sp-flash" hidden></div>
+    {{#> scripts}}{{/scripts}}
+</body>
+</html>

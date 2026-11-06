@@ -21,6 +21,37 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.79.0 — 2026-11-06
+
+### Added
+
+- **Live document workspace.** Drive opens documents, sheets and decks in a multiplayer editor, ported from the reference client. The document store and documents MCP server default on, so a deployment needs persistent storage before upgrading.
+- **Desktop sync sends deletes and renames to Drive.** A file absent for two cycles and 15 seconds moves to the Drive trash, and the same bytes under a new name move the document. Nothing is trashed when the folder is empty or missing, or when a bulk threshold is passed; `drive deletes apply` and `drive deletes restore` decide held deletes.
+- **Insert image on decks, Markdown export, readable proposals.** Decks accept uploaded PNG, JPEG, GIF and WebP (WebP is saved as PNG). Export as Markdown reports what it left out. Proposals show a plain before and after.
+- **A folder picker for Move to folder**, which can also return a document to the top level.
+
+### Changed
+
+- **Built against published systemprompt-core 0.79.0.** Every core pin in `Cargo.toml` and `tests/Cargo.toml` and `bridge/CORE_REF` moved, and the schema ladder gained the 0.79.0 rung.
+- **Export as PDF uses core's rich renderer.** Limits are stated in core's `documentation/documents.md`: no CJK or right-to-left text, and decks and sheets are simplified.
+- **The scheduler now runs core's eight `document_*` jobs.** They were never declared here. Trash purge and blob cleanup run for the first time on upgrade, so check what they would remove on an existing deployment.
+
+### Fixed
+
+- **The sheet grid draws cell fill, font colour and text styles** for xlsx, including theme colours.
+- **Deck pictures and tables can be moved and resized**, and the document toolbar draws SVG icons instead of symbol glyphs.
+
+## 0.78.0 — 2026-11-04
+
+### Changed
+
+- **Built against published systemprompt-core 0.78.0.** Every `systemprompt*` pin in `Cargo.toml` and `tests/Cargo.toml` names `0.78.0` and `bridge/CORE_REF` is `v0.78.0`; the `[patch.crates-io]` blocks stay commented out and also list the new `systemprompt-brain` and `systemprompt-notifications` crates. Core's brain stays off here: no profile sets `brain.enabled`, so no consumer starts, no recall is wired and its routes answer 404. Core's new tables and migrations install regardless.
+- **The scheduler declares core's outbox rollup and brain jobs.** `services/scheduler/config.yaml` names `outbox_backlog_rollup`, which compacts `event_outbox_backlog` on every install, and the five `brain_*` jobs, which return at once while `brain.enabled` is false, so the boot logs no unlisted-job warning for them.
+
+### Fixed
+
+- **The overview hides the Documents touched tile while the document store is off.** The tile linked to `/admin/drive`, which answers 404 when `files.documents.enabled` is false; `load_overview` now skips the count and the tile in that case.
+
 ## 0.77.1 — 2026-11-02
 
 ### Added

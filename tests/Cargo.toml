@@ -175,11 +175,11 @@ dynwork-relay = { path = "../extensions/dynwork-relay" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.77.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.77.0" }
-systemprompt-provider-contracts = { version = "0.77.0" }
-systemprompt-api = { version = "0.77.0" }
-systemprompt-cli = { version = "0.77.0" }
+systemprompt = { version = "0.79.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.79.0" }
+systemprompt-provider-contracts = { version = "0.79.0" }
+systemprompt-api = { version = "0.79.0" }
+systemprompt-cli = { version = "0.79.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -276,6 +276,8 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # systemprompt-governance = { path = "../../systemprompt-core/crates/infra/governance" }
 # systemprompt-oauth-issuance = { path = "../../systemprompt-core/crates/app/oauth-issuance" }
 # systemprompt-storage = { path = "../../systemprompt-core/crates/infra/storage" }
+# systemprompt-brain = { path = "../../systemprompt-core/crates/domain/brain" }
+# systemprompt-notifications = { path = "../../systemprompt-core/crates/domain/notifications" }
 # 
 # Optimise everything that is not a test crate.
 #

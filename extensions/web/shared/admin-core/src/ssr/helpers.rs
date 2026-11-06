@@ -39,7 +39,7 @@ pub fn render_typed_page<T: Serialize>(
         template,
         data,
         Viewer::new(user_ctx, mkt_ctx),
-        &Faults::new(),
+        Shell::console(&Faults::new()),
     )
 }
 
@@ -50,7 +50,40 @@ pub fn render_page_with_faults<T: Serialize>(
     viewer: Viewer<'_>,
     faults: &Faults,
 ) -> Response {
-    render_shell(engine, template, data, viewer, faults)
+    render_shell(engine, template, data, viewer, Shell::console(faults))
+}
+
+pub fn render_workspace_page<T: Serialize>(
+    engine: &AdminTemplateEngine,
+    template: &str,
+    data: &T,
+    viewer: Viewer<'_>,
+) -> Response {
+    render_shell(
+        engine,
+        template,
+        data,
+        viewer,
+        Shell {
+            faults: &Faults::new(),
+            workspace: true,
+        },
+    )
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Shell<'a> {
+    faults: &'a Faults,
+    workspace: bool,
+}
+
+impl<'a> Shell<'a> {
+    const fn console(faults: &'a Faults) -> Self {
+        Self {
+            faults,
+            workspace: false,
+        }
+    }
 }
 
 pub(crate) fn render_shell<T: Serialize>(
@@ -58,8 +91,9 @@ pub(crate) fn render_shell<T: Serialize>(
     template: &str,
     data: &T,
     viewer: Viewer<'_>,
-    faults: &Faults,
+    shell: Shell<'_>,
 ) -> Response {
+    let Shell { faults, workspace } = shell;
     let started = std::time::Instant::now();
     // JSON: the shell reads the page's own `page` key to pick its help text,
     // which needs the page context as data rather than as a type. This is the
@@ -75,6 +109,8 @@ pub(crate) fn render_shell<T: Serialize>(
         page_id,
         unavailable: faults.as_slice(),
         documents_enabled: engine.documents_enabled(),
+        workspace: workspace
+            || value.get("workspace").and_then(serde_json::Value::as_bool) == Some(true),
     };
     let shell = PageShell::new(engine.branding(), viewer, chrome, &value);
 

@@ -1,0 +1,45 @@
+@layer tokens {
+
+/* The Drive canvases read as the office suite a person already knows: a neutral
+   cool-grey desk under solid white paper, hairline grid rules, and one accent per
+   format (Sheets green, Slides amber, Docs blue). Each format accent is the only
+   literal in its family; the tint and ring are color-mix on it. The canvas tokens
+   live here, not on a page block, because the workspace and the block page both
+   draw these canvases and an undefined paper token renders see-through.
+   --sp-office-sheets measures 5.0:1 on white, so it can carry the active tab
+   label; --sp-office-slides is too light for text (1.8:1), so slide labels use
+   --sp-office-slides-ink (5.2:1 on its own tint). On their own tints the docs and
+   sheets accents fall under 4.5:1 at badge size, so badge text uses their -ink
+   (about 7:1). */
+:root {
+    --sp-doc-paper: var(--sp-primitive-white);
+    --sp-doc-ink: oklch(0.255 0.008 260);
+    --sp-doc-muted: oklch(0.50 0.010 260);
+    --sp-doc-rule: oklch(0.905 0.004 250);
+    --sp-doc-desk: oklch(0.962 0.003 250);
+    --sp-doc-header: oklch(0.975 0.002 250);
+    --sp-doc-header-active: oklch(0.905 0.012 250);
+    --sp-doc-shadow: 0 1px 3px oklch(0.25 0.01 260 / 0.18), 0 4px 12px oklch(0.25 0.01 260 / 0.10);
+
+    --sp-office-sheets: oklch(0.52 0.13 150);
+    --sp-office-sheets-tint: color-mix(in oklab, var(--sp-office-sheets) 12%, var(--sp-doc-paper));
+    --sp-office-sheets-ink: color-mix(in oklch, var(--sp-office-sheets) 55%, oklch(0.28 0.06 150));
+    --sp-office-slides: oklch(0.80 0.165 82);
+    --sp-office-slides-tint: color-mix(in oklab, var(--sp-office-slides) 14%, var(--sp-doc-paper));
+    --sp-office-slides-ink: color-mix(in oklch, var(--sp-office-slides) 45%, oklch(0.30 0.06 70));
+    --sp-office-docs: oklch(0.55 0.17 262);
+    --sp-office-docs-tint: color-mix(in oklab, var(--sp-office-docs) 12%, var(--sp-doc-paper));
+    --sp-office-docs-ink: color-mix(in oklch, var(--sp-office-docs) 55%, oklch(0.28 0.08 262));
+}
+
+/* The admin shell has no dark theme yet; when one sets [data-theme="dark"]
+   the canvases follow. The paper stays light, as office suites keep it. */
+:root[data-theme="dark"] {
+    --sp-doc-desk: oklch(0.24 0.006 250);
+    --sp-doc-rule: oklch(0.86 0.004 250);
+    --sp-office-sheets-tint: color-mix(in oklab, var(--sp-office-sheets) 24%, var(--sp-doc-desk));
+    --sp-office-slides-tint: color-mix(in oklab, var(--sp-office-slides) 24%, var(--sp-doc-desk));
+    --sp-office-docs-tint: color-mix(in oklab, var(--sp-office-docs) 24%, var(--sp-doc-desk));
+}
+
+}

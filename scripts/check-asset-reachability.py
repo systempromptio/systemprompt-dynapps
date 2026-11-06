@@ -130,7 +130,10 @@ def dead_js() -> list:
             target = resolve_js(spec, f)
             if target and target not in seen:
                 stack.append(target)
-    return [f for f in sorted(JS_DIR.rglob("*.js")) if f not in seen]
+    # Why: vendored modules are reached through the workspace import map, not
+    # a script src; scripts/check-vendor.sh governs them.
+    vendor = JS_DIR / "vendor"
+    return [f for f in sorted(JS_DIR.rglob("*.js")) if f not in seen and vendor not in f.parents]
 
 
 PARTIAL_RE = re.compile(r"\{\{#?>\s*([\w/-]+)")

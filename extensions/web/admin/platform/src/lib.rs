@@ -17,10 +17,15 @@
 //!   holds.
 //! - [`test_support`] — the pure helpers the test workspace exercises.
 //!
+//! - [`document_class`] — the document classes and the agent access policy that
+//!   resolves an agent's cap on a document through them.
+//!
 //! The connector accounts register as core's connection snapshot source
 //! through `inventory`, so a binary that serves connections must link this
-//! crate.
+//! crate. The agent access policy registers the same way, so a binary that
+//! serves documents must link it too.
 
+pub mod document_class;
 pub(crate) mod handlers;
 pub mod repositories;
 pub mod routes;
@@ -32,5 +37,8 @@ pub use services::{connector_oauth, identity_token, machine_credentials, service
 pub mod test_support {
     pub use crate::handlers::ssr::ssr_connectors_cards::{
         ConnectorCardView, card as connector_card,
+    };
+    pub use crate::routes::drive_actor::{
+        REAUTH_KEY, cookie_token, is_browser_session, may_act_from, wants_html,
     };
 }

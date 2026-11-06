@@ -1,7 +1,7 @@
 //! The lifecycle half of the agent's run over the binary: a note created
 //! from the compiled-in `dynapps-note` provider, which proves the binary
 //! links the crate that registers it, and the memo trashed and brought back:
-//! the agent's `documents_trash` refused as `agent_forbidden`, the owner's
+//! an agent trashing its own draft and the owner restoring it, the owner's
 //! REST trash and untrash, and the agent's read in between refused as
 //! `trashed`.
 
@@ -49,16 +49,20 @@ pub(super) async fn trash_and_untrash(
     owner: &str,
     document: &DocumentId,
 ) {
-    let forbidden = mcp
+    // An agent may trash a draft it created itself in the agent workspace.
+    let own_draft = mcp
         .call("documents_trash", json!({"document_id": document}))
         .await;
-    assert!(forbidden.is_error, "an agent trashes: {}", forbidden.raw);
-    assert_eq!(
-        forbidden.payload["code"], "agent_forbidden",
-        "{}",
-        forbidden.raw
+    assert!(
+        !own_draft.is_error,
+        "an agent keeps its own draft: {}",
+        own_draft.raw
     );
     let path = format!("/api/v1/documents/{}", document.as_str());
+    let restored = rest
+        .json("POST", &format!("{path}/untrash"), owner, &json!({}))
+        .await;
+    assert_eq!(restored.status, StatusCode::OK, "{}", restored.body);
     let trashed = rest.json("DELETE", &path, owner, &json!({})).await;
     assert_eq!(trashed.status, StatusCode::NO_CONTENT, "{}", trashed.body);
     let refused = mcp

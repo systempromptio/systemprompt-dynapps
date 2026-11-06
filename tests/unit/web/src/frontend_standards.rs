@@ -151,7 +151,10 @@ fn source_files(root: &Path, subdir: &str, ext: &str) -> Vec<(PathBuf, String)> 
                 .unwrap_or(&path)
                 .to_string_lossy()
                 .into_owned();
-            (!rel.contains("admin-bundle")).then_some((path, rel))
+            // Vendored files are third-party bytes pinned by sha256 in
+            // services/web/vendor.yaml; vendor_allowlist.rs governs them.
+            let vendored = rel.starts_with("storage/files/js/vendor/");
+            (!rel.contains("admin-bundle") && !vendored).then_some((path, rel))
         })
         .collect()
 }

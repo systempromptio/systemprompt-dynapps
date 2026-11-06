@@ -1,142 +1,178 @@
-// One drive document: the page view, the block editor, its metadata,
-// revision history, grants and live editors, each read from the document API
-// as the signed-in administrator, with user ids shown as people.
-import { cloneRow, formatDate, loadEditors, readJson, shortId } from '../services/drive-rows.js';
-import { createEditor } from '../services/drive-editor.js';
+// One drive document in the block editor: the canvas for its format (read-only
+// below edit access), a faithful preview from core, any earlier revision on
+// demand, rename in place, and a rail of details, activity and the workspace's
+// own sharing, comments and proposals panes. The canvas is the workspace's
+// registered editor for the format, so this page and the workspace edit through
+// the same live sessions; other people's commits and presence arrive on the
+// page's one document event stream and reach the editor as live events.
+import { subscribeDocument } from '../documents/documents-events.js';
+import { loadEditors, readJson } from '../services/drive-rows.js';
+import { rawFetch } from '../services/api.js';
 import { showPaper } from '../services/drive-paper.js';
+import {
+  resolvePeople, showActivity, showDetails, showEditors,
+} from '../services/drive-rail.js';
+import { documentIdOf, permits } from '../workspace/people.js';
+import { mountPanes } from '../workspace/panes.js';
+import { dispatchLive, editorFor } from '../workspace/registry.js';
+import '../workspace/doc/editor.js';
+import '../workspace/sheet/editor.js';
+import '../workspace/slides/editor.js';
+import '../workspace/drawer-sharing.js';
+import '../workspace/drawer-comments.js';
+import '../workspace/drawer-proposals.js';
 
-const people = new Map();
+const FORMAT_LABEL = {
+  docx: 'Word', odt: 'Document', xlsx: 'Excel', ods: 'Sheet', pptx: 'PowerPoint',
+  odp: 'Slides', html: 'Web page', markdown: 'Markdown', md: 'Markdown', text: 'Text',
+};
 
-const resolvePeople = async (root, ids) => {
-  const missing = [...new Set(ids.filter((id) => id && !people.has(id)))];
-  if (!missing.length) return;
-  try {
-    const body = await readJson(`${root.dataset.peopleApi}?ids=${missing.map(encodeURIComponent).join(',')}`);
-    for (const p of body?.people ?? []) people.set(p.user_id, p.display_name || p.email || p.user_id);
-  } catch {
-    // Names are a convenience; rows fall back to the id.
+const page = { root: null, doc: null };
+
+const slot = (name) => page.root.querySelector(`[data-slot="${name}"]`);
+
+const setStatus = (text, tone) => {
+  const el = slot('doc-status');
+  el.textContent = text;
+  el.dataset.tone = tone;
+};
+
+const stem = (name) => name.replace(/\.[^.]+$/, '');
+const extension = (name) => (/\.[^.]+$/.exec(name)?.[0] ?? '');
+
+const refreshRail = async () => {
+  const { root } = page;
+  const [{ document: doc, folder_path: folderPath }, { revisions }] = await Promise.all([
+    readJson(root.dataset.driveDocument),
+    readJson(root.dataset.revisionsApi),
+  ]);
+  page.doc = doc;
+  await resolvePeople(root.dataset.peopleApi, [doc.owner_user_id, ...revisions.map((r) => r.author_user_id)]);
+  showDetails(root, doc, folderPath);
+  showActivity(slot('doc-activity'), revisions, viewRevision);
+};
+
+const contextOf = (root) => {
+  const access = root.dataset.myAccess || 'view';
+  return {
+    root,
+    access,
+    canEdit: root.dataset.canEdit === 'true',
+    canShare: root.dataset.canShare === 'true',
+    canComment: permits(access, 'comment'),
+    isOwner: access === 'own',
+    userId: root.dataset.userId,
+    documentId: documentIdOf(root),
+    peopleApi: root.dataset.peopleApi,
+  };
+};
+
+const followEvents = (ctx) => {
+  const reloadPanes = mountPanes(page.root.querySelector('#doc-rail'), ctx);
+  subscribeDocument(ctx.documentId, (name, value) => {
+    reloadPanes(name);
+    dispatchLive(name, value);
+    if (name === 'document.revision.created') refreshRail().catch(() => null);
+    else if (name === 'document.presence') refreshEditors().catch(() => null);
+  });
+};
+
+const refreshEditors = async () => {
+  const editors = await loadEditors(page.root.dataset.presenceApi);
+  await resolvePeople(page.root.dataset.peopleApi, editors.map((e) => e.user_id));
+  showEditors(slot('doc-editors'), editors);
+};
+
+const setMode = (mode, revision = null) => {
+  const editing = mode === 'edit';
+  slot('doc-canvas').hidden = !editing;
+  slot('doc-frame').hidden = editing;
+  slot('doc-hint').hidden = !editing;
+  page.root.querySelector('[data-action="doc-edit"]').setAttribute('aria-pressed', String(editing));
+  page.root.querySelector('[data-action="doc-preview"]').setAttribute('aria-pressed', String(!editing));
+  const banner = slot('doc-banner');
+  banner.hidden = !revision;
+  if (revision) slot('doc-banner-text').textContent = `Viewing the revision from ${new Date(revision.created_at).toLocaleString()}. It is read-only.`;
+  if (!editing) {
+    showPaper(slot('doc-frame'), page.root.dataset.previewApi, page.doc.format, revision?.id)
+      .catch(() => setStatus('The preview could not be rendered', 'warn'));
   }
 };
 
-const person = (id) => (id ? people.get(id) ?? id : '—');
+function viewRevision(revision) {
+  setMode('preview', revision);
+}
 
-const setField = (root, name, value) => {
-  const el = root.querySelector(`dl [data-field="${name}"]`);
-  if (el) el.textContent = value ?? '—';
+const rename = async (input) => {
+  const next = input.value.trim();
+  if (!next || next === stem(page.doc.name)) {
+    input.value = stem(page.doc.name);
+    return;
+  }
+  const body = await rawFetch(page.root.dataset.driveDocument, {
+    method: 'PATCH',
+    body: JSON.stringify({ name: `${next}${extension(page.doc.name)}` }),
+  }).catch(() => null);
+  if (body) setStatus('Renamed', 'ok');
+  await refreshRail();
+  input.value = stem(page.doc.name);
 };
 
-const showDocument = async (root) => {
-  const { document: doc, head, folder_path: folderPath } = await readJson(root.dataset.driveDocument);
-  setField(root, 'name', doc.name);
-  setField(root, 'format', doc.format);
-  setField(root, 'folder', folderPath ?? 'Top level');
-  await resolvePeople(root, [doc.owner_user_id]);
-  setField(root, 'owner', person(doc.owner_user_id));
-  setField(root, 'head', shortId(head?.id));
-  setField(root, 'updated', formatDate(doc.updated_at));
-};
-
-const showRevisions = async (root) => {
-  const { revisions } = await readJson(root.dataset.revisionsApi);
-  await resolvePeople(root, revisions.map((r) => r.author_user_id));
-  root.querySelector('[data-slot="revision-rows"]').replaceChildren(
-    ...revisions.map((r) => cloneRow('drive-revision-row', {
-      id: shortId(r.id),
-      author: person(r.author_user_id),
-      actor: r.actor_kind,
-      origin: r.origin_kind,
-      message: r.message,
-      created: formatDate(r.created_at),
-    })),
-  );
-};
-
-const showGrants = async (root) => {
-  const { grants } = await readJson(root.dataset.grantsApi);
-  await resolvePeople(root, grants.flatMap((g) => [g.granted_by, g.subject_kind === 'user' ? g.subject_value : null]));
-  root.querySelector('[data-slot="grant-rows"]').replaceChildren(
-    ...grants.map((g) => cloneRow('drive-grant-row', {
-      subject: g.subject_kind === 'user' ? person(g.subject_value) : `${g.subject_kind}: ${g.subject_value}`,
-      level: g.access_level,
-      granted_by: person(g.granted_by),
-      valid_until: g.valid_until ? formatDate(g.valid_until) : 'No expiry',
-      created: formatDate(g.created_at),
-    })),
-  );
-};
-
-const showEditors = async (root) => {
-  const editors = await loadEditors(root.dataset.presenceApi);
-  await resolvePeople(root, editors.map((e) => e.user_id));
-  setField(root, 'editors', editors.length
-    ? editors.map((e) => `${person(e.user_id)} (${e.state})`).join(', ')
-    : 'Nobody');
-};
-
-const showPage = (root) => showPaper(root.querySelector('[data-slot="drive-paper"]'), root.dataset.previewApi);
-
-const setMode = (root, editing) => {
-  root.querySelector('[data-slot="drive-view"]').hidden = editing;
-  root.querySelector('[data-slot="drive-editor"]').hidden = !editing;
-  root.querySelector('[data-action="drive-view"]').setAttribute('aria-pressed', String(!editing));
-  root.querySelector('[data-action="drive-edit"]').setAttribute('aria-pressed', String(editing));
-};
-
-const wireModes = (root) => {
-  const form = root.querySelector('[data-slot="drive-editor"]');
-  const editor = createEditor({
-    form,
-    projectionApi: root.dataset.projectionApi,
-    editsApi: root.dataset.editsApi,
-    onSaved: () => Promise.allSettled([showPage(root), showDocument(root), showRevisions(root)]),
-  });
-  root.querySelector('[data-action="drive-view"]').addEventListener('click', () => setMode(root, false));
-  root.querySelector('[data-action="drive-edit"]').addEventListener('click', async () => {
-    setMode(root, true);
-    await editor.load();
-  });
-  form.querySelector('[data-action="drive-discard"]').addEventListener('click', async () => {
-    await editor.load();
-    setMode(root, false);
+const wireHeader = (ctx) => {
+  const { root } = page;
+  const name = slot('doc-name');
+  name.value = stem(page.doc.name);
+  name.readOnly = !ctx.canEdit;
+  name.addEventListener('change', () => rename(name));
+  name.addEventListener('keydown', (e) => { if (e.key === 'Enter') name.blur(); });
+  root.querySelector('[data-action="doc-edit"]').addEventListener('click', () => setMode('edit'));
+  root.querySelector('[data-action="doc-preview"]').addEventListener('click', () => setMode('preview'));
+  root.querySelector('[data-action="doc-current"]').addEventListener('click', () => setMode('edit'));
+  const railToggle = root.querySelector('[data-action="doc-rail"]');
+  railToggle.addEventListener('click', () => {
+    const open = railToggle.getAttribute('aria-pressed') !== 'true';
+    railToggle.setAttribute('aria-pressed', String(open));
+    root.classList.toggle('sp-p-doc--rail-closed', !open);
   });
 };
 
-const setSlotMessage = (root, slot, message) => {
-  const body = root.querySelector(`[data-slot="${slot}"]`);
-  const row = document.createElement('tr');
-  const cell = document.createElement('td');
-  cell.colSpan = 5;
-  cell.textContent = message;
-  row.append(cell);
-  body.replaceChildren(row);
+// A format with no registered editor, or one whose editor cannot start, opens
+// on the preview alone.
+const mountCanvas = async (ctx) => {
+  const mount = editorFor(page.doc.format);
+  if (!mount) return null;
+  try {
+    return await mount(slot('doc-canvas'), { ...ctx, doc: page.doc, readOnly: !ctx.canEdit });
+  } catch {
+    return null;
+  }
 };
-
-const showPageFallback = (root) => {
-  root.querySelector('[data-slot="drive-paper"]').srcdoc = '<p style="font:14px system-ui;padding:24px">This document could not be rendered.</p>';
-};
-
-const fallbacks = [
-  showPageFallback,
-  (root) => setField(root, 'name', 'Unavailable'),
-  (root) => setSlotMessage(root, 'revision-rows', 'Revisions could not be loaded.'),
-  (root) => setSlotMessage(root, 'grant-rows', 'Grants could not be loaded.'),
-  (root) => setField(root, 'editors', 'Unavailable'),
-];
 
 export const init = async () => {
-  const root = document.querySelector('[data-drive-document]');
-  if (!root) return;
-  wireModes(root);
-  const results = await Promise.allSettled([
-    showPage(root),
-    showDocument(root),
-    showRevisions(root),
-    showGrants(root),
-    showEditors(root),
-  ]);
-  results.forEach((result, index) => {
-    if (result.status === 'rejected') fallbacks[index](root);
-  });
+  page.root = document.querySelector('[data-drive-document]');
+  if (!page.root) return;
+  const ctx = contextOf(page.root);
+  try {
+    await refreshRail();
+  } catch {
+    setStatus('This document could not be opened', 'warn');
+    return;
+  }
+  const { format } = page.doc;
+  slot('doc-badge').textContent = FORMAT_LABEL[format] ?? format;
+  slot('doc-badge').dataset.format = format;
+  page.root.querySelector('.sp-p-doc__desk').dataset.format = format;
+  wireHeader(ctx);
+  followEvents(ctx);
+  refreshEditors().catch(() => null);
+  const editor = await mountCanvas(ctx);
+  if (!editor) {
+    page.root.querySelector('[data-action="doc-edit"]').disabled = true;
+    setMode('preview');
+    return;
+  }
+  slot('doc-hint').textContent = editor.hint ?? '';
+  if (editor.readOnly) setStatus('View only', 'ok');
 };
 
 init();

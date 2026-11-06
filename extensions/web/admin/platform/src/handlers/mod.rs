@@ -8,6 +8,8 @@ pub(crate) mod bridge_whoami;
 pub(crate) mod connector_auth;
 mod deps;
 pub(crate) mod devices;
+pub(crate) mod document_class;
+pub(crate) mod document_class_batch;
 mod jobs;
 pub(crate) mod service_accounts;
 pub(crate) mod ssr;

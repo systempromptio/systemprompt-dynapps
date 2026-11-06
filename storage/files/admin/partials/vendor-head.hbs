@@ -1,0 +1,7 @@
+{{!-- Vendor head: only workspace pages carry `vendor`. Generated from
+     services/web/vendor.yaml; never name a /js/vendor/ file anywhere else. --}}
+<script type="importmap">{{{vendor.import_map}}}</script>
+<script type="application/json" id="sp-vendor-wasm">{{{vendor.wasm}}}</script>
+{{#each vendor.styles}}
+<link rel="stylesheet" href="{{this.url}}" integrity="{{this.integrity}}" crossorigin="anonymous">
+{{/each}}

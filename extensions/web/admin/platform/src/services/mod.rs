@@ -5,6 +5,7 @@
 //! service accounts hold.
 
 pub mod connector_oauth;
+pub(crate) mod document_classes;
 pub mod identity_token;
 pub mod machine_credentials;
 pub mod service_accounts;

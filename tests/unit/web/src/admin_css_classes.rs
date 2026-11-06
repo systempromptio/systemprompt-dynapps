@@ -62,7 +62,16 @@ fn strip_handlebars(text: &str) -> String {
 fn classes_in(template: &str) -> BTreeSet<String> {
     let text = strip_handlebars(template);
     let mut found = BTreeSet::new();
-    for chunk in text.split("class").skip(1) {
+    let attrs = text
+        .match_indices("class")
+        .filter(|(at, _)| {
+            text[..*at]
+                .chars()
+                .next_back()
+                .is_some_and(char::is_whitespace)
+        })
+        .map(|(at, _)| &text[at + "class".len()..]);
+    for chunk in attrs {
         let after_eq = chunk.trim_start();
         let Some(after_eq) = after_eq.strip_prefix('=') else {
             continue;
@@ -196,7 +205,7 @@ fn admin_css_sources(root: &Path) -> Vec<std::path::PathBuf> {
 fn admin_consumer_text(root: &Path) -> String {
     let mut files = Vec::new();
     walk(&root.join("storage/files/admin"), "hbs", &mut files);
-    for dir in ["services", "components", "pages"] {
+    for dir in ["services", "components", "pages", "workspace"] {
         walk(&root.join("storage/files/js").join(dir), "js", &mut files);
     }
     let mut text = String::new();

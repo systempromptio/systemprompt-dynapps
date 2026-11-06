@@ -18,7 +18,7 @@ pub(crate) use configuration::{configuration_page, secrets_reload};
 pub(crate) use devices::devices_page;
 pub use drive::{DriveDocuments, USER_BASE_URL};
 pub(crate) use drive::{
-    drive_document_page, drive_page, drive_people, user_drive_document_page, user_drive_page,
+    drive_caller, drive_document_page, drive_page, drive_people, drive_workspace_page,
 };
 pub(crate) use ssr_bridge_device_link::{device_link_approve, device_link_deny, device_link_page};
 pub(crate) use ssr_connect::connect_page;

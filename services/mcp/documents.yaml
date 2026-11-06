@@ -8,7 +8,7 @@ mcp_servers:
     binary: systemprompt-mcp-documents
     package: documents
     port: 5012
-    enabled: false
+    enabled: true
     tool_policy: allow
     display_in_web: true
     removable: false

@@ -1,0 +1,324 @@
+# The third-party frontend allowlist: the ONLY way JS, WASM, CSS or fonts
+# written outside this repo reach a page.
+#
+# Every file under storage/files/js/vendor/ is listed here with its sha256
+# and sha384 SRI, and every listed file exists. Pages that opt into the
+# workspace layout get an import map generated from this file; no other page
+# loads vendor code. `scripts/check-vendor.sh` and
+# tests/unit/web/src/vendor_allowlist.rs enforce it.
+#
+# Add or upgrade only with `just vendor-add <name> <version> --why "…"`,
+# never by hand. The tool clears approved_by/approved_on; a reviewer fills
+# them in the same PR. systemprompt-core never ships third-party frontend
+# code: this file and the vendor/ directory exist only in this repo.
+
+packages:
+- name: '@ironcalc/wasm'
+  version: 0.9.1
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/@ironcalc/wasm/-/wasm-0.9.1.tgz
+    integrity: sha512-PYNQ9hhXhZddhrJsaqf3KEL2nE/hJbQtvPN6t+C3RxGDIu/bWAICpHf/p3wL/9uiffPCNYaCTyZ/Mj3UMQvT4A==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: Spreadsheet formula engine in the browser; must match the ironcalc =0.9.1 crate in core so client
+    and server evaluate identically
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-30'
+  bundled: []
+  files:
+  - path: '@ironcalc/wasm@0.9.1/index.afe4c6349571.js'
+    kind: module
+    specifier: '@ironcalc/wasm'
+    sha256: afe4c63495713c2678763a8d1e16db670fcdc35d2673184f5b5f8c7fdd122a38
+    sri: sha384-7pLzMC4Cf2t8c/9panwvZ5DvNwzP06IaegOEOuH2TF8q32iz9fqhC6oY1YNAf/XV
+  - path: '@ironcalc/wasm@0.9.1/wasm_bg.04fa0f077d11.wasm'
+    kind: wasm
+    sha256: 04fa0f077d11782a30f5b6a47be91fb0e26a19f7efc403cbbc175a5cb85e9569
+    sri: sha384-XL5lkfQvaGWiPEiyzMzlAyhutn0+X1FXXep1TPzalMwSTuWCCPSo+u0mf1JjguUw
+- name: loro-crdt
+  version: 1.17.1
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/loro-crdt/-/loro-crdt-1.17.1.tgz
+    integrity: sha512-83hWRYG6eMMpPezm+yXWlOqCuUsC0BYY1MVCPW9x2zlikgkHhL7GC7Q6JFH+Hjvauyn287Q1MiwTuRW0lUOUag==
+    entry: web
+    bundler: esbuild@0.28.2
+  why: Live co-editing CRDT; must match the wire version of core's systemprompt-engine-loro (loro =1.17.1)
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: loro-crdt@1.17.1/index.00e254565158.js
+    kind: module
+    specifier: loro-crdt
+    sha256: 00e2545651584eb1b75042e3e21ba97649f2b5fd56506a2af0083a412191b861
+    sri: sha384-dHH/Oaeev9sN8g8qXIKHVvYM0CKtwwzqGalHlRx0zjegLOtwq68NoBciufj4Oqo0
+  - path: loro-crdt@1.17.1/loro_wasm_bg.856987111b05.wasm
+    kind: wasm
+    sha256: 856987111b0535924540a54c4d20ef2f44997a8c6966df4a25443c6e9fe47be2
+    sri: sha384-kp81+EGgTYZIri/Ob3hH/iwegAbXPnOdYJdZE9T5CqzcRO5o4fTlvh3Ybo7zZ+1C
+- name: prosemirror-commands
+  version: 1.7.2
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-commands/-/prosemirror-commands-1.7.2.tgz
+    integrity: sha512-q6Q6szxqdu9Xd6EcdKsqXghu5nQdZTpB4Q9yd04WRc7/jt763e/rT60Owh0L1GYY+T46o5rD+9lEN36dZS43tw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): toolbar and
+    keymap editing commands'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-commands@1.7.2/index.06c53694cff6.js
+    kind: module
+    specifier: prosemirror-commands
+    sha256: 06c53694cff627028e36e7f807c5354bb914fc74a9c1fa4ffdaa8fa9cab3ae70
+    sri: sha384-YbMqBVBjIQJfsWoVq+ufjqS97N1upmoOeSFws2nCaLDKY/9ojxtDYOape3c8tI5P
+- name: prosemirror-dropcursor
+  version: 1.8.4
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-dropcursor/-/prosemirror-dropcursor-1.8.4.tgz
+    integrity: sha512-VmKxhcA6a+h5oPSYmfF1ZNeQqPbyYaIxqZsKqeYCyTlPtrjUgNaHL3P8vVaO19oqAV0zuaM/axkowZHrB1P3Tg==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): drop position
+    indicator for drag and drop'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-dropcursor@1.8.4/index.331c998075d4.js
+    kind: module
+    specifier: prosemirror-dropcursor
+    sha256: 331c998075d4fd068c7e3c064a769d086df4c9c744751b21b41453690787f743
+    sri: sha384-EDm+mS22MwQMSYvWF5V206tG5xHk5esxrH3dgGcqseZ7qFEyOlPxMvEl9wItDQMi
+- name: prosemirror-gapcursor
+  version: 1.4.1
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-gapcursor/-/prosemirror-gapcursor-1.4.1.tgz
+    integrity: sha512-pMdYaEnjNMSwl11yjEGtgTmLkR08m/Vl+Jj443167p9eB3HVQKhYCc4gmHVDsLPODfZfjr/MmirsdyZziXbQKw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): cursor between
+    non-text blocks'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-gapcursor@1.4.1/index.b1d6d1e2978b.js
+    kind: module
+    specifier: prosemirror-gapcursor
+    sha256: b1d6d1e2978bb30824fe442f5d3912ec3f1f15cc38c69a2cd2df2d61ebdc9bb4
+    sri: sha384-6rhRQg0PomCCYtWbeXF8ceyLITuxpWqLmFl64dANR/RLKmWv/JfCEkyeo1E/aBVU
+  - path: prosemirror-gapcursor@1.4.1/gapcursor.aeed7c130759.css
+    kind: style
+    sha256: aeed7c130759271e3412900d613269273c4ba2956bdcb7bdb5f0bf09e4fefdaf
+    sri: sha384-mQ4zgy1uOQdlO+LvOZEuwHRafxrXNT00t9I+7xBGUiooEB65/5lbsAn3g0rQaMK+
+- name: prosemirror-history
+  version: 1.5.1
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-history/-/prosemirror-history-1.5.1.tgz
+    integrity: sha512-onlwnqKvgtFg6srZOmDOAhlAy1FIHQpOExORybX0S+DvJepE5tPALrB9iGet/2sqqqrelSnB10OoiOJqAvu2DA==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): local undo/redo
+    outside a live session'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled:
+  - name: rope-sequence
+    version: 1.3.4
+    license: MIT
+    integrity: sha512-UT5EDe2cu2E/6O4igUr5PSFs23nvvukicWHx6GnOPlHAiiYbzNuCRQCuiUdHJQcqKalLKlrYJnjY0ySGsXNQXQ==
+  files:
+  - path: prosemirror-history@1.5.1/index.27a011d0fa12.js
+    kind: module
+    specifier: prosemirror-history
+    sha256: 27a011d0fa1255a2f1bee4e9626f5cb6f7e027e209cb4866855215a11eec7eda
+    sri: sha384-5cVGRy0edkMGGx2Z3obWwMQeX+hParInpQbcvu15BspSwR52HJbonFPUlUGbPIKn
+- name: prosemirror-inputrules
+  version: 1.5.1
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-inputrules/-/prosemirror-inputrules-1.5.1.tgz
+    integrity: sha512-7wj4uMjKaXWAQ1CDgxNzNtR9AlsuwzHfdFH1ygEHA2KHF2DOEaXl1CJfNPAKCg9qNEh4rum975QLaCiQPyY6Fw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): markdown-style
+    input rules'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-inputrules@1.5.1/index.74640eb363b6.js
+    kind: module
+    specifier: prosemirror-inputrules
+    sha256: 74640eb363b6d1574ddcb53e064cc474e3ebfa7e8c9861db7d70045531a44229
+    sri: sha384-RLQToJKkv4EH3XE7/mQMi6fA9X6RbJ1hIklouXFE+S9dzvq8liAAZkCmQhfaNL8m
+- name: prosemirror-keymap
+  version: 1.2.3
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-keymap/-/prosemirror-keymap-1.2.3.tgz
+    integrity: sha512-4HucRlpiLd1IPQQXNqeo81BGtkY8Ai5smHhKW9jjPKRc2wQIxksg7Hl1tTI2IfT2B/LgX6bfYvXxEpJl7aKYKw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): keyboard shortcuts'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled:
+  - name: w3c-keyname
+    version: 2.2.8
+    license: MIT
+    integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==
+  files:
+  - path: prosemirror-keymap@1.2.3/index.508b273a0b66.js
+    kind: module
+    specifier: prosemirror-keymap
+    sha256: 508b273a0b66e1bd4eb255799046ff71c1615dc7b8c6f71a9690ce94f208d410
+    sri: sha384-c6kPJnPTscHKmxn152WFkQV4++Ed5BYy7qB1d3emYRyP3r4no1mOaSu38noKOyI3
+- name: prosemirror-model
+  version: 1.25.12
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-model/-/prosemirror-model-1.25.12.tgz
+    integrity: sha512-Ue2gTmXMa7EhpLNhC7J+h4+ykD8ha12K6rrZFFKKJHBForfIStw5gJ6Zrf1mqqAa9NmpmEB4wp9bKmA4eUVjWg==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): schema and document
+    model'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled:
+  - name: orderedmap
+    version: 2.1.1
+    license: MIT
+    integrity: sha512-TvAWxi0nDe1j/rtMcWcIj94+Ffe6n7zhow33h40SKxmsmozs6dz/e+EajymfoFcHd7sxNn8yHM8839uixMOV6g==
+  files:
+  - path: prosemirror-model@1.25.12/index.fd64640f66fa.js
+    kind: module
+    specifier: prosemirror-model
+    sha256: fd64640f66fa85b4f8f21ef44a28ba496d5f1e2dd7676ef838379f7fa9875e5b
+    sri: sha384-PP90NbK3ITh5Tjm92viEv0K874EhqkYGAFLX/NXk/T74oRmJ+MQOlK5U5ZhIhJkv
+- name: prosemirror-schema-list
+  version: 1.5.1
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-schema-list/-/prosemirror-schema-list-1.5.1.tgz
+    integrity: sha512-927lFx/uwyQaGwJxLWCZRkjXG0p48KpMj6ueoYiu4JX05GGuGcgzAy62dfiV8eFZftgyBUvLx76RsMe20fJl+Q==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): list node specs
+    and commands'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-schema-list@1.5.1/index.aa932d6f8914.js
+    kind: module
+    specifier: prosemirror-schema-list
+    sha256: aa932d6f8914589ede324b81bbaab6c9f6e719367f9e6e488581b36f1d7fcf74
+    sri: sha384-DJhfs4tKqorGHvDF49CnlPZfmDjtHNDQw+qBgBKAWiDO/i9dEBuVFFcj/afsgqeC
+- name: prosemirror-state
+  version: 1.4.4
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-state/-/prosemirror-state-1.4.4.tgz
+    integrity: sha512-6jiYHH2CIGbCfnxdHbXZ12gySFY/fz/ulZE333G6bPqIZ4F+TXo9ifiR86nAHpWnfoNjOb3o5ESi7J8Uz1jXHw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): editor state,
+    selection, plugins'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-state@1.4.4/index.535680fe301a.js
+    kind: module
+    specifier: prosemirror-state
+    sha256: 535680fe301a2d689113efb5ad143ab079e027b8c3dcb63a8894bdffb206347c
+    sri: sha384-wHEFnL2ZYnLH0nAAZDZodryFIt+ipLe9Di+/eMx57Wh74NADh5RrnrCv+C6QdPZN
+- name: prosemirror-tables
+  version: 1.8.5
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-tables/-/prosemirror-tables-1.8.5.tgz
+    integrity: sha512-V/0cDCsHKHe/tfWkeCmthNUcEp1IVO3p6vwN8XtwE9PZQLAZJigbw3QoraAdfJPir4NKJtNvOB8oYGKRl+t0Dw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): table editing
+    (rows, columns, cell selection)'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-tables@1.8.5/index.c5747d5ebfee.js
+    kind: module
+    specifier: prosemirror-tables
+    sha256: c5747d5ebfeee0c6a372de03255ad63db396ddae5f1334485e5375fd7c11b0e0
+    sri: sha384-Tw19ykifEuEQZF8B88KD5aZ49HprRFAc4DGhVsoNwQz1P0V1d+1j3U9JbwjmkaAA
+  - path: prosemirror-tables@1.8.5/tables.3fec20590b90.css
+    kind: style
+    sha256: 3fec20590b901e5ecf7d17691df2b053e836ed052894632a199d07081d3019a9
+    sri: sha384-yQrgRq7vTLemP25WAbTXue/Y8r87Y2PH+w8DbnW8nkqjrPrvGDv/47xfNqEvJBRs
+- name: prosemirror-transform
+  version: 1.12.4
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-transform/-/prosemirror-transform-1.12.4.tgz
+    integrity: sha512-2/WuPum3pn+O/Vi2vzpi8210ICUe2kIPXdLYjQ09Pv5DtT5bcKWMJhAKPBwvpPjpp5iOYUVwVEr0gOM1BY1Mgw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): steps and transforms'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-transform@1.12.4/index.de1b2f5e34b0.js
+    kind: module
+    specifier: prosemirror-transform
+    sha256: de1b2f5e34b0f51e0cd9afea35f3ff92aaceae792e4c110bceb7118e33c989c6
+    sri: sha384-QfOTOOtFYboliSEhsSaBczglRecBVXuRnNDoBORThX91HhvzavvVvZSRXPqSOcnJ
+- name: prosemirror-view
+  version: 1.42.8
+  license: MIT
+  source:
+    tarball: https://registry.npmjs.org/prosemirror-view/-/prosemirror-view-1.42.8.tgz
+    integrity: sha512-ftDZjCs9AjAekXmCfJRn2U3IdlRCl0Yc4tZT1/jJWCsz4DiSifEBXtWmpJpw/4f1Rg328uAUQ+u2lCJ0+AVZkw==
+    entry: .
+    bundler: esbuild@0.28.2
+  why: 'ProseMirror document editor for the Drive workspace (rich text, deck shape text): contenteditable
+    view and its required stylesheet'
+  owner: drive-workspace
+  approved_by: Edward Burton
+  approved_on: '2026-10-28'
+  bundled: []
+  files:
+  - path: prosemirror-view@1.42.8/index.099213309ecd.js
+    kind: module
+    specifier: prosemirror-view
+    sha256: 099213309ecd6383f90e5628b84a7d5fa7fa7b6badd5413b3f48f542d7e4a8c9
+    sri: sha384-rBoMJ7NX69u4AVCs0PoB02+hxSHrM+/gXB0wRG25VE/Yf2c0xc9Jl8WH1QXOI1FV
+  - path: prosemirror-view@1.42.8/prosemirror.1234171efd99.css
+    kind: style
+    sha256: 1234171efd99cd16d1a6754c0f6586d0d8b69573432aff2e671cb6a26c9eaa57
+    sri: sha384-ej9rgqnWjJ6pCWLNbHXzPuCLg/qtVwhTxn45izNED4uoeTusSyEe8x94CePxPBpC
