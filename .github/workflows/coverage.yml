@@ -66,12 +66,19 @@ jobs:
             phases: root
           - part: tests-unit
             phases: tests-unit
-          - part: tests-integration
-            phases: tests-integration
+          # The non-unit tests/ packages, split into the groups that
+          # CI_COVERAGE_INTEGRATION_GROUPS (.github/ci-params.env) names plus
+          # the rest, so no single leg's compile and link outgrows the runner.
+          - part: tests-integration-1
+            phases: tests-integration-1
+          - part: tests-integration-2
+            phases: tests-integration-2
+          - part: tests-integration-rest
+            phases: tests-integration-rest
           - part: bridge
             phases: bridge
-    # Nothing instrumented is cached (see the rust-cache step), so every run
-    # is a cold build.
+    # Instrumented objects are cached by sccache, not rust-cache (see the
+    # rust-cache step), so a cold cache is the slow case.
     timeout-minutes: 80
     env:
       CARGO_INCREMENTAL: "0"
@@ -84,6 +91,13 @@ jobs:
       # even without debug info.
       COVERAGE_BUILD_JOBS: "2"
       SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
+      # sccache keys every object on the full rustc argument list, RUSTFLAGS
+      # included, so an instrumented object is only ever served to an
+      # instrumented build; scripts/coverage.sh keeps this wrapper only when
+      # SCCACHE_GHA_ENABLED is set, and its profraw and object checks verify
+      # the result.
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
     services:
       postgres:
         image: postgres:18
@@ -112,6 +126,11 @@ jobs:
       # libdbus: the bridge workspace pulls keyring -> dbus-secret-service.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3 libdbus-1-dev zstd
       - run: rustup show
+      - uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
+      # Memory high-water mark for the build step, read back after it.
+      - run: |
+          echo "cores: $(nproc)"; free -h; df -h / /mnt
+          (while sleep 10; do free -m | awk '/Mem:/{m=$3} /Swap:/{s=$3} END{print m, s}'; done) > "$RUNNER_TEMP/mem.log" 2>&1 &
       # scripts/coverage.sh calls llvm-profdata and llvm-cov out of the
       # toolchain's own sysroot rather than installing cargo-llvm-cov, which
       # re-injects the mold linker flags and produces zero profraws.
@@ -119,8 +138,8 @@ jobs:
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
-      # Registry and git checkouts only. The instrumented trees would take
-      # several GB of the repository's 10 GB cache and evict the Gates caches.
+      # Registry and git checkouts only; instrumented objects go through
+      # sccache above, not a cached target tree.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: coverage-${{ matrix.part }}
@@ -144,6 +163,11 @@ jobs:
             echo "::error title=Coverage build timed out::the ${{ matrix.part }} leg did not finish in 60 min; this is a runner-time problem, not a coverage drop"
           fi
           exit "$status"
+      - name: Peak memory (MiB used RAM / swap)
+        if: always()
+        run: sort -n "$RUNNER_TEMP/mem.log" | tail -1; sort -k2 -n "$RUNNER_TEMP/mem.log" | tail -1
+      - if: always()
+        run: sccache --show-stats
       # The instrumented executables and the raw profiles are the report's
       # whole input. tar keeps the exec bit, which the report's object scan
       # selects on and upload-artifact would drop.
@@ -222,7 +246,7 @@ jobs:
           # A leg that failed before packing uploads nothing; report over
           # what arrived, and the last step keeps the job red.
           missing=""
-          for part in root tests-unit tests-integration bridge; do
+          for part in root tests-unit tests-integration-1 tests-integration-2 tests-integration-rest bridge; do
             if [ -f "/mnt/coverage-in/coverage-$part.tar.zst" ]; then
               zstd -dc "/mnt/coverage-in/coverage-$part.tar.zst" | tar -xPf -
             else

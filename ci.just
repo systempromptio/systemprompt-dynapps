@@ -30,9 +30,9 @@ preflight-static:
     set -uo pipefail
     failed=()
     check() { echo "==> $1"; shift; "$@" || failed+=("$*"); }
-    check "fmt (root)" cargo fmt --all -- --check
-    check "fmt (tests)" cargo fmt --manifest-path tests/Cargo.toml --all -- --check
-    check "fmt (bridge)" cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
+    check "fmt (root)" bash scripts/fmt-check.sh Cargo.toml
+    check "fmt (tests)" bash scripts/fmt-check.sh tests/Cargo.toml
+    check "fmt (bridge)" bash scripts/fmt-check.sh bridge/Cargo.toml
     check "sqlx cache" bash scripts/check-sqlx-cache.sh
     check "core crate versions" bash scripts/check-core-crate-versions.sh
     check "build coordinator" bash tests/scripts/build-coordinator.sh
@@ -67,6 +67,10 @@ _doc-check-uncoordinated:
 
 # The workspace must build on the declared minimum supported Rust version
 # (rust-version in Cargo.toml). Requires: rustup toolchain install 1.96.0
+# Compile proof only: lints are judged once, by `clippy` on the pinned stable,
+# so `--cap-lints=warn` replaces any inherited `-D warnings` and a lint that
+# differs between compilers (in this workspace or core's path crates) cannot
+# fail here.
 msrv-check:
     @scripts/build-coordinator.sh run msrv-check "" -- {{just_executable()}} _msrv-check-uncoordinated
 
@@ -77,7 +81,7 @@ _msrv-check-uncoordinated:
         echo "msrv-check: toolchain 1.96.0 missing — run: rustup toolchain install 1.96.0" >&2
         exit 1
     fi
-    SQLX_OFFLINE=true cargo +1.96.0 check --workspace
+    SQLX_OFFLINE=true RUSTFLAGS="--cap-lints=warn" cargo +1.96.0 check --workspace
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COVERAGE (raw llvm-cov; floor + ratchet vs tracked coverage/baseline.json)
