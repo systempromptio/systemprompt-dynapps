@@ -308,9 +308,31 @@ WARNINGS="$ROOT/coverage-report/llvm-cov-warnings.txt"
 MISMATCHED=$(sed -n 's/^.*warning: \([0-9][0-9]*\) functions have mismatched data.*$/\1/p' "$WARNINGS" | head -n 1)
 MISMATCH_LIMIT="${COVERAGE_MISMATCH_LIMIT:-10}"
 if [ -n "$MISMATCHED" ] && [ "$MISMATCHED" -gt "$MISMATCH_LIMIT" ]; then
-    echo "error: llvm-cov rejected profile data for $MISMATCHED functions (limit $MISMATCH_LIMIT); duplicate or incompatible instrumented objects remain" >&2
-    echo "       inspect coverage-report/llvm-cov-warnings.txt" >&2
-    exit 1
+    # Why: an object that links a dependency function without calling it
+    # carries an empty mapping record with hash 0, which llvm-cov counts as a
+    # mismatch against the record a calling object wrote; every test binary
+    # contributes one or two (hashbrown, foldhash), so the count grows with the
+    # number of binaries. Only records with a real hash are build variants.
+    # llvm-cov can abort after printing the dump, so its exit status is not
+    # read; the record count must equal the warning's or the check fails.
+    DUMP="$ROOT/coverage-report/llvm-cov-mismatches.txt"
+    { "$LLVM_COV" report \
+        --instr-profile="$ROOT/coverage-report/tests.profdata" \
+        "${OBJ_ARGS[@]}" \
+        --ignore-filename-regex="$IGNORE_RE" \
+        -dump 2>&1 >/dev/null || true; } | grep '^hash-mismatch:' > "$DUMP" || true
+    DUMPED=$(wc -l < "$DUMP")
+    if [ "$DUMPED" -ne "$MISMATCHED" ]; then
+        echo "error: llvm-cov reported $MISMATCHED mismatched functions but its dump lists $DUMPED" >&2
+        exit 1
+    fi
+    VARIANTS=$(grep -vc 'with hash = 0x0$' "$DUMP" || true)
+    echo "==> $MISMATCHED mismatched functions, $VARIANTS with a real hash (coverage-report/llvm-cov-mismatches.txt)"
+    if [ "$VARIANTS" -gt "$MISMATCH_LIMIT" ]; then
+        echo "error: llvm-cov rejected profile data for $VARIANTS functions with a real hash (limit $MISMATCH_LIMIT); duplicate or incompatible instrumented objects remain" >&2
+        echo "       inspect coverage-report/llvm-cov-mismatches.txt" >&2
+        exit 1
+    fi
 fi
 
 "$LLVM_COV" export \
