@@ -102,6 +102,14 @@ if [ "$(uname -s)" = "Darwin" ]; then
 else
     PROFRAW_PATTERN="%m%c"
     COVERAGE_RUSTFLAGS="-C instrument-coverage -C llvm-args=--runtime-counter-relocation"
+    # Why: GNU ld needs several GiB per instrumented test binary and pushes a
+    # 7 GiB runner deep into swap. The toolchain's own rust-lld links the same
+    # objects in a fraction of the memory and, unlike mold, keeps the
+    # profile-runtime constructors.
+    gcc_ld="$(rustc --print sysroot)/lib/rustlib/$(rustc -vV | sed -n 's/^host: //p')/bin/gcc-ld"
+    if [ -x "$gcc_ld/ld.lld" ]; then
+        COVERAGE_RUSTFLAGS="$COVERAGE_RUSTFLAGS -C link-arg=-fuse-ld=lld -C link-arg=-B$gcc_ld"
+    fi
 fi
 
 run_instrumented() {

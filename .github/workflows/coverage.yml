@@ -73,6 +73,8 @@ jobs:
             phases: tests-integration-1
           - part: tests-integration-2
             phases: tests-integration-2
+          - part: tests-integration-3
+            phases: tests-integration-3
           - part: tests-integration-rest
             phases: tests-integration-rest
           - part: bridge
@@ -165,7 +167,9 @@ jobs:
           exit "$status"
       - name: Peak memory (MiB used RAM / swap)
         if: always()
-        run: sort -n "$RUNNER_TEMP/mem.log" | tail -1; sort -k2 -n "$RUNNER_TEMP/mem.log" | tail -1
+        run: |
+          sort -n "$RUNNER_TEMP/mem.log" | tail -1; sort -k2 -n "$RUNNER_TEMP/mem.log" | tail -1
+          echo "per-minute (RAM swap):"; awk 'NR % 6 == 0 { printf "%dm %s %s\n", NR / 6, $1, $2 }' "$RUNNER_TEMP/mem.log"
       - if: always()
         run: sccache --show-stats
       # The instrumented executables and the raw profiles are the report's
@@ -246,7 +250,7 @@ jobs:
           # A leg that failed before packing uploads nothing; report over
           # what arrived, and the last step keeps the job red.
           missing=""
-          for part in root tests-unit tests-integration-1 tests-integration-2 tests-integration-rest bridge; do
+          for part in root tests-unit tests-integration-1 tests-integration-2 tests-integration-3 tests-integration-rest bridge; do
             if [ -f "/mnt/coverage-in/coverage-$part.tar.zst" ]; then
               zstd -dc "/mnt/coverage-in/coverage-$part.tar.zst" | tar -xPf -
             else
