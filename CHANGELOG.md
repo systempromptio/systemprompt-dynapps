@@ -21,6 +21,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Changed
+
+- **sqlx no longer builds its SQLite driver.** The root workspace dropped sqlx's unused `sqlite` feature, so no artifact links the bundled C SQLite affected by RUSTSEC-2026-0459; `.cargo/audit.toml` ignores the advisory because cargo-audit still sees `libsqlite3-sys` as an optional entry in the lockfiles.
+
 ## 0.79.0 — 2026-11-06
 
 ### Added
