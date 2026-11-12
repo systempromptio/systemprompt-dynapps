@@ -28,10 +28,8 @@
 
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::traits::OwnedTask;
 
 use async_trait::async_trait;
-use chrono::Utc;
 use systemprompt::agent_runs::credentials::{
     IssueRunCredentials, RunCredentialLimits, RunCredentialService,
 };
@@ -39,24 +37,22 @@ use systemprompt::agent_runs::governance::{HookBases, hooks_file};
 use systemprompt::agent_runs::repository::{Released, RunStarted};
 use systemprompt::agent_runs::service::{ClaimedRun, DbEventSink, RunHandler};
 use systemprompt::agent_runs::{
-    AgentRunRow, AgentRunsError, AgentRunsResult, EventSink, ExecuteParams, RunCredentials,
-    RunEvent, RunLayout, RunOutcome, RunRequest, RunnerLevel, execute,
+    AgentRunsError, AgentRunsResult, EventSink, ExecuteParams, RunCredentials, RunLayout,
+    RunOutcome, RunRequest, execute,
 };
-use systemprompt::identifiers::AgentRunId;
-// JSON: core's `finish` takes the diff summary as a JSONB value, and a
-// released run's count lives in the stored request's `releases` key.
+// JSON: core's `finish` takes the diff summary as a JSONB value.
 use serde_json::Value;
 
+use super::attempt::{record_notes, resume_note, watch_cancel};
 use super::fly::remote::{RemoteJob, run_remote};
 use super::{cost_window, observer, prepare};
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::{agents, runs};
 use crate::state::FarmState;
-use crate::types::{AgentRunStatus, ErrorClass, FarmRunId, RunEventKind, RunEventPayload};
+use crate::types::{AgentRunStatus, ErrorClass, FarmRunId};
 
 const CREDENTIAL_GRACE: Duration = Duration::from_secs(300);
-const CANCEL_POLL: Duration = Duration::from_secs(2);
 
 #[derive(Debug)]
 pub(super) struct FarmRunHandler {
@@ -277,26 +273,6 @@ pub(super) async fn settle(
     Ok(())
 }
 
-fn resume_note(row: &AgentRunRow) -> Option<String> {
-    let releases = row
-        .request
-        .get("releases")
-        .and_then(Value::as_i64)
-        .unwrap_or(0);
-    if row.attempt > 1 {
-        Some(format!(
-            "attempt {} resumes the earlier workspace",
-            row.attempt
-        ))
-    } else if releases > 0 {
-        Some(format!(
-            "release {releases} resumes the workspace a shutdown interrupted"
-        ))
-    } else {
-        None
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 struct Job<'a> {
     farm_run_id: &'a FarmRunId,
@@ -304,55 +280,4 @@ struct Job<'a> {
     request: &'a RunRequest,
     layout: &'a RunLayout,
     credentials: &'a RunCredentials,
-}
-
-async fn record_notes(
-    claimed: &ClaimedRun,
-    sink: &dyn EventSink,
-    notes: &[String],
-) -> FarmResult<Option<i64>> {
-    let existing = claimed.repo.count_events(&claimed.row.id).await?;
-    let batch: Vec<RunEvent> = notes
-        .iter()
-        .zip(existing..)
-        .map(|(note, seq)| RunEvent {
-            seq,
-            kind: RunEventKind::Runner,
-            tool_name: None,
-            tool_use_id: None,
-            payload: RunEventPayload::Runner {
-                message: note.clone(),
-                level: RunnerLevel::Warn,
-            },
-            created_at: Utc::now(),
-        })
-        .collect();
-    let written = i64::try_from(batch.len()).unwrap_or(0);
-    if !batch.is_empty() {
-        sink.emit(batch).await?;
-    }
-    let total = existing + written;
-    Ok((total > 0).then_some(total - 1))
-}
-
-fn watch_cancel(claimed: &ClaimedRun) -> OwnedTask<()> {
-    let repo = claimed.repo.clone();
-    let token = claimed.run_token.clone();
-    let id: AgentRunId = claimed.row.id.clone();
-    OwnedTask::spawn("farm_cancel_watch", async move {
-        loop {
-            tokio::select! {
-                () = token.cancelled() => return,
-                () = tokio::time::sleep(CANCEL_POLL) => {},
-            }
-            match repo.find_cancel_requested(&id).await {
-                Ok(true) => {
-                    token.cancel();
-                    return;
-                },
-                Ok(false) => {},
-                Err(err) => tracing::warn!(run = %id, error = %err, "farm cancel poll failed"),
-            }
-        }
-    })
 }

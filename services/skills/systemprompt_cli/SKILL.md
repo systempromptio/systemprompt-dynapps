@@ -56,7 +56,9 @@ Common health and inventory commands:
 | `analytics requests list` | `--since`, `--until`, `--user <id>`, `--model`, `--limit/-n`, `--offset` |
 | `analytics conversations list` | `--since`, `--until`, `--source agent\|gateway\|all`, `--user <id>`, `--limit/-n` |
 | `admin users list` | `--limit`, `--offset`, `--role admin\|user\|anonymous`, `--status`, `--include-anonymous` (with `--role` paging is ignored) |
-| `admin users role assign\|promote\|demote <user-id>` | `--roles <role>[,<role>]` (assign) - only `admin`, `user`, `anonymous` exist; `--yes` is required in non-interactive runs |
+| `admin users role assign <user-id>` | `--roles <role>[,<role>]` - only `admin`, `user`, `anonymous` exist; `--yes` is required in non-interactive runs |
+| `admin users role promote <user-id>` | `--yes` is required in non-interactive runs |
+| `admin users role demote <user-id>` | `--yes` is required in non-interactive runs |
 | `infra logs governance report` | `--since`, `--group-by policy\|tool\|user`, `--limit` |
 | `infra logs trace list` | `--since`, `--agent`, `--status`, `--tool`, `--decision`, `--has-mcp`, `--all`, `--limit/-n` |
 
