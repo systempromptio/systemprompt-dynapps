@@ -19,7 +19,6 @@ use systemprompt_secrets_onepassword as _;
 use systemprompt_web_admin_governance as _;
 use systemprompt_web_admin_identity as _;
 use systemprompt_web_admin_platform as _;
-use tokio::net::TcpListener;
 
 const DEFAULT_SERVICE_ID: &str = "systemprompt";
 const DEFAULT_PORT: u16 = 5010;
@@ -91,10 +90,10 @@ async fn main() -> Result<()> {
         );
     }
 
-    let addr = format!("0.0.0.0:{}", port());
+    let addr = format!("127.0.0.1:{}", port());
     // Why: core's supervisor judges this process by pid and port, so the port
     // is claimed before the slow, bounded bring-up and a clash fails at once.
-    let listener = TcpListener::bind(&addr)
+    let listener = systemprompt::mcp::bind_loopback(port())
         .await
         .with_context(|| format!("Failed to bind {addr}"))?;
     let timeout = startup_timeout();
@@ -126,20 +125,23 @@ async fn main() -> Result<()> {
         systemprompt_mcp_shared::auth::ServerAccess {
             authz_hook: Arc::clone(ctx.authz_hook()),
             services: ctx.services_watch().clone(),
-            token_authority: ctx.token_authority(),
-            config: Arc::clone(ctx.config_arc()),
         },
         ctx.artifact_ingest_arc(),
         systemprompt_mcp_agent::CliLocation::from_profile(ctx.profile()),
     )
     .with_issues(IssueTools::from_context(&ctx, service_id.clone()));
+    let requires_oauth = ctx
+        .services_watch()
+        .get()
+        .mcp_servers
+        .get(service_id.as_str())
+        .is_some_and(|deployment| deployment.oauth.required);
     let router = systemprompt::mcp::create_router(
         server,
         Arc::clone(ctx.mcp_session_repository()),
-        systemprompt::mcp::McpHttpConfig {
-            server_id: Some(service_id.clone()),
-            ..systemprompt::mcp::McpHttpConfig::default()
-        },
+        systemprompt::mcp::McpHttpConfig::default(),
+        systemprompt::mcp::middleware::HopVerifier::new(ctx.token_authority(), service_id.clone())
+            .requiring_hop(requires_oauth),
     );
 
     tracing::info!(

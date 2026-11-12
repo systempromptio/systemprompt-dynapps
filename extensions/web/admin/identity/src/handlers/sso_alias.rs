@@ -12,12 +12,12 @@ use std::sync::Arc;
 use axum::Extension;
 use axum::extract::Query;
 use axum::extract::rejection::QueryRejection;
-use axum::http::header::SET_COOKIE;
-use axum::http::{HeaderMap, HeaderValue};
+use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::analytics::SessionAnalyticsBuilder;
+use systemprompt::api::services::session_cookie::SessionCookie;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::sso::{
     SsoCallback, SsoDriver, SsoReturn, SsoReturnBinding, binder_from_headers, into_response,
@@ -36,6 +36,7 @@ pub struct SsoDeps {
     // assembled without one (tests, early boot) keeps every SSO route
     // mounted but answers `unavailable`, as the pre-driver flow did.
     pub driver: Option<SsoDriver>,
+    pub cookie: SessionCookie,
     pub write_pool: Arc<PgPool>,
     pub session_service: Arc<SessionCreationService>,
 }
@@ -141,33 +142,7 @@ async fn finish(
             },
         )
         .await;
-    let mut response = into_response(outcome);
-    relax_session_cookie(&mut response);
-    Ok(response)
-}
-
-// Why: core 0.68 sets the session cookie `SameSite=Strict`, which Chrome
-// withholds on the redirect chain started by the IdP's cross-site POST/GET
-// back to us, so the first `/admin` arrives without it. Drop once core's
-// `session_cookie_redirect` ships `SameSite=Lax`.
-fn relax_session_cookie(response: &mut Response) {
-    let relaxed: Vec<HeaderValue> = response
-        .headers()
-        .get_all(SET_COOKIE)
-        .iter()
-        .map(|value| match value.to_str() {
-            Ok(text) if text.starts_with("access_token=") => {
-                HeaderValue::from_str(&text.replace("SameSite=Strict", "SameSite=Lax"))
-                    .unwrap_or_else(|_| value.clone())
-            },
-            _ => value.clone(),
-        })
-        .collect();
-    let headers = response.headers_mut();
-    headers.remove(SET_COOKIE);
-    for value in relaxed {
-        headers.append(SET_COOKIE, value);
-    }
+    Ok(into_response(deps.cookie, outcome))
 }
 
 pub(crate) async fn oidc_start(

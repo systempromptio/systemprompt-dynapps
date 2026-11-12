@@ -125,8 +125,10 @@ same-origin relative path; anything else falls back to `/admin`.
    ones alone. An Entra group that maps to nothing leaves the person in the
    derived `unassigned` group.
 
-**Roles are overwritten on every SSO sign-in.** This installation's role
-resolver hands core's driver the policy's roles — the mapped roles, or
+**Roles are overwritten on every SSO sign-in to an account SSO
+provisioned.** An account that existed before it was linked to its Entra
+identity keeps its roles; SSO does not change them. For a provisioned account,
+this installation's role resolver hands core's driver the policy's roles — the mapped roles, or
 `default_roles` (`[user]`) when no group maps — joined with the roles an admin
 granted by hand in the dashboard (`user_manual_roles`), and the driver writes
 that set to `users.roles` before minting the session. A role granted only by
@@ -162,7 +164,10 @@ deliberately coarse; the finer reason is on the audit row.
 | `forbidden` | `forbidden` | Email domain not in `allowed_email_domains` | Your account is not on an email domain this platform accepts. |
 | `group_overage` | `group_overage` | Entra ID sent an overage pointer instead of the group list | Your account is in too many Entra ID groups. |
 | `no_group` | `no_group` | No group at all and `deny_without_group: true` | Your account is not in a Systemprompt-* Entra ID group. |
-| `not_provisioned` | `not_provisioned` | No linked account and `auto_provision` off, or the account is inactive or a service account | No account exists for you yet. |
+| `not_provisioned` | `not_provisioned` | No linked account and `auto_provision` off | No account exists for you yet. |
+| `email_in_use` | `email_in_use` | An existing account owns the verified email and the issuer's link policy does not allow email linking | An existing account already uses your email address. |
+| `link_ineligible` | `link_ineligible` | The account that owns the verified email cannot be linked (for example a service account) | Your email address belongs to an account that cannot be linked. |
+| `account_unavailable` | `account_unavailable` | The linked account is inactive, disabled or deleted | Your account is disabled or no longer available. |
 | `error` | `error` | Anything else — the server log has the detail | Sign-in failed or the sign-in page expired. |
 
 The messages live in `storage/files/js/pages/admin-login.js`; an unknown code
@@ -244,7 +249,7 @@ create an account. Accounts are provisioned by operators or by SSO when a signed
 ```bash
 # Create the account and grant the admin role
 systemprompt admin users create --name "Jane" --email jane@dynapps.es
-systemprompt admin users role promote jane@dynapps.es admin
+systemprompt admin users role promote jane@dynapps.es admin --yes
 ```
 
 For access when SSO itself is down, mint a CLI admin session directly against

@@ -7,13 +7,27 @@ fn default_session_id() -> SessionId {
     SessionId::new(String::new())
 }
 
+fn blank_tolerant_session_id<'de, D>(deserializer: D) -> Result<SessionId, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let raw = Option::<String>::deserialize(deserializer)?.unwrap_or_default();
+    if raw.trim().is_empty() {
+        return Ok(default_session_id());
+    }
+    SessionId::try_new(raw).map_err(serde::de::Error::custom)
+}
+
 fn default_task_id() -> TaskId {
     TaskId::new(String::new())
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct HookCommonFields {
-    #[serde(default = "default_session_id")]
+    #[serde(
+        default = "default_session_id",
+        deserialize_with = "blank_tolerant_session_id"
+    )]
     pub session_id: SessionId,
     #[serde(default)]
     pub cwd: String,

@@ -87,13 +87,13 @@ pub enum MarketplaceError {
     Profile(#[from] systemprompt::config::ProfileBootstrapError),
 
     #[error("Services config error: {0}")]
-    Services(#[from] systemprompt::loader::ConfigLoadError),
+    Services(#[source] Box<systemprompt::loader::ConfigLoadError>),
 
     #[error("Identifier error: {0}")]
     Identifier(#[from] systemprompt::identifiers::error::IdValidationError),
 
     #[error("the AI catalog does not resolve: {0}")]
-    Catalog(#[from] systemprompt::manifest::services::CatalogError),
+    Catalog(#[source] Box<systemprompt::manifest::services::CatalogError>),
 
     #[error("route `{route}` is not a valid route: {source}")]
     InvalidRoute {
@@ -104,6 +104,18 @@ pub enum MarketplaceError {
 
     #[error(transparent)]
     Infra(#[from] InfraError),
+}
+
+impl From<systemprompt::manifest::services::CatalogError> for MarketplaceError {
+    fn from(err: systemprompt::manifest::services::CatalogError) -> Self {
+        Self::Catalog(Box::new(err))
+    }
+}
+
+impl From<systemprompt::loader::ConfigLoadError> for MarketplaceError {
+    fn from(err: systemprompt::loader::ConfigLoadError) -> Self {
+        Self::Services(Box::new(err))
+    }
 }
 
 impl MarketplaceError {

@@ -6,7 +6,7 @@ use super::response::{body, tool_error};
 use super::transport::client;
 use serde_json::{Value, json};
 use std::time::Instant;
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
@@ -20,6 +20,7 @@ async fn rpc(
     let mut request = http
         .post(validate_outbound_url(
             &grant.provider.endpoint(&services.config()),
+            LoopbackPolicy::Allow,
         )?)
         .header(
             "Authorization",
@@ -103,7 +104,10 @@ pub async fn verify_reporting(
     let mut probe_session = None;
     let result = handshake(services, grant, http, &mut probe_session, report).await;
     if let Some(session) = probe_session {
-        let endpoint = validate_outbound_url(&grant.provider.endpoint(&services.config()))?;
+        let endpoint = validate_outbound_url(
+            &grant.provider.endpoint(&services.config()),
+            LoopbackPolicy::Allow,
+        )?;
         let _cleanup_result = http
             .delete(endpoint)
             .header("Mcp-Session-Id", session)

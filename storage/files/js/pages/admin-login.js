@@ -8,6 +8,9 @@ const SSO_MESSAGES = {
   not_provisioned: 'No account exists for you yet. Ask IT to add you to a Systemprompt-* Entra ID group.',
   group_overage: 'Your account is in too many Entra ID groups for the sign-in to list them. Ask IT to emit only the groups assigned to the application.',
   correlation_lost: 'Dynapps SSO (Microsoft Entra ID) sent a sign-in this platform did not start. Start again from this page.',
+  email_in_use: 'An existing account already uses your email address, and this platform does not link it to your Dynapps SSO (Microsoft Entra ID) identity automatically. Contact the platform team to have the accounts linked.',
+  link_ineligible: 'Your email address belongs to an existing account that cannot be linked to single sign-on. Contact the platform team.',
+  account_unavailable: 'Your account is disabled or no longer available on this platform. Contact the platform team.',
   error: 'Sign-in failed or the sign-in page expired. Start again from this page.'
 };
 

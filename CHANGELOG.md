@@ -27,6 +27,7 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Core 0.81 adoption.** The three MCP binaries bind loopback only and admit identity through core's proxy-signed hop token (`HopVerifier`, required when the server's `oauth.required` is set), so `ToolAuth` and `ServerAccess` no longer carry a JWT verifier. Session, client and policy ids from requests are built with `try_new`, so a malformed id is refused at the boundary (the session detail page answers 400). The SSO alias routes pass core's `SessionCookie` to `into_response`; the local rewrite of the session cookie to `SameSite=Lax` is gone because core issues it that way. `MarketplaceError` boxes its `CatalogError` and `ConfigLoadError` causes, which grew in core 0.81. `deploy/loadtest/kind/services/ai/config.yaml` drops the `ai.mcp` and `ai.history.log_tool_executions` keys core no longer reads.
 - **sqlx no longer builds its SQLite driver.** The root workspace dropped sqlx's unused `sqlite` feature, so no artifact links the bundled C SQLite affected by RUSTSEC-2026-0459; `.cargo/audit.toml` ignores the advisory because cargo-audit still sees `libsqlite3-sys` as an optional entry in the lockfiles.
 
 ## 0.79.0 — 2026-11-06

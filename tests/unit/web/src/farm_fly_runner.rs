@@ -4,13 +4,15 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use systemprompt::agent_runs::service::DbEventSink;
+use async_trait::async_trait;
 use systemprompt::agent_runs::{
-    AgentRunRepository, HostKind, McpServerSpec, PermissionMode, RunRequest, TrafficClass,
+    AgentRunsResult, EventSink, HostKind, McpServerSpec, PermissionMode, RunEvent, RunRequest,
+    TrafficClass,
 };
-use systemprompt::identifiers::AgentRunId;
+use systemprompt::identifiers::HostSessionId;
 use systemprompt_web_admin_farm::config::{
     FlyRunnerConfig, RunnerMode, parse_farms_doc, with_mode_override,
 };
@@ -229,18 +231,35 @@ fn spec(run_id: &str) -> WorkerSpec {
     }
 }
 
+#[derive(Default)]
+struct MemorySink {
+    sessions: Mutex<Vec<HostSessionId>>,
+}
+
+#[async_trait]
+impl EventSink for MemorySink {
+    async fn emit(&self, _batch: Vec<RunEvent>) -> AgentRunsResult<()> {
+        Ok(())
+    }
+
+    async fn session_observed(&self, session_id: &HostSessionId) -> AgentRunsResult<()> {
+        self.sessions
+            .lock()
+            .expect("sessions")
+            .push(session_id.clone());
+        Ok(())
+    }
+}
+
 #[tokio::test]
 async fn worker_token_opens_only_its_run_while_registered() {
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy("postgres://unused@localhost/unused")
-        .expect("lazy pool");
-    let repo = AgentRunRepository::from_pool(std::sync::Arc::new(pool));
-    let sink = DbEventSink::new(repo, AgentRunId::new("fly-reg-run"));
-    let runs = std::sync::Arc::new(RemoteRuns::default());
+    let sink = Arc::new(MemorySink::default());
+    let runs = Arc::new(RemoteRuns::default());
+    let events: Arc<dyn EventSink> = Arc::<MemorySink>::clone(&sink);
     let mut registration = runs.register(
         spec("fly-reg-run"),
         PathBuf::from(SERVER_ROOT),
-        sink,
+        events,
         "tok-a",
     );
     assert!(runs.authorise("fly-reg-run", "tok-a").is_some());
@@ -253,6 +272,14 @@ async fn worker_token_opens_only_its_run_while_registered() {
     );
 
     let run = runs.authorise("fly-reg-run", "tok-a").expect("admitted");
+    run.sink
+        .session_observed(&HostSessionId::try_new("host-session").expect("non-empty host session id"))
+        .await
+        .expect("session reaches the registered sink");
+    assert_eq!(
+        sink.sessions.lock().expect("sessions").as_slice(),
+        &[HostSessionId::try_new("host-session").expect("non-empty host session id")]
+    );
     assert!(!run.cancel_requested());
     run.request_cancel();
     assert!(run.cancel_requested());

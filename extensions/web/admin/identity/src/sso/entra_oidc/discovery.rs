@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Deserialize;
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt::sso::SsoError;
 
 use super::super::error::SsoProviderError;
@@ -41,7 +41,7 @@ async fn fetch_discovery(
     url: String,
 ) -> Result<OidcDiscovery, SsoProviderError> {
     let destination =
-        validate_outbound_url(&url).map_err(|source| SsoProviderError::OutboundUrl {
+        validate_outbound_url(&url, LoopbackPolicy::Allow).map_err(|source| SsoProviderError::OutboundUrl {
             url: url.clone(),
             source,
         })?;

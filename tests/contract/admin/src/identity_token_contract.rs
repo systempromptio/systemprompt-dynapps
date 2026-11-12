@@ -112,10 +112,12 @@ async fn identity_token_is_signed_for_an_entitled_caller() {
     let mut validation = Validation::new(Algorithm::RS256);
     validation.set_audience(&[AUDIENCE]);
     validation.set_issuer(&[globals::boot().config().jwt_issuer.as_str()]);
-    let claims =
-        decode::<IdentityClaims>(&token, globals::signing_keys().decoding_key(), &validation)
-            .expect("token verifies against the authority key")
-            .claims;
+    let key = globals::signing_keys()
+        .decoding_key_for_kid(header.kid.as_deref().expect("jwt kid"))
+        .expect("kid is in the authority keyring");
+    let claims = decode::<IdentityClaims>(&token, key, &validation)
+        .expect("token verifies against the authority key")
+        .claims;
     assert_eq!(claims.sub, admin_id.as_str());
     assert!(!claims.email.is_empty(), "email claim is populated");
     assert!(!claims.name.is_empty(), "name claim is populated");

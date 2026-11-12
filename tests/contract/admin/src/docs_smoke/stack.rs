@@ -13,9 +13,10 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
-use systemprompt::identifiers::{AccessTokenId, ClientId, SessionId, UserId};
+use systemprompt::identifiers::{AccessTokenId, ClientId, McpServerId, SessionId, UserId};
 use systemprompt::models::auth::{
-    AuthenticatedUser, JwtAudience, Permission, TokenInteraction, UserJwtRequest,
+    AuthenticatedUser, JwtAudience, McpHopIdentity, Permission, TokenInteraction, UserJwtRequest,
+    UserType,
 };
 use systemprompt::models::documents::DRIVE_SYNC_AUDIENCE;
 use systemprompt::system::AppContext;
@@ -23,6 +24,7 @@ use systemprompt::system::AppContext;
 use systemprompt_security::keys::RsaSigningKey;
 use tokio::process::{Child, Command};
 
+use super::mcp::McpCaller;
 use crate::globals;
 
 pub(super) const SYSTEM_ADMIN_ID: &str = "00000000-0000-4000-8000-00000000ad01";
@@ -278,21 +280,23 @@ impl Stack {
             .expect("mint the session token")
     }
 
-    // An attended agent's bearer, as Claude Code holds it: document classes cap
-    // an unattended one at suggest.
-    pub(super) async fn agent_token(&self, pool: &sqlx::PgPool, user: &UserId) -> String {
+    // An attended agent as Claude Code drives the documents server: its
+    // bearer, and the hop identity the API proxy would sign for the same
+    // session. Document classes cap an unattended agent at suggest.
+    pub(super) async fn agent_caller(&self, pool: &sqlx::PgPool, user: &UserId) -> McpCaller {
         let session = seed_session(pool, user).await;
-        self.ctx
-            .token_authority()
+        let authenticated = AuthenticatedUser::new_with_roles(
+            user.clone(),
+            user.as_str().to_owned(),
+            format!("{}@contract.test", user.as_str()),
+            vec![Permission::User],
+            vec!["user".to_owned()],
+        );
+        let tokens = self.ctx.token_authority();
+        let bearer = tokens
             .mint_user_jwt(&UserJwtRequest {
-                user: AuthenticatedUser::new_with_roles(
-                    user.clone(),
-                    user.as_str().to_owned(),
-                    format!("{}@contract.test", user.as_str()),
-                    vec![Permission::User],
-                    vec!["user".to_owned()],
-                ),
-                session_id: session,
+                user: authenticated.clone(),
+                session_id: session.clone(),
                 jti: AccessTokenId::generate(),
                 permissions: vec![Permission::User],
                 audience: JwtAudience::standard(),
@@ -303,7 +307,23 @@ impl Stack {
                 interaction: Some(TokenInteraction::Interactive),
                 browser_session: false,
             })
-            .expect("mint the agent token")
+            .expect("mint the agent token");
+        McpCaller {
+            bearer,
+            tokens,
+            server: McpServerId::new("documents"),
+            identity: McpHopIdentity {
+                user_id: user.clone(),
+                user: Some(authenticated),
+                session_id: session,
+                user_type: UserType::User,
+                client_id: None,
+                act_chain: Vec::new(),
+                purpose: None,
+                interaction: Some(TokenInteraction::Interactive),
+                mcp_session: None,
+            },
+        }
     }
 
     // The bridge Drive routes take only a token whose sole audience is the

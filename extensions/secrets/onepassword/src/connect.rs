@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use reqwest::{Client, redirect};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use urlencoding::encode;
 use zeroize::Zeroizing;
 
@@ -70,7 +70,7 @@ impl ConnectBackend {
 
     async fn get_json<T: DeserializeOwned>(&self, path: &str) -> Result<T, OnePasswordError> {
         let url = format!("{}{path}", self.base_url);
-        let url = validate_outbound_url(&url).map_err(|source| OnePasswordError::ConnectUrl {
+        let url = validate_outbound_url(&url, LoopbackPolicy::Allow).map_err(|source| OnePasswordError::ConnectUrl {
             url: url.clone(),
             source,
         })?;

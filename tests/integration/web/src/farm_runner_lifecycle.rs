@@ -4,12 +4,19 @@
 //! claim loop picks up (origin `agent_farm_run`, origin id = the farm run id)
 //! and the `agent_farm_runs` row that references it. A cancel before any
 //! claim flags both. The finish observer copies a `RunOutcome` onto the farm
-//! row, attempt included. No executor is started, so no host process is ever
-//! spawned.
+//! row, attempt included. A run released by a shutdown returns to `queued`
+//! on both rows with its attempt unchanged. No executor is started, so no
+//! host process is ever spawned.
+//!
+//! Every test runs in its own `TempDb`, so the run a test launched is the
+//! only queued `agent_farm_run` there when `claim` takes the oldest one;
+//! `claim` asserts it got that run.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use sqlx::PgPool;
+use systemprompt::agent_runs::repository::{Lease, Released};
 use systemprompt::agent_runs::{AgentRunRepository, ErrorClass, RunOutcome, RunStatus};
 use systemprompt::identifiers::{MarketplaceId, PluginId, UserId};
 use systemprompt_web_admin_farm::repositories::filters::{NewAgent, NewFarm};
@@ -227,7 +234,8 @@ async fn the_finish_observer_stamps_the_outcome_on_the_farm_row() {
         final_text: Some("Done.".to_owned()),
     };
 
-    observe_finish(&seeded.state, &run, &outcome).await;
+    let lease = claim(&seeded.state, &run).await;
+    observe_finish(&seeded.state, &run, &lease, &outcome).await;
 
     let farm_row = runs::find_run(&db.pool, &run.id)
         .await
@@ -254,13 +262,14 @@ async fn the_finish_observer_stamps_a_reclaimed_runs_attempt() {
         .execute(db.pool.as_ref())
         .await
         .expect("simulate a reclaim");
+    let lease = claim(&seeded.state, &run).await;
     let outcome = systemprompt_web_admin_farm::services::runner::observer::unexecuted_outcome(
         RunStatus::Failed,
         ErrorClass::Timeout,
         "lease expired",
     );
 
-    observe_finish(&seeded.state, &run, &outcome).await;
+    observe_finish(&seeded.state, &run, &lease, &outcome).await;
 
     let farm_row = runs::find_run(&db.pool, &run.id)
         .await
@@ -270,14 +279,107 @@ async fn the_finish_observer_stamps_a_reclaimed_runs_attempt() {
     db.cleanup().await;
 }
 
-// The executor finishes the core row; the farm observer then stamps the
-// outcome onto the farm row from that record.
-pub(crate) async fn observe_finish(state: &Arc<FarmState>, run: &RunRow, outcome: &RunOutcome) {
+#[tokio::test]
+async fn a_run_released_by_shutdown_is_queued_again_on_both_rows_and_resumes() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let seeded = seed(&db.pool).await;
+    let run = launch_one(&seeded).await;
+    let lease = claim(&seeded.state, &run).await;
+    assert!(
+        runs::update_run_started(&db.pool, &run.id)
+            .await
+            .expect("start the farm run")
+    );
+
+    let released = repo(&db.pool)
+        .release(&run.agent_run_id, &lease, 3)
+        .await
+        .expect("release the agent run");
+    assert_eq!(released, Released::Requeued);
+    assert!(
+        runs::update_run_requeued(&db.pool, &run.id)
+            .await
+            .expect("requeue the farm run"),
+        "a running farm row follows its released run back to queued"
+    );
+
+    let agent_run = repo(&db.pool)
+        .find_run(&run.agent_run_id)
+        .await
+        .expect("read agent_runs")
+        .expect("agent run exists");
+    assert_eq!(agent_run.status, "queued", "a released run is not finished");
+    assert_eq!(agent_run.attempt, 1, "a release costs no attempt");
+    assert_eq!(agent_run.request["releases"], 1);
+    let farm_row = runs::find_run(&db.pool, &run.id)
+        .await
+        .expect("read farm run")
+        .expect("farm run exists");
+    assert_eq!(farm_row.status, "queued");
+    assert!(farm_row.finished_at.is_none());
+
+    let stale = repo(&db.pool)
+        .finish(
+            &run.agent_run_id,
+            &lease,
+            &systemprompt_web_admin_farm::services::runner::observer::unexecuted_outcome(
+                RunStatus::Cancelled,
+                ErrorClass::Ok,
+                "late write",
+            ),
+            None,
+        )
+        .await
+        .expect("finish under the released lease");
+    assert!(
+        !stale.is_applied(),
+        "the released lease writes nothing more"
+    );
+
+    let reclaimed = claim(&seeded.state, &run).await;
+    let outcome = systemprompt_web_admin_farm::services::runner::observer::unexecuted_outcome(
+        RunStatus::Succeeded,
+        ErrorClass::Ok,
+        "resumed",
+    );
+    observe_finish(&seeded.state, &run, &reclaimed, &outcome).await;
+    let farm_row = runs::find_run(&db.pool, &run.id)
+        .await
+        .expect("read farm run")
+        .expect("farm run exists");
+    assert_eq!(farm_row.status, "succeeded");
+    assert_eq!(farm_row.attempt, 1);
+    db.cleanup().await;
+}
+
+pub(crate) async fn claim(state: &Arc<FarmState>, run: &RunRow) -> Lease {
+    let claimed = AgentRunRepository::from_pool(Arc::clone(&state.pool))
+        .claim_queued(ORIGIN_KIND, "farm-tests", Duration::from_secs(300))
+        .await
+        .expect("claim the agent run")
+        .expect("the launched run is queued");
+    assert_eq!(
+        claimed.row.id, run.agent_run_id,
+        "the test's own run is the only one queued in its database"
+    );
+    claimed.lease
+}
+
+// The executor finishes the core row under its claim; the farm observer then
+// stamps the outcome onto the farm row from that record.
+pub(crate) async fn observe_finish(
+    state: &Arc<FarmState>,
+    run: &RunRow,
+    lease: &Lease,
+    outcome: &RunOutcome,
+) {
     let finished = AgentRunRepository::from_pool(Arc::clone(&state.pool))
-        .finish(&run.agent_run_id, outcome, None)
+        .finish(&run.agent_run_id, lease, outcome, None)
         .await
         .expect("finish the agent run");
-    assert!(finished, "the agent run was still open");
+    assert!(finished.is_applied(), "the agent run was still open");
     let stamped = systemprompt_web_admin_farm::services::runner::observer::observe_finished(
         state,
         &run.agent_run_id,

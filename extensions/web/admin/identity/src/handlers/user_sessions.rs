@@ -47,7 +47,8 @@ pub(crate) async fn revoke_user_session_handler(
     Path((user_id_raw, session_id_raw)): Path<(String, String)>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
-    let session_id = SessionId::new(session_id_raw);
+    let session_id = SessionId::try_new(session_id_raw)
+        .map_err(|e| AdminError::BadRequest(format!("Invalid session id: {e}")))?;
     guard(&user_ctx)?;
 
     if !sessions::revoke_signin_session(&pool, &user_id, &session_id).await? {

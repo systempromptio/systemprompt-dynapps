@@ -12,7 +12,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use serde::Deserialize;
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt::sso::SsoError;
 use systemprompt::traits::SecretStore;
 
@@ -88,7 +88,7 @@ pub(super) async fn redeem_code(
         ("client_secret", req.client_secret),
         ("code_verifier", req.code_verifier),
     ]);
-    let token_endpoint = validate_outbound_url(req.token_endpoint).map_err(|source| {
+    let token_endpoint = validate_outbound_url(req.token_endpoint, LoopbackPolicy::Allow).map_err(|source| {
         SsoProviderError::OutboundUrl {
             url: req.token_endpoint.to_owned(),
             source,

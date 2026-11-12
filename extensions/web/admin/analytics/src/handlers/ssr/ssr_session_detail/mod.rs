@@ -66,12 +66,9 @@ pub(crate) async fn session_detail_page(
     State(pool): State<Arc<PgPool>>,
     Path(session_id): Path<String>,
 ) -> AdminHtmlResult<Response> {
-    let session_id = SessionId::new(session_id.trim());
-    let header = if session_id.as_str().is_empty() {
-        None
-    } else {
-        find_session_header(&pool, &session_id).await?
-    };
+    let session_id = SessionId::try_new(session_id.trim())
+        .map_err(|e| AdminError::invalid("session id", e))?;
+    let header = find_session_header(&pool, &session_id).await?;
     let visible = match &header {
         Some(h) => may_view(&pool, &shell.user, h.user_id.as_ref()).await?,
         None => false,

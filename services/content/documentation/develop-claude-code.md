@@ -78,7 +78,7 @@ A new account has user permissions. Admin-only pages, the systemprompt MCP
 server, and the admin plugins remain hidden until it is promoted:
 
 ```bash
-systemprompt admin users role promote <email>
+systemprompt admin users role promote <email> --yes
 ```
 
 The admin scope is minted at token-issue time, so an existing session keeps the
@@ -181,7 +181,7 @@ Use the account created during setup, or create a test identity and issue its co
 
 ```bash
 systemprompt admin users create --name you --email you@example.com --if-not-exists
-systemprompt admin users role promote you@example.com
+systemprompt admin users role promote you@example.com --yes
 systemprompt admin bridge issue-code --user-id you@example.com
 ```
 

@@ -133,7 +133,7 @@ impl ServerHandler for SystempromptServer {
              conversation_audit (one request's transcript, paged and bounded), users (roster), \
              admin_report (dashboard). report_issue files a bug or feedback report about this \
              platform when issue reports are on. The 'systemprompt' tool runs any other CLI command: \
-             'core skills list', 'core skills show <id>', 'admin users role promote <id>'. \
+             'core skills list', 'core skills show <id>', 'admin users role promote <id> --yes'. \
              Never pass --json or --export. Full documentation: {WEBSITE_URL}/docs"
         ))
     }
@@ -180,7 +180,6 @@ impl ServerHandler for SystempromptServer {
                 service_id: &self.service_id,
                 authz_hook: &self.access.authz_hook,
                 services_config: &self.access.services.get(),
-                verifier: self.access.verifier(),
             },
             &tool_name,
             &ctx,

@@ -14,6 +14,7 @@ use systemprompt::identifiers::UserId;
 use systemprompt::manifest::services::catalog::EndpointRef;
 use systemprompt::manifest::services::{CatalogContext, ResolvedCatalog};
 use systemprompt::security::credential::TokenCache;
+use systemprompt::traits::{ExtensionSecret, SecretLookup};
 use systemprompt::wire::WireProtocol;
 
 use crate::support::committed_services;
@@ -117,7 +118,7 @@ fn a_personal_endpoint_is_never_served_from_a_deployment_secret() {
     let catalog = catalog();
     let go = binding(&catalog, "opencode-go/chat");
     assert!(go.credential.platform_secret().is_none());
-    assert!(UpstreamTarget::from_secrets(&tokens(), &no_platform_secrets(), go).is_err());
+    assert!(UpstreamTarget::from_secrets(&tokens(), &NoPlatformSecrets, go).is_err());
 }
 
 #[test]
@@ -136,10 +137,11 @@ fn a_platform_credential_without_a_secret_fails_to_resolve() {
     );
 }
 
-fn no_platform_secrets() -> systemprompt::manifest::secrets::Secrets {
-    serde_json::from_value(serde_json::json!({
-        "database_url": "postgres://unused:unused@localhost:5432/postgres",
-        "oauth_at_rest_pepper": "unit-test-pepper-not-a-real-secret",
-    }))
-    .expect("a secrets document with no platform keys")
+#[derive(Debug)]
+struct NoPlatformSecrets;
+
+impl SecretLookup for NoPlatformSecrets {
+    fn lookup(&self, _name: &str) -> Option<ExtensionSecret> {
+        None
+    }
 }

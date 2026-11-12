@@ -1,6 +1,8 @@
-//! The handler's half of a run on a Fly Machine: register the run, launch a
-//! runner machine, record it on the farm row, then wait for the worker's
-//! terminal result and finish the `agent_runs` row with it.
+//! The handler's half of a run on a Fly Machine: register, launch, record,
+//! then settle the `agent_runs` row from the worker's terminal result.
+//!
+//! A run finishes with that result, or is released back to `queued` when
+//! shutdown interrupted it.
 //!
 //! The wait ends one of five ways: the worker posts its result; the worker
 //! never makes contact within `start_timeout_seconds`; it goes silent for
@@ -15,8 +17,8 @@ use std::time::{Duration, Instant};
 // JSON: `agent_runs.diff_summary` is a JSONB column core's `finish` takes as a
 // value; the worker's typed `DiffSummary` is encoded into it here.
 use serde_json::Value;
-use systemprompt::agent_runs::service::{ClaimedRun, DbEventSink};
-use systemprompt::agent_runs::{RunCredentials, RunLayout, RunOutcome, RunRequest};
+use systemprompt::agent_runs::service::ClaimedRun;
+use systemprompt::agent_runs::{EventSink, RunCredentials, RunLayout, RunOutcome, RunRequest};
 use uuid::Uuid;
 
 use super::api::MachineLaunch;
@@ -27,6 +29,7 @@ use super::registry::Registration;
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::runs;
+use crate::services::runner::handler::settle;
 use crate::services::runner::observer::unexecuted_outcome;
 use crate::state::{FarmState, GatewayEndpoints};
 use crate::types::{AgentRunStatus, ErrorClass, FarmRunId};
@@ -35,7 +38,6 @@ pub const HEARTBEAT_SECONDS: u64 = 10;
 const CANCEL_GRACE: Duration = Duration::from_secs(30);
 const WATCH_EVERY: Duration = Duration::from_secs(5);
 
-#[derive(Debug)]
 pub struct RemoteJob<'a> {
     pub state: &'a FarmState,
     pub claimed: &'a ClaimedRun,
@@ -43,8 +45,18 @@ pub struct RemoteJob<'a> {
     pub request: &'a RunRequest,
     pub layout: &'a RunLayout,
     pub credentials: &'a RunCredentials,
-    pub sink: &'a DbEventSink,
+    pub sink: &'a Arc<dyn EventSink>,
     pub seq_after: Option<i64>,
+}
+
+impl std::fmt::Debug for RemoteJob<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RemoteJob")
+            .field("agent_run_id", &self.claimed.row.id)
+            .field("farm_run_id", &self.farm_run_id)
+            .field("seq_after", &self.seq_after)
+            .finish_non_exhaustive()
+    }
 }
 
 #[must_use]
@@ -122,7 +134,7 @@ pub async fn run_remote(fly: &FlyRunnerConfig, job: RemoteJob<'_>) -> FarmResult
     let registration = job.state.runs.register(
         worker_spec(&job, &target, &fly.egress_allow),
         job.layout.root.clone(),
-        job.sink.clone(),
+        Arc::clone(job.sink),
         &token,
     );
     let launch = MachineLaunch {
@@ -144,8 +156,7 @@ pub async fn run_remote(fly: &FlyRunnerConfig, job: RemoteJob<'_>) -> FarmResult
     };
     pool.release(&machine.id).await;
     let (outcome, diff) = waited?;
-    job.claimed.repo.finish(id, &outcome, diff.as_ref()).await?;
-    Ok(())
+    settle(job.state, job.claimed, job.farm_run_id, &outcome, diff.as_ref()).await
 }
 
 fn failed(class: ErrorClass, message: &str) -> (RunOutcome, Option<Value>) {

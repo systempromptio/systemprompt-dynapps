@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_runs\nSET status = 'queued', updated_at = NOW()\nWHERE id = $1 AND status IN ('preparing', 'running')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d4b0871c82165a8694a26da8deee0e444beddd98f57c8ce60ac8d41f66cfc1d"
+}

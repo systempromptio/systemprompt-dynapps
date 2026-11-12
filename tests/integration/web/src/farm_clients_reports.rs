@@ -16,7 +16,7 @@ use systemprompt_web_admin_farm::repositories::{agents, clients, reports, runs};
 use systemprompt_web_admin_farm::services::runs::{LaunchRequest, launch, resolve_client};
 use systemprompt_web_admin_farm::types::{ClientId, TriggeredVia};
 
-use crate::farm_runner_lifecycle::{Seeded, launch_one, observe_finish, seed};
+use crate::farm_runner_lifecycle::{Seeded, claim, launch_one, observe_finish, seed};
 use crate::tempdb::TempDb;
 
 async fn add_clients(seeded: &Seeded, tag: &str) -> (ClientId, ClientId) {
@@ -213,10 +213,12 @@ async fn a_finished_run_gets_a_report_with_its_mcp_tally_and_facts() {
     .into_iter()
     .flatten()
     .collect();
-    AgentRunRepository::from_pool(std::sync::Arc::clone(&db.pool))
-        .insert_events_batch(&run.agent_run_id, &events)
+    let lease = claim(&seeded.state, &run).await;
+    let inserted = AgentRunRepository::from_pool(std::sync::Arc::clone(&db.pool))
+        .insert_events_batch(&run.agent_run_id, &lease, &events)
         .await
         .expect("insert run events");
+    assert!(inserted.is_applied(), "the claimed run takes its events");
 
     let outcome = RunOutcome {
         status: RunStatus::Succeeded,
@@ -232,7 +234,7 @@ async fn a_finished_run_gets_a_report_with_its_mcp_tally_and_facts() {
         error: None,
         final_text: None,
     };
-    observe_finish(&seeded.state, &run, &outcome).await;
+    observe_finish(&seeded.state, &run, &lease, &outcome).await;
 
     let report = reports::find_run_report(&db.pool, &run.id)
         .await

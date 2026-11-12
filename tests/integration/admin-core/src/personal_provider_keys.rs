@@ -183,6 +183,7 @@ fn owner(keys: &UserProviderCredentialRepository, user: &UserId) -> KeyOwner {
     KeyOwner {
         credentials: keys.clone(),
         user_id: user.clone(),
+        caller_auth: None,
     }
 }
 

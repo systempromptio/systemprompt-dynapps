@@ -42,7 +42,7 @@ fn an_unguarded_request_site_fails_and_is_named() {
 fn a_guarded_request_site_passes() {
     let dir = tree(&[(
         "send.rs",
-        "use reqwest::Client;\nuse systemprompt::models::net::validate_outbound_url;\nasync fn f(http: &Client, u: &str) {\n    let _ = http\n        .post(validate_outbound_url(u)?)\n        .send()\n        .await;\n}\n",
+        "use reqwest::Client;\nuse systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};\nasync fn f(http: &Client, u: &str) {\n    let _ = http\n        .post(validate_outbound_url(u, LoopbackPolicy::Allow)?)\n        .send()\n        .await;\n}\n",
     )]);
     let (ok, stderr) = run(dir.path());
     assert!(ok, "{stderr}");

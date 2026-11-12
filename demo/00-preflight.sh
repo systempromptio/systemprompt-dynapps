@@ -261,7 +261,7 @@ if [[ -z "$ADMIN_TOKEN" ]]; then
   USER_ID=$("$CLI" admin users search "$CLOUD_EMAIL" --profile "$PROFILE" 2>/dev/null \
     | sed -n 's/.*"id":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1 || true)
   if [[ -n "$USER_ID" ]]; then
-    "$CLI" admin users role promote "$USER_ID" --profile "$PROFILE" 2>&1 || true
+    "$CLI" admin users role promote "$USER_ID" --yes --profile "$PROFILE" 2>&1 || true
     echo "  Admin user ready: $CLOUD_EMAIL ($USER_ID)"
     echo ""
   else
@@ -296,7 +296,7 @@ if [[ -n "$USER_ROW" && ",$USER_ROLES," != *",admin,"* ]]; then
   echo "  Every token-based demo will fail with 'Invalid or expired token'" >&2
   echo "  until the role is restored and tokens are re-minted. Fix:" >&2
   echo "" >&2
-  echo "    $CLI admin users role promote ${USER_ID:-<user-id>} --profile $PROFILE" >&2
+  echo "    $CLI admin users role promote ${USER_ID:-<user-id>} --yes --profile $PROFILE" >&2
   echo "    ./demo/00-preflight.sh" >&2
   exit 1
 fi

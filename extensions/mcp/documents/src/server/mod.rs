@@ -109,7 +109,6 @@ impl ServerHandler for DocumentsServer {
                 service_id: &self.service_id,
                 authz_hook: &self.access.authz_hook,
                 services_config: &self.access.services.get(),
-                verifier: self.access.verifier(),
             },
             &tool_name,
             &ctx,

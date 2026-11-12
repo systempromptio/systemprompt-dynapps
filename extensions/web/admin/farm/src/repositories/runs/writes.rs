@@ -45,6 +45,13 @@ pub async fn update_run_started(pool: &PgPool, id: &FarmRunId) -> Result<bool, s
     Ok(result.rows_affected() > 0)
 }
 
+pub async fn update_run_requeued(pool: &PgPool, id: &FarmRunId) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query_file!("src/repositories/runs/update_run_requeued.sql", id.as_str())
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected() > 0)
+}
+
 pub async fn update_run_finished(
     pool: &PgPool,
     id: &FarmRunId,

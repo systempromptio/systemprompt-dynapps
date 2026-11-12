@@ -203,11 +203,11 @@ ensure_plugin_token() { # $1=user-id $2=email
   # A demo-owned account is checked first: it must end the call with role `user`
   # whatever it started as, or the deny demos that rely on it fail open.
   if [[ "${SEL_USER_CREATED_THIS_RUN:-0}" == "1" ]]; then
-    "$CLI" admin users role promote "$user_id" --profile "$PROFILE" >/dev/null 2>&1 || true
+    "$CLI" admin users role promote "$user_id" --yes --profile "$PROFILE" >/dev/null 2>&1 || true
     token=$("$CLI" admin keys issue-plugin-token --token-only \
       --email "$email" --profile "$PROFILE" 2>/dev/null \
       | grep -oE 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' | head -1 || true)
-    "$CLI" admin users role demote "$user_id" --profile "$PROFILE" >/dev/null 2>&1 || true
+    "$CLI" admin users role demote "$user_id" --yes --profile "$PROFILE" >/dev/null 2>&1 || true
     SEL_USER_IS_ADMIN=0
   elif [[ "${SEL_USER_IS_ADMIN:-0}" == "1" ]]; then
     token=$("$CLI" admin keys issue-plugin-token --token-only \
@@ -218,9 +218,9 @@ ensure_plugin_token() { # $1=user-id $2=email
     echo "  without a temporary role change — and this user already existed," >&2
     echo "  so the demo will not touch their roles. Do it yourself if intended:" >&2
     echo "" >&2
-    echo "    $CLI admin users role promote $user_id --profile $PROFILE" >&2
+    echo "    $CLI admin users role promote $user_id --yes --profile $PROFILE" >&2
     echo "    # re-run this script, then:" >&2
-    echo "    $CLI admin users role demote $user_id --profile $PROFILE" >&2
+    echo "    $CLI admin users role demote $user_id --yes --profile $PROFILE" >&2
     return 1
   fi
 

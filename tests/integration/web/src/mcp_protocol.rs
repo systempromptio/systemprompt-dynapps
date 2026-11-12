@@ -73,8 +73,6 @@ fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
         systemprompt_mcp_shared::auth::ServerAccess {
             authz_hook: deny_all_hook(),
             services: ConfigWatch::new(services()),
-            token_authority: crate::mcp_access::token_authority(),
-            config: crate::jobs_context::test_config(),
         },
         Arc::clone(&ingest),
         crate::mcp_access::cli(),
@@ -318,35 +316,104 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     db.cleanup().await;
 }
 
+fn router(
+    server: SystempromptServer,
+    pool: &Arc<PgPool>,
+    requiring_hop: bool,
+) -> axum::Router {
+    let db_pool = db_pool(pool);
+    systemprompt::mcp::create_router(
+        server,
+        Arc::new(systemprompt::mcp::repository::McpSessionRepository::new(
+            &db_pool,
+        )),
+        systemprompt::mcp::McpHttpConfig::default(),
+        systemprompt::mcp::middleware::HopVerifier::new(
+            crate::mcp_access::token_authority(),
+            McpServerId::new("systemprompt"),
+        )
+        .requiring_hop(requiring_hop),
+    )
+}
+
+fn initialize_body() -> serde_json::Value {
+    serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": MCP_PROTOCOL_VERSION,
+            "capabilities": {},
+            "clientInfo": {"name": "protocol-contract-client", "version": "1.0"}
+        }
+    })
+}
+
+async fn refused_text(router: axum::Router, request: http::Request<Body>) -> String {
+    let response = router.oneshot(request).await.expect("MCP router responds");
+    assert_eq!(
+        response.status(),
+        http::StatusCode::UNAUTHORIZED,
+        "a request without a verified hop must be refused before the MCP service"
+    );
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("read refusal body")
+        .to_bytes();
+    String::from_utf8(body.to_vec()).expect("refusal body is UTF-8")
+}
+
+#[tokio::test]
+async fn oauth_server_refuses_requests_without_a_verified_hop_at_the_transport() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let (server, _) = server(&db.pool);
+    assert!(
+        services()
+            .mcp_servers
+            .get("systemprompt")
+            .is_some_and(|deployment| deployment.oauth.required),
+        "the shipped systemprompt server must require OAuth"
+    );
+    let router = router(server, &db.pool, true);
+
+    let missing = refused_text(router.clone(), mcp_request(&initialize_body(), None)).await;
+    assert!(
+        missing.contains("carries no hop token"),
+        "missing hop refused for the wrong reason: {missing}"
+    );
+
+    let mut forged = mcp_request(&initialize_body(), None);
+    forged.headers_mut().insert(
+        systemprompt::identifiers::headers::MCP_HOP,
+        http::HeaderValue::from_static("not-a-hop-token"),
+    );
+    let forged = refused_text(router, forged).await;
+    assert!(
+        forged.contains("hop token was refused"),
+        "forged hop refused for the wrong reason: {forged}"
+    );
+
+    let executions: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mcp_tool_executions")
+        .fetch_one(&*db.pool)
+        .await
+        .expect("count executions");
+    assert_eq!(executions, 0, "a refused request must create no execution");
+
+    db.cleanup().await;
+}
+
 #[tokio::test]
 async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let (server, _) = server(&db.pool);
-    let db_pool = db_pool(&db.pool);
-    let router = systemprompt::mcp::create_router(
-        server,
-        Arc::new(systemprompt::mcp::repository::McpSessionRepository::new(
-            &db_pool,
-        )),
-        systemprompt::mcp::McpHttpConfig::default(),
-    );
-    let (status, headers, initialized) = post_mcp(
-        router.clone(),
-        &serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": MCP_PROTOCOL_VERSION,
-                "capabilities": {},
-                "clientInfo": {"name": "protocol-contract-client", "version": "1.0"}
-            }
-        }),
-        None,
-    )
-    .await;
+    let router = router(server, &db.pool, false);
+    let (status, headers, initialized) = post_mcp(router.clone(), &initialize_body(), None).await;
     assert!(
         status.is_success(),
         "MCP initialization failed: {initialized}"
@@ -382,16 +449,16 @@ async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution()
     assert_eq!(
         error["code"],
         serde_json::json!(-32600),
-        "unexpected missing-Bearer MCP response: {denied}"
+        "unexpected hop-less MCP response: {denied}"
     );
     let message = error["message"].as_str().expect("OAuth error message");
     assert!(
-        message.contains("requires OAuth"),
-        "missing-Bearer request reached the wrong MCP error: {denied}"
+        message.contains("Authentication required"),
+        "hop-less request reached the wrong MCP error: {denied}"
     );
     assert!(
-        message.contains("no Bearer token"),
-        "missing-Bearer request reached the wrong MCP error: {denied}"
+        message.contains("only through the platform proxy"),
+        "hop-less request reached the wrong MCP error: {denied}"
     );
     let after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mcp_tool_executions")
         .fetch_one(&*db.pool)

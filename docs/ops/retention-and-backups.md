@@ -23,6 +23,8 @@ retention:
   ai_request_payload_raw_days: 7   # raw request/response bodies set to NULL;
                                    # excerpts, hashes and sizes stay
   governance_decisions_days: 180   # per-call policy decisions
+  engagement_events_days: 90      # page engagement events
+  fingerprint_reputation_days: 90 # client fingerprint reputation rows
 ```
 
 `ai_quota_buckets` older than 62 days (the longest quota window plus its

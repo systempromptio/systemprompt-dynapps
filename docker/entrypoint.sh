@@ -111,7 +111,9 @@ else
         #    (EXTERNAL_URL, or RENDER_EXTERNAL_URL via the fallback above).
         if [ -n "${EXTERNAL_URL:-}" ]; then
             sed -i "s|^  api_external_url: .*|  api_external_url: ${EXTERNAL_URL}|" "$PROFILE_FILE"
-            sed -i "/^  cors_allowed_origins:/a\\  - ${EXTERNAL_URL}" "$PROFILE_FILE"
+            origin="$(printf '%s' "$EXTERNAL_URL" \
+                | sed -E 's#^([A-Za-z][A-Za-z0-9+.-]*://[^/?\#]+).*#\1#' | tr 'A-Z' 'a-z')"
+            sed -i "/^  cors_allowed_origins:/a\\  - ${origin}" "$PROFILE_FILE"
         fi
     fi
 fi

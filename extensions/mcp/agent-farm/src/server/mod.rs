@@ -19,14 +19,11 @@ use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
 use systemprompt::identifiers::McpServerId;
-use systemprompt::manifest::Config;
 use systemprompt::manifest::services::ServicesConfig;
-use systemprompt::mcp::middleware::JwtVerifier;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
 };
-use systemprompt::models::auth::TokenAuthority;
 use systemprompt::traits::{ConfigWatch, DynToolCallIntentClaims};
 pub use systemprompt_mcp_shared::auth::ServerAccess;
 use systemprompt_mcp_shared::auth::{ToolAuth, authenticate_tool_request};
@@ -45,8 +42,6 @@ pub struct AgentFarmServer {
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
     services: ConfigWatch<ServicesConfig>,
-    token_authority: Arc<dyn TokenAuthority>,
-    config: Arc<Config>,
     env: Arc<Env>,
 }
 
@@ -61,8 +56,6 @@ impl AgentFarmServer {
         let ServerAccess {
             authz_hook,
             services,
-            token_authority,
-            config,
         } = access;
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
@@ -78,8 +71,6 @@ impl AgentFarmServer {
             executor,
             authz_hook,
             services,
-            token_authority,
-            config,
             env,
         }
     }
@@ -136,10 +127,6 @@ impl ServerHandler for AgentFarmServer {
                 service_id: &self.service_id,
                 authz_hook: &self.authz_hook,
                 services_config: &self.services.get(),
-                verifier: JwtVerifier {
-                    authority: self.token_authority.as_ref(),
-                    config: &self.config,
-                },
             },
             &tool_name,
             &ctx,
