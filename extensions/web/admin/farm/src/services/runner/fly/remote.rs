@@ -156,7 +156,14 @@ pub async fn run_remote(fly: &FlyRunnerConfig, job: RemoteJob<'_>) -> FarmResult
     };
     pool.release(&machine.id).await;
     let (outcome, diff) = waited?;
-    settle(job.state, job.claimed, job.farm_run_id, &outcome, diff.as_ref()).await
+    settle(
+        job.state,
+        job.claimed,
+        job.farm_run_id,
+        &outcome,
+        diff.as_ref(),
+    )
+    .await
 }
 
 fn failed(class: ErrorClass, message: &str) -> (RunOutcome, Option<Value>) {

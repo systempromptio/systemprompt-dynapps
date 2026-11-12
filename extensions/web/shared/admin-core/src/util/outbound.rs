@@ -8,7 +8,9 @@
 //! names, so [`validate_mesh_url`] trusts exactly those names for `http` and
 //! applies core's rule unchanged to everything else.
 
-use systemprompt::models::net::{LoopbackPolicy, OutboundUrlError, validate_outbound_url_with_trust};
+use systemprompt::models::net::{
+    LoopbackPolicy, OutboundUrlError, validate_outbound_url_with_trust,
+};
 use url::Url;
 
 // Why: Fly's 6PN private network resolves only `*.internal` names and carries

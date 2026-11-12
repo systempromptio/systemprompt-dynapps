@@ -136,7 +136,10 @@ impl McpClient {
             .bearer_auth(&self.caller.bearer)
             .header("accept", "application/json, text/event-stream")
             .header(headers::MCP_HOP, self.caller.hop(&self.session))
-            .header(headers::SESSION_ID, self.caller.identity.session_id.as_str())
+            .header(
+                headers::SESSION_ID,
+                self.caller.identity.session_id.as_str(),
+            )
             .header(headers::TRACE_ID, uuid::Uuid::new_v4().to_string())
             .header(headers::AGENT_NAME, "docs-smoke")
             .header(headers::CONTEXT_ID, &self.context_id)

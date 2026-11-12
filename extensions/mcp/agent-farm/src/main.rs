@@ -4,10 +4,9 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::config::{LoadedProfile, SecretsService};
+use systemprompt::extension::ExtensionContext;
 use systemprompt::identifiers::McpServerId;
-use systemprompt::loader::BootContext;
-use systemprompt::system::AppContext;
+use systemprompt::system::HostContext;
 use systemprompt_mcp_agent_farm::{AgentFarmServer, Env, ServerAccess};
 // Why: core discovers the governance authz hook, the connection snapshot
 // source and the group/project/role subject providers through inventory, so
@@ -48,15 +47,11 @@ fn startup_timeout() -> Duration {
     Duration::from_secs(secs)
 }
 
-async fn init_context() -> Result<Arc<AppContext>> {
-    let profile = LoadedProfile::from_env().context("Failed to initialize profile")?;
-    let secrets = SecretsService::load(Arc::clone(&profile))
-        .await
-        .context("Failed to initialize secrets")?;
+async fn init_context() -> Result<Arc<HostContext>> {
     Ok(Arc::new(
-        AppContext::new(BootContext::new(profile, secrets))
+        HostContext::from_process_env()
             .await
-            .context("Failed to initialize application context")?,
+            .context("Failed to initialize the MCP host context")?,
     ))
 }
 
@@ -75,7 +70,7 @@ fn install_tls_crypto_provider() {
     }
 }
 
-fn build_env(ctx: &AppContext) -> Env {
+fn build_env(ctx: &HostContext) -> Env {
     let pool = ctx.db_pool().write_pool();
     let boot = systemprompt_web_admin_core::extension_boot::ExtensionBoot::from_context(ctx);
     let services_path = boot.services_root().to_path_buf();
@@ -85,11 +80,12 @@ fn build_env(ctx: &AppContext) -> Env {
             systemprompt_web_admin_farm::state::build_farm_state_with_ai(
                 Arc::clone(&pool),
                 Some(ctx.app_paths()),
-                ctx.ai_service_arc(),
+                // Why: core boots MCP children without provider secrets.
+                None,
                 systemprompt_web_admin_farm::state::FarmHost {
                     tasks: ctx.background_tasks().clone(),
                     services: systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx),
-                    artefacts: Arc::clone(ctx.file_storage()),
+                    artefacts: ExtensionContext::file_storage(ctx),
                     instance: ctx.config().instance_id.clone(),
                     runs: Arc::new(
                         systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns::default(),
@@ -152,14 +148,14 @@ async fn main() -> Result<()> {
         service_id.clone(),
         ServerAccess {
             authz_hook: Arc::clone(ctx.authz_hook()),
-            services: ctx.services_watch().clone(),
+            services: ctx.services_state().watch().clone(),
         },
-        ctx.artifact_ingest_arc(),
+        ctx.artifact_ingest(),
         Arc::new(build_env(&ctx)),
     );
     let requires_oauth = ctx
-        .services_watch()
-        .get()
+        .services_state()
+        .config()
         .mcp_servers
         .get(service_id.as_str())
         .is_some_and(|deployment| deployment.oauth.required);
@@ -167,8 +163,12 @@ async fn main() -> Result<()> {
         server,
         Arc::clone(ctx.mcp_session_repository()),
         systemprompt::mcp::McpHttpConfig::default(),
-        systemprompt::mcp::middleware::HopVerifier::new(ctx.token_authority(), service_id.clone())
-            .requiring_hop(requires_oauth),
+        systemprompt::mcp::middleware::HopVerifier::new(
+            ctx.verification_keys().clone(),
+            &ctx.config().jwt_issuer,
+            service_id.clone(),
+        )
+        .requiring_hop(requires_oauth),
     );
 
     tracing::info!(

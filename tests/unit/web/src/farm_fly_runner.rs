@@ -273,7 +273,9 @@ async fn worker_token_opens_only_its_run_while_registered() {
 
     let run = runs.authorise("fly-reg-run", "tok-a").expect("admitted");
     run.sink
-        .session_observed(&HostSessionId::try_new("host-session").expect("non-empty host session id"))
+        .session_observed(
+            &HostSessionId::try_new("host-session").expect("non-empty host session id"),
+        )
         .await
         .expect("session reaches the registered sink");
     assert_eq!(

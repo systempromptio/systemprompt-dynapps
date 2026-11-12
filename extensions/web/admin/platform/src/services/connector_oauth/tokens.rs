@@ -29,9 +29,10 @@ async fn request_with_client(
         form.append_pair("resource", &grant.provider.endpoint(&services.config()));
         form.finish()
     };
-    let token_endpoint = validate_outbound_url(&grant.token_endpoint, LoopbackPolicy::Allow).map_err(|error| {
-        FlowFailure::verification(systemprompt_web_admin_core::error::AdminError::from(error))
-    })?;
+    let token_endpoint = validate_outbound_url(&grant.token_endpoint, LoopbackPolicy::Allow)
+        .map_err(|error| {
+            FlowFailure::verification(systemprompt_web_admin_core::error::AdminError::from(error))
+        })?;
     let mut request = http.post(token_endpoint);
     if grant.token_auth_method == "client_secret_basic" {
         let encode = |value: &str| {

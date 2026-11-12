@@ -59,3 +59,4 @@ lint-core-globals         install:lint-globals.sh
 lint-serde-aliases        wrapper
 check-removed-config-names  install:check-removed-config-names.sh
 check-no-vendor  n/a: an install vendors frontend code and the vendor/ plugin submodule on purpose
+lint-unbounded-bodies     wrapper

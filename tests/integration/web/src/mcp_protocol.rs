@@ -316,11 +316,7 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     db.cleanup().await;
 }
 
-fn router(
-    server: SystempromptServer,
-    pool: &Arc<PgPool>,
-    requiring_hop: bool,
-) -> axum::Router {
+fn router(server: SystempromptServer, pool: &Arc<PgPool>, requiring_hop: bool) -> axum::Router {
     let db_pool = db_pool(pool);
     systemprompt::mcp::create_router(
         server,
@@ -329,7 +325,10 @@ fn router(
         )),
         systemprompt::mcp::McpHttpConfig::default(),
         systemprompt::mcp::middleware::HopVerifier::new(
-            crate::mcp_access::token_authority(),
+            dynapps_test_common::ephemeral_signing_keys()
+                .keyring()
+                .clone(),
+            &crate::jobs_context::test_config().jwt_issuer,
             McpServerId::new("systemprompt"),
         )
         .requiring_hop(requiring_hop),

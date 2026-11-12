@@ -123,7 +123,8 @@ impl SsoApp {
     pub(crate) fn build(pool: &Arc<PgPool>, oidc: Option<entra_oidc::EntraOidcConfig>) -> Self {
         let boot = profile::boot();
         let config = Arc::clone(boot.config().expect("fixture profile config"));
-        let cookie = systemprompt::api::services::session_cookie::SessionCookie::from_config(&config);
+        let cookie =
+            systemprompt::api::services::session_cookie::SessionCookie::from_config(&config);
         let config_file = profile::services_web_config_dir().join("entra-oidc.yaml");
         match oidc {
             Some(cfg) => std::fs::write(

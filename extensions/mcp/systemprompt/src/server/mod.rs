@@ -196,9 +196,16 @@ impl ServerHandler for SystempromptServer {
         .await;
 
         let client = client_profile_from_peer(&ctx);
+        let hop = systemprompt_mcp_shared::auth::verified_hop_token(&ctx);
         if let Some(result) = self
             .issues
-            .call(&self.executor, &request, &request_context, &client)
+            .call(
+                &self.executor,
+                &request,
+                &request_context,
+                &client,
+                hop.as_ref(),
+            )
             .await
         {
             return result.map(Into::into);

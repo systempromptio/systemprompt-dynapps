@@ -495,6 +495,7 @@ _lint-gates-uncoordinated:
         check-gate-parity.sh
         lint-authoritative-reads.sh
         lint-async-trait.sh
+        lint-unbounded-bodies.sh
         lint-owned-tasks.sh
         lint-serde-aliases.sh
         lint-stringly-errors.sh

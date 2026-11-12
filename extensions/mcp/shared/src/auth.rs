@@ -9,9 +9,9 @@ use rmcp::ErrorData as McpError;
 use rmcp::service::{RequestContext, RoleServer};
 use systemprompt::database::DbPool;
 use systemprompt::governance::authz::SharedAuthzHook;
-use systemprompt::identifiers::McpServerId;
+use systemprompt::identifiers::{JwtToken, McpServerId};
 use systemprompt::manifest::services::ServicesConfig;
-use systemprompt::mcp::middleware::enforce_rbac_from_registry;
+use systemprompt::mcp::middleware::{VerifiedHop, enforce_rbac_from_registry};
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
 use systemprompt::traits::ConfigWatch;
 
@@ -96,4 +96,12 @@ pub async fn authenticate_tool_request(
             Err(e)
         },
     }
+}
+
+#[must_use]
+pub fn verified_hop_token(ctx: &RequestContext<RoleServer>) -> Option<JwtToken> {
+    ctx.extensions
+        .get::<axum::http::request::Parts>()
+        .and_then(|parts| parts.extensions.get::<VerifiedHop>())
+        .map(|hop| hop.token().clone())
 }

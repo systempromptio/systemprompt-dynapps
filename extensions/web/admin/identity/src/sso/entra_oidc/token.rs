@@ -88,12 +88,13 @@ pub(super) async fn redeem_code(
         ("client_secret", req.client_secret),
         ("code_verifier", req.code_verifier),
     ]);
-    let token_endpoint = validate_outbound_url(req.token_endpoint, LoopbackPolicy::Allow).map_err(|source| {
-        SsoProviderError::OutboundUrl {
-            url: req.token_endpoint.to_owned(),
-            source,
-        }
-    })?;
+    let token_endpoint =
+        validate_outbound_url(req.token_endpoint, LoopbackPolicy::Allow).map_err(|source| {
+            SsoProviderError::OutboundUrl {
+                url: req.token_endpoint.to_owned(),
+                source,
+            }
+        })?;
     let response = http
         .post(token_endpoint)
         .header(

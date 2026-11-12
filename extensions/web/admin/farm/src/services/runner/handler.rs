@@ -233,7 +233,14 @@ impl FarmRunHandler {
             at: format!("agent run {id} diff"),
             source,
         })?;
-        settle(&self.state, claimed, farm_run_id, &report.outcome, Some(&diff)).await
+        settle(
+            &self.state,
+            claimed,
+            farm_run_id,
+            &report.outcome,
+            Some(&diff),
+        )
+        .await
     }
 }
 
@@ -277,7 +284,10 @@ fn resume_note(row: &AgentRunRow) -> Option<String> {
         .and_then(Value::as_i64)
         .unwrap_or(0);
     if row.attempt > 1 {
-        Some(format!("attempt {} resumes the earlier workspace", row.attempt))
+        Some(format!(
+            "attempt {} resumes the earlier workspace",
+            row.attempt
+        ))
     } else if releases > 0 {
         Some(format!(
             "release {releases} resumes the workspace a shutdown interrupted"

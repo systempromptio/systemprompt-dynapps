@@ -1,16 +1,16 @@
 //! Core's issue report tools, served by the `systemprompt` server beside its
 //! own tools.
 //!
-//! The tools are built once at startup from the application context. An
+//! The tools are built once at startup from the MCP host context. An
 //! instance with `files.issues.enabled` off gets no issue tools at all rather
 //! than four tools that refuse every call.
 
 use rmcp::ErrorData as McpError;
 use rmcp::model::{CallToolRequestParams, CallToolResult, Tool};
-use systemprompt::identifiers::McpServerId;
+use systemprompt::identifiers::{JwtToken, McpServerId};
 use systemprompt::mcp::{ClientProfile, McpToolExecutor};
 use systemprompt::models::execution::context::RequestContext;
-use systemprompt::system::AppContext;
+use systemprompt::system::HostContext;
 use systemprompt::system::issues::mcp::{IssuesMcpTools, IssuesToolCall};
 
 /// The issue tools, when this instance takes issue reports.
@@ -18,8 +18,8 @@ use systemprompt::system::issues::mcp::{IssuesMcpTools, IssuesToolCall};
 pub struct IssueTools(Option<IssuesMcpTools>);
 
 impl IssueTools {
-    pub fn from_context(ctx: &AppContext, service_id: McpServerId) -> Self {
-        match IssuesMcpTools::from_context(ctx, service_id) {
+    pub fn from_host(host: &HostContext, service_id: McpServerId) -> Self {
+        match IssuesMcpTools::from_host(host, service_id) {
             Ok(tools) => Self(Some(tools)),
             Err(error) => {
                 tracing::info!(%error, "issue report tools omitted");
@@ -40,6 +40,7 @@ impl IssueTools {
         request: &CallToolRequestParams,
         context: &RequestContext,
         client: &ClientProfile,
+        hop: Option<&JwtToken>,
     ) -> Option<Result<CallToolResult, McpError>> {
         let tools = self.0.as_ref()?;
         if !IssuesMcpTools::tool_names().contains(&request.name.as_ref()) {
@@ -52,6 +53,7 @@ impl IssueTools {
                     request,
                     context,
                     client,
+                    hop,
                 })
                 .await,
         )

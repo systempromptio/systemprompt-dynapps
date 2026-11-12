@@ -4,11 +4,9 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::config::{LoadedProfile, SecretsService};
 use systemprompt::identifiers::McpServerId;
-use systemprompt::loader::BootContext;
 use systemprompt::runtime::documents::mcp::DocumentsMcpTools;
-use systemprompt::system::AppContext;
+use systemprompt::system::HostContext;
 use systemprompt_mcp_documents::DocumentsServer;
 // Why: core discovers the governance authz hook, the connection snapshot
 // source, the group/project/role subject providers and the document template
@@ -51,15 +49,11 @@ fn startup_timeout() -> Duration {
     Duration::from_secs(secs)
 }
 
-async fn init_context() -> Result<Arc<AppContext>> {
-    let profile = LoadedProfile::from_env().context("Failed to initialize profile")?;
-    let secrets = SecretsService::load(Arc::clone(&profile))
-        .await
-        .context("Failed to initialize secrets")?;
+async fn init_context() -> Result<Arc<HostContext>> {
     Ok(Arc::new(
-        AppContext::new(BootContext::new(profile, secrets))
+        HostContext::from_process_env()
             .await
-            .context("Failed to initialize application context")?,
+            .context("Failed to initialize the MCP host context")?,
     ))
 }
 
@@ -116,15 +110,15 @@ async fn main() -> Result<()> {
         Arc::clone(ctx.db_pool()),
         systemprompt_mcp_shared::auth::ServerAccess {
             authz_hook: Arc::clone(ctx.authz_hook()),
-            services: ctx.services_watch().clone(),
+            services: ctx.services_state().watch().clone(),
         },
-        ctx.artifact_ingest_arc(),
-        DocumentsMcpTools::from_context(&ctx, service_id.clone())
+        ctx.artifact_ingest(),
+        DocumentsMcpTools::from_host(&ctx, service_id.clone())
             .context("Document store unavailable")?,
     );
     let requires_oauth = ctx
-        .services_watch()
-        .get()
+        .services_state()
+        .config()
         .mcp_servers
         .get(service_id.as_str())
         .is_some_and(|deployment| deployment.oauth.required);
@@ -132,8 +126,12 @@ async fn main() -> Result<()> {
         server,
         Arc::clone(ctx.mcp_session_repository()),
         systemprompt::mcp::McpHttpConfig::default(),
-        systemprompt::mcp::middleware::HopVerifier::new(ctx.token_authority(), service_id.clone())
-            .requiring_hop(requires_oauth),
+        systemprompt::mcp::middleware::HopVerifier::new(
+            ctx.verification_keys().clone(),
+            &ctx.config().jwt_issuer,
+            service_id.clone(),
+        )
+        .requiring_hop(requires_oauth),
     );
 
     tracing::info!(

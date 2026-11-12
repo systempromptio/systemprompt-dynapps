@@ -23,10 +23,12 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- **Unbounded body reads are gated.** `scripts/lint-unbounded-bodies.sh` runs core's gate against unbounded request and response body reads over `extensions`, `src` and `bridge/src`, and is part of `just lint-gates`.
 - **`just vendor-add` and `just vendor-check`.** The recipes `scripts/vendor-add.py` and `scripts/check-vendor.sh` already name: `vendor-add NAME VERSION` vendors one npm package into `storage/files/js/vendor/` and records it in `services/web/vendor.yaml` with its approval fields cleared, and `vendor-check` validates the allowlist.
 
 ### Changed
 
+- **MCP servers boot core's least-privilege host.** The `documents`, `systemprompt` and `agent-farm` binaries boot `HostContext::from_process_env()` instead of an `AppContext`, so they read no profile secrets source and receive only the database URLs, the verification keys and what their manifest entry grants under `secrets:`. Hop tokens are verified against the public key set and the configured issuer, and each tool call forwards its verified hop token to core's document and issue tools (`systemprompt_mcp_shared::auth::verified_hop_token`). The agent-farm server builds the farm without an AI service, so a rubric case started through its tools gets no judge score.
 - **Core 0.81 adoption.** The three MCP binaries bind loopback only and admit identity through core's proxy-signed hop token (`HopVerifier`, required when the server's `oauth.required` is set), so `ToolAuth` and `ServerAccess` no longer carry a JWT verifier. Session, client and policy ids from requests are built with `try_new`, so a malformed id is refused at the boundary (the session detail page answers 400). The SSO alias routes pass core's `SessionCookie` to `into_response`; the local rewrite of the session cookie to `SameSite=Lax` is gone because core issues it that way. `MarketplaceError` boxes its `CatalogError` and `ConfigLoadError` causes, which grew in core 0.81. `deploy/loadtest/kind/services/ai/config.yaml` drops the `ai.mcp` and `ai.history.log_tool_executions` keys core no longer reads.
 - **sqlx no longer builds its SQLite driver.** The root workspace dropped sqlx's unused `sqlite` feature, so no artifact links the bundled C SQLite affected by RUSTSEC-2026-0459; `.cargo/audit.toml` ignores the advisory because cargo-audit still sees `libsqlite3-sys` as an optional entry in the lockfiles.
 

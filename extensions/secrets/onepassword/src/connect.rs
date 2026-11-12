@@ -70,9 +70,11 @@ impl ConnectBackend {
 
     async fn get_json<T: DeserializeOwned>(&self, path: &str) -> Result<T, OnePasswordError> {
         let url = format!("{}{path}", self.base_url);
-        let url = validate_outbound_url(&url, LoopbackPolicy::Allow).map_err(|source| OnePasswordError::ConnectUrl {
-            url: url.clone(),
-            source,
+        let url = validate_outbound_url(&url, LoopbackPolicy::Allow).map_err(|source| {
+            OnePasswordError::ConnectUrl {
+                url: url.clone(),
+                source,
+            }
         })?;
         let delays = self.policy.delays();
         let mut attempt = 0;

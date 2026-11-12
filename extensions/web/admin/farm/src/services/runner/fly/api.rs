@@ -102,9 +102,11 @@ impl MachinesClient {
             "{}/v1/apps/{app}",
             config.machines_api.trim_end_matches('/')
         );
-        validate_outbound_url(&base, LoopbackPolicy::Allow).map_err(|source| FarmError::OutboundUrl {
-            url: base.clone(),
-            source,
+        validate_outbound_url(&base, LoopbackPolicy::Allow).map_err(|source| {
+            FarmError::OutboundUrl {
+                url: base.clone(),
+                source,
+            }
         })?;
         Ok(Self {
             http,
