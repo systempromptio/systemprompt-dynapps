@@ -219,15 +219,3 @@ content:
   sources:
   - legal
   - docs
-social_action_bar:
-  label: 'Follow:'
-  platforms:
-  - type: linkedin
-  enable_share: true
-nav:
-  app_url: ''
-  docs_url: /documentation
-  blog_url: ''
-  playbooks_url: ''
-  github_url: ''
-  getting_started_url: /documentation/connect-claude-code
