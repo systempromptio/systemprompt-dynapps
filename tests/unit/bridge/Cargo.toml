@@ -16,7 +16,7 @@ systemprompt-models = { path = "../../../../systemprompt-core/crates/shared/mode
 systemprompt-identifiers = { path = "../../../../systemprompt-core/crates/shared/identifiers" }
 axum.workspace = true
 tokio.workspace = true
-systemprompt-api = { path = "../../../../systemprompt-core/crates/entry/api" }
+systemprompt-api = { path = "../../../../systemprompt-core/crates/entry/api", features = ["otel"] }
 opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "trace", "logs", "metrics"] }
 base64.workspace = true
 serde_json.workspace = true

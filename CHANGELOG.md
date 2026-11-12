@@ -19,7 +19,7 @@ Conventions (strict — hold every entry to them):
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
 
-## Unreleased
+## 0.81.0 — 2026-11-12
 
 ### Added
 
@@ -28,6 +28,7 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Built on systemprompt-core 0.81.0.** Every core crate pin, `bridge/CORE_REF` (`v0.81.0`) and the three lockfiles move to the published 0.81.0 release; `rmcp` moves to `=3.9.0` in both workspaces, which resolves RUSTSEC-2026-0462.
 - **MCP servers boot core's least-privilege host.** The `documents`, `systemprompt` and `agent-farm` binaries boot `HostContext::from_process_env()` instead of an `AppContext`, so they read no profile secrets source and receive only the database URLs, the verification keys and what their manifest entry grants under `secrets:`. Hop tokens are verified against the public key set and the configured issuer, and each tool call forwards its verified hop token to core's document and issue tools (`systemprompt_mcp_shared::auth::verified_hop_token`). The agent-farm server builds the farm without an AI service, so a rubric case started through its tools gets no judge score.
 - **Core 0.81 adoption.** The three MCP binaries bind loopback only and admit identity through core's proxy-signed hop token (`HopVerifier`, required when the server's `oauth.required` is set), so `ToolAuth` and `ServerAccess` no longer carry a JWT verifier. Session, client and policy ids from requests are built with `try_new`, so a malformed id is refused at the boundary (the session detail page answers 400). The SSO alias routes pass core's `SessionCookie` to `into_response`; the local rewrite of the session cookie to `SameSite=Lax` is gone because core issues it that way. `MarketplaceError` boxes its `CatalogError` and `ConfigLoadError` causes, which grew in core 0.81. `deploy/loadtest/kind/services/ai/config.yaml` drops the `ai.mcp` and `ai.history.log_tool_executions` keys core no longer reads.
 - **sqlx no longer builds its SQLite driver.** The root workspace dropped sqlx's unused `sqlite` feature, so no artifact links the bundled C SQLite affected by RUSTSEC-2026-0459; `.cargo/audit.toml` ignores the advisory because cargo-audit still sees `libsqlite3-sys` as an optional entry in the lockfiles.
