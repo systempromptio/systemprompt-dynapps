@@ -21,6 +21,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **`just vendor-add` and `just vendor-check`.** The recipes `scripts/vendor-add.py` and `scripts/check-vendor.sh` already name: `vendor-add NAME VERSION` vendors one npm package into `storage/files/js/vendor/` and records it in `services/web/vendor.yaml` with its approval fields cleared, and `vendor-check` validates the allowlist.
+
 ### Changed
 
 - **sqlx no longer builds its SQLite driver.** The root workspace dropped sqlx's unused `sqlite` feature, so no artifact links the bundled C SQLite affected by RUSTSEC-2026-0459; `.cargo/audit.toml` ignores the advisory because cargo-audit still sees `libsqlite3-sys` as an optional entry in the lockfiles.

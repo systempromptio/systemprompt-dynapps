@@ -424,6 +424,17 @@ test:
 lint-silent-skips:
     ./scripts/lint-silent-skips.sh tests
 
+# Vendor one npm package into storage/files/js/vendor/ and record it in
+# services/web/vendor.yaml (the third-party frontend allowlist). Clears the
+# approval fields so the diff needs review. Example:
+#   just vendor-add prosemirror-model 1.25.12 --why "…"
+vendor-add NAME VERSION *ARGS:
+    python3 -I scripts/vendor-add.py {{NAME}} {{VERSION}} {{ARGS}}
+
+# Check the vendor allowlist: files, hashes, licences, import discipline.
+vendor-check:
+    ./scripts/check-vendor.sh
+
 lint-gates:
     @scripts/build-coordinator.sh run lint-gates "" -- {{just_executable()}} _lint-gates-uncoordinated
 
