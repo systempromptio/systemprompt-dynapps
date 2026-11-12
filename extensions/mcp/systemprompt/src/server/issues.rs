@@ -6,10 +6,8 @@
 //! than four tools that refuse every call.
 
 use rmcp::ErrorData as McpError;
-use rmcp::model::{CallToolRequestParams, CallToolResult, Tool};
-use systemprompt::identifiers::{JwtToken, McpServerId};
-use systemprompt::mcp::{ClientProfile, McpToolExecutor};
-use systemprompt::models::execution::context::RequestContext;
+use rmcp::model::{CallToolResult, Tool};
+use systemprompt::identifiers::McpServerId;
 use systemprompt::system::HostContext;
 use systemprompt::system::issues::mcp::{IssuesMcpTools, IssuesToolCall};
 
@@ -36,26 +34,12 @@ impl IssueTools {
 
     pub(super) async fn call(
         &self,
-        executor: &McpToolExecutor,
-        request: &CallToolRequestParams,
-        context: &RequestContext,
-        client: &ClientProfile,
-        hop: Option<&JwtToken>,
+        call: IssuesToolCall<'_>,
     ) -> Option<Result<CallToolResult, McpError>> {
         let tools = self.0.as_ref()?;
-        if !IssuesMcpTools::tool_names().contains(&request.name.as_ref()) {
+        if !IssuesMcpTools::tool_names().contains(&call.request.name.as_ref()) {
             return None;
         }
-        Some(
-            tools
-                .call(IssuesToolCall {
-                    executor,
-                    request,
-                    context,
-                    client,
-                    hop,
-                })
-                .await,
-        )
+        Some(tools.call(call).await)
     }
 }

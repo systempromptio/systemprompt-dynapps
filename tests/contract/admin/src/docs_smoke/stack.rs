@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use systemprompt::identifiers::{AccessTokenId, ClientId, McpServerId, SessionId, UserId};
+use systemprompt::mcp::services::process::spawner;
 use systemprompt::models::auth::{
     AuthenticatedUser, JwtAudience, McpHopIdentity, Permission, TokenInteraction, UserJwtRequest,
     UserType,
@@ -164,10 +165,35 @@ async fn serve_api(ctx: &AppContext) -> (String, tokio::task::JoinHandle<()>) {
     (format!("http://{addr}"), server)
 }
 
-async fn start_binary(profile: &Path, port: u16) -> Child {
+fn child_environment(ctx: &AppContext, profile: &Path, port: u16) -> Vec<(String, String)> {
+    let config = ctx
+        .mcp_registry()
+        .get_server("documents")
+        .expect("the documents server is in the run's services config");
+    let (tools_config_json, server_model_config_json) =
+        spawner::serialize_server_configs(&config).expect("serialise the server's configs");
+    let profile_path = profile.to_str().expect("the run's profile path is UTF-8");
+    spawner::spawn_environment(
+        &spawner::SpawnEnvSpec {
+            config: &config,
+            port,
+            system_root: ctx.app_paths().system().root(),
+            database_type: &ctx.config().database_type,
+            profile_path,
+            tools_config_json: &tools_config_json,
+            server_model_config_json: &server_model_config_json,
+        },
+        ctx.config(),
+        ctx.secrets(),
+        |name| std::env::var(name).ok(),
+    )
+    .expect("build the environment the API's spawner hands the server")
+}
+
+async fn start_binary(ctx: &AppContext, profile: &Path, port: u16) -> Child {
     let mut child = Command::new(binary_path())
-        .env("SYSTEMPROMPT_PROFILE", profile)
-        .env("MCP_PORT", port.to_string())
+        .env_clear()
+        .envs(child_environment(ctx, profile, port))
         .env("MCP_SERVICE_ID", "documents")
         .stdout(Stdio::null())
         .stderr(Stdio::inherit())
@@ -241,7 +267,7 @@ pub(super) async fn start(database_url: &str) -> Stack {
         .await
         .expect("register the folder entities");
     let (api, server) = serve_api(&ctx).await;
-    let binary = start_binary(&profile, mcp_port).await;
+    let binary = start_binary(&ctx, &profile, mcp_port).await;
     Stack {
         ctx,
         api,

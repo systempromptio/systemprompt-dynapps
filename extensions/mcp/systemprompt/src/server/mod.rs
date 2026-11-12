@@ -41,6 +41,7 @@ use crate::cli::CliLocation;
 
 pub use issues::IssueTools;
 use systemprompt::mcp::client_profile_from_peer;
+use systemprompt::system::issues::mcp::IssuesToolCall;
 use tool::dispatch_tool;
 
 #[derive(Clone)]
@@ -199,13 +200,13 @@ impl ServerHandler for SystempromptServer {
         let hop = systemprompt_mcp_shared::auth::verified_hop_token(&ctx);
         if let Some(result) = self
             .issues
-            .call(
-                &self.executor,
-                &request,
-                &request_context,
-                &client,
-                hop.as_ref(),
-            )
+            .call(IssuesToolCall {
+                executor: &self.executor,
+                request: &request,
+                context: &request_context,
+                client: &client,
+                hop: hop.as_ref(),
+            })
             .await
         {
             return result.map(Into::into);
