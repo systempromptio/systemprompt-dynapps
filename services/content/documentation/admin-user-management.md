@@ -47,7 +47,7 @@ systemprompt admin users create --name jane --email jane@example.com \
   --full-name "Jane Doe" --if-not-exists
 
 # 2. Optional: make them an admin
-systemprompt admin users role promote jane@example.com
+systemprompt admin users role promote jane@example.com --yes
 
 # 3. Issue a bridge exchange code so they can connect their laptop
 systemprompt admin bridge issue-code --user-id jane@example.com
@@ -170,10 +170,14 @@ Only the `admin` role mints the session's `admin` permission
 always pair it with `admin`.
 
 ```bash
-systemprompt admin users role promote jane@example.com   # grant admin
-systemprompt admin users role demote jane@example.com    # revoke admin
-systemprompt admin users role assign jane@example.com knowledge_worker
+systemprompt admin users role promote jane@example.com --yes   # grant admin
+systemprompt admin users role demote jane@example.com --yes    # revoke admin
+systemprompt admin users role assign jane@example.com knowledge_worker --yes
 ```
+
+Role changes cannot be undone automatically, so the command asks for
+confirmation in a terminal; `--yes` confirms up front and is required when it
+runs from a script or an agent.
 
 Only a platform admin may grant or remove `platform_admin` or `super_admin`,
 and the last platform admin cannot be demoted (`handlers/roles.rs`).

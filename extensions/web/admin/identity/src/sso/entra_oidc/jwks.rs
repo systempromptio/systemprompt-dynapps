@@ -7,7 +7,7 @@
 //! token header, never taken from the key.
 
 use serde::Deserialize;
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt::sso::SsoError;
 
 use super::super::error::SsoProviderError;
@@ -40,9 +40,11 @@ pub(super) async fn fetch_rsa_key(
     allowed_hosts: &[String],
     kid: &str,
 ) -> Result<RsaComponents, SsoError> {
-    let url = validate_outbound_url(jwks_uri).map_err(|source| SsoProviderError::OutboundUrl {
-        url: jwks_uri.to_owned(),
-        source,
+    let url = validate_outbound_url(jwks_uri, LoopbackPolicy::Allow).map_err(|source| {
+        SsoProviderError::OutboundUrl {
+            url: jwks_uri.to_owned(),
+            source,
+        }
     })?;
     let host_allowed = url
         .host_str()

@@ -12,7 +12,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use systemprompt::identifiers::ClientId;
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 #[derive(Deserialize)]
@@ -211,6 +211,7 @@ async fn register_client(
         let response = http
             .post(validate_outbound_url(
                 trusted_endpoint(services, provider, endpoint)?.as_str(),
+                LoopbackPolicy::Allow,
             )?)
             .json(&serde_json::json!({
                 "client_name": "Dynapps systemprompt", "redirect_uris": [callback],

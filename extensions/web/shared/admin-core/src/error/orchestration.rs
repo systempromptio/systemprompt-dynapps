@@ -8,6 +8,7 @@ impl From<systemprompt::system::managed::OrchestrationError> for AdminError {
         match error {
             OrchestrationError::Managed(error) => error.into(),
             error @ (OrchestrationError::CredentialUnresolved
+            | OrchestrationError::CredentialNotMigrated { .. }
             | OrchestrationError::NotGitSource) => Self::ConflictingState {
                 context: "managed source",
                 source: Box::new(error),

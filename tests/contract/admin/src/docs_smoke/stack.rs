@@ -13,9 +13,11 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
-use systemprompt::identifiers::{AccessTokenId, ClientId, SessionId, UserId};
+use systemprompt::identifiers::{AccessTokenId, ClientId, McpServerId, SessionId, UserId};
+use systemprompt::mcp::services::process::spawner;
 use systemprompt::models::auth::{
-    AuthenticatedUser, JwtAudience, Permission, TokenInteraction, UserJwtRequest,
+    AuthenticatedUser, JwtAudience, McpHopIdentity, Permission, TokenInteraction, UserJwtRequest,
+    UserType,
 };
 use systemprompt::models::documents::DRIVE_SYNC_AUDIENCE;
 use systemprompt::system::AppContext;
@@ -23,6 +25,7 @@ use systemprompt::system::AppContext;
 use systemprompt_security::keys::RsaSigningKey;
 use tokio::process::{Child, Command};
 
+use super::mcp::McpCaller;
 use crate::globals;
 
 pub(super) const SYSTEM_ADMIN_ID: &str = "00000000-0000-4000-8000-00000000ad01";
@@ -162,10 +165,35 @@ async fn serve_api(ctx: &AppContext) -> (String, tokio::task::JoinHandle<()>) {
     (format!("http://{addr}"), server)
 }
 
-async fn start_binary(profile: &Path, port: u16) -> Child {
+fn child_environment(ctx: &AppContext, profile: &Path, port: u16) -> Vec<(String, String)> {
+    let config = ctx
+        .mcp_registry()
+        .get_server("documents")
+        .expect("the documents server is in the run's services config");
+    let (tools_config_json, server_model_config_json) =
+        spawner::serialize_server_configs(&config).expect("serialise the server's configs");
+    let profile_path = profile.to_str().expect("the run's profile path is UTF-8");
+    spawner::spawn_environment(
+        &spawner::SpawnEnvSpec {
+            config: &config,
+            port,
+            system_root: ctx.app_paths().system().root(),
+            database_type: &ctx.config().database_type,
+            profile_path,
+            tools_config_json: &tools_config_json,
+            server_model_config_json: &server_model_config_json,
+        },
+        ctx.config(),
+        ctx.secrets(),
+        |name| std::env::var(name).ok(),
+    )
+    .expect("build the environment the API's spawner hands the server")
+}
+
+async fn start_binary(ctx: &AppContext, profile: &Path, port: u16) -> Child {
     let mut child = Command::new(binary_path())
-        .env("SYSTEMPROMPT_PROFILE", profile)
-        .env("MCP_PORT", port.to_string())
+        .env_clear()
+        .envs(child_environment(ctx, profile, port))
         .env("MCP_SERVICE_ID", "documents")
         .stdout(Stdio::null())
         .stderr(Stdio::inherit())
@@ -239,7 +267,7 @@ pub(super) async fn start(database_url: &str) -> Stack {
         .await
         .expect("register the folder entities");
     let (api, server) = serve_api(&ctx).await;
-    let binary = start_binary(&profile, mcp_port).await;
+    let binary = start_binary(&ctx, &profile, mcp_port).await;
     Stack {
         ctx,
         api,
@@ -278,21 +306,23 @@ impl Stack {
             .expect("mint the session token")
     }
 
-    // An attended agent's bearer, as Claude Code holds it: document classes cap
-    // an unattended one at suggest.
-    pub(super) async fn agent_token(&self, pool: &sqlx::PgPool, user: &UserId) -> String {
+    // An attended agent as Claude Code drives the documents server: its
+    // bearer, and the hop identity the API proxy would sign for the same
+    // session. Document classes cap an unattended agent at suggest.
+    pub(super) async fn agent_caller(&self, pool: &sqlx::PgPool, user: &UserId) -> McpCaller {
         let session = seed_session(pool, user).await;
-        self.ctx
-            .token_authority()
+        let authenticated = AuthenticatedUser::new_with_roles(
+            user.clone(),
+            user.as_str().to_owned(),
+            format!("{}@contract.test", user.as_str()),
+            vec![Permission::User],
+            vec!["user".to_owned()],
+        );
+        let tokens = self.ctx.token_authority();
+        let bearer = tokens
             .mint_user_jwt(&UserJwtRequest {
-                user: AuthenticatedUser::new_with_roles(
-                    user.clone(),
-                    user.as_str().to_owned(),
-                    format!("{}@contract.test", user.as_str()),
-                    vec![Permission::User],
-                    vec!["user".to_owned()],
-                ),
-                session_id: session,
+                user: authenticated.clone(),
+                session_id: session.clone(),
                 jti: AccessTokenId::generate(),
                 permissions: vec![Permission::User],
                 audience: JwtAudience::standard(),
@@ -303,7 +333,23 @@ impl Stack {
                 interaction: Some(TokenInteraction::Interactive),
                 browser_session: false,
             })
-            .expect("mint the agent token")
+            .expect("mint the agent token");
+        McpCaller {
+            bearer,
+            tokens,
+            server: McpServerId::new("documents"),
+            identity: McpHopIdentity {
+                user_id: user.clone(),
+                user: Some(authenticated),
+                session_id: session,
+                user_type: UserType::User,
+                client_id: None,
+                act_chain: Vec::new(),
+                purpose: None,
+                interaction: Some(TokenInteraction::Interactive),
+                mcp_session: None,
+            },
+        }
     }
 
     // The bridge Drive routes take only a token whose sole audience is the

@@ -109,7 +109,6 @@ impl ServerHandler for DocumentsServer {
                 service_id: &self.service_id,
                 authz_hook: &self.access.authz_hook,
                 services_config: &self.access.services.get(),
-                verifier: self.access.verifier(),
             },
             &tool_name,
             &ctx,
@@ -126,12 +125,14 @@ impl ServerHandler for DocumentsServer {
         .await;
 
         let client = client_profile_from_peer(&ctx);
+        let hop = systemprompt_mcp_shared::auth::verified_hop_token(&ctx);
         self.tools
             .call(DocumentsToolCall {
                 executor: &self.executor,
                 request: &request,
                 context: &request_context,
                 client: &client,
+                hop: hop.as_ref(),
             })
             .await
             .map(Into::into)

@@ -35,7 +35,7 @@ impl McpToolHandler for UsersHandler<'_> {
         "users"
     }
     fn description(&self) -> &'static str {
-        "List registered users with id, name, email, roles, status and creation date, offset-paged. Use it to map a `user_id` from `usage_by_user` or `request_log` to a person. Read-only; role changes go through the `systemprompt` tool (`admin users role promote|demote <id>`)."
+        "List registered users with id, name, email, roles, status and creation date, offset-paged. Use it to map a `user_id` from `usage_by_user` or `request_log` to a person. Read-only; role changes go through the `systemprompt` tool (`admin users role promote|demote <id> --yes`)."
     }
     fn read_only(&self) -> bool {
         true

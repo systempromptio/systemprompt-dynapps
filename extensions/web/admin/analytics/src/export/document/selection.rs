@@ -91,7 +91,8 @@ fn ticked_valid_ids(ids: &str) -> Selection {
 }
 
 async fn session_contexts(pool: &PgPool, session: &str) -> AdminResult<Selection> {
-    let session_id = SessionId::new(session.trim());
+    let session_id =
+        SessionId::try_new(session.trim()).map_err(|e| AdminError::invalid("session id", e))?;
     let rows = list_session_contexts(pool, &session_id).await?;
     let total = i64::try_from(rows.len()).unwrap_or(i64::MAX);
     Ok(Selection {

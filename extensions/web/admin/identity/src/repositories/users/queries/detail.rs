@@ -1,7 +1,7 @@
 //! Everything the single-user detail page renders.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{Email, UserId};
+use systemprompt::identifiers::{Email, SessionId, UserId};
 
 use systemprompt_web_admin_core::activity;
 use systemprompt_web_admin_core::types::{
@@ -137,7 +137,7 @@ pub async fn list_user_sessions(
     sqlx::query_as!(
         UserSession,
         r#"SELECT
-            session_id as "session_id!",
+            session_id as "session_id!: SessionId",
             started_at,
             total_events::BIGINT as "total_events!",
             tool_uses::BIGINT as "tool_uses!",

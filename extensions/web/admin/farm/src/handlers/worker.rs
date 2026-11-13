@@ -12,7 +12,6 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use systemprompt::agent_runs::EventSink;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 use crate::services::runner::fly::protocol::{

@@ -12,7 +12,7 @@ use systemprompt::traits::SecretStore;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
@@ -102,9 +102,11 @@ impl MachinesClient {
             "{}/v1/apps/{app}",
             config.machines_api.trim_end_matches('/')
         );
-        validate_outbound_url(&base).map_err(|source| FarmError::OutboundUrl {
-            url: base.clone(),
-            source,
+        validate_outbound_url(&base, LoopbackPolicy::Allow).map_err(|source| {
+            FarmError::OutboundUrl {
+                url: base.clone(),
+                source,
+            }
         })?;
         Ok(Self {
             http,

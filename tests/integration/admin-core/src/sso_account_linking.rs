@@ -1,7 +1,8 @@
 //! Entra ID OIDC sign-in for someone who already has a local account but no
 //! federated link: core's driver links by verified email when the policy's
-//! `link_by_email` allows it and refuses otherwise, and a hand-granted role
-//! survives the directory's role write (the `RoleResolver` re-joins
+//! `link_by_email` allows it and refuses the email clash otherwise. On an
+//! account the directory provisioned, a hand-granted role survives the
+//! directory's role write on the next sign-in (the `RoleResolver` re-joins
 //! `user_manual_roles`), both in `users.roles` and in the minted token.
 //!
 //! One provider config per process (first-write-wins slot): nextest's
@@ -92,11 +93,17 @@ async fn an_existing_account_is_not_claimed_without_link_by_email() {
 
     sign_in(&app, &idp, &email, &sub)
         .await
-        .assert_refused("not_provisioned");
+        .assert_refused("email_in_use");
     assert!(federated_user(&db.pool, &sub).await.is_none());
+    let accounts: i64 = sqlx::query_scalar("SELECT count(*) FROM users WHERE email = $1")
+        .bind(&email)
+        .fetch_one(&*db.pool)
+        .await
+        .expect("count users");
+    assert_eq!(accounts, 1, "no account created");
     assert_eq!(
         login_events(&db.pool).await,
-        vec![("refused".to_owned(), Some("not_provisioned".to_owned()))]
+        vec![("refused".to_owned(), Some("email_in_use".to_owned()))]
     );
     db.cleanup().await;
 }
@@ -106,24 +113,28 @@ async fn a_manual_role_survives_sign_in_in_the_row_and_the_token() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let (app, idp, email) = existing_account(&db, true).await;
+    let idp = FakeOidcIdp::start(OIDC_TENANT).await;
+    let app = SsoApp::build(&db.pool, Some(oidc::config(&idp)));
+    let email = format!("{}@{DOMAIN}", unique("provisioned"));
+    let sub = unique("persistent-sub");
+    sign_in(&app, &idp, &email, &sub)
+        .await
+        .assert_signed_in("/admin");
+    let id = federated_user(&db.pool, &sub)
+        .await
+        .expect("the directory provisioned the account");
     let user = insert_user(
         &db.pool,
         &unique("granter"),
         &format!("{}@elsewhere.test", unique("g")),
     )
     .await;
-    let id: String = sqlx::query_scalar("SELECT id FROM users WHERE email = $1")
-        .bind(&email)
-        .fetch_one(&*db.pool)
-        .await
-        .expect("seeded user");
     let target = systemprompt::identifiers::UserId::new(id.clone());
     set_manual_roles(&db.pool, &target, &[MANUAL_ROLE.to_owned()], &user, None)
         .await
         .expect("grant a manual role");
 
-    let reply = sign_in(&app, &idp, &email, &unique("persistent-sub")).await;
+    let reply = sign_in(&app, &idp, &email, &sub).await;
     reply.assert_signed_in("/admin");
 
     let roles: Vec<String> = sqlx::query_scalar("SELECT roles FROM users WHERE id = $1")

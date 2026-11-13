@@ -13,7 +13,7 @@ use systemprompt_web_admin_farm::repositories::filters::FarmRunFilter;
 use systemprompt_web_admin_farm::repositories::{farms, runs};
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 
-use crate::farm_runner_lifecycle::{Seeded, launch_one, observe_finish, seed};
+use crate::farm_runner_lifecycle::{Seeded, claim, launch_one, observe_finish, seed};
 use crate::tempdb::TempDb;
 
 const COST: i64 = 1_500;
@@ -98,7 +98,8 @@ async fn pruning_a_farm_keeps_spend_and_drops_its_runs_from_farm_totals() {
     let stale = seed(&db.pool).await;
     let busy = seed(&db.pool).await;
     let finished = launch_one(&stale).await;
-    observe_finish(&stale.state, &finished, &outcome()).await;
+    let lease = claim(&stale.state, &finished).await;
+    observe_finish(&stale.state, &finished, &lease, &outcome()).await;
     spend_row(&db.pool, &stale, &format!("req-{}", finished.id)).await;
     let in_flight = launch_one(&busy).await;
 

@@ -74,6 +74,9 @@ fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
             systemprompt::sso::SsoDriver::discover(&ctx, oauth, Arc::clone(&sessions))
                 .expect("SSO provider discovery"),
         ),
+        cookie: systemprompt::api::services::session_cookie::SessionCookie::from_config(
+            boot.config_arc(),
+        ),
         write_pool: Arc::clone(pool),
         session_service: sessions,
     }

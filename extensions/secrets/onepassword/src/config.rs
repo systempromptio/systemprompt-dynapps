@@ -193,11 +193,13 @@ fn non_empty(field: &str, value: String) -> Result<String, OnePasswordError> {
 }
 
 fn validate_url(url: &str) -> Result<String, OnePasswordError> {
-    systemprompt::models::net::validate_outbound_url(url).map_err(|source| {
-        OnePasswordError::ConnectUrl {
-            url: url.to_owned(),
-            source,
-        }
+    systemprompt::models::net::validate_outbound_url(
+        url,
+        systemprompt::models::net::LoopbackPolicy::Allow,
+    )
+    .map_err(|source| OnePasswordError::ConnectUrl {
+        url: url.to_owned(),
+        source,
     })?;
     Ok(url.trim_end_matches('/').to_owned())
 }

@@ -1,4 +1,4 @@
-# template-version: 0.79.0
+# template-version: 0.81.0
 # Dynapps profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are
@@ -128,6 +128,9 @@ rate_limits:
   # /v1/auth/bridge/*, deliberately its own budget: sign-in must stay
   # reachable on an instance whose inference traffic is saturating its own.
   bridge_auth_per_second: 20
+  # Every request, before authentication, also spends a per-address budget
+  # shared across all route groups.
+  pre_auth_ip_per_second: 500
   burst_multiplier: 3
 system_admin:
   username: admin
@@ -167,3 +170,5 @@ retention:
   governance_decisions_days: 180
   mcp_tool_executions_days: 180
   outbox_processed_days: 7
+  engagement_events_days: 90
+  fingerprint_reputation_days: 90

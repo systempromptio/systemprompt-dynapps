@@ -11,6 +11,7 @@ use systemprompt::gateway::protocol::canonical::ContentBlockKind;
 use systemprompt::gateway::protocol::inbound::anthropic_messages::AnthropicMessagesInbound;
 use systemprompt::gateway::protocol::inbound::openai_chat::OpenAiChatInbound;
 use systemprompt::gateway::protocol::inbound::openai_responses::OpenAiResponsesInbound;
+use systemprompt::gateway::protocol::outbound::{UpstreamBounds, UpstreamHttp};
 use systemprompt::gateway::{
     CanonicalEvent, GatewayUpstreamRegistry, InboundAdapter, OutboundCtx, OutboundOutcome,
 };
@@ -247,7 +248,7 @@ pub(crate) async fn dispatch_reply(
     .call()
     .await
     .map_err(|e| format!("call: {e}"))?;
-    let http = reqwest::Client::new();
+    let http = UpstreamHttp::new(reqwest::Client::new(), UpstreamBounds::PRODUCTION);
     let ctx = OutboundCtx {
         target: &hop,
         upstream: &call,
@@ -258,6 +259,7 @@ pub(crate) async fn dispatch_reply(
         automatic_prompt_caching: true,
         forward_headers: &forward,
         raw_body,
+        policy: systemprompt::gateway::service::HopPolicy::of(&hop),
     };
     let registry = GatewayUpstreamRegistry::new();
     let adapter = registry
@@ -292,6 +294,9 @@ pub(crate) async fn dispatch_reply(
                 }
             }
             out
+        },
+        OutboundOutcome::Relayed(_) => {
+            return Err("a governed hop relayed the upstream answer whole".to_owned());
         },
         OutboundOutcome::RawStreaming { mut stream, .. } => {
             let mut out = String::new();

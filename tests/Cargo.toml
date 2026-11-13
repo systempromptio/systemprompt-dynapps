@@ -175,11 +175,11 @@ dynwork-relay = { path = "../extensions/dynwork-relay" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.79.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.79.0" }
-systemprompt-provider-contracts = { version = "0.79.0" }
-systemprompt-api = { version = "0.79.0" }
-systemprompt-cli = { version = "0.79.0" }
+systemprompt = { version = "0.81.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.81.0" }
+systemprompt-provider-contracts = { version = "0.81.0" }
+systemprompt-api = { version = "0.81.0" }
+systemprompt-cli = { version = "0.81.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -222,7 +222,7 @@ tempfile = "3"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 # Pinned to the exact version the root workspace pins, so the `ServerHandler`
 # trait the tests bring into scope is the one the MCP crates implement.
-rmcp = { version = "=3.7.0", features = ["server"] }
+rmcp = { version = "=3.9.0", features = ["server"] }
 uuid = { version = "1.28", features = ["v4"] }
 base64 = "0.23"
 # Pinned to what `extensions/web/admin/catalog` uses for the share-token HMAC, so the

@@ -1,19 +1,39 @@
 //! A minimal MCP client over the streamable HTTP transport: initialize, then
-//! JSON-RPC requests carrying the session id, the caller's bearer and the
-//! request-context headers the server builds the caller's context from. A
+//! JSON-RPC requests carrying the session id, the caller's bearer, the
+//! request-context headers and a hop token signed per request exactly as the
+//! API proxy signs one, which is the only identity the server accepts. A
 //! response arrives as JSON or as one server-sent event; both are read.
 
+use std::sync::Arc;
+
 use serde_json::{Value, json};
-use systemprompt::identifiers::{ContextId, headers};
+use systemprompt::identifiers::{ContextId, McpServerId, headers};
+use systemprompt::models::auth::{McpHopIdentity, TokenAuthority};
 
 const PROTOCOL_VERSION: &str = "2025-06-18";
 const MCP_SESSION: &str = "mcp-session-id";
 
+pub(super) struct McpCaller {
+    pub(super) bearer: String,
+    pub(super) tokens: Arc<dyn TokenAuthority>,
+    pub(super) server: McpServerId,
+    pub(super) identity: McpHopIdentity,
+}
+
+impl McpCaller {
+    fn hop(&self, mcp_session: &str) -> String {
+        let mut identity = self.identity.clone();
+        identity.mcp_session = (!mcp_session.is_empty()).then(|| mcp_session.to_owned());
+        self.tokens
+            .mint_mcp_hop(&self.server, &identity)
+            .expect("mint the hop token")
+    }
+}
+
 pub(super) struct McpClient {
     http: reqwest::Client,
     url: String,
-    bearer: String,
-    user_id: String,
+    caller: McpCaller,
     context_id: String,
     session: String,
     next_id: u64,
@@ -69,12 +89,11 @@ fn payload(result: &Value) -> Value {
 }
 
 impl McpClient {
-    pub(super) async fn connect(url: &str, bearer: &str, user_id: &str) -> Self {
+    pub(super) async fn connect(url: &str, caller: McpCaller) -> Self {
         let mut client = Self {
             http: reqwest::Client::new(),
             url: url.to_owned(),
-            bearer: bearer.to_owned(),
-            user_id: user_id.to_owned(),
+            caller,
             context_id: ContextId::generate().as_str().to_owned(),
             session: String::new(),
             next_id: 0,
@@ -114,11 +133,14 @@ impl McpClient {
         let mut request = self
             .http
             .post(&self.url)
-            .bearer_auth(&self.bearer)
+            .bearer_auth(&self.caller.bearer)
             .header("accept", "application/json, text/event-stream")
-            .header(headers::SESSION_ID, uuid::Uuid::new_v4().to_string())
+            .header(headers::MCP_HOP, self.caller.hop(&self.session))
+            .header(
+                headers::SESSION_ID,
+                self.caller.identity.session_id.as_str(),
+            )
             .header(headers::TRACE_ID, uuid::Uuid::new_v4().to_string())
-            .header(headers::USER_ID, &self.user_id)
             .header(headers::AGENT_NAME, "docs-smoke")
             .header(headers::CONTEXT_ID, &self.context_id)
             .json(body);

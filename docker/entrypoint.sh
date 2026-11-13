@@ -71,7 +71,47 @@ else
         elif [ -n "${OPENAI_API_KEY:-}" ]; then DEFAULT_PROVIDER=openai
         else DEFAULT_PROVIDER=gemini
         fi
-        /app/bin/systemprompt admin setup -e docker \
+        # Setup logs in with the credentials it writes and refuses any it
+        # cannot verify, so hand it DATABASE_URL's own role, password,
+        # host, port and database (password over stdin, never argv).
+        db_rest="${DATABASE_URL#*://}"
+        db_auth="${db_rest%%@*}"
+        db_rest="${db_rest#*@}"
+        db_hostport="${db_rest%%/*}"
+        db_name="${db_rest#*/}"
+        db_name="${db_name%%\?*}"
+        db_user="${db_auth%%:*}"
+        db_pass="${db_auth#*:}"
+        db_host="${db_hostport%:*}"
+        db_port="${db_hostport##*:}"
+        [ "$db_port" != "$db_hostport" ] || db_port=5432
+        url_decode() {
+            rest="$1"; out=""
+            while [ -n "$rest" ]; do
+                case "$rest" in
+                    %[0-9A-Fa-f][0-9A-Fa-f]*)
+                        hex="$(printf '%s' "$rest" | cut -c2-3)"
+                        # shellcheck disable=SC2059 # the octal escape is the format
+                        out="$out$(printf "\\$(printf '%03o' "0x$hex")")"
+                        rest="${rest#???}" ;;
+                    *) out="$out$(printf '%s' "$rest" | cut -c1)"; rest="${rest#?}" ;;
+                esac
+            done
+            printf '%s' "$out"
+        }
+        i=0
+        until pg_isready -d "$DATABASE_URL" >/dev/null 2>&1; do
+            i=$((i + 1))
+            if [ "$i" -ge 300 ]; then
+                echo "ERROR: Postgres did not become ready within 300s." >&2
+                exit 1
+            fi
+            sleep 1
+        done
+        printf '%s\n' "$(url_decode "$db_pass")" | /app/bin/systemprompt admin setup -e docker \
+            --db-host "$db_host" --db-port "$db_port" \
+            --db-user "$(url_decode "$db_user")" --db-name "$(url_decode "$db_name")" \
+            --db-password-stdin \
             --default-provider "$DEFAULT_PROVIDER" --yes --no-migrate
 
         # Setup authors a localhost dev profile; patch the parts the
@@ -83,7 +123,7 @@ else
         sed -i "s/^  host: 127\.0\.0\.1$/  host: \"${HOST:-0.0.0.0}\"/" "$PROFILE_FILE"
         # 1b. Binaries ship in /app/bin, not a cargo target dir.
         sed -i 's|^  bin: .*|  bin: /app/bin|' "$PROFILE_FILE"
-        # 2. Point at the real database, not setup's generated localhost one.
+        # 2. Keep DATABASE_URL verbatim (query parameters such as sslmode).
         jq --arg db "$DATABASE_URL" '.database_url = $db' "$SECRETS_FILE" \
             > "$SECRETS_FILE.tmp" && mv "$SECRETS_FILE.tmp" "$SECRETS_FILE"
         # 2b. Optional read/write split: reads stay on DATABASE_URL, writes go
@@ -111,7 +151,9 @@ else
         #    (EXTERNAL_URL, or RENDER_EXTERNAL_URL via the fallback above).
         if [ -n "${EXTERNAL_URL:-}" ]; then
             sed -i "s|^  api_external_url: .*|  api_external_url: ${EXTERNAL_URL}|" "$PROFILE_FILE"
-            sed -i "/^  cors_allowed_origins:/a\\  - ${EXTERNAL_URL}" "$PROFILE_FILE"
+            origin="$(printf '%s' "$EXTERNAL_URL" \
+                | sed -E 's#^([A-Za-z][A-Za-z0-9+.-]*://[^/?\#]+).*#\1#' | tr 'A-Z' 'a-z')"
+            sed -i "/^  cors_allowed_origins:/a\\  - ${origin}" "$PROFILE_FILE"
         fi
     fi
 fi

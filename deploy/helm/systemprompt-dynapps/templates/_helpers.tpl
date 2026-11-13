@@ -217,11 +217,9 @@ containers:
     env:
       - {name: SYSTEMPROMPT_PROFILE_DIR, value: {{ $profileDir }}}
       - {name: HOME, value: /home/app}
-      {{- if eq .role "worker" }}
       - name: POD_IP
         valueFrom:
           fieldRef: {fieldPath: status.podIP}
-      {{- end }}
       {{- if eq $v.secrets.mode "onepassword" }}
       {{- $op := $v.secrets.onepassword }}
       - name: {{ $op.tokenEnv }}

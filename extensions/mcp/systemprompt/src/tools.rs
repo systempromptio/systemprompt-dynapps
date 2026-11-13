@@ -92,7 +92,7 @@ pub fn list_tools() -> Vec<Tool> {
         --model, --provider, --before <cursor>)\n  \
         - infra logs audit <request-id> --messages --limit 20 --max-content 400: One request's \
         transcript, paged\n  \
-        - admin users role promote <id>: Grant admin\n\n\
+        - admin users role promote <id> --yes: Grant admin\n\n\
         Never pass --json, --format or --export (they are stripped). On an unknown-flag error \
         run '<command> --help' once; do not guess flags.\n\n\
         Example: {{\"command\": \"core skills list\"}}\n\n\

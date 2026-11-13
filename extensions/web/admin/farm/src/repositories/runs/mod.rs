@@ -16,5 +16,6 @@ pub use reads::{
 pub use runner::{RunnerMachineRow, find_run_runner, update_run_runner};
 pub use stats::{get_run_stats, list_daily_run_counts};
 pub use writes::{
-    insert_run, update_run_cancel_requested, update_run_finished, update_run_started,
+    insert_run, update_run_cancel_requested, update_run_finished, update_run_requeued,
+    update_run_started,
 };

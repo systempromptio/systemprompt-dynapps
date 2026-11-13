@@ -7,7 +7,7 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // are read, and the body was already verified as JSON by `response::body`.
 use serde_json::Value;
 use systemprompt::models::mcp::deployment::ConnectorIdentity;
-use systemprompt::models::net::validate_outbound_url;
+use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 
 pub(super) async fn generic_identity(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
@@ -27,7 +27,7 @@ pub(super) async fn generic_identity(
     })?;
     let url = super::generic_discovery::trusted_endpoint(services, &grant.provider, endpoint)?;
     let response = http
-        .get(validate_outbound_url(url.as_str())?)
+        .get(validate_outbound_url(url.as_str(), LoopbackPolicy::Allow)?)
         .bearer_auth(&grant.access_token)
         .send()
         .await

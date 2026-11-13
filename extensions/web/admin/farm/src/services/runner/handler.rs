@@ -8,6 +8,15 @@
 //! finishes the row (`failed`, `host_crashed`), so no run is left
 //! `preparing`; the observer then stamps the farm row either way.
 //!
+//! Every write to the `agent_runs` row carries the claim's lease; once one
+//! reports the lease lost the handler stops, writes nothing more to the run
+//! and returns the error rather than finishing the row. A run stopped by
+//! shutdown with no cancel requested is released back to `queued` (and its
+//! farm row with it) for the next claimer instead of finishing as
+//! `cancelled`. A re-claimed run, whether reclaimed after a stale lease
+//! (`attempt > 1`) or released by a shutdown (`request.releases > 0`),
+//! resumes the earlier workspace rather than materialising it again.
+//!
 //! Materialise notes become `runner` events numbered after whatever an
 //! earlier attempt recorded, and `seq_after` hands the executor the last
 //! one. Core's claim loop cancels a run only on shutdown or a lost lease, so
@@ -19,32 +28,31 @@
 
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::traits::OwnedTask;
 
 use async_trait::async_trait;
-use chrono::Utc;
 use systemprompt::agent_runs::credentials::{
     IssueRunCredentials, RunCredentialLimits, RunCredentialService,
 };
 use systemprompt::agent_runs::governance::{HookBases, hooks_file};
-use systemprompt::agent_runs::repository::RunStarted;
+use systemprompt::agent_runs::repository::{Released, RunStarted};
 use systemprompt::agent_runs::service::{ClaimedRun, DbEventSink, RunHandler};
 use systemprompt::agent_runs::{
-    AgentRunsResult, EventSink, ExecuteParams, RunCredentials, RunEvent, RunLayout, RunRequest,
-    RunnerLevel, execute,
+    AgentRunsError, AgentRunsResult, EventSink, ExecuteParams, RunCredentials, RunLayout,
+    RunOutcome, RunRequest, execute,
 };
-use systemprompt::identifiers::AgentRunId;
+// JSON: core's `finish` takes the diff summary as a JSONB value.
+use serde_json::Value;
 
+use super::attempt::{record_notes, resume_note, watch_cancel};
 use super::fly::remote::{RemoteJob, run_remote};
 use super::{cost_window, observer, prepare};
 use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::{agents, runs};
 use crate::state::FarmState;
-use crate::types::{AgentRunStatus, ErrorClass, FarmRunId, RunEventKind, RunEventPayload};
+use crate::types::{AgentRunStatus, ErrorClass, FarmRunId};
 
 const CREDENTIAL_GRACE: Duration = Duration::from_secs(300);
-const CANCEL_POLL: Duration = Duration::from_secs(2);
 
 #[derive(Debug)]
 pub(super) struct FarmRunHandler {
@@ -58,14 +66,22 @@ pub(super) struct FarmRunHandler {
 impl RunHandler for FarmRunHandler {
     async fn run(&self, claimed: ClaimedRun) -> AgentRunsResult<()> {
         let id = claimed.row.id.clone();
-        if let Err(err) = self.drive(&claimed).await {
-            tracing::error!(run = %id, error = %err, "farm run failed before it finished");
-            let outcome = observer::unexecuted_outcome(
-                AgentRunStatus::Failed,
-                ErrorClass::HostCrashed,
-                &err.to_string(),
-            );
-            claimed.repo.finish(&id, &outcome, None).await?;
+        match self.drive(&claimed).await {
+            Ok(()) => {},
+            Err(FarmError::AgentRuns(err @ AgentRunsError::LeaseLost { .. })) => return Err(err),
+            Err(err) => {
+                tracing::error!(run = %id, error = %err, "farm run failed before it finished");
+                let outcome = observer::unexecuted_outcome(
+                    AgentRunStatus::Failed,
+                    ErrorClass::HostCrashed,
+                    &err.to_string(),
+                );
+                claimed
+                    .repo
+                    .finish(&id, &claimed.lease, &outcome, None)
+                    .await?
+                    .applied(&id)?;
+            },
         }
         if let Err(err) = observer::observe_finished(&self.state, &id).await {
             tracing::error!(run = %id, error = %err, "farm run facts not recorded");
@@ -88,7 +104,11 @@ impl FarmRunHandler {
                 ErrorClass::Ok,
                 "cancelled before it started",
             );
-            claimed.repo.finish(&row.id, &outcome, None).await?;
+            claimed
+                .repo
+                .finish(&row.id, &claimed.lease, &outcome, None)
+                .await?
+                .applied(&row.id)?;
             return Ok(());
         }
         let pool = self.state.pool.as_ref();
@@ -103,12 +123,9 @@ impl FarmRunHandler {
             })?;
 
         let layout = prepare::run_layout(&self.state, &row.id);
-        let notes = if row.attempt > 1 {
+        let notes = if let Some(note) = resume_note(row) {
             layout.create().await?;
-            vec![format!(
-                "attempt {} resumes the earlier workspace",
-                row.attempt
-            )]
+            vec![note]
         } else {
             prepare::materialise(&self.state, &run, &agent, &layout).await?
         };
@@ -161,6 +178,7 @@ impl FarmRunHandler {
             .repo
             .update_started(
                 id,
+                &claimed.lease,
                 RunStarted {
                     run_dir: &layout.root,
                     pid: None,
@@ -168,9 +186,10 @@ impl FarmRunHandler {
                     api_key_id: Some(&credentials.api_key_id),
                 },
             )
-            .await?;
-        let sink = DbEventSink::new(claimed.repo.clone(), id.clone());
-        let seq_after = record_notes(claimed, &sink, notes).await?;
+            .await?
+            .applied(id)?;
+        let sink: Arc<dyn EventSink> = Arc::new(DbEventSink::new(claimed));
+        let seq_after = record_notes(claimed, sink.as_ref(), notes).await?;
         if let Some(fly) = &self.fly {
             let remote = RemoteJob {
                 state: &self.state,
@@ -199,7 +218,7 @@ impl FarmRunHandler {
             gateway_base_url: &self.state.gateway.internal_base,
             hooks_file: hooks,
             seq_after,
-            sink: &sink,
+            sink: sink.as_ref(),
             cancel: claimed.run_token.clone(),
             harness: None,
         })
@@ -210,12 +229,48 @@ impl FarmRunHandler {
             at: format!("agent run {id} diff"),
             source,
         })?;
-        claimed
-            .repo
-            .finish(id, &report.outcome, Some(&diff))
-            .await?;
-        Ok(())
+        settle(
+            &self.state,
+            claimed,
+            farm_run_id,
+            &report.outcome,
+            Some(&diff),
+        )
+        .await
     }
+}
+
+pub(super) async fn settle(
+    state: &FarmState,
+    claimed: &ClaimedRun,
+    farm_run_id: &FarmRunId,
+    outcome: &RunOutcome,
+    diff: Option<&Value>,
+) -> FarmResult<()> {
+    let id = &claimed.row.id;
+    if claimed.interrupted()
+        && outcome.status == AgentRunStatus::Cancelled
+        && !claimed.repo.find_cancel_requested(id).await?
+    {
+        let released = claimed
+            .repo
+            .release(id, &claimed.lease, claimed.max_releases)
+            .await?
+            .applied(id)?;
+        if released == Released::Requeued {
+            runs::update_run_requeued(state.pool.as_ref(), farm_run_id).await?;
+            tracing::info!(run = %id, "farm run interrupted by shutdown; released");
+        } else {
+            tracing::warn!(run = %id, "farm run interrupted by shutdown too often; failed");
+        }
+        return Ok(());
+    }
+    claimed
+        .repo
+        .finish(id, &claimed.lease, outcome, diff)
+        .await?
+        .applied(id)?;
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -225,55 +280,4 @@ struct Job<'a> {
     request: &'a RunRequest,
     layout: &'a RunLayout,
     credentials: &'a RunCredentials,
-}
-
-async fn record_notes(
-    claimed: &ClaimedRun,
-    sink: &DbEventSink,
-    notes: &[String],
-) -> FarmResult<Option<i64>> {
-    let existing = claimed.repo.count_events(&claimed.row.id).await?;
-    let batch: Vec<RunEvent> = notes
-        .iter()
-        .zip(existing..)
-        .map(|(note, seq)| RunEvent {
-            seq,
-            kind: RunEventKind::Runner,
-            tool_name: None,
-            tool_use_id: None,
-            payload: RunEventPayload::Runner {
-                message: note.clone(),
-                level: RunnerLevel::Warn,
-            },
-            created_at: Utc::now(),
-        })
-        .collect();
-    let written = i64::try_from(batch.len()).unwrap_or(0);
-    if !batch.is_empty() {
-        sink.emit(batch).await?;
-    }
-    let total = existing + written;
-    Ok((total > 0).then_some(total - 1))
-}
-
-fn watch_cancel(claimed: &ClaimedRun) -> OwnedTask<()> {
-    let repo = claimed.repo.clone();
-    let token = claimed.run_token.clone();
-    let id: AgentRunId = claimed.row.id.clone();
-    OwnedTask::spawn("farm_cancel_watch", async move {
-        loop {
-            tokio::select! {
-                () = token.cancelled() => return,
-                () = tokio::time::sleep(CANCEL_POLL) => {},
-            }
-            match repo.find_cancel_requested(&id).await {
-                Ok(true) => {
-                    token.cancel();
-                    return;
-                },
-                Ok(false) => {},
-                Err(err) => tracing::warn!(run = %id, error = %err, "farm cancel poll failed"),
-            }
-        }
-    })
 }

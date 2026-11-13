@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
-use systemprompt::agent_runs::service::DbEventSink;
+use systemprompt::agent_runs::EventSink;
 use tokio::sync::oneshot;
 
 use super::protocol::{WorkerResult, WorkerSpec, token_hash};
@@ -42,7 +42,7 @@ impl RemoteRuns {
         self: &Arc<Self>,
         spec: WorkerSpec,
         root: PathBuf,
-        sink: DbEventSink,
+        sink: Arc<dyn EventSink>,
         token: &str,
     ) -> Registration {
         let (tx, rx) = oneshot::channel();
@@ -80,15 +80,24 @@ impl RemoteRuns {
     }
 }
 
-#[derive(Debug)]
 pub struct RemoteRun {
     token_hash: [u8; 32],
     pub spec: WorkerSpec,
     pub root: PathBuf,
-    pub sink: DbEventSink,
+    pub sink: Arc<dyn EventSink>,
     last_seen: Mutex<Option<Instant>>,
     cancel: AtomicBool,
     result: Mutex<Option<oneshot::Sender<WorkerResult>>>,
+}
+
+impl std::fmt::Debug for RemoteRun {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RemoteRun")
+            .field("spec", &self.spec)
+            .field("root", &self.root)
+            .field("cancel", &self.cancel)
+            .finish_non_exhaustive()
+    }
 }
 
 impl RemoteRun {

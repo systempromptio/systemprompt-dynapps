@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 
+use systemprompt::api::services::session_cookie::SessionCookie;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::sso::{SsoDriver, SsoHookContext, SsoProviderError};
 use systemprompt_web_admin_identity::SsoDeps;
@@ -24,6 +25,7 @@ pub(super) fn build(
     let driver = SsoDriver::discover(&ctx, db.oauth.oauth.clone(), Arc::clone(session_service))?;
     Ok(SsoDeps {
         driver: Some(driver),
+        cookie: SessionCookie::from_config(db.boot.config_arc()),
         write_pool: Arc::clone(&db.write),
         session_service: Arc::clone(session_service),
     })

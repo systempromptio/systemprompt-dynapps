@@ -41,6 +41,7 @@ use crate::cli::CliLocation;
 
 pub use issues::IssueTools;
 use systemprompt::mcp::client_profile_from_peer;
+use systemprompt::system::issues::mcp::IssuesToolCall;
 use tool::dispatch_tool;
 
 #[derive(Clone)]
@@ -133,7 +134,7 @@ impl ServerHandler for SystempromptServer {
              conversation_audit (one request's transcript, paged and bounded), users (roster), \
              admin_report (dashboard). report_issue files a bug or feedback report about this \
              platform when issue reports are on. The 'systemprompt' tool runs any other CLI command: \
-             'core skills list', 'core skills show <id>', 'admin users role promote <id>'. \
+             'core skills list', 'core skills show <id>', 'admin users role promote <id> --yes'. \
              Never pass --json or --export. Full documentation: {WEBSITE_URL}/docs"
         ))
     }
@@ -180,7 +181,6 @@ impl ServerHandler for SystempromptServer {
                 service_id: &self.service_id,
                 authz_hook: &self.access.authz_hook,
                 services_config: &self.access.services.get(),
-                verifier: self.access.verifier(),
             },
             &tool_name,
             &ctx,
@@ -197,9 +197,16 @@ impl ServerHandler for SystempromptServer {
         .await;
 
         let client = client_profile_from_peer(&ctx);
+        let hop = systemprompt_mcp_shared::auth::verified_hop_token(&ctx);
         if let Some(result) = self
             .issues
-            .call(&self.executor, &request, &request_context, &client)
+            .call(IssuesToolCall {
+                executor: &self.executor,
+                request: &request,
+                context: &request_context,
+                client: &client,
+                hop: hop.as_ref(),
+            })
             .await
         {
             return result.map(Into::into);

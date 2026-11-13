@@ -201,11 +201,12 @@ auto-provisioning off, an unknown identity is refused with
 
 A user's roles are the union of the roles of every mapped group in their
 token, exact matches first, then patterns, deduplicated. **Every SSO
-sign-in overwrites the account's roles with that set; the platform then
-re-joins the roles an admin granted by hand in the dashboard**
+sign-in to an account SSO provisioned overwrites its roles with that set; the
+platform then re-joins the roles an admin granted by hand in the dashboard**
 (`user_manual_roles`). A role given only through `systemprompt admin users
 role promote|assign` is not a dashboard grant and is replaced at the next
-SSO sign-in. Removing someone from the
+SSO sign-in. A pre-existing account linked to its Entra identity keeps
+its roles; SSO does not change them. Removing someone from the
 admins group revokes `admin` at their next sign-in. What each
 role opens is in
 [Create & Manage Users → Roles](/documentation/admin-user-management#roles).

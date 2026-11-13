@@ -41,7 +41,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.79.0"
+version = "0.81.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -51,10 +51,10 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.79.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.79.0" }
-systemprompt-extension = { version = "0.79.0" }
-systemprompt-provider-contracts = { version = "0.79.0" }
+systemprompt = { version = "0.81.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.81.0" }
+systemprompt-extension = { version = "0.81.0" }
+systemprompt-provider-contracts = { version = "0.81.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -85,7 +85,7 @@ async-trait = "0.1"
 tokio-util = "0.7"
 
 # Database
-sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring-webpki", "macros", "sqlite", "postgres", "migrate", "chrono", "rust_decimal", "json"] }
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring-webpki", "macros", "postgres", "migrate", "chrono", "rust_decimal", "json"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -135,7 +135,7 @@ handlebars = "6"
 # Archive
 
 # MCP Protocol
-rmcp = { version = "=3.7.0", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
+rmcp = { version = "=3.9.0", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
 
 # The tests/ workspace deliberately relaxes a handful of these (unwrap/expect/
 # panic and the doc lints) in its own [workspace.lints.clippy] block — see

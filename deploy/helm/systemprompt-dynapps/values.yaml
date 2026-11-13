@@ -69,6 +69,7 @@ profile:
     content_per_second: 50
     gateway_per_second: 100
     bridge_auth_per_second: 20
+    pre_auth_ip_per_second: 500
     burst_multiplier: 3
   retention:
     logs_days: 14
@@ -78,6 +79,8 @@ profile:
     governance_decisions_days: 180
     mcp_tool_executions_days: 180
     outbox_processed_days: 7
+    engagement_events_days: 90
+    fingerprint_reputation_days: 90
   # Deep-merged over the generated profile last (lists replace). Use it for any
   # profile key this chart does not surface, e.g. rate_limits or governance.
   overrides: {}

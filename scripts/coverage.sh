@@ -3,8 +3,13 @@
 # from systemprompt-core's `just coverage` recipe. Raw llvm-cov rather than
 # cargo-llvm-cov, for the same host-toolchain reasons core documents:
 #
-#   1. sccache via [build] rustc-wrapper in ~/.cargo/config.toml returns
-#      cached uninstrumented rlibs — neutralised by CARGO_BUILD_RUSTC_WRAPPER="".
+#   1. A host-wide [build] rustc-wrapper in ~/.cargo/config.toml is
+#      neutralised by CARGO_BUILD_RUSTC_WRAPPER="" and RUSTC_WRAPPER="". In
+#      CI (SCCACHE_GHA_ENABLED=true) RUSTC_WRAPPER=sccache is kept: cargo
+#      passes RUSTFLAGS to rustc as arguments and sccache keys every object
+#      on the full argument list, so an instrumented object is only ever
+#      served to an instrumented build. The profraw-count and object checks
+#      below verify the result.
 #   2. A mold linker pinned by target.<triple>.rustflags strips the
 #      profile-runtime constructors, silently producing zero profraw files.
 #      Setting the RUSTFLAGS env replaces target rustflags entirely (cargo's
@@ -54,12 +59,25 @@ TBASE="${COVERAGE_TARGET_DIR:-$ROOT/coverage-report/target}"
 # build each workspace on its own runner and report over all of them on
 # another. tests-unit and tests-integration each build half of the tests/
 # workspace (the *-unit-tests packages, and every other one), so neither
-# compile outgrows a runner's time bound. Any build phase starts a fresh profile;
+# compile outgrows a runner's time bound. tests-integration-1,
+# tests-integration-2, ... split tests-integration further: group N is the
+# Nth '|'-separated package list in CI_COVERAGE_INTEGRATION_GROUPS
+# (.github/ci-params.env), and tests-integration-rest is every
+# non-unit package no group names. Any build phase starts a fresh profile;
 # a report-only run reads the profraw and objects it was handed.
 PHASES=" ${COVERAGE_PHASES:-root tests bridge report} "
 has_phase() { [[ "$PHASES" == *" $1 "* ]]; }
 
-if has_phase root || has_phase tests || has_phase tests-unit || has_phase tests-integration || has_phase bridge; then
+CI_COVERAGE_INTEGRATION_GROUPS="$(sed -n 's/^CI_COVERAGE_INTEGRATION_GROUPS=//p' "$ROOT/.github/ci-params.env")"
+IFS='|' read -r -a INTEGRATION_GROUPS <<< "$CI_COVERAGE_INTEGRATION_GROUPS"
+integration_group_phase=""
+for phase in $PHASES; do
+    case "$phase" in
+        tests-integration-rest|tests-integration-[0-9]*) integration_group_phase="$phase" ;;
+    esac
+done
+
+if has_phase root || has_phase tests || has_phase tests-unit || has_phase tests-integration || [ -n "$integration_group_phase" ] || has_phase bridge; then
     rm -rf "$PROFDIR" "$ROOT/coverage-report/tests.profdata"
 fi
 mkdir -p "$PROFDIR"
@@ -84,6 +102,14 @@ if [ "$(uname -s)" = "Darwin" ]; then
 else
     PROFRAW_PATTERN="%m%c"
     COVERAGE_RUSTFLAGS="-C instrument-coverage -C llvm-args=--runtime-counter-relocation"
+    # Why: GNU ld needs several GiB per instrumented test binary and pushes a
+    # 7 GiB runner deep into swap. The toolchain's own rust-lld links the same
+    # objects in a fraction of the memory and, unlike mold, keeps the
+    # profile-runtime constructors.
+    gcc_ld="$(rustc --print sysroot)/lib/rustlib/$(rustc -vV | sed -n 's/^host: //p')/bin/gcc-ld"
+    if [ -x "$gcc_ld/ld.lld" ]; then
+        COVERAGE_RUSTFLAGS="$COVERAGE_RUSTFLAGS -C link-arg=-fuse-ld=lld -C link-arg=-B$gcc_ld"
+    fi
 fi
 
 run_instrumented() {
@@ -99,8 +125,12 @@ run_instrumented() {
     # `if` rather than a bare call: this script runs under `set -e`, and the
     # phases below survive a red workspace while keeping its exit status.
     local status=0
+    local wrapper=""
+    if [ "${SCCACHE_GHA_ENABLED:-}" = "true" ] && [ "${RUSTC_WRAPPER:-}" = "sccache" ]; then
+        wrapper=sccache
+    fi
     if CARGO_BUILD_RUSTC_WRAPPER="" \
-        RUSTC_WRAPPER="" \
+        RUSTC_WRAPPER="$wrapper" \
         CARGO_TARGET_DIR="$tdir" \
         LLVM_PROFILE_FILE="$PROFDIR/$PROFRAW_PATTERN.profraw" \
         RUSTFLAGS="$COVERAGE_RUSTFLAGS" \
@@ -146,6 +176,19 @@ elif has_phase tests-unit; then
     tests_selection=(--package '*-unit-tests')
 elif has_phase tests-integration; then
     tests_selection=(--workspace --exclude '*-unit-tests')
+elif [ "$integration_group_phase" = "tests-integration-rest" ]; then
+    tests_selection=(--workspace --exclude '*-unit-tests')
+    for group in "${INTEGRATION_GROUPS[@]}"; do
+        for package in $group; do tests_selection+=(--exclude "$package"); done
+    done
+elif [ -n "$integration_group_phase" ]; then
+    index="${integration_group_phase#tests-integration-}"
+    group="${INTEGRATION_GROUPS[$((index - 1))]:-}"
+    if [ "$index" -lt 1 ] || [ -z "${group// /}" ]; then
+        echo "error: $integration_group_phase names no group in CI_COVERAGE_INTEGRATION_GROUPS" >&2
+        exit 1
+    fi
+    for package in $group; do tests_selection+=(--package "$package"); done
 fi
 
 if [ "${#tests_selection[@]}" -gt 0 ]; then
@@ -265,9 +308,31 @@ WARNINGS="$ROOT/coverage-report/llvm-cov-warnings.txt"
 MISMATCHED=$(sed -n 's/^.*warning: \([0-9][0-9]*\) functions have mismatched data.*$/\1/p' "$WARNINGS" | head -n 1)
 MISMATCH_LIMIT="${COVERAGE_MISMATCH_LIMIT:-10}"
 if [ -n "$MISMATCHED" ] && [ "$MISMATCHED" -gt "$MISMATCH_LIMIT" ]; then
-    echo "error: llvm-cov rejected profile data for $MISMATCHED functions (limit $MISMATCH_LIMIT); duplicate or incompatible instrumented objects remain" >&2
-    echo "       inspect coverage-report/llvm-cov-warnings.txt" >&2
-    exit 1
+    # Why: an object that links a dependency function without calling it
+    # carries an empty mapping record with hash 0, which llvm-cov counts as a
+    # mismatch against the record a calling object wrote; every test binary
+    # contributes one or two (hashbrown, foldhash), so the count grows with the
+    # number of binaries. Only records with a real hash are build variants.
+    # llvm-cov can abort after printing the dump, so its exit status is not
+    # read; the record count must equal the warning's or the check fails.
+    DUMP="$ROOT/coverage-report/llvm-cov-mismatches.txt"
+    { "$LLVM_COV" report \
+        --instr-profile="$ROOT/coverage-report/tests.profdata" \
+        "${OBJ_ARGS[@]}" \
+        --ignore-filename-regex="$IGNORE_RE" \
+        -dump 2>&1 >/dev/null || true; } | grep '^hash-mismatch:' > "$DUMP" || true
+    DUMPED=$(wc -l < "$DUMP")
+    if [ "$DUMPED" -ne "$MISMATCHED" ]; then
+        echo "error: llvm-cov reported $MISMATCHED mismatched functions but its dump lists $DUMPED" >&2
+        exit 1
+    fi
+    VARIANTS=$(grep -vc 'with hash = 0x0$' "$DUMP" || true)
+    echo "==> $MISMATCHED mismatched functions, $VARIANTS with a real hash (coverage-report/llvm-cov-mismatches.txt)"
+    if [ "$VARIANTS" -gt "$MISMATCH_LIMIT" ]; then
+        echo "error: llvm-cov rejected profile data for $VARIANTS functions with a real hash (limit $MISMATCH_LIMIT); duplicate or incompatible instrumented objects remain" >&2
+        echo "       inspect coverage-report/llvm-cov-mismatches.txt" >&2
+        exit 1
+    fi
 fi
 
 "$LLVM_COV" export \

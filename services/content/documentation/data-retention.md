@@ -54,6 +54,8 @@ These are the windows this installation runs with. The profile sets no `retentio
 | Server log lines (`logs`) | 30 days | profile default |
 | Traffic and behaviour events | 90 days | profile default |
 | Processed durable events (`event_outbox`) | 7 days | profile default |
+| Page engagement events | 90 days | profile default |
+| Client fingerprint reputation | 90 days | profile default |
 | Spent quota windows | 62 days | fixed (longest quota window plus carry-forward) |
 | Archived user accounts and every row keyed on them | 90 days after archiving; never while under legal hold | profile `retention.archived_users_days` |
 | Audit chain links (`audit_chain_links`) | 100 days | `audit_chain_verify` |

@@ -9,11 +9,14 @@ files:
   documents:
     enabled: true
     # Live sessions: snapshot cadence and the owner lease. Each replica
-    # advertises its own address: FLY_PRIVATE_IP on Fly, loopback locally,
-    # SYSTEMPROMPT_COLLAB_ADVERTISE_URL overrides both.
+    # advertises its own address, resolved from the environment when this file
+    # is read: FLY_PRIVATE_IP on Fly, POD_IP under Helm (each platform sets only
+    # its own). Left empty, core advertises 127.0.0.1 and warns, which suits a
+    # single local instance.
     collab:
       snapshotAfterSecs: 30
       snapshotAfterUpdates: 200
       owner:
         enabled: true
         advertisePort: 8080
+        advertiseHost: ${FLY_PRIVATE_IP:-}${POD_IP:-}

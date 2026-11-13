@@ -4,10 +4,8 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use systemprompt::config::{LoadedProfile, SecretsService};
 use systemprompt::identifiers::McpServerId;
-use systemprompt::loader::BootContext;
-use systemprompt::system::AppContext;
+use systemprompt::system::HostContext;
 use systemprompt_mcp_agent::SystempromptServer;
 use systemprompt_mcp_agent::server::IssueTools;
 // Why: core discovers the governance authz hook, the connection snapshot
@@ -19,7 +17,6 @@ use systemprompt_secrets_onepassword as _;
 use systemprompt_web_admin_governance as _;
 use systemprompt_web_admin_identity as _;
 use systemprompt_web_admin_platform as _;
-use tokio::net::TcpListener;
 
 const DEFAULT_SERVICE_ID: &str = "systemprompt";
 const DEFAULT_PORT: u16 = 5010;
@@ -50,15 +47,11 @@ fn startup_timeout() -> Duration {
     Duration::from_secs(secs)
 }
 
-async fn init_context() -> Result<Arc<AppContext>> {
-    let profile = LoadedProfile::from_env().context("Failed to initialize profile")?;
-    let secrets = SecretsService::load(Arc::clone(&profile))
-        .await
-        .context("Failed to initialize secrets")?;
+async fn init_context() -> Result<Arc<HostContext>> {
     Ok(Arc::new(
-        AppContext::new(BootContext::new(profile, secrets))
+        HostContext::from_process_env()
             .await
-            .context("Failed to initialize application context")?,
+            .context("Failed to initialize the MCP host context")?,
     ))
 }
 
@@ -91,10 +84,10 @@ async fn main() -> Result<()> {
         );
     }
 
-    let addr = format!("0.0.0.0:{}", port());
+    let addr = format!("127.0.0.1:{}", port());
     // Why: core's supervisor judges this process by pid and port, so the port
     // is claimed before the slow, bounded bring-up and a clash fails at once.
-    let listener = TcpListener::bind(&addr)
+    let listener = systemprompt::mcp::bind_loopback(port())
         .await
         .with_context(|| format!("Failed to bind {addr}"))?;
     let timeout = startup_timeout();
@@ -125,21 +118,28 @@ async fn main() -> Result<()> {
         service_id.clone(),
         systemprompt_mcp_shared::auth::ServerAccess {
             authz_hook: Arc::clone(ctx.authz_hook()),
-            services: ctx.services_watch().clone(),
-            token_authority: ctx.token_authority(),
-            config: Arc::clone(ctx.config_arc()),
+            services: ctx.services_state().watch().clone(),
         },
-        ctx.artifact_ingest_arc(),
+        ctx.artifact_ingest(),
         systemprompt_mcp_agent::CliLocation::from_profile(ctx.profile()),
     )
-    .with_issues(IssueTools::from_context(&ctx, service_id.clone()));
+    .with_issues(IssueTools::from_host(&ctx, service_id.clone()));
+    let requires_oauth = ctx
+        .services_state()
+        .config()
+        .mcp_servers
+        .get(service_id.as_str())
+        .is_some_and(|deployment| deployment.oauth.required);
     let router = systemprompt::mcp::create_router(
         server,
         Arc::clone(ctx.mcp_session_repository()),
-        systemprompt::mcp::McpHttpConfig {
-            server_id: Some(service_id.clone()),
-            ..systemprompt::mcp::McpHttpConfig::default()
-        },
+        systemprompt::mcp::McpHttpConfig::default(),
+        systemprompt::mcp::middleware::HopVerifier::new(
+            ctx.verification_keys().clone(),
+            &ctx.config().jwt_issuer,
+            service_id.clone(),
+        )
+        .requiring_hop(requires_oauth),
     );
 
     tracing::info!(

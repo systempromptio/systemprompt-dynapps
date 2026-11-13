@@ -17,6 +17,7 @@ tracing = { workspace = true }
 serde_json = { workspace = true }
 jsonschema = { workspace = true }
 rmcp = { workspace = true }
+axum = { workspace = true }
 
 [lints]
 workspace = true

@@ -9,6 +9,7 @@
 //! [`report`] leaves the task-completion report, with [`tool_tally`]'s count
 //! of the run's MCP reads, writes and `DynBrain` delivery.
 
+mod attempt;
 pub mod cost_window;
 pub mod fly;
 mod handler;
