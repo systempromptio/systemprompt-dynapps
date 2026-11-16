@@ -8,6 +8,7 @@
 
 pub mod config;
 pub mod error;
+pub mod ids;
 pub mod paging;
 pub mod query;
 pub mod sanitize;
@@ -24,10 +25,11 @@ use tokio::sync::Mutex;
 
 pub use config::{DEFAULT_GRAPH_URL, GRAPH_URL_SECRET, GraphEndpoint, GraphLimits, http_client};
 pub use error::GraphError;
+pub use ids::GraphId;
 pub use paging::{Page, Window};
 pub use query::GraphQuery;
 pub use send::{GraphBody, GraphRequest, GraphResponse};
-pub use token::{BROKER_PATH, Broker, BrokerTokens, GraphTokens};
+pub use token::{BROKER_PATH, Broker, BrokerTokens, GraphTokens, bearer_credential};
 
 /// What a [`GraphClient`] is built from.
 pub struct GraphClientParts {

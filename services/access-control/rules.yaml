@@ -167,6 +167,20 @@ entities:
     allow:
       role: [user, developer, project_manager, admin, platform_admin, super_admin]
 
+  - entity: mcp_server/microsoft-365
+    default: closed
+    why: >-
+      The Microsoft 365 MCP server (Graph mail, calendar, files, Teams…). Every
+      tool runs as the caller's own Microsoft account through the per-user
+      Entra grant the broker hands out, so Microsoft's permissions and the
+      admitted-tenant list scope the data; this band only decides who sees the
+      server. oauth.scopes (user) in services/mcp/microsoft-365.yaml gates it a
+      second time; services/governance/config.yaml role-gates its send,
+      delete, batch, mail-rule and share tools (recorded, not refused,
+      while the tool plane is in warn mode).
+    allow:
+      role: [user, developer, project_manager, admin, platform_admin, super_admin]
+
   - entity: plugin/dynapps-engineering
     default: closed
     why: Engineering plugin; the agent-farm server and its guide skill.

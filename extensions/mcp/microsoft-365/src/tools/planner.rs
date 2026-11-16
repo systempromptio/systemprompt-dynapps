@@ -14,7 +14,7 @@ use super::graph_tool::graph_tools;
 use super::reply::{GraphItem, GraphList};
 use super::teams::{list_page, select};
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphBody, GraphClient, GraphError, GraphRequest};
+use crate::graph::{GraphBody, GraphClient, GraphError, GraphId, GraphRequest};
 
 pub const PLANNER_PLAN_FIELDS: &str = "id,title,createdDateTime,owner,createdBy,container";
 pub const PLANNER_TASK_FIELDS: &str = "id,title,planId,bucketId,assignments,priority,\
@@ -45,7 +45,7 @@ graph_tools! {
 pub struct ListPlansInput {
     #[schemars(description = "Microsoft 365 group ID that owns the plans.")]
     #[serde(default)]
-    pub group_id: String,
+    pub group_id: GraphId,
     #[schemars(description = "Roster ID (for group-less plans).")]
     #[serde(default)]
     pub roster_id: String,
@@ -73,7 +73,7 @@ pub struct CreatePlanInput {
     pub title: String,
     #[schemars(description = "Microsoft 365 group ID to own the plan.")]
     #[serde(default)]
-    pub group_id: String,
+    pub group_id: GraphId,
     #[schemars(description = "Roster ID (for group-less plans).")]
     #[serde(default)]
     pub roster_id: String,

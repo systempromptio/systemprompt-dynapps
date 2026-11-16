@@ -1,0 +1,53 @@
+# Microsoft 365 through Microsoft Graph, served by this instance as the
+# signed-in user: mail, calendar, contacts, To Do, OneDrive, SharePoint, Teams,
+# chats, meetings, Planner, OneNote, groups, users, presence and search. Tool
+# names and annotations follow the Belgian `dynapps-365` server (`d365_*`).
+#
+# Each person connects their own Microsoft 365 account on /admin/connectors.
+# Core refuses a `connector` block on an internal server, so the platform crate
+# synthesizes the Entra connector for this id (connector_oauth/entra.rs); the
+# Entra app, its tenant mode and the admitted tenants live in the secrets
+# store (docs/integrations/microsoft-365.md). Every tool call asks the
+# connector broker for the caller's own Graph token with the broker secret.
+#
+# Ships disabled: an enabled server without the Entra app's secrets offers a
+# Connect button that cannot work, and core refuses to spawn a child whose
+# granted secret is missing. Enable it once `microsoft_365_client_id`,
+# `microsoft_365_client_secret` and `microsoft_365_allowed_tenants` are set.
+#
+# `secrets`: the broker secret, and the Entra client id that Graph wants as
+# the session id of a presence the app sets (d365_set_my_presence). A local
+# simulation also grants `custom:microsoft_365_graph_url`; it is not granted
+# here because core requires every granted secret to exist.
+#
+# `toolsets: documents`: the API signs upload and download links only for a
+# server that declares it; files reach these tools as `documents_upload`
+# references and downloads are saved as the caller's documents.
+#
+# `prompt`: the tools read and change the user's mailbox, files and chats.
+# services/governance/config.yaml role-gates the send, reply, forward,
+# delete, batch, mail-rule and share tools; the tool plane runs in warn mode
+# today, so a gated call is recorded, not refused. Who may reach the server is declared in
+# services/access-control/rules.yaml (`mcp_server/microsoft-365`).
+mcp_servers:
+  microsoft-365:
+    server_type: internal
+    binary: systemprompt-mcp-microsoft-365
+    package: microsoft-365
+    port: 5013
+    enabled: false
+    tool_policy: prompt
+    display_in_web: true
+    removable: true
+    description: Microsoft 365 through Microsoft Graph — mail, calendar, contacts, To Do, OneDrive, SharePoint, Teams, meetings, Planner, OneNote and search, as the signed-in user's own account
+    oauth:
+      required: true
+      scopes:
+      - user
+      audience: mcp
+      client_id: null
+    toolsets:
+    - id: documents
+    secrets:
+    - custom:mcp_credential_broker_secret
+    - custom:microsoft_365_client_id

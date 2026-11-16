@@ -5,11 +5,11 @@
 //! A row is attributed to the signed-in caller; a refusal of a call that
 //! carried no user is attributed to the anonymous principal, like
 //! `record_mcp_access_rejected`, never to whatever user id the request
-//! context holds. A row names the file by its reference (`upload:<id>`, `blob:<hash>`,
-//! `document:<id>`, `inline`), never by its name, and a refusal by its
-//! error code, so no file name or address reaches the audit table. Actions
-//! are drawn from the set the activity timeline decodes (`created`, `used`,
-//! `imported`, `rejected`); a new word would make that read fail.
+//! context holds. A row names the file by its reference (`upload:<id>`,
+//! `blob:<hash>`, `document:<id>`, `inline`), never by its name, and a refusal
+//! by its error code, so no file name or address reaches the audit table.
+//! Actions are drawn from the set the activity timeline decodes (`created`,
+//! `used`, `imported`, `rejected`); a new word would make that read fail.
 
 use std::fmt;
 
@@ -17,8 +17,8 @@ use async_trait::async_trait;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::{McpServerId, UserId};
 
-use crate::{AuditMetadata, resolve_anonymous_principal};
 use crate::repositories::{McpAccessParams, insert_mcp_access};
+use crate::{AuditMetadata, resolve_anonymous_principal};
 
 const FILE_ENTITY: &str = "file";
 
@@ -80,7 +80,8 @@ impl FileAuditEvent {
     }
 }
 
-/// Where file audit events are written.
+/// Where file audit events are written. Held as `dyn FileAuditSink` so tests
+/// can record in memory instead of `user_activity`.
 #[async_trait]
 pub trait FileAuditSink: Send + Sync + fmt::Debug {
     async fn record(&self, event: &FileAuditEvent);

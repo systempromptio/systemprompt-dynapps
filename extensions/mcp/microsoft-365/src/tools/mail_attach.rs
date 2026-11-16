@@ -17,7 +17,7 @@ use systemprompt_mcp_shared::files::{DownloadedFile, FileCall, FileRef, McpFiles
 
 use super::reply::GraphItem;
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphClient, GraphError, GraphQuery};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery};
 
 // Why: Graph's limit for a file attachment POSTed whole; larger ones need an
 // upload session.
@@ -45,7 +45,7 @@ fn default_mime() -> String {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct AttachmentIdInput {
     #[schemars(description = "The unique ID of the message.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "The unique ID of the attachment.")]
     pub attachment_id: String,
 }
@@ -53,7 +53,7 @@ pub struct AttachmentIdInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct AddAttachmentInput {
     #[schemars(description = "The draft message ID to attach to.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "Display name of the attachment.")]
     pub filename: String,
     #[schemars(
@@ -76,7 +76,7 @@ pub struct AddAttachmentInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct UploadSessionInput {
     #[schemars(description = "The draft message ID to attach to.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "Display name of the attachment.")]
     pub filename: String,
     #[schemars(description = "Total file size in bytes.")]

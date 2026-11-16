@@ -12,7 +12,7 @@ use super::users::USER_FIELDS;
 use crate::graph::sanitize::{
     DEFAULT_MAX_TOP, clamp_skip, clamp_top, sanitize_search, validate_id,
 };
-use crate::graph::{GraphClient, GraphError, GraphQuery, Window};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery, Window};
 
 pub const GROUP_FIELDS: &str = "id,displayName,description,mail,groupTypes,visibility";
 
@@ -58,13 +58,13 @@ pub struct ListGroupsInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct GroupIdInput {
     #[schemars(description = "The group ID.")]
-    pub group_id: String,
+    pub group_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct GroupSkipInput {
     #[schemars(description = "The group ID.")]
-    pub group_id: String,
+    pub group_id: GraphId,
     #[schemars(description = "Number of items to skip for pagination (default 0).")]
     #[serde(default)]
     pub skip: i64,
@@ -73,7 +73,7 @@ pub struct GroupSkipInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct GroupConversationsInput {
     #[schemars(description = "The group ID.")]
-    pub group_id: String,
+    pub group_id: GraphId,
     #[schemars(description = "Maximum number of conversations to return (1-50, default 25).")]
     #[serde(default = "default_top")]
     pub top: i64,
@@ -85,7 +85,7 @@ pub struct GroupConversationsInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct GroupThreadsInput {
     #[schemars(description = "The group ID.")]
-    pub group_id: String,
+    pub group_id: GraphId,
     #[schemars(description = "The conversation ID.")]
     pub conversation_id: String,
     #[schemars(description = "Maximum number of threads to return (1-50, default 25).")]
@@ -96,8 +96,8 @@ pub struct GroupThreadsInput {
     pub skip: i64,
 }
 
-fn group_path(group_id: &str) -> Result<String, GraphError> {
-    let group = validate_id(group_id, "group_id")?;
+fn group_path(group: &str) -> Result<String, GraphError> {
+    let group = validate_id(group, "group_id")?;
     Ok(format!("/groups/{group}"))
 }
 

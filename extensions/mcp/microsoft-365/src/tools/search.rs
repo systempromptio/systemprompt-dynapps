@@ -131,7 +131,7 @@ fn truthy(value: &Value) -> bool {
 
 // Why: Graph's `$batch` needs a `Content-Type` on every request carrying a
 // body; JSON unless the caller's headers name another.
-fn batch_item(index: usize, request: &Map<String, Value>) -> Result<Value, String> {
+fn batch_item(index: usize, request: &Map<String, Value>) -> Result<Value, GraphItem> {
     let id = request
         .get("id")
         .filter(|id| truthy(id))
@@ -142,10 +142,10 @@ fn batch_item(index: usize, request: &Map<String, Value>) -> Result<Value, Strin
         .to_uppercase();
     let url = match request.get("url") {
         Some(Value::String(url)) if !url.is_empty() => url.clone(),
-        _ => return Err(format!("Request {id} has no 'url'")),
+        _ => return Err(noted(format!("Request {id} has no 'url'"))),
     };
     if !BATCH_METHODS.contains(&method.as_str()) {
-        return Err(format!("Request {id} method '{method}' not allowed"));
+        return Err(noted(format!("Request {id} method '{method}' not allowed")));
     }
     let mut item = Map::new();
     item.insert("id".to_owned(), Value::String(id));
@@ -188,7 +188,7 @@ pub async fn batch(graph: &GraphClient, input: BatchInput) -> Result<GraphItem, 
     for (index, request) in input.requests.iter().enumerate() {
         match batch_item(index, request) {
             Ok(item) => items.push(item),
-            Err(refusal) => return Ok(noted(refusal)),
+            Err(refusal) => return Ok(refusal),
         }
     }
     let data = graph

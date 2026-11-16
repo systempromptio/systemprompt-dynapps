@@ -19,7 +19,7 @@ use crate::graph::sanitize::{
     DEFAULT_MAX_TOP, clamp_skip, clamp_top, sanitize_odata_string, sanitize_search,
     sanitize_select, validate_id,
 };
-use crate::graph::{GraphClient, GraphError, GraphQuery, Window};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery, Window};
 
 pub const CALENDAR_FIELDS: &str = "id,name,color,isDefaultCalendar,canEdit,owner";
 pub const EVENT_LIST_FIELDS: &str = "id,subject,start,end,location,organizer,isAllDay,\
@@ -122,7 +122,7 @@ pub struct ListCalendarViewInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ListSharedCalendarEventsInput {
     #[schemars(description = "User ID or UPN of the calendar's owner.")]
-    pub user_id: String,
+    pub user_id: GraphId,
     #[schemars(description = "Events starting on or after this ISO 8601 date or datetime.")]
     #[serde(default)]
     pub start_date: String,

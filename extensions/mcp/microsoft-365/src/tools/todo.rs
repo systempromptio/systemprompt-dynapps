@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 use super::graph_tool::graph_tools;
 use super::reply::{GraphItem, GraphList};
 use crate::graph::sanitize::{DEFAULT_MAX_TOP, clamp_skip, clamp_top, validate_id};
-use crate::graph::{GraphClient, GraphError, GraphQuery, Window};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery, Window};
 
 const LISTS: &str = "/me/todo/lists";
 
@@ -70,7 +70,7 @@ pub struct TodoTaskIdInput {
     #[schemars(description = "The To Do list ID.")]
     pub list_id: String,
     #[schemars(description = "The task ID.")]
-    pub task_id: String,
+    pub task_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -95,7 +95,7 @@ pub struct UpdateTodoTaskInput {
     #[schemars(description = "The To Do list ID.")]
     pub list_id: String,
     #[schemars(description = "The task ID to update.")]
-    pub task_id: String,
+    pub task_id: GraphId,
     #[schemars(description = "New task title.")]
     #[serde(default)]
     #[schemars(with = "String")]
@@ -128,9 +128,9 @@ fn tasks_path(list_id: &str) -> Result<String, GraphError> {
     Ok(format!("{LISTS}/{list}/tasks"))
 }
 
-fn task_path(list_id: &str, task_id: &str) -> Result<String, GraphError> {
+fn task_path(list_id: &str, task: &str) -> Result<String, GraphError> {
     let tasks = tasks_path(list_id)?;
-    let task = validate_id(task_id, "task_id")?;
+    let task = validate_id(task, "task_id")?;
     Ok(format!("{tasks}/{task}"))
 }
 

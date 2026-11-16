@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use super::mail_read::MessageIdInput;
 use super::reply::GraphItem;
 use crate::graph::sanitize::{validate_folder, validate_id};
-use crate::graph::{GraphClient, GraphError};
+use crate::graph::{GraphClient, GraphError, GraphId};
 
 pub const SEND_MAIL_DESCRIPTION: &str = "Send an email message from the user's mailbox.";
 pub const REPLY_MAIL_DESCRIPTION: &str =
@@ -59,7 +59,7 @@ pub struct SendMailInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ReplyMailInput {
     #[schemars(description = "The unique ID of the message to reply to.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "The reply body content (plain text).")]
     pub body: String,
     #[schemars(description = "If true, reply to all recipients (default false).")]
@@ -70,7 +70,7 @@ pub struct ReplyMailInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ForwardMailInput {
     #[schemars(description = "The unique ID of the message to forward.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "Recipient email addresses to forward to.")]
     pub to: Vec<String>,
     #[schemars(description = "Optional comment above the forwarded message.")]
@@ -97,7 +97,7 @@ pub struct CreateDraftInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct UpdateMailInput {
     #[schemars(description = "The unique ID of the message to update.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "True marks the message read, false unread; omitted leaves it.")]
     #[serde(default)]
     #[schemars(with = "bool")]
@@ -117,7 +117,7 @@ pub struct UpdateMailInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct MoveMailInput {
     #[schemars(description = "The unique ID of the message to move.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(
         description = "Destination folder: \"inbox\", \"archive\", \"deleteditems\", \"drafts\", \"junkemail\", \"sentitems\" or a folder ID."
     )]

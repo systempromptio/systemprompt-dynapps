@@ -47,7 +47,9 @@ pub enum FilesError {
          complete_url not yet posted, do that; if completion is under way, retry shortly"
     )]
     NotReady { upload: DocumentUploadId },
-    #[error("{what} is no longer available (expired, aborted or refused); call {upload_tool} for a new upload")]
+    #[error(
+        "{what} is no longer available (expired, aborted or refused); call {upload_tool} for a new upload"
+    )]
     Expired { what: String, upload_tool: String },
     #[error("a file named {name} already exists")]
     NameTaken { name: String },

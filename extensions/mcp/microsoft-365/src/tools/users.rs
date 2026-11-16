@@ -9,7 +9,7 @@ use super::groups::search_directory;
 use super::reply::{GraphItem, GraphList};
 use super::teams::{list_page, select};
 use crate::graph::sanitize::{DEFAULT_MAX_TOP, clamp_skip, clamp_top, validate_id};
-use crate::graph::{GraphClient, GraphError, Window};
+use crate::graph::{GraphClient, GraphError, GraphId, Window};
 
 pub const USER_FIELDS: &str =
     "id,displayName,mail,userPrincipalName,jobTitle,department,officeLocation";
@@ -55,7 +55,7 @@ pub struct SearchUsersInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct UserIdInput {
     #[schemars(description = "The user ID or userPrincipalName.")]
-    pub user_id: String,
+    pub user_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -65,7 +65,7 @@ pub struct DirectReportsInput {
     )]
     #[serde(default)]
     #[schemars(with = "String")]
-    pub user_id: Option<String>,
+    pub user_id: Option<GraphId>,
     #[schemars(description = "Number of items to skip for pagination (default 0).")]
     #[serde(default)]
     pub skip: i64,

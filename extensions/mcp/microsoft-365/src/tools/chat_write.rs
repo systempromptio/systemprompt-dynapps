@@ -16,7 +16,7 @@ use super::reply::GraphItem;
 use super::teams::select;
 use super::teams_write::{message_body, noted};
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphClient, GraphError};
+use crate::graph::{GraphClient, GraphError, GraphId};
 
 const NO_CALLER: &str = "Could not determine caller id from /me";
 
@@ -57,7 +57,7 @@ pub struct SendChatMessageInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct OneOnOneChatInput {
     #[schemars(description = "The Azure AD user ID of the other participant.")]
-    pub user_id: String,
+    pub user_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -74,7 +74,7 @@ pub struct ChatMessageIdInput {
     #[schemars(description = "The chat ID.")]
     pub chat_id: String,
     #[schemars(description = "The ID of the message.")]
-    pub message_id: String,
+    pub message_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -90,7 +90,7 @@ pub struct ChatReactionInput {
     #[schemars(description = "The chat ID.")]
     pub chat_id: String,
     #[schemars(description = "The message ID.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "Reaction to set: like, angry, sad, laugh, heart or surprised.")]
     pub reaction_type: String,
 }

@@ -34,6 +34,16 @@
 # the same way, with no restart. The role is declared in
 # services/access-control/rules.yaml.
 #
+# The internal Microsoft 365 server's tools that send, reply, forward or
+# delete as the user, `d365_batch` (whose requests may carry any of those,
+# DELETE included), and the two that move data out without sending —
+# `d365_create_mail_rule` (a forward or redirect rule) and `d365_share_file`
+# (a sharing link) — pass only for admin or a `knowledge_worker`, the
+# business role that holds the Cowork workspace; its read tools pass for
+# everyone entitled to the server. The same role is exempt from the delete
+# blocklist on that prefix only. Only the gateway name is listed: the server
+# is in no plugin, so no `mcp__plugin_…` form reaches it yet.
+#
 # Warn mode is NOT the same as `enabled: false`. A disabled stage does not run
 # and writes nothing. An enabled stage always contributes evidence; a confirmed
 # match writes `decision = 'warn'`, while an entropy-only observation passes.
@@ -139,6 +149,9 @@ governance:
     - prefix: mcp__plugin_dynapps-portal_dynapps-odoo__
       contains: [write, create, unlink, execute, post, send]
       roles: [odoo_writer]
+    - prefix: mcp__microsoft-365__
+      contains: [send, reply, forward, delete, batch, create_mail_rule, share_file]
+      roles: [knowledge_worker]
   - id: tool_blocklist
     enabled: true
     patterns:
@@ -152,6 +165,8 @@ governance:
       roles: [odoo_writer]
     - prefix: mcp__plugin_dynapps-portal_dynapps-odoo__
       roles: [odoo_writer]
+    - prefix: mcp__microsoft-365__
+      roles: [knowledge_worker]
   - id: rate_limit
     enabled: true
     requests_per_window: 300

@@ -157,9 +157,8 @@ impl McpFiles {
         owner: &UserId,
         given: &str,
     ) -> Result<UploadSlot, FilesError> {
-        let id = DocumentUploadId::try_new(given).map_err(|_invalid| {
-            FilesError::InvalidRef("upload_id is not a valid id".to_owned())
-        })?;
+        let id = DocumentUploadId::try_new(given)
+            .map_err(|_invalid| FilesError::InvalidRef("upload_id is not a valid id".to_owned()))?;
         let slot = self.store.find_upload(ctx, &id).await?;
         let label = format!("upload {id}");
         ensure_owner(owner, &slot.owner, &label)?;

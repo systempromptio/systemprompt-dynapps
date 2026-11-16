@@ -13,7 +13,7 @@ use super::teams::select;
 use super::teams_write::noted;
 use crate::graph::config::APP_ID_SECRET;
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphClient, GraphError, GraphQuery};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery};
 
 pub const PRESENCE_FIELDS: &str = "id,availability,activity,statusMessage";
 
@@ -39,7 +39,7 @@ pub struct MyPresenceInput {}
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct UserPresenceInput {
     #[schemars(description = "The Azure AD user ID.")]
-    pub user_id: String,
+    pub user_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]

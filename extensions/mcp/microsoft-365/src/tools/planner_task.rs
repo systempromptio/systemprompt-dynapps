@@ -12,7 +12,7 @@ use super::planner::{PLANNER_TASK_FIELDS, delete_versioned, patch_versioned};
 use super::reply::{GraphItem, GraphList};
 use super::teams::{list_page, select};
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphClient, GraphError};
+use crate::graph::{GraphClient, GraphError, GraphId};
 
 const LIST_TASKS: &str = "List Planner tasks in a plan or bucket. Exactly one of `plan_id` \
     or `bucket_id` must be given. Page with `top` (1-50) and `skip`.";
@@ -53,7 +53,7 @@ pub struct ListTasksInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct TaskIdInput {
     #[schemars(description = "The task ID.")]
-    pub task_id: String,
+    pub task_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -87,7 +87,7 @@ pub struct CreateTaskInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct UpdateTaskInput {
     #[schemars(description = "The task ID.")]
-    pub task_id: String,
+    pub task_id: GraphId,
     #[schemars(description = "The task's `@odata.etag` from a prior get (sent as If-Match).")]
     pub etag: String,
     #[schemars(description = "New title.")]
@@ -125,7 +125,7 @@ pub struct UpdateTaskInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct DeleteTaskInput {
     #[schemars(description = "The task ID.")]
-    pub task_id: String,
+    pub task_id: GraphId,
     #[schemars(description = "The task's `@odata.etag` from a prior get (sent as If-Match).")]
     pub etag: String,
 }
@@ -140,8 +140,8 @@ fn assignments(user_ids: &[String]) -> Map<String, Value> {
         .collect()
 }
 
-pub(super) fn task_path(task_id: &str) -> Result<String, GraphError> {
-    let task = validate_id(task_id, "task_id")?;
+pub(super) fn task_path(task: &str) -> Result<String, GraphError> {
+    let task = validate_id(task, "task_id")?;
     Ok(format!("/planner/tasks/{task}"))
 }
 

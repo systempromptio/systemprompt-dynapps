@@ -166,7 +166,8 @@ impl FileRef {
             let revision = match self.revision_id.trim() {
                 "" => None,
                 given => Some(
-                    DocumentRevisionId::try_new(given).map_err(|_invalid| invalid("revision_id"))?,
+                    DocumentRevisionId::try_new(given)
+                        .map_err(|_invalid| invalid("revision_id"))?,
                 ),
             };
             return Ok(FileSource::Stored(StoredRef::Document { id, revision }));

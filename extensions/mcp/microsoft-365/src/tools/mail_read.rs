@@ -11,7 +11,7 @@ use super::reply::{GraphItem, GraphList};
 use crate::graph::sanitize::{
     DEFAULT_MAX_TOP, clamp_skip, clamp_top, sanitize_search, validate_folder, validate_id,
 };
-use crate::graph::{GraphClient, GraphError, GraphQuery, Window};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery, Window};
 
 pub const MAIL_DETAIL_FIELDS: &str = "id,subject,from,toRecipients,ccRecipients,bccRecipients,\
     receivedDateTime,body,isRead,hasAttachments,importance,flag,categories";
@@ -46,7 +46,7 @@ fn default_folder() -> String {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct MessageIdInput {
     #[schemars(description = "The unique ID of the message.")]
-    pub message_id: String,
+    pub message_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -71,7 +71,7 @@ pub struct SkipInput {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ListAttachmentsInput {
     #[schemars(description = "The unique ID of the message.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "Number of items to skip for paging (default 0).")]
     #[serde(default)]
     pub skip: i64,
@@ -82,7 +82,7 @@ pub struct SharedMailboxInput {
     #[schemars(
         description = "User ID or email address of the shared mailbox (e.g. \"shared@company.com\")."
     )]
-    pub user_id: String,
+    pub user_id: GraphId,
     #[schemars(description = "Mail folder to list (default \"inbox\").")]
     #[serde(default = "default_folder")]
     pub folder: String,

@@ -422,6 +422,8 @@ mod farm_mcp_tools;
 
 #[cfg(test)]
 mod governance_dynapps_odoo_gate;
+#[cfg(test)]
+mod governance_microsoft_365_gate;
 
 #[cfg(test)]
 mod farm_assertions;

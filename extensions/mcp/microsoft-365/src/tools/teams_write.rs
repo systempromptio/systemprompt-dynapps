@@ -13,7 +13,7 @@ use super::graph_tool::graph_tools;
 use super::reply::GraphItem;
 use super::teams::{channel_message_path, channel_path};
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphClient, GraphError};
+use crate::graph::{GraphClient, GraphError, GraphId};
 
 const SEND_CHANNEL_MESSAGE: &str =
     "Send a message to a channel, as plain text or (with `is_html`) HTML.";
@@ -56,7 +56,7 @@ pub struct ReplyChannelMessageInput {
     #[schemars(description = "The channel ID.")]
     pub channel_id: String,
     #[schemars(description = "The parent message ID to reply to.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "The reply content.")]
     pub body: String,
     #[schemars(description = "If true, send as HTML; otherwise plain text.")]

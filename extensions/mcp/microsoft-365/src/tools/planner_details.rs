@@ -12,7 +12,7 @@ use super::graph_tool::graph_tools;
 use super::planner::patch_versioned;
 use super::planner_task::{TaskIdInput, put, task_path};
 use super::reply::GraphItem;
-use crate::graph::{GraphClient, GraphError, GraphQuery};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery};
 
 const GET_DETAILS: &str = "Get the details of a Planner task (description, checklist, \
     references, preview type). The reply carries the details' own `@odata.etag`.";
@@ -33,7 +33,7 @@ graph_tools! {
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct UpdateDetailsInput {
     #[schemars(description = "The task ID.")]
-    pub task_id: String,
+    pub task_id: GraphId,
     #[schemars(description = "`@odata.etag` of the details object (not of the task).")]
     pub etag: String,
     #[schemars(description = "New task description (free text).")]

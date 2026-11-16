@@ -11,7 +11,7 @@ use super::planner::delete_versioned;
 use super::reply::{GraphItem, GraphList};
 use super::teams::list_page;
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphClient, GraphError, GraphQuery};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery};
 
 const CREATE_ROSTER: &str = "Create a Planner roster. Rosters hold group-less plans and carry \
     their own member list; the signed-in user becomes its first member.";
@@ -58,7 +58,7 @@ pub struct AddRosterMemberInput {
     #[schemars(description = "The roster ID.")]
     pub roster_id: String,
     #[schemars(description = "Entra object ID of the user to add.")]
-    pub user_id: String,
+    pub user_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]

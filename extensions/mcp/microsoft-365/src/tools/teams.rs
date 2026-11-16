@@ -11,7 +11,7 @@ use serde::Deserialize;
 use super::graph_tool::graph_tools;
 use super::reply::{GraphItem, GraphList};
 use crate::graph::sanitize::{DEFAULT_MAX_TOP, clamp_skip, clamp_top, validate_id};
-use crate::graph::{GraphClient, GraphError, GraphQuery, Window};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery, Window};
 
 pub const TEAM_FIELDS: &str = "id,displayName,description";
 pub const CHANNEL_FIELDS: &str = "id,displayName,description,membershipType";
@@ -101,7 +101,7 @@ pub struct ChannelMessageIdInput {
     #[schemars(description = "The channel ID.")]
     pub channel_id: String,
     #[schemars(description = "The message ID.")]
-    pub message_id: String,
+    pub message_id: GraphId,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -111,7 +111,7 @@ pub struct ChannelRepliesInput {
     #[schemars(description = "The channel ID.")]
     pub channel_id: String,
     #[schemars(description = "The parent message ID.")]
-    pub message_id: String,
+    pub message_id: GraphId,
     #[schemars(description = "Number of items to skip for pagination (default 0).")]
     #[serde(default)]
     pub skip: i64,
@@ -131,10 +131,10 @@ pub(super) fn channel_path(team_id: &str, channel_id: &str) -> Result<String, Gr
 pub(super) fn channel_message_path(
     team_id: &str,
     channel_id: &str,
-    message_id: &str,
+    message: &str,
 ) -> Result<String, GraphError> {
     let channel = channel_path(team_id, channel_id)?;
-    let message = validate_id(message_id, "message_id")?;
+    let message = validate_id(message, "message_id")?;
     Ok(format!("{channel}/messages/{message}"))
 }
 

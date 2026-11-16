@@ -64,6 +64,8 @@ mod m365_calendar_list;
 #[cfg(test)]
 mod m365_contacts;
 #[cfg(test)]
+mod m365_core_broker;
+#[cfg(test)]
 mod m365_core_graph;
 #[cfg(test)]
 mod m365_core_mail;

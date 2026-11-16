@@ -20,6 +20,8 @@ use super::GraphError;
 
 pub const BROKER_PATH: &str = "/api/public/connectors/microsoft-365/token";
 
+/// Held as `dyn GraphTokens` so a call takes the broker in production and a
+/// fixed token in tests.
 #[async_trait]
 pub trait GraphTokens: Send + Sync + fmt::Debug {
     async fn access_token(&self, stale: Option<&str>) -> Result<String, GraphError>;
@@ -105,13 +107,34 @@ impl GraphTokens for BrokerTokens {
                     "secret `{BROKER_SECRET_KEY}` is not granted to this server"
                 ))
             })?;
-        Ok(fetch_external_bearer(
+        let authorization = fetch_external_bearer(
             &self.broker.accessor,
             &self.bearer,
             secret.expose(),
             &self.broker.server,
             self.purpose.as_deref(),
         )
-        .await?)
+        .await?;
+        Ok(bearer_credential(&authorization)?.to_owned())
     }
+}
+
+// Why: the broker answers with the whole `Authorization` value core's
+// external-server proxy sends as is (`Bearer <token>`); the Graph client adds
+// its own scheme, so only the credential is kept, and anything but a bearer
+// credential is refused rather than forwarded to Graph.
+pub fn bearer_credential(authorization: &str) -> Result<&str, GraphError> {
+    let value = authorization.trim();
+    let credential = match value.split_once(char::is_whitespace) {
+        Some((scheme, credential)) if scheme.eq_ignore_ascii_case("bearer") => credential.trim(),
+        Some(_) => "",
+        None if value.eq_ignore_ascii_case("bearer") => "",
+        None => value,
+    };
+    if credential.is_empty() || credential.contains(char::is_whitespace) {
+        return Err(GraphError::Config(
+            "the connector broker returned no bearer credential".to_owned(),
+        ));
+    }
+    Ok(credential)
 }
