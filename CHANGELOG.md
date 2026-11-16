@@ -19,6 +19,16 @@ Conventions (strict — hold every entry to them):
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
 
+## 0.81.1 — 2026-11-16
+
+### Changed
+
+- **Built on systemprompt-core 0.81.1.** Every core crate pin, `bridge/CORE_REF` (`v0.81.1`) and the three lockfiles move to the published 0.81.1 release, and the bridge crate follows to 0.81.1. Core 0.81.1 only changes services `${VAR}` interpolation: a disk hook's `command` and a skill's carried-through `frontmatter` are never rewritten, and a placeholder naming a variable the client expands (`CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_SKILL_DIR`, `CLAUDE_PROJECT_DIR`) is left as written in every field instead of failing the load as unset. This repo's `services/` tree uses none of those (its only placeholder is `advertiseHost` in `services/config/files.yaml`), so it loads exactly as before. Core 0.81.1 adds no migrations; the schema ladder gains its 0.81.1 rung.
+
+### Fixed
+
+- **ammonia 4.2.5 (RUSTSEC-2026-0533).** `Cargo.lock` and `tests/Cargo.lock` move `ammonia` from 4.2.4 to 4.2.5, which fixes a mutation-XSS bypass in HTML sanitisation; the advisory failed the Supply chain gate on every branch. `bridge/Cargo.lock` does not resolve `ammonia`.
+
 ## 0.81.0 — 2026-11-12
 
 ### Added
