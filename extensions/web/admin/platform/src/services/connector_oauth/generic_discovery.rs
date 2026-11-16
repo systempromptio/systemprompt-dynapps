@@ -1,5 +1,6 @@
 //! Trusted OAuth discovery and bounded metadata parsing.
 use super::Provider;
+use super::lenient_discovery::{advertised_metadata_document, resource_matches};
 use serde::Deserialize;
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
@@ -147,6 +148,7 @@ pub(super) async fn metadata(
     http: &reqwest::Client,
     provider: &Provider,
 ) -> AdminResult<AuthorizationMetadata> {
+    let mode = services.connector_discovery().mode(provider.slug());
     let resource_url =
         trusted_endpoint(services, provider, &provider.endpoint(&services.config()))?;
     let mut discovery = resource_url.clone();
@@ -162,7 +164,7 @@ pub(super) async fn metadata(
             discovery.set_path("/.well-known/oauth-protected-resource");
             read(services, http, provider, discovery.as_str()).await?
         };
-    if Url::parse(&resource.resource).ok().as_ref() != Some(&resource_url) {
+    if !resource_matches(&resource.resource, &resource_url, mode) {
         return Err(AdminError::Unavailable(
             "OAuth protected resource mismatch".into(),
         ));
@@ -172,22 +174,14 @@ pub(super) async fn metadata(
         .first()
         .ok_or_else(|| AdminError::Unavailable("OAuth issuer missing".into()))?;
     let issuer_url = trusted_endpoint(services, provider, issuer)?;
-    let mut endpoint = issuer_url.clone();
-    endpoint.set_path(&format!(
-        "/.well-known/oauth-authorization-server{}",
-        issuer_url.path().trim_end_matches('/')
-    ));
-    endpoint.set_query(None);
-    let result: AuthorizationMetadata =
-        if let Ok(value) = read(services, http, provider, endpoint.as_str()).await {
-            value
-        } else {
-            endpoint.set_path(&format!(
-                "{}/.well-known/openid-configuration",
-                issuer_url.path().trim_end_matches('/')
-            ));
-            read(services, http, provider, endpoint.as_str()).await?
-        };
+    let document = advertised_metadata_document(&issuer_url, &resource_url, mode);
+    let result: AuthorizationMetadata = match &document {
+        Some(document) => read(services, http, provider, document.url.as_str()).await?,
+        None => issuer_metadata(services, http, provider, &issuer_url).await?,
+    };
+    let issuer = document
+        .as_ref()
+        .map_or(issuer.as_str(), |d| d.issuer.as_str());
     if !same_issuer(&result.issuer, issuer)
         || !result
             .code_challenge_methods_supported
@@ -201,4 +195,26 @@ pub(super) async fn metadata(
     trusted_endpoint(services, provider, &result.authorization_endpoint)?;
     trusted_endpoint(services, provider, &result.token_endpoint)?;
     Ok(result)
+}
+
+async fn issuer_metadata(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    http: &reqwest::Client,
+    provider: &Provider,
+    issuer_url: &Url,
+) -> AdminResult<AuthorizationMetadata> {
+    let mut endpoint = issuer_url.clone();
+    endpoint.set_path(&format!(
+        "/.well-known/oauth-authorization-server{}",
+        issuer_url.path().trim_end_matches('/')
+    ));
+    endpoint.set_query(None);
+    if let Ok(value) = read(services, http, provider, endpoint.as_str()).await {
+        return Ok(value);
+    }
+    endpoint.set_path(&format!(
+        "{}/.well-known/openid-configuration",
+        issuer_url.path().trim_end_matches('/')
+    ));
+    read(services, http, provider, endpoint.as_str()).await
 }

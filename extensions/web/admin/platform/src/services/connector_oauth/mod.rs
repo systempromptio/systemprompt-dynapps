@@ -12,6 +12,7 @@ pub mod config;
 pub mod failure;
 pub mod generic;
 mod generic_discovery;
+mod lenient_discovery;
 mod resolve;
 mod response;
 pub mod token_plan;

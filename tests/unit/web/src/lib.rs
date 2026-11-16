@@ -357,6 +357,8 @@ mod connector_cards;
 mod connector_oauth;
 #[cfg(test)]
 mod connector_oauth_classify;
+#[cfg(test)]
+mod connector_oauth_lenient;
 
 #[cfg(test)]
 mod authorization_failures;

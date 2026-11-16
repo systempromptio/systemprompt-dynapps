@@ -19,7 +19,13 @@ Conventions (strict — hold every entry to them):
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
 
+## Unreleased
+
 ## 0.81.1 — 2026-11-16
+
+### Added
+
+- **Per-connector lenient OAuth discovery.** `services/web/config/connectors.yaml` (new, extension-owned; core's `connector:` block rejects unknown keys) sets `discovery: strict | lenient` per MCP server id. `lenient` additionally accepts, on the endpoint's own origin only, protected resource metadata whose `resource` is the bare origin and an `authorization_servers` entry that is the metadata document URL (`/.well-known/oauth-authorization-server` or `/.well-known/openid-configuration`). Issuer match, PKCE S256 and trusted endpoint origins are enforced as in `strict`. A missing file or an unlisted server means `strict`; a file that does not parse is logged at boot and leaves every connector strict. The file is read at boot. Needed for servers such as dynapps-365, which strict discovery rejects with "OAuth protected resource mismatch". See `docs/CONFIGURED-CONNECTORS.md`.
 
 ### Changed
 
