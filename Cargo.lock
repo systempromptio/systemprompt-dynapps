@@ -7665,13 +7665,19 @@ dependencies = [
 name = "systemprompt-mcp-shared"
 version = "0.81.0"
 dependencies = [
+ "async-trait",
  "axum",
+ "base64 0.22.1",
+ "chrono",
+ "futures-util",
  "jsonschema 0.60.0",
  "rmcp",
+ "schemars 1.2.3",
  "serde",
  "serde_json",
  "sqlx",
  "systemprompt",
+ "thiserror 2.0.21",
  "tracing",
 ]
 

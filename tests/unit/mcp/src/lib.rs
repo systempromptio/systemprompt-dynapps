@@ -16,11 +16,20 @@
 //!   the fields its dashboard artifact reads
 //! - the `documents` server's tool surface and its manifest/services yaml
 //! - the issue report tools on the `systemprompt` server and their config
+//! - `systemprompt-mcp-shared`'s file layer: `FileRef` parsing and schema,
+//!   the inline limit, name and MIME checks, and `McpFiles` ownership,
+//!   expiry, size limits and audit over an in-memory store
 
 #[cfg(test)]
 mod access_policy;
 #[cfg(test)]
 mod audit_metadata;
+#[cfg(test)]
+mod files_refs;
+#[cfg(test)]
+mod files_service;
+#[cfg(test)]
+mod files_support;
 #[cfg(test)]
 mod filter_hallucinated_args;
 #[cfg(test)]
