@@ -72,4 +72,24 @@
 
 .sp-ws--slides .sp-ws__present:hover { background: var(--sp-office-slides-tint); }
 
+.sp-ws__canvas:has(> .sp-doc-rendered__frame) { grid-template-rows: auto minmax(0, 1fr); }
+
+.sp-doc-rendered__bar {
+  display: flex;
+  gap: var(--sp-space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-space-1) var(--sp-space-3);
+  background: var(--sp-bg-surface);
+  border-block-end: 1px solid var(--sp-border-subtle);
+}
+
+.sp-doc-rendered__frame {
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 60vh;
+  border: 0;
+  background: var(--sp-doc-paper);
+}
+
 }

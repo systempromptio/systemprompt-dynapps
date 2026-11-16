@@ -91,7 +91,11 @@ const toggleComments = (root) => {
   toggleDrawer(root, 'comments', open);
 };
 
-const present = (root) => root.querySelector('[data-slot="ws-editor"]').requestFullscreen?.();
+const canPresent = (ctx) => isDeck(ctx) || ctx.doc?.format === 'html';
+
+// The mounted editor owns what presenting means for its format: the deck
+// editor opens its slide show, the rendered HTML page goes full screen.
+const present = (root) => root.dispatchEvent(new CustomEvent('ws:present'));
 
 [
   { id: 'rename', label: 'Rename', menu: true, when: canEdit, run: rename },
@@ -109,6 +113,6 @@ const present = (root) => root.querySelector('[data-slot="ws-editor"]').requestF
   { id: 'blocks', label: 'Block editor', menu: true, run: (root) => go(root.dataset.blocksUrl) },
   { id: 'trash', label: 'Move to trash', menu: true, when: isOwner, run: trash },
   { id: 'comments', label: 'Show comments', run: toggleComments },
-  { id: 'present', label: 'Present', when: (ctx) => DECKS.has(ctx.doc?.format), run: present },
+  { id: 'present', label: 'Present', when: canPresent, run: present },
   { id: 'home', label: 'Back to Drive', run: (root) => go(root.dataset.baseUrl) },
 ].forEach((command) => registerCommand(command));

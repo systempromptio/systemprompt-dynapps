@@ -18,6 +18,38 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
+## Unreleased
+
+## 0.82.0 — 2026-11-16
+
+### Added
+
+- **An HTML document opens as the page its author designed.** The Drive workspace shows an `.html` document in a sandboxed frame loaded from core's `GET /api/v1/documents/{id}/rendered` (`storage/files/js/workspace/doc/rendered.js`), with its own CSS, fonts and images, instead of reducing it to the rich-text schema. The frame carries no same origin, so the file cannot reach the session, cookies or API. An **Edit** switch (edit access only) opens the rich-text editor beside it and switching back reloads the page. Scripts and `https:` assets load only when the profile sets `files.documents.renderedHtml.scripts` and `files.documents.renderedHtml.remoteAssets`; both are off by default. Needs systemprompt-core 0.82.0.
+- **Present works for an HTML document.** The toolbar's Present puts the rendered page full screen.
+
+### Changed
+
+- **systemprompt-core 0.82.0.** Every `systemprompt*` requirement in `Cargo.toml` and `tests/Cargo.toml` moves from 0.81.1 to 0.82.0 and resolves from crates.io; only the core crates move in the three lockfiles. The `[patch.crates-io]` blocks stay commented out and `bridge/CORE_REF` names `v0.82.0`. Core 0.82.0 adds database migration `009` (`schema_trigger_digests`), and the 0.82.0 schema rung is `tests/fixtures/schema/release-baseline-0.82.0.sql`.
+- **An artifact resource is read as the caller.** The `systemprompt` MCP server authenticates a `resources/read` of `ui://<server>/artifact/<id>` and passes the caller to core, which answers only the user the artifact was stored for; any other caller receives the same answer as for an unknown artifact (`extensions/mcp/systemprompt/src/server/mod.rs`).
+
+### Fixed
+
+- **Choosing a heading in the outline scrolls the document to it.** The doc editor (HTML, Markdown, Word, OpenDocument text) answers the rail's `ws:reveal` and scrolls to the block with that id, at any depth; before, only decks and the comments pane answered it.
+- **The toolbar's Present opens the slide show.** It starts the same presentation as the filmstrip's Present, from the current slide; before, it only asked for full screen on the editor canvas. The command announces `ws:present` and the mounted editor decides what presenting means.
+
+## 0.81.1 — 2026-11-16
+
+### Added
+
+- **Per-connector lenient OAuth discovery.** `services/web/config/connectors.yaml` (new, extension-owned; core's `connector:` block rejects unknown keys) sets `discovery: strict | lenient` per MCP server id. `lenient` additionally accepts, on the endpoint's own origin only, protected resource metadata whose `resource` is the bare origin and an `authorization_servers` entry that is the metadata document URL (`/.well-known/oauth-authorization-server` or `/.well-known/openid-configuration`). Issuer match, PKCE S256 and trusted endpoint origins are enforced as in `strict`. A missing file or an unlisted server means `strict`; a file that does not parse is logged at boot and leaves every connector strict. The file is read at boot. Needed for servers such as dynapps-365, which strict discovery rejects with "OAuth protected resource mismatch". See `docs/CONFIGURED-CONNECTORS.md`.
+
+### Changed
+
+- **Built on systemprompt-core 0.81.1.** Every core crate pin, `bridge/CORE_REF` (`v0.81.1`) and the three lockfiles move to the published 0.81.1 release, and the bridge crate follows to 0.81.1. Core 0.81.1 only changes services `${VAR}` interpolation: a disk hook's `command` and a skill's carried-through `frontmatter` are never rewritten, and a placeholder naming a variable the client expands (`CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_SKILL_DIR`, `CLAUDE_PROJECT_DIR`) is left as written in every field instead of failing the load as unset. This repo's `services/` tree uses none of those (its only placeholder is `advertiseHost` in `services/config/files.yaml`), so it loads exactly as before. Core 0.81.1 adds no migrations; the schema ladder gains its 0.81.1 rung.
+
+### Fixed
+
+- **ammonia 4.2.5 (RUSTSEC-2026-0533).** `Cargo.lock` and `tests/Cargo.lock` move `ammonia` from 4.2.4 to 4.2.5, which fixes a mutation-XSS bypass in HTML sanitisation; the advisory failed the Supply chain gate on every branch. `bridge/Cargo.lock` does not resolve `ammonia`.
 
 ## 0.81.0 — 2026-11-12
 

@@ -168,6 +168,7 @@ export const mount = async (slot, { root, readOnly }) => {
       showToast(error.message ?? 'The picture could not be added.', 'error');
     }
   };
+  root.addEventListener('ws:present', () => present(session, ui.index));
   root.addEventListener('ws:reveal', (event) => {
     const at = indexOfId(slideList(session.state.doc), event.detail?.node ?? '');
     if (at >= 0) pick(at);

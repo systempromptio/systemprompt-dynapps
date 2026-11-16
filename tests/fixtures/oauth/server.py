@@ -18,6 +18,7 @@ openssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", "server.key", "-out",
 openssl("x509", "-req", "-in", "server.csr", "-CA", "ca.pem", "-CAkey", "ca.key", "-CAcreateserial", "-out", "server.pem", "-days", "1", "-extfile", "extensions")
 
 mode = sys.argv[2] if len(sys.argv) > 2 else "standard"
+metadata_path = "/.well-known/oauth-authorization-server"
 refresh_requests = 0
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -37,13 +38,23 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.send_json({"refresh_requests": refresh_requests})
         if self.path.startswith("/.well-known/oauth-protected-resource"):
             suffix = self.path.removeprefix("/.well-known/oauth-protected-resource") or "/mcp"
+            # The dynapps-365 shape: no path-suffixed document, a resource that is
+            # the bare origin, and the metadata document URL in place of an issuer.
+            if mode.startswith("dynapps-365"):
+                if self.path != "/.well-known/oauth-protected-resource":
+                    return self.send_json({}, 401)
+                return self.send_json({"resource": origin, "authorization_servers": [origin + metadata_path]})
+            if mode == "metadata-document-issuer":
+                return self.send_json({"resource": origin + suffix, "authorization_servers": [origin + metadata_path]})
             # Google advertises the issuer with a trailing slash here and without
             # one in its OpenID metadata; the client must treat them as one issuer.
             return self.send_json({"resource": origin + suffix, "authorization_servers": [origin + "/"]})
-        if self.path == "/.well-known/oauth-authorization-server":
-            return self.send_json({"issuer": origin, "authorization_endpoint": origin + "/authorize", "token_endpoint": origin + "/token",
+        if self.path == metadata_path:
+            issuer = origin + "/other" if mode == "dynapps-365-issuer-mismatch" else origin
+            methods = ["plain"] if mode == "dynapps-365-no-s256" else ["S256"]
+            return self.send_json({"issuer": issuer, "authorization_endpoint": origin + "/authorize", "token_endpoint": origin + "/token",
                 "registration_endpoint": origin + "/register", "userinfo_endpoint": origin + "/userinfo",
-                "code_challenge_methods_supported": ["S256"],
+                "code_challenge_methods_supported": methods,
                 "token_endpoint_auth_methods_supported": ["none", "client_secret_post", "client_secret_basic"]})
         if self.path == "/userinfo":
             if self.headers.get("Authorization") != "Bearer access-token":

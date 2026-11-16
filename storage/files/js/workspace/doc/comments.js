@@ -24,7 +24,7 @@ const bodyOf = (text) => {
   return body;
 };
 
-const idle = { load: async () => undefined, fromSelection: () => undefined, onEvent: () => undefined };
+const idle = { load: async () => undefined, fromSelection: () => undefined, onEvent: () => undefined, focusBlock: () => undefined };
 
 export const createComments = ({ root, api, getView, canComment }) => {
   const pane = root.querySelector('[data-pane="comments"]');
@@ -56,9 +56,11 @@ export const createComments = ({ root, api, getView, canComment }) => {
 
   const focusBlock = (id) => {
     const view = getView();
-    if (!view) return;
-    view.state.doc.forEach((node, offset) => {
-      if (node.attrs.id === id) view.nodeDOM(offset)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (!view || !id) return;
+    view.state.doc.descendants((node, pos) => {
+      if (node.attrs.id !== id) return true;
+      view.nodeDOM(pos)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return false;
     });
   };
 
@@ -134,5 +136,5 @@ export const createComments = ({ root, api, getView, canComment }) => {
     load();
   };
 
-  return { load, fromSelection: (view) => fromSelection(view).catch(() => undefined), onEvent: () => load().catch(() => undefined) };
+  return { load, focusBlock, fromSelection: (view) => fromSelection(view).catch(() => undefined), onEvent: () => load().catch(() => undefined) };
 };

@@ -19,11 +19,16 @@ use systemprompt::models::authz::{
     SubjectAttributeSource, SubjectAttributes, SubjectDimension, SubjectSourceError,
 };
 
-/// The services view and subject-attribute source an extension call reads.
+use crate::repositories::connector_discovery::ConnectorDiscoveryPolicy;
+
+/// The services view and subject-attribute source an extension call reads,
+/// plus the connector discovery policy the admin composition root loaded
+/// (all-strict wherever it was not attached).
 #[derive(Clone)]
 pub struct ExtensionServices {
     view: ServicesView,
     subjects: Arc<dyn SubjectAttributeSource>,
+    connector_discovery: Arc<ConnectorDiscoveryPolicy>,
 }
 
 impl std::fmt::Debug for ExtensionServices {
@@ -35,7 +40,17 @@ impl std::fmt::Debug for ExtensionServices {
 impl ExtensionServices {
     #[must_use]
     pub fn new(view: ServicesView, subjects: Arc<dyn SubjectAttributeSource>) -> Self {
-        Self { view, subjects }
+        Self {
+            view,
+            subjects,
+            connector_discovery: Arc::default(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_connector_discovery(mut self, policy: ConnectorDiscoveryPolicy) -> Self {
+        self.connector_discovery = Arc::new(policy);
+        self
     }
 
     #[must_use]
@@ -56,6 +71,11 @@ impl ExtensionServices {
     #[must_use]
     pub const fn view(&self) -> &ServicesView {
         &self.view
+    }
+
+    #[must_use]
+    pub fn connector_discovery(&self) -> &ConnectorDiscoveryPolicy {
+        &self.connector_discovery
     }
 
     #[must_use]
