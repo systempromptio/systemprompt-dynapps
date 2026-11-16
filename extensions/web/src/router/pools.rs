@@ -68,9 +68,9 @@ impl DbHandles {
         let files = ctx.file_storage();
         let services =
             systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx)
-                .with_connector_discovery(ConnectorDiscoveryPolicy::load_or_default(
-                    boot.services_root(),
-                ));
+                .with_connector_discovery(
+                    ConnectorDiscoveryPolicy::load_discovery_policy_or_strict(boot.services_root()),
+                );
         let farm = super::farm_public::build_state(
             Arc::clone(&write),
             paths.as_ref(),

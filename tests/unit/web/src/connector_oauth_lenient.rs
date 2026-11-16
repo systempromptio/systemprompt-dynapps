@@ -127,7 +127,7 @@ fn every_connector_is_strict_unless_listed_as_lenient() {
         ConnectorDiscoveryPolicy::default().mode("dynapps-365"),
         Strict
     );
-    let policy = ConnectorDiscoveryPolicy::from_yaml(
+    let policy = ConnectorDiscoveryPolicy::parse_discovery_policy(
         "connectors:\n  dynapps-365:\n    discovery: lenient\n  dynbrain:\n    discovery: strict\n  plain: {}\n",
     )
     .unwrap();
@@ -136,7 +136,7 @@ fn every_connector_is_strict_unless_listed_as_lenient() {
     assert_eq!(policy.mode("plain"), Strict);
     assert_eq!(policy.mode("unlisted"), Strict);
     assert_eq!(
-        ConnectorDiscoveryPolicy::from_yaml("").unwrap(),
+        ConnectorDiscoveryPolicy::parse_discovery_policy("").unwrap(),
         ConnectorDiscoveryPolicy::default()
     );
 }
@@ -148,7 +148,10 @@ fn unknown_discovery_modes_and_keys_are_refused() {
         "connectors:\n  dynapps-365:\n    discovery: lenient\n    resource: any\n",
         "connector:\n  dynapps-365:\n    discovery: lenient\n",
     ] {
-        assert!(ConnectorDiscoveryPolicy::from_yaml(yaml).is_err(), "{yaml}");
+        assert!(
+            ConnectorDiscoveryPolicy::parse_discovery_policy(yaml).is_err(),
+            "{yaml}"
+        );
     }
 }
 
@@ -158,14 +161,14 @@ fn an_unparseable_policy_file_leaves_every_connector_strict() {
     let path = root.path().join(CONNECTORS_FILE);
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(&path, "connectors:\n  dynapps-365:\n    discovery: yes\n").unwrap();
-    assert!(ConnectorDiscoveryPolicy::load(root.path()).is_err());
+    assert!(ConnectorDiscoveryPolicy::load_discovery_policy(root.path()).is_err());
     assert_eq!(
-        ConnectorDiscoveryPolicy::load_or_default(root.path()).mode("dynapps-365"),
+        ConnectorDiscoveryPolicy::load_discovery_policy_or_strict(root.path()).mode("dynapps-365"),
         Strict
     );
     let missing = tempfile::tempdir().unwrap();
     assert_eq!(
-        ConnectorDiscoveryPolicy::load(missing.path()).unwrap(),
+        ConnectorDiscoveryPolicy::load_discovery_policy(missing.path()).unwrap(),
         ConnectorDiscoveryPolicy::default()
     );
 }
@@ -173,7 +176,8 @@ fn an_unparseable_policy_file_leaves_every_connector_strict() {
 #[test]
 fn the_committed_connectors_file_parses() {
     let services = crate::support::repo_root().join("services");
-    ConnectorDiscoveryPolicy::load(&services).expect("services/web/config/connectors.yaml");
+    ConnectorDiscoveryPolicy::load_discovery_policy(&services)
+        .expect("services/web/config/connectors.yaml");
 }
 
 #[tokio::test]
@@ -289,7 +293,7 @@ impl Fixture {
         std::fs::write(&config, yaml).unwrap();
         let policy = match mode {
             Strict => ConnectorDiscoveryPolicy::default(),
-            Lenient => ConnectorDiscoveryPolicy::from_yaml(&format!(
+            Lenient => ConnectorDiscoveryPolicy::parse_discovery_policy(&format!(
                 "connectors:\n  {SERVER}:\n    discovery: lenient\n"
             ))
             .unwrap(),

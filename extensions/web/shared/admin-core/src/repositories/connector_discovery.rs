@@ -64,8 +64,8 @@ pub enum ConnectorDiscoveryError {
 
 impl ConnectorDiscoveryPolicy {
     #[must_use]
-    pub fn load_or_default(services_dir: &Path) -> Self {
-        match Self::load(services_dir) {
+    pub fn load_discovery_policy_or_strict(services_dir: &Path) -> Self {
+        match Self::load_discovery_policy(services_dir) {
             Ok(policy) => policy,
             Err(error) => {
                 tracing::error!(error = %error, file = CONNECTORS_FILE, "connector discovery policy unreadable; every connector is strict");
@@ -74,17 +74,17 @@ impl ConnectorDiscoveryPolicy {
         }
     }
 
-    pub fn load(services_dir: &Path) -> Result<Self, ConnectorDiscoveryError> {
+    pub fn load_discovery_policy(services_dir: &Path) -> Result<Self, ConnectorDiscoveryError> {
         let path = services_dir.join(CONNECTORS_FILE);
         let text = match std::fs::read_to_string(&path) {
             Ok(text) => text,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),
             Err(source) => return Err(ConnectorDiscoveryError::Read { path, source }),
         };
-        Self::from_yaml(&text)
+        Self::parse_discovery_policy(&text)
     }
 
-    pub fn from_yaml(text: &str) -> Result<Self, ConnectorDiscoveryError> {
+    pub fn parse_discovery_policy(text: &str) -> Result<Self, ConnectorDiscoveryError> {
         let doc: Option<ConnectorsDoc> =
             serde_yaml::from_str(text).map_err(ConnectorDiscoveryError::Parse)?;
         let modes = doc
