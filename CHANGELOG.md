@@ -18,8 +18,17 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
-
 ## Unreleased
+
+### Added
+
+- **An HTML document opens as the page its author designed.** The Drive workspace shows an `.html` document in a sandboxed frame loaded from core's `GET /api/v1/documents/{id}/rendered` (`storage/files/js/workspace/doc/rendered.js`), with its own CSS, fonts and images, instead of reducing it to the rich-text schema. The frame carries no same origin, so the file cannot reach the session, cookies or API. An **Edit** switch (edit access only) opens the rich-text editor beside it and switching back reloads the page. Scripts and `https:` assets load only when the profile sets `files.documents.renderedHtml.scripts` and `files.documents.renderedHtml.remoteAssets`; both are off by default. Needs systemprompt-core 0.82.0.
+- **Present works for an HTML document.** The toolbar's Present puts the rendered page full screen.
+
+### Fixed
+
+- **Choosing a heading in the outline scrolls the document to it.** The doc editor (HTML, Markdown, Word, OpenDocument text) answers the rail's `ws:reveal` and scrolls to the block with that id, at any depth; before, only decks and the comments pane answered it.
+- **The toolbar's Present opens the slide show.** It starts the same presentation as the filmstrip's Present, from the current slide; before, it only asked for full screen on the editor canvas. The command announces `ws:present` and the mounted editor decides what presenting means.
 
 ## 0.81.1 — 2026-11-16
 
