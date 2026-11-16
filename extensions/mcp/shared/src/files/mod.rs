@@ -1,18 +1,21 @@
 //! The file layer every MCP server in this repo shares, so file bytes never
 //! travel through the model's context.
 //!
-//! A tool takes a file as a [`FileRef`] and hands one back as a
-//! [`FileOut`]. [`McpFiles`] sits on core's document store runtime:
+//! A tool takes a file as a [`FileRef`](crate::files::FileRef) and hands one
+//! back as a [`FileOut`](crate::files::FileOut).
+//! [`McpFiles`](crate::files::McpFiles) sits on core's document store runtime:
 //! `request_upload` opens a resumable upload owned by the caller and answers
 //! the signed links a client sends the bytes to; `resolve_ref` turns a
-//! [`FileRef`] (an upload, a blob, one of the caller's documents, or base64
-//! up to the inline limit) into a byte stream; `store_download` keeps bytes a
-//! server fetched as a document of the caller and answers a signed download
-//! link. Every operation, refusals included, writes one audit row.
+//! [`FileRef`](crate::files::FileRef) (an upload, a blob, one of the caller's
+//! documents, or base64 up to the inline limit) into a byte stream;
+//! `store_download` keeps bytes a server fetched as a document of the caller
+//! and answers a signed download link. Every operation, refusals included,
+//! writes one audit row.
 //!
 //! The decisions (ownership, expiry, size, MIME, inline limit, audit) are
 //! taken here, once, for every server; the store behind them is the
-//! [`FileStore`] port, implemented over core by [`DocumentsFileStore`].
+//! [`FileStore`](crate::files::FileStore) port, implemented over core by
+//! [`DocumentsFileStore`](crate::files::DocumentsFileStore).
 //! Nothing here knows which upstream a server talks to.
 
 mod audit;

@@ -1,7 +1,7 @@
 //! Microsoft Entra ID as the connector adapter of the internal `microsoft-365`
 //! MCP server.
 //!
-//! Core refuses a `connector` block on an internal server, so [`settings_for`]
+//! Core refuses a `connector` block on an internal server, so `settings_for`
 //! synthesizes one (`adapter: entra`) in code, and the rest of the connector
 //! machinery — accounts, sealed grants, locked refresh, revocation and the
 //! credential broker — is reused unchanged. Entra publishes no
