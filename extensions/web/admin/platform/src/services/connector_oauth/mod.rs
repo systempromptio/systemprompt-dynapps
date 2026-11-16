@@ -9,6 +9,9 @@
 mod account_state;
 pub mod callback_notice;
 pub mod config;
+pub mod entra;
+pub mod entra_claims;
+pub mod entra_tenancy;
 pub mod failure;
 pub mod generic;
 mod generic_discovery;
@@ -112,13 +115,16 @@ pub fn open(
         .try_into()
         .map_err(AdminError::internal)?;
     let bytes = secret_crypto::decrypt(&key, &nonce, &row.ciphertext)?;
-    let grant: Grant = serde_json::from_slice(&bytes).map_err(AdminError::internal)?;
+    let mut grant: Grant = serde_json::from_slice(&bytes).map_err(AdminError::internal)?;
     if !grant_bound_to(&grant, user, provider) {
         return Err(AdminError::Forbidden(
             "Connector credential owner mismatch".into(),
         ));
     }
     generic::validate_grant(services, &grant)?;
+    if entra::is_entra(&services.config(), &grant.provider) {
+        entra::reconcile(secrets, &mut grant)?;
+    }
     Ok(grant)
 }
 

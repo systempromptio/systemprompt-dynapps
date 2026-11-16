@@ -354,6 +354,10 @@ mod bridge_release_parity;
 #[cfg(test)]
 mod connector_cards;
 #[cfg(test)]
+mod connector_entra;
+#[cfg(test)]
+mod connector_entra_flow;
+#[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
 mod connector_oauth_classify;

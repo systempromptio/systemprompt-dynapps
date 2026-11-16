@@ -5,6 +5,7 @@ use super::token_response::{Tokens, accepted_tokens};
 use super::transport::client;
 use chrono::Utc;
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
+use systemprompt::traits::SecretStore;
 use systemprompt_web_admin_core::error::AdminResult;
 
 async fn request_with_client(
@@ -17,18 +18,11 @@ async fn request_with_client(
         kind: FailureKind::Configuration,
         error: Box::new(error),
     })?;
-    let body = {
-        let mut form = url::form_urlencoded::Serializer::new(String::new());
-        form.extend_pairs(fields)
-            .append_pair("client_id", &grant.client);
-        if !grant.client_secret.is_empty()
-            && matches!(grant.token_auth_method.as_str(), "" | "client_secret_post")
-        {
-            form.append_pair("client_secret", &grant.client_secret);
-        }
-        form.append_pair("resource", &grant.provider.endpoint(&services.config()));
-        form.finish()
-    };
+    let entra = super::entra::settings(&services.config(), &grant.provider);
+    let body = entra.as_ref().map_or_else(
+        || generic_form(services, grant, fields),
+        |settings| super::entra::token_form(settings, grant, fields),
+    );
     let token_endpoint = validate_outbound_url(&grant.token_endpoint, LoopbackPolicy::Allow)
         .map_err(|error| {
             FlowFailure::verification(systemprompt_web_admin_core::error::AdminError::from(error))
@@ -67,10 +61,31 @@ async fn request_with_client(
                 FailureKind::Outage
             })
         })?;
-    let tokens = accepted_tokens(grant, response, refreshing).await?;
-    apply_tokens(grant, tokens, refreshing)
+    let mut tokens = accepted_tokens(grant, response, refreshing).await?;
+    let id_token = tokens.id_token.take();
+    apply_tokens(grant, tokens, refreshing)?;
+    if entra.is_some() {
+        super::entra_claims::admit(grant, id_token.as_deref(), refreshing)?;
+    }
+    Ok(())
 }
 
+fn generic_form(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    grant: &Grant,
+    fields: &[(&str, &str)],
+) -> String {
+    let mut form = url::form_urlencoded::Serializer::new(String::new());
+    form.extend_pairs(fields)
+        .append_pair("client_id", &grant.client);
+    if !grant.client_secret.is_empty()
+        && matches!(grant.token_auth_method.as_str(), "" | "client_secret_post")
+    {
+        form.append_pair("client_secret", &grant.client_secret);
+    }
+    form.append_pair("resource", &grant.provider.endpoint(&services.config()));
+    form.finish()
+}
 
 fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResult<()> {
     // Why: a provider that rotates refresh tokens has already rotated before
@@ -146,20 +161,22 @@ pub async fn exchange(
     grant: &mut Grant,
     code: &str,
 ) -> AdminResult<()> {
-    exchange_classified(services, config, grant, code)
+    let callback = grant.provider.callback(config);
+    exchange_request(services, None, grant, code, &callback, &client()?)
         .await
         .map_err(|failure| *failure.error)
 }
 
 pub(crate) async fn exchange_classified(
-    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    access: super::ConnectorAccess<'_>,
     config: &systemprompt::manifest::Config,
     grant: &mut Grant,
     code: &str,
 ) -> FlowResult<()> {
     let callback = grant.provider.callback(config);
     exchange_request(
-        services,
+        access.services,
+        Some(access.secrets),
         grant,
         code,
         &callback,
@@ -175,33 +192,38 @@ pub async fn exchange_with_client(
     callback: &str,
     http: &reqwest::Client,
 ) -> AdminResult<()> {
-    exchange_request(services, grant, code, callback, http)
+    exchange_request(services, None, grant, code, callback, http)
         .await
         .map_err(|failure| *failure.error)
 }
 
-async fn exchange_request(
+pub(super) async fn exchange_request(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: Option<&dyn SecretStore>,
     grant: &mut Grant,
     code: &str,
     callback: &str,
     http: &reqwest::Client,
 ) -> FlowResult<()> {
+    let admission = if super::entra::is_entra(&services.config(), &grant.provider) {
+        Some(secrets.ok_or_else(super::entra::allow_list_unavailable)?)
+    } else {
+        None
+    };
     let verifier = grant.verifier.clone();
-    request_with_client(
-        services,
-        grant,
-        &[
-            ("grant_type", "authorization_code"),
-            ("code", code),
-            ("redirect_uri", callback),
-            ("code_verifier", &verifier),
-        ],
-        http,
-    )
-    .await?;
+    let fields = [
+        ("grant_type", "authorization_code"),
+        ("code", code),
+        ("redirect_uri", callback),
+        ("code_verifier", verifier.as_str()),
+    ];
+    let outcome = request_with_client(services, grant, &fields, http).await;
+    if outcome.is_err() && admission.is_some() {
+        super::entra_claims::wipe(grant);
+    }
+    outcome?;
     grant.verifier.clear();
-    Ok(())
+    admission.map_or(Ok(()), |secrets| super::entra::admit_tenant(secrets, grant))
 }
 
 pub(super) async fn refresh(

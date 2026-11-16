@@ -69,6 +69,7 @@ pub(super) fn tone(status: &str) -> &'static str {
 fn family(provider: &str) -> &'static str {
     match provider {
         "google_workspace" => "google",
+        crate::services::connector_oauth::entra::SERVER_ID => "microsoft",
         "systemprompt" => "systemprompt",
         _ => "generic",
     }
@@ -77,6 +78,7 @@ fn family(provider: &str) -> &'static str {
 fn kind(glyph: &str) -> &'static str {
     match glyph {
         "google" => "Google Workspace",
+        "microsoft" => "Microsoft 365",
         "systemprompt" => "Control plane",
         _ => "MCP server",
     }
@@ -85,6 +87,7 @@ fn kind(glyph: &str) -> &'static str {
 fn monogram(glyph: &str, name: &str) -> String {
     match glyph {
         "google" => "G".into(),
+        "microsoft" => "M".into(),
         "systemprompt" => "Sp".into(),
         _ => name.chars().take(2).collect(),
     }
@@ -94,6 +97,9 @@ fn blurb(glyph: &str) -> String {
     match glyph {
         "google" => {
             "Search across Drive, Gmail and Calendar — only what you can already open.".into()
+        },
+        "microsoft" => {
+            "Mail, calendar, files and Teams in your Microsoft 365 tenant — only what your account can already open.".into()
         },
         "systemprompt" => {
             "The Dynapps control plane: governed tools, catalogue and deployments, as the admin you are signed in as.".into()

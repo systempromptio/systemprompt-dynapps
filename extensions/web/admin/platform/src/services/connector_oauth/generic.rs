@@ -43,7 +43,11 @@ pub fn validate_grant(
             "Connector configuration changed; reconnect required".into(),
         ));
     }
-    trusted_endpoint(services, &grant.provider, &grant.token_endpoint)?;
+    if super::entra::is_entra(&services.config(), &grant.provider) {
+        super::entra::trusted_token_endpoint(&grant.token_endpoint)?;
+    } else {
+        trusted_endpoint(services, &grant.provider, &grant.token_endpoint)?;
+    }
     Ok(())
 }
 
@@ -84,14 +88,17 @@ pub async fn authorize_with_client(
     http: &reqwest::Client,
 ) -> AdminResult<(String, Grant)> {
     let services = access.services;
+    let settings = provider
+        .settings(&services.config())
+        .ok_or_else(|| AdminError::Unavailable("OAuth setup required".into()))?;
+    if settings.adapter == super::entra::ADAPTER {
+        return super::entra::authorize(access, consent, provider, callback);
+    }
     let Consent {
         user,
         state,
         verifier,
     } = consent;
-    let settings = provider
-        .settings(&services.config())
-        .ok_or_else(|| AdminError::Unavailable("OAuth setup required".into()))?;
     if settings.adapter != "generic" {
         return Err(AdminError::Unavailable(
             "Unsupported connector adapter".into(),
@@ -154,6 +161,9 @@ pub async fn validate_refresh(
     http: &reqwest::Client,
 ) -> AdminResult<()> {
     validate_grant(services, grant)?;
+    if super::entra::is_entra(&services.config(), &grant.provider) {
+        return Ok(());
+    }
     let metadata = metadata(services, http, &grant.provider).await?;
     if (metadata.issuer.as_str(), metadata.token_endpoint.as_str())
         != (

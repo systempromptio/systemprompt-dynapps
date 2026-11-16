@@ -64,7 +64,11 @@ impl Provider {
         &self,
         services: &ServicesConfig,
     ) -> Option<systemprompt::models::mcp::deployment::ConnectorConfig> {
-        self.server(services)?.connector.clone()
+        let server = self.server(services)?;
+        server
+            .connector
+            .clone()
+            .or_else(|| super::entra::settings_for(self.slug(), server))
     }
     pub fn session_scopes<'a>(&self, services: &'a ServicesConfig) -> Option<&'a [Permission]> {
         if self.settings(services).is_some() {

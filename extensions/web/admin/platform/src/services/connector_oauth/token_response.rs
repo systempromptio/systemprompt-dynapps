@@ -10,6 +10,7 @@ pub(super) struct Tokens {
     pub(super) expires_in: Option<i64>,
     pub(super) error: Option<String>,
     pub(super) token_type: Option<String>,
+    pub(super) id_token: Option<String>,
 }
 
 // Why: OAuth response diagnostics can contain credentials; return only the
@@ -70,6 +71,7 @@ fn log_shape(grant: &Grant, value: &serde_json::Value) {
         "expires_in",
         "error",
         "error_description",
+        "id_token",
     ]
     .into_iter()
     .map(|field| {
