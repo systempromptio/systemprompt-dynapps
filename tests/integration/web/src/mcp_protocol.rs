@@ -219,7 +219,7 @@ async fn seed_artifact(ingest: &ArtifactIngest) -> ArtifactId {
 }
 
 #[tokio::test]
-async fn protocol_client_initializes_discovers_resources_and_refuses_an_artifact_without_a_caller() {
+async fn protocol_client_discovers_resources_and_is_refused_a_stored_artifact() {
     let Some(db) = TempDb::create().await else {
         return;
     };
