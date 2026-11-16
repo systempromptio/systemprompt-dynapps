@@ -5,7 +5,13 @@
 
 pub mod calendar;
 pub mod calendar_event;
+pub mod chat;
+pub mod chat_write;
 pub mod contacts;
+pub mod drive;
+pub mod drive_content;
+mod drive_tools;
+pub mod drive_write;
 mod file_tool;
 pub mod graph_tool;
 mod handlers;
@@ -15,8 +21,17 @@ pub mod mail_folders;
 pub mod mail_read;
 pub mod mail_send;
 mod mail_tools;
+pub mod meetings;
+pub mod meetings_media;
+pub mod presence;
 pub mod reply;
+pub mod sharepoint;
+pub mod teams;
+mod teams_hub;
+pub mod teams_write;
 pub mod todo;
+
+use std::sync::LazyLock;
 
 use rmcp::model::{Tool, ToolAnnotations};
 use systemprompt::identifiers::McpServerId;
@@ -71,7 +86,20 @@ impl ToolSpec {
     }
 }
 
-pub const TOOLS: &[ToolSpec] = &[
+// Why: check-file-size.sh caps a source at 300 lines, so each later domain
+// keeps its specs beside its tools; this joins them after the mail,
+// calendar, contacts and To Do specs below.
+pub static TOOLS: LazyLock<Vec<ToolSpec>> = LazyLock::new(|| {
+    [
+        BASE_SPECS,
+        drive_tools::DRIVE_SPECS,
+        sharepoint::SHAREPOINT_SPECS,
+        teams_hub::TEAMS_SPECS,
+    ]
+    .concat()
+});
+
+const BASE_SPECS: &[ToolSpec] = &[
     ToolSpec::new("d365_list_mail", "List emails", ToolKind::Read),
     ToolSpec::new("d365_get_mail", "Get email", ToolKind::Read),
     ToolSpec::new("d365_search_mail", "Search emails", ToolKind::Read),

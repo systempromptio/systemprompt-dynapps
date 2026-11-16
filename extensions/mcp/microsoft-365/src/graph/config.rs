@@ -6,7 +6,10 @@
 //! (default `https://graph.microsoft.com/v1.0`), read on every call so a
 //! change applies without a restart, as `microsoft_365_authority` does. Tool
 //! paths resolve under it and never carry a query; a URL Graph hands back
-//! (`@odata.nextLink`) is admitted only on the same origin and path.
+//! (`@odata.nextLink`) is admitted only on the same origin and path. The
+//! endpoint also carries the Entra app's client id (`microsoft_365_client_id`,
+//! the secret the connector signs in with), which Graph wants as the
+//! `sessionId` of a presence the app sets.
 
 use std::time::Duration;
 
@@ -20,6 +23,8 @@ use super::error::GraphError;
 pub const DEFAULT_GRAPH_URL: &str = "https://graph.microsoft.com/v1.0";
 
 pub const GRAPH_URL_SECRET: &str = "microsoft_365_graph_url";
+
+pub const APP_ID_SECRET: &str = "microsoft_365_client_id";
 
 const MAX_REDIRECTS: usize = 3;
 
@@ -59,6 +64,7 @@ pub fn http_client(limits: &GraphLimits) -> Result<reqwest::Client, GraphError> 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GraphEndpoint {
     base: Url,
+    app_id: Option<String>,
 }
 
 impl GraphEndpoint {
@@ -74,7 +80,17 @@ impl GraphEndpoint {
                 "graph url must not carry a query, fragment or credentials".to_owned(),
             ));
         }
-        Ok(Self { base })
+        Ok(Self { base, app_id: None })
+    }
+
+    pub fn with_app_id(mut self, app_id: impl Into<String>) -> Self {
+        let app_id = app_id.into();
+        self.app_id = (!app_id.trim().is_empty()).then_some(app_id);
+        self
+    }
+
+    pub fn app_id(&self) -> Option<&str> {
+        self.app_id.as_deref()
     }
 
     pub fn from_lookup(secrets: &dyn SecretLookup) -> Result<Self, GraphError> {
@@ -82,7 +98,11 @@ impl GraphEndpoint {
             .lookup(GRAPH_URL_SECRET)
             .map(|secret| secret.expose().trim().to_owned())
             .filter(|value| !value.is_empty());
-        Self::parse(configured.as_deref().unwrap_or(DEFAULT_GRAPH_URL))
+        let app_id = secrets
+            .lookup(APP_ID_SECRET)
+            .map(|secret| secret.expose().trim().to_owned())
+            .unwrap_or_default();
+        Ok(Self::parse(configured.as_deref().unwrap_or(DEFAULT_GRAPH_URL))?.with_app_id(app_id))
     }
 
     pub const fn base(&self) -> &Url {

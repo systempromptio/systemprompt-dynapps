@@ -72,6 +72,10 @@ pub(super) fn definitions(server: &McpServerId) -> Vec<Tool> {
     tools.extend(super::calendar_event::definitions(server));
     tools.extend(super::contacts::definitions(server));
     tools.extend(super::todo::definitions(server));
+    tools.extend(super::drive_tools::definitions(server));
+    tools.extend(super::drive_tools::file_definitions(server));
+    tools.extend(super::sharepoint::definitions(server));
+    tools.extend(super::teams_hub::definitions(server));
     tools
 }
 
@@ -103,6 +107,18 @@ pub async fn dispatch(call: &ToolCall<'_>) -> Result<CallToolResult, McpError> {
         return result;
     }
     if let Some(result) = super::todo::dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::drive_tools::dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::drive_tools::file_dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::sharepoint::dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::teams_hub::dispatch(call).await {
         return result;
     }
     let graph = Some(call.graph);

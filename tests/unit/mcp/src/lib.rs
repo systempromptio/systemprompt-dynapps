@@ -30,6 +30,14 @@
 //! - the `microsoft-365` calendar, contacts and To Do tools (`m365_calendar_*`,
 //!   `m365_contacts`, `m365_todo`): the Graph request each builds and the
 //!   Belgian reply, against a simulated Graph
+//! - the `microsoft-365` OneDrive and SharePoint tools (`m365_files_*`,
+//!   `m365_sharepoint`): drive paths percent-encoded, file content through the
+//!   file layer (redirect followed without the bearer, kept as documents,
+//!   uploads by reference or upload session) and the pinned surface
+//! - the `microsoft-365` Teams, chat, presence and online meeting tools
+//!   (`m365_teams*`, `m365_meetings`): the Graph request each builds, the
+//!   Belgian reply, the caller bound from `/me`, presence as a session of the
+//!   Entra app and meeting transcripts kept as documents
 
 #[cfg(test)]
 mod access_policy;
@@ -62,6 +70,16 @@ mod m365_core_sanitize;
 #[cfg(test)]
 mod m365_core_surface;
 #[cfg(test)]
+mod m365_files_content;
+#[cfg(test)]
+mod m365_files_read;
+#[cfg(test)]
+mod m365_files_surface;
+#[cfg(test)]
+mod m365_files_upload;
+#[cfg(test)]
+mod m365_files_write;
+#[cfg(test)]
 mod m365_mail_attach;
 #[cfg(test)]
 mod m365_mail_folders;
@@ -72,9 +90,19 @@ mod m365_mail_send;
 #[cfg(test)]
 mod m365_mail_surface;
 #[cfg(test)]
+mod m365_meetings;
+#[cfg(test)]
 mod m365_pim_support;
 #[cfg(test)]
+mod m365_sharepoint;
+#[cfg(test)]
 mod m365_support;
+#[cfg(test)]
+mod m365_teams;
+#[cfg(test)]
+mod m365_teams_chat;
+#[cfg(test)]
+mod m365_teams_presence;
 #[cfg(test)]
 mod m365_todo;
 #[cfg(test)]

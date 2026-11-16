@@ -108,7 +108,7 @@ fn attachment_path(message: &str, attachment: &str) -> Result<String, GraphError
     Ok(format!("/me/messages/{message}/attachments/{attachment}"))
 }
 
-fn one_source(base64: &str, file: &FileRef, field: &str) -> Result<FileRef, GraphError> {
+pub(super) fn one_source(base64: &str, file: &FileRef, field: &str) -> Result<FileRef, GraphError> {
     match (base64.is_empty(), *file == FileRef::default()) {
         (false, true) => Ok(FileRef {
             content_base64: base64.to_owned(),
@@ -121,7 +121,7 @@ fn one_source(base64: &str, file: &FileRef, field: &str) -> Result<FileRef, Grap
     }
 }
 
-fn text_of(value: &Value, key: &str) -> Option<String> {
+pub(super) fn text_of(value: &Value, key: &str) -> Option<String> {
     value.get(key).and_then(Value::as_str).map(str::to_owned)
 }
 
