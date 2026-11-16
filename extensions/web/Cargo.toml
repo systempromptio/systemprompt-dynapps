@@ -30,6 +30,8 @@ systemprompt-web-admin-farm = { workspace = true }
 systemprompt-web-admin-governance = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
+# The "My routines" page; its crate owns the routines tables.
+dynwork-routines = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-content = { workspace = true }
 systemprompt-web-site = { workspace = true }

@@ -4,6 +4,7 @@
 //! - device credentials: shape, hashing, redaction
 //! - the per-connection rate limiter
 //! - the desktop ring buffer: count, byte and age eviction
+//! - the change hint: its frame, its recipients and the `NOTIFY` payload
 //! - the hub: same-user routing only, the other kind of end only, holding for
 //!   an offline peer, revocation, replacement and slow consumers
 //! - the limits' defaults and validation
@@ -20,6 +21,8 @@ mod credential;
 mod envelope;
 #[cfg(test)]
 mod extension;
+#[cfg(test)]
+mod hint;
 #[cfg(test)]
 mod hub;
 #[cfg(test)]

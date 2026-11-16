@@ -12,7 +12,9 @@
 //! The hub also tells a user's desktops when one of the user's phones
 //! attaches or goes away, with a relay presence message
 //! ([`crate::envelope::presence`]) on the same queue as the envelopes, so a
-//! desktop sees a phone's last envelope before its departure.
+//! desktop sees a phone's last envelope before its departure. Other
+//! extensions reach a user's desktops through the change hint
+//! ([`Hub::notify_user_desktops`], fed by [`crate::hint`]).
 
 pub mod control;
 mod inner;
@@ -34,7 +36,7 @@ pub use ring::Ring;
 use inner::{Inner, Key, Known, Slot};
 
 use crate::config::RingLimits;
-use crate::envelope::Presence;
+use crate::envelope::{Presence, changed};
 use crate::ids::{DeviceId, PeerId, PeerKind};
 
 pub type ConnId = u64;
@@ -219,6 +221,24 @@ impl Hub {
         } else {
             Routed::Dropped(DropReason::NotHeld)
         }
+    }
+
+    // Why: a desktop whose queue is full misses the hint rather than being
+    // closed as a slow consumer: the hint is advisory and the desktop polls.
+    pub fn notify_user_desktops(&self, user: &UserId, except: Option<PeerId>, kind: &str) -> usize {
+        let inner = self.lock();
+        inner
+            .live
+            .iter()
+            .filter(|(key, slot)| {
+                &key.user == user && slot.kind == PeerKind::Desktop && Some(key.peer) != except
+            })
+            .filter(|(key, slot)| {
+                slot.tx
+                    .try_send(Bytes::from(changed(key.peer, kind)))
+                    .is_ok()
+            })
+            .count()
     }
 
     pub fn revoke(&self, device: DeviceId) -> usize {

@@ -2340,6 +2340,7 @@ dependencies = [
  "base64 0.23.1",
  "chrono",
  "dynwork-relay",
+ "dynwork-routines",
  "jsonwebtoken",
  "rand_core 0.6.4",
  "rsa 0.9.10",
@@ -2415,6 +2416,42 @@ dependencies = [
  "systemprompt",
  "systemprompt-security 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
+]
+
+[[package]]
+name = "dynwork-routines"
+version = "0.81.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "dynwork-relay",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-web-admin-core",
+ "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
+name = "dynwork-routines-integration-tests"
+version = "0.0.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "dynapps-test-common",
+ "dynwork-relay",
+ "dynwork-routines",
+ "http-body-util",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-security 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+ "tokio-util",
+ "tower",
 ]
 
 [[package]]
@@ -11283,6 +11320,7 @@ version = "0.81.0"
 dependencies = [
  "async-trait",
  "axum",
+ "dynwork-routines",
  "inventory",
  "serde",
  "serde_json",

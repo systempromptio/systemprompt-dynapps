@@ -9,7 +9,8 @@
 //! model traffic to their providers, and the configuration, lifecycle, sync
 //! and observability pages; the gateway policy editor writes
 //! `ai_gateway_policies`, which core re-reads per request, so its saves are
-//! live edits rather than file edits.
+//! live edits rather than file edits. "My routines" runs over the write pool
+//! so the page an action redirects to already shows it.
 
 use std::sync::Arc;
 
@@ -67,6 +68,7 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
         .merge(farm_routes())
         .merge(platform_routes())
         .merge(platform_ssr::data_routes().with_state(db.write_pool()))
+        .merge(dynwork_routines::page::routes().with_state(db.write_pool()))
         .merge(account_routes())
         .merge(api_routes())
         .merge(redirects::legacy_routes())

@@ -1,5 +1,5 @@
-//! The `Extension` registration: schema, the router and the revocation
-//! watch.
+//! The `Extension` registration: schema, the router, the revocation watch
+//! and the change-hint listener.
 //!
 //! Core asks an extension for its router more than once (to validate the
 //! path, then to mount it), so the relay state is built on the first call
@@ -14,7 +14,7 @@ use crate::mobile_auth::Branding;
 use crate::router::{EXTENSION_BASE_PATH, extension_router};
 use crate::state::RelayState;
 use crate::store::postgres::PgRelayStore;
-use crate::{schema, sweeper};
+use crate::{hint, schema, sweeper};
 
 #[derive(Debug, Default)]
 pub struct RelayExtension {
@@ -37,7 +37,8 @@ impl RelayExtension {
             tracing::error!("Database handle is not Postgres; the dynwork relay is not mounted");
             return None;
         };
-        let store = Arc::new(PgRelayStore::new(database.write_pool()));
+        let pool = database.write_pool();
+        let store = Arc::new(PgRelayStore::new(Arc::clone(&pool)));
         let built = RelayState::builder(store, ctx.token_authority(), ctx.background_tasks())
             .branding(Branding::load(&ctx.services_root().path))
             .build()
@@ -47,6 +48,7 @@ impl RelayExtension {
             Ok(()) => {
                 let state = self.state.get()?;
                 sweeper::spawn(state);
+                hint::spawn(state, pool);
                 Some(state.clone())
             },
             Err(_raced) => self.state.get().cloned(),

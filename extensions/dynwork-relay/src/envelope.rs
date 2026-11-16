@@ -12,6 +12,11 @@
 //! The relay reads `version` and `to`, overwrites `from` with the sender's
 //! authenticated peer id, and never parses, logs or keeps `ciphertext` beyond
 //! the ring buffer.
+//!
+//! The relay's own control frames carry version `0xFF`: presence, and the
+//! change hint that tells a desktop to pull a feed again.
+
+use serde_json::json;
 
 use crate::ids::{PEER_ID_LEN, PeerId};
 
@@ -73,5 +78,18 @@ pub fn presence(to: PeerId, phone: PeerId, event: Presence) -> Vec<u8> {
     message.extend_from_slice(to.as_bytes());
     message.extend_from_slice(phone.as_bytes());
     message.push(event as u8);
+    message
+}
+
+// Why: a change hint is `0xFF ‖ to ‖ {"t":"<kind>.changed"}`. It is never 34
+// bytes long with a valid event byte, so a desktop that only knows presence
+// ignores it.
+pub fn changed(to: PeerId, kind: &str) -> Vec<u8> {
+    // JSON: outgoing fixed-shape construction (the hint's one field).
+    let body = json!({ "t": format!("{kind}.changed") }).to_string();
+    let mut message = Vec::with_capacity(1 + PEER_ID_LEN + body.len());
+    message.push(CONTROL_VERSION);
+    message.extend_from_slice(to.as_bytes());
+    message.extend_from_slice(body.as_bytes());
     message
 }
