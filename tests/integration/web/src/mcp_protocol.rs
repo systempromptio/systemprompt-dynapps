@@ -219,7 +219,7 @@ async fn seed_artifact(ingest: &ArtifactIngest) -> ArtifactId {
 }
 
 #[tokio::test]
-async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifacts() {
+async fn protocol_client_initializes_discovers_resources_and_refuses_an_artifact_without_a_caller() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -276,21 +276,14 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
     assert!(text.contains("Artifact Viewer"));
     let artifact_uri = artifact_resource_uri(&McpServerId::new("systemprompt"), &artifact_id);
-    let artifact = client
+    let refused = client
         .read_resource(ReadResourceRequestParams::new(artifact_uri))
         .await
-        .expect("read stored artifact resource");
-    let ResourceContents::TextResourceContents {
-        mime_type, text, ..
-    } = artifact
-        .contents
-        .first()
-        .expect("artifact has one HTML resource")
-    else {
-        panic!("artifact must return text HTML")
-    };
-    assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
-    assert!(text.contains("protocol artifact body"));
+        .expect_err("a stored artifact is read only by an authenticated caller");
+    assert!(
+        format!("{refused:?}").contains("RequestContext missing"),
+        "the artifact read was refused for the wrong reason: {refused:?}"
+    );
     let missing_artifact_uri =
         artifact_resource_uri(&McpServerId::new("systemprompt"), &ArtifactId::generate());
     assert!(
