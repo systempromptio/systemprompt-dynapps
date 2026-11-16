@@ -2,7 +2,9 @@
 //!
 //! A duplex transport gives rmcp a real peer, so these tests exercise the
 //! `ServerHandler` methods that cannot be called with a hand-built request
-//! context: handshake, resource discovery/read, and the fail-closed auth gate.
+//! context: handshake, resource discovery/read, and the fail-closed auth gate
+//! (an artifact resource is read as the caller, so a peer with no identity is
+//! refused).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -219,7 +221,7 @@ async fn seed_artifact(ingest: &ArtifactIngest) -> ArtifactId {
 }
 
 #[tokio::test]
-async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifacts() {
+async fn protocol_client_initializes_discovers_resources_and_refuses_artifacts_without_identity() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -275,22 +277,18 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     assert_eq!(uri, "ui://systemprompt/artifact-viewer");
     assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
     assert!(text.contains("Artifact Viewer"));
+    // Core 0.82.0 answers an artifact resource only for the user it was stored
+    // for, so the server authenticates the caller first. This duplex transport
+    // carries no HTTP request, hence no identity: the stored artifact is
+    // refused, fail closed, exactly like an unknown one.
     let artifact_uri = artifact_resource_uri(&McpServerId::new("systemprompt"), &artifact_id);
-    let artifact = client
-        .read_resource(ReadResourceRequestParams::new(artifact_uri))
-        .await
-        .expect("read stored artifact resource");
-    let ResourceContents::TextResourceContents {
-        mime_type, text, ..
-    } = artifact
-        .contents
-        .first()
-        .expect("artifact has one HTML resource")
-    else {
-        panic!("artifact must return text HTML")
-    };
-    assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
-    assert!(text.contains("protocol artifact body"));
+    assert!(
+        client
+            .read_resource(ReadResourceRequestParams::new(artifact_uri))
+            .await
+            .is_err(),
+        "a stored artifact is refused to a caller with no identity"
+    );
     let missing_artifact_uri =
         artifact_resource_uri(&McpServerId::new("systemprompt"), &ArtifactId::generate());
     assert!(
