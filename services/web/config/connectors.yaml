@@ -1,0 +1,25 @@
+# Per-connector settings the generic OAuth connector reads beyond core's
+# `connector:` block (core rejects unknown keys there), keyed by MCP server id.
+#
+# Read by the admin console at boot (extensions/web/shared/admin-core/src/
+# repositories/connector_discovery.rs). A missing file, or a server not listed,
+# means `discovery: strict`. A file that does not parse (an unknown key or
+# mode) is logged at boot and every connector stays strict.
+#
+# discovery: strict | lenient
+#   strict   RFC 9728 / RFC 8414 as written: the protected resource metadata
+#            names the configured endpoint exactly, and `authorization_servers`
+#            lists issuers.
+#   lenient  Additionally accepts, on the endpoint's own origin only, a
+#            `resource` that is the bare origin, and an `authorization_servers`
+#            entry that is the metadata document URL
+#            (/.well-known/oauth-authorization-server or
+#            /.well-known/openid-configuration, optionally with an issuer path
+#            after it). Issuer match, PKCE S256 and trusted endpoint origins are
+#            enforced exactly as in strict. Example:
+#
+#   connectors:
+#     example-mcp:
+#       discovery: lenient
+
+connectors: {}

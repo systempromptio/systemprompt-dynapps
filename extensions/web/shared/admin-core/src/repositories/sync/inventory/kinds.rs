@@ -170,6 +170,12 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "web/config/security.yaml",
     ),
     file(
+        "connectors",
+        "Connector discovery",
+        "which MCP connectors accept lenient OAuth discovery",
+        "web/config/connectors.yaml",
+    ),
+    file(
         "homepage",
         "Homepage",
         "the public landing page's sections",

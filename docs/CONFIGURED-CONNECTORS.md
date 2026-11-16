@@ -67,6 +67,38 @@ Issuer identifiers are compared as URLs, with a single trailing slash ignored,
 so an issuer advertised as `https://idp.example/` in protected-resource metadata
 matches `https://idp.example` in its own metadata.
 
+### Lenient discovery
+
+Some MCP servers publish discovery documents that deviate from RFC 9728 and
+RFC 8414 in ways Claude Code's MCP client tolerates. Core owns the
+`connector:` block and rejects unknown keys there, so the opt-in lives in the
+extension-owned `services/web/config/connectors.yaml`, keyed by server id:
+
+```yaml
+connectors:
+  example-tools:
+    discovery: lenient   # strict (default) | lenient
+```
+
+`strict` is the default for every server not listed, and when the file is
+missing. An unknown key or mode makes the file fail to parse; the error is
+logged at boot and every connector stays strict. The file is read once at
+boot, so a change needs a restart.
+
+`lenient` relaxes exactly two checks, both confined to the origin of the
+configured `endpoint`:
+
+| Shape | Strict | Lenient |
+| --- | --- | --- |
+| Protected resource `resource` is the bare origin (`https://mcp.example.com` for endpoint `https://mcp.example.com/mcp`) | `OAuth protected resource mismatch` | Accepted. Another host, scheme, port or path, a query or a fragment is still a mismatch |
+| `authorization_servers[0]` is the metadata document URL (`https://mcp.example.com/.well-known/oauth-authorization-server`, or `/.well-known/openid-configuration`, optionally followed by an issuer path) | Read as an issuer, so the derived metadata URL is wrong | That document is fetched directly, and its `issuer` must equal the origin plus the issuer path after the well-known segment |
+
+Everything else is enforced the same way in both modes: trusted origins,
+outbound URL validation, size limits, the issuer match, PKCE S256, trusted
+authorization and token endpoints, and the RFC 9207 `iss` check on the
+callback. A metadata document URL on any other origin is read as an issuer,
+as in strict mode.
+
 ## Migration and failures
 
 Migration 051 replaces the three-provider database restrictions with server-ID

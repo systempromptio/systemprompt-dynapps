@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use systemprompt::config::AppPaths;
 use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
+use systemprompt_web_admin_core::repositories::connector_discovery::ConnectorDiscoveryPolicy;
 use systemprompt_web_admin_core::state::ManagedState;
 use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
 use systemprompt_web_admin_farm::state::FarmState;
@@ -66,7 +67,10 @@ impl DbHandles {
         ));
         let files = ctx.file_storage();
         let services =
-            systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx);
+            systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx)
+                .with_connector_discovery(ConnectorDiscoveryPolicy::load_or_default(
+                    boot.services_root(),
+                ));
         let farm = super::farm_public::build_state(
             Arc::clone(&write),
             paths.as_ref(),
