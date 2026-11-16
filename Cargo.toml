@@ -15,6 +15,7 @@ members = [
     "extensions/mcp/systemprompt",
     "extensions/mcp/agent-farm",
     "extensions/mcp/documents",
+    "extensions/mcp/microsoft-365",
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",

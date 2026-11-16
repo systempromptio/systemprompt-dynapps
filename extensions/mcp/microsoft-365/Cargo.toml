@@ -1,0 +1,44 @@
+[package]
+name = "systemprompt-mcp-microsoft-365"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Microsoft 365 MCP server for the Dynapps instance: Microsoft Graph tools served to signed-in users as themselves, with the Graph token taken from the connector broker on every call."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[[bin]]
+name = "systemprompt-mcp-microsoft-365"
+path = "src/main.rs"
+
+[dependencies]
+# Audit: uses client (guarded HTTP), config, database, identifiers, mcp (executor, broker accessor), models (net guard, request context), traits (secrets) — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+
+anyhow.workspace = true
+rustls.workspace = true
+tokio.workspace = true
+
+rmcp.workspace = true
+axum.workspace = true
+reqwest.workspace = true
+url.workspace = true
+urlencoding.workspace = true
+
+async-trait.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+systemprompt-mcp-shared.workspace = true
+systemprompt-secrets-onepassword.workspace = true
+systemprompt-web-admin-governance.workspace = true
+systemprompt-web-admin-identity.workspace = true
+systemprompt-web-admin-platform.workspace = true
+systemprompt-web-shared.workspace = true
+
+[lints]
+workspace = true

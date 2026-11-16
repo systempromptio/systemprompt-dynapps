@@ -4981,6 +4981,7 @@ dependencies = [
  "systemprompt-mcp-agent",
  "systemprompt-mcp-agent-farm",
  "systemprompt-mcp-documents",
+ "systemprompt-mcp-microsoft-365",
  "systemprompt-mcp-shared",
  "systemprompt-web-admin-core",
  "systemprompt-web-shared",
@@ -10313,6 +10314,33 @@ dependencies = [
  "systemprompt-web-shared",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "systemprompt-mcp-microsoft-365"
+version = "0.81.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "reqwest",
+ "rmcp",
+ "rustls",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "urlencoding",
 ]
 
 [[package]]

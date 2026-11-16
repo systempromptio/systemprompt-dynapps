@@ -19,6 +19,10 @@
 //! - `systemprompt-mcp-shared`'s file layer: `FileRef` parsing and schema,
 //!   the inline limit, name and MIME checks, and `McpFiles` ownership,
 //!   expiry, size limits and audit over an in-memory store
+//! - the `microsoft-365` server (`m365_core_*`): value checks ported from the
+//!   Belgian server, the Graph client against a simulated Graph (429, 401,
+//!   redirects, size limit, paging), `d365_list_mail`, the broker token and
+//!   the tool surface against the pinned Belgian fixture
 
 #[cfg(test)]
 mod access_policy;
@@ -32,6 +36,18 @@ mod files_service;
 mod files_support;
 #[cfg(test)]
 mod filter_hallucinated_args;
+#[cfg(test)]
+mod m365_core_graph;
+#[cfg(test)]
+mod m365_core_mail;
+#[cfg(test)]
+mod m365_core_paging;
+#[cfg(test)]
+mod m365_core_sanitize;
+#[cfg(test)]
+mod m365_core_surface;
+#[cfg(test)]
+mod m365_support;
 #[cfg(test)]
 mod gemini_schema;
 #[cfg(test)]

@@ -155,6 +155,7 @@ systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
 systemprompt-mcp-agent-farm = { path = "../extensions/mcp/agent-farm" }
 systemprompt-mcp-documents = { path = "../extensions/mcp/documents" }
+systemprompt-mcp-microsoft-365 = { path = "../extensions/mcp/microsoft-365" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }
 systemprompt-web-admin-core = { path = "../extensions/web/shared/admin-core" }
 systemprompt-web-admin-analytics = { path = "../extensions/web/admin/analytics" }
