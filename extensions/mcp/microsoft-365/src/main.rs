@@ -8,7 +8,8 @@ use systemprompt::identifiers::McpServerId;
 use systemprompt::system::HostContext;
 use systemprompt::traits::SecretLookup;
 use systemprompt_mcp_microsoft_365::graph::{Broker, GraphLimits, http_client};
-use systemprompt_mcp_microsoft_365::{GraphHost, Microsoft365Server};
+use systemprompt_mcp_microsoft_365::{GraphHost, Microsoft365Server, UPLOAD_TOOL};
+use systemprompt_mcp_shared::files::{FilePolicy, McpFiles};
 // Why: core discovers the governance authz hook, the connection snapshot
 // source, the group/project/role subject providers and the document template
 // providers through inventory, so the crates that register them must be
@@ -115,6 +116,8 @@ async fn main() -> Result<()> {
         secrets,
         limits,
     };
+    let files = McpFiles::from_host(&ctx, service_id.clone(), FilePolicy::new(UPLOAD_TOOL))
+        .context("Failed to build the file layer")?;
     let server = Microsoft365Server::new(
         service_id.clone(),
         Arc::clone(ctx.db_pool()),
@@ -124,6 +127,7 @@ async fn main() -> Result<()> {
         },
         ctx.artifact_ingest(),
         graph,
+        files,
     );
     let requires_oauth = ctx
         .services_state()

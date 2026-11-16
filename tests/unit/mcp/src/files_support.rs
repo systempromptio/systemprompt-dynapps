@@ -216,7 +216,9 @@ impl FileStore for FakeStore {
             return Err(FilesError::LinkUnavailable);
         }
         Ok(SignedDownload {
-            url: format!("https://api.test/api/v1/documents/{document}/content?revision={revision}"),
+            url: format!(
+                "https://api.test/api/v1/documents/{document}/content?revision={revision}"
+            ),
             expires_at: Utc::now() + Duration::minutes(10),
         })
     }
@@ -291,7 +293,12 @@ pub(crate) fn exec_id() -> McpExecutionId {
     McpExecutionId::new("files-exec")
 }
 
-pub(crate) fn document_of(owner: &str, name: &str, mime: &str, size: u64) -> (FileRecord, DocumentId) {
+pub(crate) fn document_of(
+    owner: &str,
+    name: &str,
+    mime: &str,
+    size: u64,
+) -> (FileRecord, DocumentId) {
     let id = DocumentId::generate();
     let record = FileRecord {
         owner: UserId::new(owner),

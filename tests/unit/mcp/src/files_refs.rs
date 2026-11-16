@@ -44,7 +44,9 @@ fn files_ref_with_no_source_or_two_sources_is_refused() {
 fn files_ref_parses_each_source_and_rejects_malformed_ids() {
     let document = DocumentId::generate();
     let revision = DocumentRevisionId::generate();
-    let parsed = FileRef::document(&document, &revision).source().expect("document");
+    let parsed = FileRef::document(&document, &revision)
+        .source()
+        .expect("document");
     assert_eq!(
         parsed,
         FileSource::Stored(StoredRef::Document {
@@ -129,7 +131,10 @@ fn files_inline_base64_over_the_limit_names_the_upload_tool() {
     let error = policy
         .decode_inline(&STANDARD.encode(&one_over))
         .expect_err("over the limit");
-    assert!(matches!(error, FilesError::InlineTooLarge { .. }), "{error}");
+    assert!(
+        matches!(error, FilesError::InlineTooLarge { .. }),
+        "{error}"
+    );
     assert!(error.to_string().contains(UPLOAD_TOOL), "{error}");
 
     let far_over = "A".repeat(4 * 1024 * 1024);
@@ -165,7 +170,10 @@ fn files_mime_types_are_normalized_checked_and_filtered() {
 
     policy.allowed_mime = vec!["image/*".to_owned(), "application/pdf".to_owned()];
     assert_eq!(policy.mime("image/PNG").expect("wildcard"), "image/png");
-    assert_eq!(policy.mime("application/pdf").expect("exact"), "application/pdf");
+    assert_eq!(
+        policy.mime("application/pdf").expect("exact"),
+        "application/pdf"
+    );
     assert!(matches!(
         policy.mime("application/zip"),
         Err(FilesError::MimeNotAllowed { .. })

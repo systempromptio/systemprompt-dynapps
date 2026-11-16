@@ -1,6 +1,8 @@
-//! The reply shape of a list tool, the Belgian server's
-//! `paginated_response`: the items, and when more exist `has_more`, how many
-//! came back and a hint telling the model to page with `skip`.
+//! The reply shapes of the tools. A list tool answers like the Belgian
+//! server's `paginated_response`: the items, and when more exist `has_more`,
+//! how many came back and a hint telling the model to page with `skip`. A
+//! single-item tool answers like its `success_response`: `data` and
+//! `message`.
 
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -52,5 +54,37 @@ impl GraphList {
 impl McpOutputSchema for GraphList {
     fn artifact_type() -> &'static str {
         "microsoft_365_list"
+    }
+}
+
+/// The reply of a single-item tool, the Belgian server's
+/// `success_response`: the Graph resource (or the tool's own summary of a
+/// write Graph answers with 204) under `data`.
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+pub struct GraphItem {
+    // JSON: a Graph resource passes through as Graph returns it; its schema is Graph's.
+    pub data: serde_json::Value,
+    pub message: String,
+}
+
+impl GraphItem {
+    pub fn new(data: serde_json::Value) -> Self {
+        Self {
+            data,
+            message: "success".to_owned(),
+        }
+    }
+
+    pub fn summary(&self) -> String {
+        match self.data.get("id").and_then(serde_json::Value::as_str) {
+            Some(_) => "1 item returned".to_owned(),
+            None => "done".to_owned(),
+        }
+    }
+}
+
+impl McpOutputSchema for GraphItem {
+    fn artifact_type() -> &'static str {
+        "microsoft_365_item"
     }
 }

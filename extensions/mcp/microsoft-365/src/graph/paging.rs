@@ -4,7 +4,9 @@
 //! Teams, the directory and SharePoint/OneDrive refuse it and only page
 //! through `@odata.nextLink`. The fast path hands `$skip`/`$top` to Graph;
 //! on that refusal the cursor is walked here and the requested window
-//! sliced out, so every tool keeps one `skip`/`top` contract.
+//! sliced out, so every tool keeps one `skip`/`top` contract. Headers a
+//! query needs (Graph's `ConsistencyLevel: eventual` for advanced queries)
+//! ride on every page, the cursor pages included.
 
 use reqwest::Method;
 // JSON: Graph collection items are open-world resources passed through as
@@ -45,6 +47,23 @@ impl GraphClient {
         query: &GraphQuery,
         window: Window,
     ) -> Result<Page, GraphError> {
+        self.get_collection_with_headers(path, query, &[], window)
+            .await
+    }
+
+    pub async fn get_collection_with_headers(
+        &self,
+        path: &str,
+        query: &GraphQuery,
+        headers: &[(&str, &str)],
+        window: Window,
+    ) -> Result<Page, GraphError> {
+        let request = |query: GraphQuery| {
+            headed(
+                GraphRequest::new(Method::GET, path).with_query(query),
+                headers,
+            )
+        };
         let mut query = query.clone();
         if let Some(top) = window.top {
             query.set("$top", top.to_string());
@@ -52,7 +71,8 @@ impl GraphClient {
         if window.skip > 0 {
             query.set("$skip", window.skip.to_string());
         }
-        match self.get_json(path, &query).await {
+        let first = self.send(&request(query.clone())).await;
+        match first.and_then(|response| response.json()) {
             Ok(data) => {
                 let (items, next) = split(data);
                 return match cursor_behind_empty_page(&items, next) {
@@ -61,7 +81,8 @@ impl GraphClient {
                             skip: 0,
                             top: window.top,
                         };
-                        self.walk(GraphRequest::link(link), rest).await
+                        let cursor = headed(GraphRequest::link(link), headers);
+                        self.walk(cursor, headers, rest).await
                     },
                     Err(next) => Ok(Page {
                         items,
@@ -77,21 +98,21 @@ impl GraphClient {
             skip = window.skip,
             "Graph endpoint rejects $skip; paging through nextLink"
         );
-        let first = GraphRequest::new(Method::GET, path).with_query(query.clone());
-        match self.walk(first, window).await {
+        match self.walk(request(query.clone()), headers, window).await {
             Err(error) if error.rejects_option(&TOP_UNSUPPORTED) => {
                 query.remove("$top");
-                self.walk(
-                    GraphRequest::new(Method::GET, path).with_query(query),
-                    window,
-                )
-                .await
+                self.walk(request(query), headers, window).await
             },
             other => other,
         }
     }
 
-    async fn walk(&self, first: GraphRequest, window: Window) -> Result<Page, GraphError> {
+    async fn walk(
+        &self,
+        first: GraphRequest,
+        headers: &[(&str, &str)],
+        window: Window,
+    ) -> Result<Page, GraphError> {
         let skip = window.skip as usize;
         let needed = window.top.map(|top| skip + top as usize);
         let max_pages = self.limits().max_pages.max(1);
@@ -106,7 +127,7 @@ impl GraphClient {
             if pages >= max_pages || needed.is_some_and(|n| items.len() >= n) {
                 break Some(link);
             }
-            request = GraphRequest::link(link);
+            request = headed(GraphRequest::link(link), headers);
         };
         if next.is_some() && pages >= max_pages {
             tracing::warn!(pages, "Stopped following nextLink at the page cap");
@@ -136,6 +157,12 @@ fn cursor_behind_empty_page(
         Some(link) if items.is_empty() => Ok(link),
         other => Err(other),
     }
+}
+
+fn headed(request: GraphRequest, headers: &[(&str, &str)]) -> GraphRequest {
+    headers.iter().fold(request, |request, (name, value)| {
+        request.with_header(name, *value)
+    })
 }
 
 // JSON: a Graph collection body — `value` plus an optional `@odata.nextLink`.

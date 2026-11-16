@@ -111,10 +111,12 @@ fn m365_core_every_listed_input_schema_is_gemini_declarable() {
             "`{}`: {violations:?}\n{schema:#}",
             tool.name
         );
-        assert_eq!(
-            schema["properties"]["is_read"]["type"], "boolean",
-            "{schema:#}"
-        );
+        if tool.name == "d365_list_mail" {
+            assert_eq!(
+                schema["properties"]["is_read"]["type"], "boolean",
+                "{schema:#}"
+            );
+        }
     }
 }
 

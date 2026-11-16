@@ -9,7 +9,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use axum::Router;
 use axum::body::Bytes;
-use axum::extract::{Query, State};
+use axum::extract::{DefaultBodyLimit, Query, State};
 use axum::http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use serde_json::Value;
@@ -25,6 +25,7 @@ pub(crate) struct Seen {
     pub(crate) raw_query: Option<String>,
     pub(crate) query: HashMap<String, String>,
     pub(crate) headers: Vec<(String, String)>,
+    pub(crate) body: Vec<u8>,
 }
 
 impl Seen {
@@ -37,6 +38,10 @@ impl Seen {
 
     pub(crate) fn q(&self, key: &str) -> Option<&str> {
         self.query.get(key).map(String::as_str)
+    }
+
+    pub(crate) fn json(&self) -> Value {
+        serde_json::from_slice(&self.body).unwrap()
     }
 }
 
@@ -83,7 +88,7 @@ async fn handle(
     method: Method,
     uri: Uri,
     headers: HeaderMap,
-    _body: Bytes,
+    body: Bytes,
 ) -> Response {
     let query = Query::<HashMap<String, String>>::try_from_uri(&uri)
         .map(|q| q.0)
@@ -97,6 +102,7 @@ async fn handle(
             .iter()
             .map(|(k, v)| (k.as_str().to_owned(), v.to_str().unwrap_or("").to_owned()))
             .collect(),
+        body: body.to_vec(),
     };
     let index = {
         let mut calls = state.calls.lock().unwrap();
@@ -128,7 +134,11 @@ impl Sim {
             script: Arc::new(script),
             calls: Arc::clone(&calls),
         };
-        let app = Router::new().fallback(handle).with_state(state);
+        // Upload-session chunks run to 3 MiB, past axum's 2 MB default.
+        let app = Router::new()
+            .fallback(handle)
+            .layer(DefaultBodyLimit::max(64 * 1024 * 1024))
+            .with_state(state);
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });

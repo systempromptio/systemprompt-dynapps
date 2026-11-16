@@ -53,7 +53,8 @@ async fn files_upload_then_resolve_round_trips_the_same_bytes() {
     assert!(ticket.instructions.contains(UPLOAD_TOOL));
     assert!(!format!("{ticket:?}").contains(&ticket.upload_token));
 
-    h.store.complete(&ticket.upload_id, PDF, Duration::minutes(1));
+    h.store
+        .complete(&ticket.upload_id, PDF, Duration::minutes(1));
     let file = h
         .files
         .resolve_ref(call, &ticket.file_ref)
@@ -218,7 +219,13 @@ async fn files_size_limits_hold_on_requests_and_while_reading() {
         .request_upload(call, &upload_request(17))
         .await
         .expect_err("declared over the limit");
-    assert_eq!(error, FilesError::TooLarge { size: 17, limit: 16 });
+    assert_eq!(
+        error,
+        FilesError::TooLarge {
+            size: 17,
+            limit: 16
+        }
+    );
     assert!(h.store.with(|state| state.uploads.is_empty()));
 
     let blob = ContentHash::try_new("ab".repeat(32)).expect("hash");
@@ -242,7 +249,10 @@ async fn files_size_limits_hold_on_requests_and_while_reading() {
         .resolve_ref(call, &reference)
         .await
         .expect_err("size unknown up front, over the limit once read");
-    assert!(matches!(error, FilesError::TooLarge { limit: 16, .. }), "{error}");
+    assert!(
+        matches!(error, FilesError::TooLarge { limit: 16, .. }),
+        "{error}"
+    );
     let refused = h.audit.events().pop().expect("audited");
     assert_eq!(refused.action, FileAction::Refused);
     assert_eq!(refused.reason.as_deref(), Some("too_large"));
@@ -259,7 +269,10 @@ async fn files_size_limits_hold_on_requests_and_while_reading() {
         .await
         .expect("the store reported 10 bytes");
     let error = file.read_all().await.expect_err("capped while reading");
-    assert!(matches!(error, FilesError::TooLarge { limit: 16, .. }), "{error}");
+    assert!(
+        matches!(error, FilesError::TooLarge { limit: 16, .. }),
+        "{error}"
+    );
     let file = h.files.resolve_ref(call, &reference).await.expect("again");
     let mut stream = file.into_stream();
     let first = stream.next().await.expect("one chunk");
@@ -291,7 +304,10 @@ async fn files_a_stored_type_outside_the_allowlist_cannot_be_relabelled() {
         .resolve_ref(call, &relabelled)
         .await
         .expect_err("stored type not admitted");
-    assert!(matches!(error, FilesError::MimeNotAllowed { .. }), "{error}");
+    assert!(
+        matches!(error, FilesError::MimeNotAllowed { .. }),
+        "{error}"
+    );
     assert_eq!(h.store.with(|state| state.opened), 0);
 }
 
@@ -417,7 +433,11 @@ async fn files_downloads_become_the_callers_documents_with_a_link() {
     assert_eq!(out.name, "invoice (2).pdf");
     assert_eq!(out.mime, "application/pdf");
     assert_eq!(out.size_bytes, PDF.len() as u64);
-    assert!(out.download_url.as_deref().is_some_and(|url| url.contains(&out.file_ref.document_id)));
+    assert!(
+        out.download_url
+            .as_deref()
+            .is_some_and(|url| url.contains(&out.file_ref.document_id))
+    );
     assert!(!out.file_ref.revision_id.is_empty());
 
     let back = h
@@ -428,7 +448,10 @@ async fn files_downloads_become_the_callers_documents_with_a_link() {
     assert_eq!(back.read_all().await.expect("bytes"), PDF);
     let events = h.audit.events();
     assert_eq!(events[0].action, FileAction::Stored);
-    assert_eq!(events[0].file, format!("document:{}", out.file_ref.document_id));
+    assert_eq!(
+        events[0].file,
+        format!("document:{}", out.file_ref.document_id)
+    );
     assert!(!events[0].description().contains("invoice"));
 }
 
@@ -436,7 +459,12 @@ async fn files_downloads_become_the_callers_documents_with_a_link() {
 async fn files_a_download_whose_numbered_names_are_all_taken_gets_a_unique_tag() {
     let h = harness();
     h.store.with(|state| {
-        for taken in ["notes.txt", "notes (2).txt", "notes (3).txt", "notes (4).txt"] {
+        for taken in [
+            "notes.txt",
+            "notes (2).txt",
+            "notes (3).txt",
+            "notes (4).txt",
+        ] {
             state.taken_names.insert(taken.to_owned());
         }
     });

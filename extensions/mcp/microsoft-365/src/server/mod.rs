@@ -20,7 +20,10 @@ use systemprompt::mcp::{
     ArtifactIngest, McpToolExecutor, WEBSITE_URL, build_tool_list_result, client_profile_from_peer,
 };
 use systemprompt::traits::{DynToolCallIntentClaims, SecretLookup};
-use systemprompt_mcp_shared::auth::{ServerAccess, ToolAuth, authenticate_tool_request};
+use systemprompt_mcp_shared::auth::{
+    ServerAccess, ToolAuth, authenticate_tool_request, verified_hop_token,
+};
+use systemprompt_mcp_shared::files::McpFiles;
 use systemprompt_mcp_shared::record_mcp_access;
 
 use crate::graph::{Broker, GraphClient, GraphClientParts, GraphEndpoint, GraphError, GraphLimits};
@@ -59,6 +62,7 @@ pub struct Microsoft365Server {
     executor: McpToolExecutor,
     access: ServerAccess,
     graph: GraphHost,
+    files: McpFiles,
 }
 
 impl Microsoft365Server {
@@ -68,6 +72,7 @@ impl Microsoft365Server {
         access: ServerAccess,
         artifact_ingest: Arc<ArtifactIngest>,
         graph: GraphHost,
+        files: McpFiles,
     ) -> Self {
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
@@ -83,6 +88,7 @@ impl Microsoft365Server {
             executor,
             access,
             graph,
+            files,
         }
     }
 }
@@ -156,12 +162,15 @@ impl ServerHandler for Microsoft365Server {
         let purpose = request_context.caller_purpose().map(str::to_owned);
         let graph = self.graph.client_for(bearer, purpose)?;
         let client = client_profile_from_peer(&ctx);
+        let hop = verified_hop_token(&ctx);
         tools::dispatch(&ToolCall {
             executor: &self.executor,
             request: &request,
             context: &request_context,
             client: &client,
             graph: &graph,
+            files: &self.files,
+            hop: hop.as_ref(),
         })
         .await
         .map(Into::into)

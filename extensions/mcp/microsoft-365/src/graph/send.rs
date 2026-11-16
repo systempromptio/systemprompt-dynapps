@@ -213,7 +213,7 @@ fn retry_after(response: &reqwest::Response, limits: &GraphLimits) -> Duration {
         .map_or(limits.default_backoff, Duration::from_secs)
 }
 
-async fn finish(
+pub(super) async fn finish(
     mut response: reqwest::Response,
     limit: usize,
 ) -> Result<GraphResponse, GraphError> {

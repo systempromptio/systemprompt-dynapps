@@ -16,13 +16,20 @@
 //!   the fields its dashboard artifact reads
 //! - the `documents` server's tool surface and its manifest/services yaml
 //! - the issue report tools on the `systemprompt` server and their config
-//! - `systemprompt-mcp-shared`'s file layer: `FileRef` parsing and schema,
-//!   the inline limit, name and MIME checks, and `McpFiles` ownership,
-//!   expiry, size limits and audit over an in-memory store
+//! - `systemprompt-mcp-shared`'s file layer: `FileRef` parsing and schema, the
+//!   inline limit, name and MIME checks, and `McpFiles` ownership, expiry, size
+//!   limits and audit over an in-memory store
 //! - the `microsoft-365` server (`m365_core_*`): value checks ported from the
 //!   Belgian server, the Graph client against a simulated Graph (429, 401,
-//!   redirects, size limit, paging), `d365_list_mail`, the broker token and
-//!   the tool surface against the pinned Belgian fixture
+//!   redirects, size limit, paging), `d365_list_mail`, the broker token and the
+//!   tool surface against the pinned Belgian fixture
+//! - the `microsoft-365` mail tools (`m365_mail_*`): the Graph request each
+//!   sends and its Belgian reply, attachments through the file layer (kept as
+//!   documents, upload sessions without the bearer, other users' files refused)
+//!   and the mail surface against the pinned fixture
+//! - the `microsoft-365` calendar, contacts and To Do tools (`m365_calendar_*`,
+//!   `m365_contacts`, `m365_todo`): the Graph request each builds and the
+//!   Belgian reply, against a simulated Graph
 
 #[cfg(test)]
 mod access_policy;
@@ -37,6 +44,14 @@ mod files_support;
 #[cfg(test)]
 mod filter_hallucinated_args;
 #[cfg(test)]
+mod gemini_schema;
+#[cfg(test)]
+mod m365_calendar_event;
+#[cfg(test)]
+mod m365_calendar_list;
+#[cfg(test)]
+mod m365_contacts;
+#[cfg(test)]
 mod m365_core_graph;
 #[cfg(test)]
 mod m365_core_mail;
@@ -47,9 +62,21 @@ mod m365_core_sanitize;
 #[cfg(test)]
 mod m365_core_surface;
 #[cfg(test)]
+mod m365_mail_attach;
+#[cfg(test)]
+mod m365_mail_folders;
+#[cfg(test)]
+mod m365_mail_read;
+#[cfg(test)]
+mod m365_mail_send;
+#[cfg(test)]
+mod m365_mail_surface;
+#[cfg(test)]
+mod m365_pim_support;
+#[cfg(test)]
 mod m365_support;
 #[cfg(test)]
-mod gemini_schema;
+mod m365_todo;
 #[cfg(test)]
 mod systemprompt_error;
 #[cfg(test)]

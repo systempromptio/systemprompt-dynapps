@@ -13,6 +13,8 @@ pub mod query;
 pub mod sanitize;
 mod send;
 pub mod token;
+pub mod upload;
+mod write;
 
 use std::fmt;
 use std::sync::Arc;

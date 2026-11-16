@@ -4,9 +4,10 @@
 
 use rmcp::ErrorData as McpError;
 use rmcp::model::{CallToolRequestParams, CallToolResult, Tool};
-use systemprompt::identifiers::{McpExecutionId, McpServerId};
+use systemprompt::identifiers::{JwtToken, McpExecutionId, McpServerId};
 use systemprompt::mcp::{ClientProfile, McpToolExecutor, McpToolHandler};
 use systemprompt::models::execution::context::RequestContext;
+use systemprompt_mcp_shared::files::McpFiles;
 use systemprompt_mcp_shared::reply;
 
 use super::mail::{self, LIST_MAIL_DESCRIPTION, ListMailInput};
@@ -22,6 +23,8 @@ pub struct ToolCall<'a> {
     pub context: &'a RequestContext,
     pub client: &'a ClientProfile,
     pub graph: &'a GraphClient,
+    pub files: &'a McpFiles,
+    pub hop: Option<&'a JwtToken>,
 }
 
 fn graph<'a>(graph: Option<&'a GraphClient>) -> Result<&'a GraphClient, McpError> {
@@ -62,7 +65,14 @@ impl McpToolHandler for ListMail<'_> {
 }
 
 pub(super) fn definitions(server: &McpServerId) -> Vec<Tool> {
-    vec![ListMail { graph: None }.tool_definition(server)]
+    let mut tools = vec![ListMail { graph: None }.tool_definition(server)];
+    tools.extend(super::mail_tools::definitions(server));
+    tools.extend(super::mail_tools::file_definitions(server));
+    tools.extend(super::calendar::definitions(server));
+    tools.extend(super::calendar_event::definitions(server));
+    tools.extend(super::contacts::definitions(server));
+    tools.extend(super::todo::definitions(server));
+    tools
 }
 
 async fn run<H: McpToolHandler>(
@@ -77,6 +87,24 @@ async fn run<H: McpToolHandler>(
 }
 
 pub async fn dispatch(call: &ToolCall<'_>) -> Result<CallToolResult, McpError> {
+    if let Some(result) = super::mail_tools::dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::mail_tools::file_dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::calendar::dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::calendar_event::dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::contacts::dispatch(call).await {
+        return result;
+    }
+    if let Some(result) = super::todo::dispatch(call).await {
+        return result;
+    }
     let graph = Some(call.graph);
     match call.request.name.as_ref() {
         "d365_list_mail" => run(call, &ListMail { graph }).await,
