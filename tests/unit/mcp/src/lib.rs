@@ -38,6 +38,10 @@
 //!   (`m365_teams*`, `m365_meetings`): the Graph request each builds, the
 //!   Belgian reply, the caller bound from `/me`, presence as a session of the
 //!   Entra app and meeting transcripts kept as documents
+//! - the `microsoft-365` Planner, OneNote, group, user, search and batch tools
+//!   (`m365_rest_*`), and the whole surface against the Belgian fixture
+//!   (`m365_parity`): its 147 tools, titles, hints and parameters, and the
+//!   three `apps/` entry points not served
 
 #[cfg(test)]
 mod access_policy;
@@ -92,7 +96,19 @@ mod m365_mail_surface;
 #[cfg(test)]
 mod m365_meetings;
 #[cfg(test)]
+mod m365_parity;
+#[cfg(test)]
 mod m365_pim_support;
+#[cfg(test)]
+mod m365_rest_directory;
+#[cfg(test)]
+mod m365_rest_onenote;
+#[cfg(test)]
+mod m365_rest_planner;
+#[cfg(test)]
+mod m365_rest_planner_tasks;
+#[cfg(test)]
+mod m365_rest_search;
 #[cfg(test)]
 mod m365_sharepoint;
 #[cfg(test)]

@@ -14,6 +14,7 @@ mod drive_tools;
 pub mod drive_write;
 mod file_tool;
 pub mod graph_tool;
+pub mod groups;
 mod handlers;
 pub mod mail;
 pub mod mail_attach;
@@ -23,13 +24,23 @@ pub mod mail_send;
 mod mail_tools;
 pub mod meetings;
 pub mod meetings_media;
+pub mod onenote;
+pub mod planner;
+pub mod planner_bucket;
+pub mod planner_details;
+mod planner_hub;
+pub mod planner_roster;
+pub mod planner_task;
 pub mod presence;
 pub mod reply;
+mod rest_hub;
+pub mod search;
 pub mod sharepoint;
 pub mod teams;
 mod teams_hub;
 pub mod teams_write;
 pub mod todo;
+pub mod users;
 
 use std::sync::LazyLock;
 
@@ -95,6 +106,8 @@ pub static TOOLS: LazyLock<Vec<ToolSpec>> = LazyLock::new(|| {
         drive_tools::DRIVE_SPECS,
         sharepoint::SHAREPOINT_SPECS,
         teams_hub::TEAMS_SPECS,
+        planner_hub::PLANNER_SPECS,
+        rest_hub::REST_SPECS,
     ]
     .concat()
 });
