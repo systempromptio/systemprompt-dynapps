@@ -113,6 +113,7 @@ impl GraphClient {
         }
         let fresh = self.tokens.access_token(None).await?;
         *slot = Some(fresh.clone());
+        drop(slot);
         Ok(fresh)
     }
 

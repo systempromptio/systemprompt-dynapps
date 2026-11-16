@@ -1,4 +1,4 @@
-//! The OneNote tools against a simulated Graph: notebooks and sections with
+//! The `OneNote` tools against a simulated Graph: notebooks and sections with
 //! the Belgian `$select`, a page's HTML handed back as text, and a new page
 //! posted as an HTML document whose title is escaped.
 

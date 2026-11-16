@@ -223,8 +223,10 @@ impl FileStore for DocumentsFileStore {
         };
         let (document, revision) = act_as_request(
             ctx,
-            self.documents
-                .create_from_file(who, request, ctx.trace_id()),
+            Box::pin(
+                self.documents
+                    .create_from_file(who, request, ctx.trace_id()),
+            ),
         )
         .await
         .map_err(|error| documents_error(&error))?;

@@ -184,6 +184,7 @@ impl GraphTokens for FakeTokens {
         let mut asked = self.asked.lock().unwrap();
         asked.push(stale.map(str::to_owned));
         let index = (asked.len() - 1).min(self.sequence.len() - 1);
+        drop(asked);
         Ok(self.sequence[index].clone())
     }
 }

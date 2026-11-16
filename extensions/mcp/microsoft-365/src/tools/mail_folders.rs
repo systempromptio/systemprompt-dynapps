@@ -1,6 +1,7 @@
 //! Mailbox organisation: mail folders, inbox rules and Outlook categories.
-//! A rule without a `sequence` runs last: Graph reads a missing sequence as
-//! 0 and refuses it, so the next free position is taken from the existing
+//!
+//! A rule without a `sequence` runs last: Graph reads a missing sequence as 0
+//! and refuses it, so the next free position is taken from the existing
 //! rules, as the Belgian server does.
 
 use schemars::JsonSchema;

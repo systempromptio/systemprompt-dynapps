@@ -1,7 +1,9 @@
-//! Mail tools. `d365_list_mail` lists a folder with the Belgian server's
-//! filters, ordering and paging. Graph takes neither `$filter` nor
-//! `$orderby` beside `$search` on messages (Graph's query-parameter
-//! rules), so a search drops both; the Belgian server still sent `$orderby`.
+//! Mail tools.
+//!
+//! `d365_list_mail` lists a folder with the Belgian server's filters,
+//! ordering and paging. Graph takes neither `$filter` nor `$orderby` beside
+//! `$search` on messages (Graph's query-parameter rules), so a search drops
+//! both; the Belgian server still sent `$orderby`.
 
 use schemars::JsonSchema;
 use serde::Deserialize;

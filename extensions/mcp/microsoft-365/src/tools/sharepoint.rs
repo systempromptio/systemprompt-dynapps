@@ -1,6 +1,7 @@
-//! SharePoint tools: find a site by keyword, ID or host and path, list its
+//! `SharePoint` tools: find a site by keyword, ID or host and path, list its
 //! lists and document libraries, and read, create and update list items.
-//! A library's files are then reached with the OneDrive tools and the
+//!
+//! A library's files are then reached with the `OneDrive` tools and the
 //! library's `drive_id`. List item `fields` are the list's own columns,
 //! passed through as an open object.
 

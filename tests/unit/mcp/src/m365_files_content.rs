@@ -179,7 +179,7 @@ async fn m365_files_get_file_content_refuses_a_folder_before_downloading() {
 
 #[tokio::test]
 async fn m365_files_download_file_returns_a_document_not_the_presigned_url() {
-    let zip = vec![9_u8; 2048];
+    let zip = vec![9u8; 2048];
     let metadata = json!({
         "id": "Z1", "name": "plans.zip", "size": zip.len(),
         "file": {"mimeType": "application/zip"},
@@ -243,7 +243,7 @@ async fn m365_files_get_file_content_keeps_text_that_is_not_utf8_as_a_document()
 
 #[tokio::test]
 async fn m365_files_download_file_without_a_mime_type_keeps_it_as_octet_stream() {
-    let bytes = vec![1_u8, 2, 3, 4];
+    let bytes = vec![1u8, 2, 3, 4];
     let metadata = json!({"id": "B1", "name": "blob.bin", "size": 4, "file": {}});
     let (sim, _download) = drive_with(metadata, bytes.clone()).await;
     let h = harness();

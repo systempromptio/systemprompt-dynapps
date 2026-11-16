@@ -11,7 +11,7 @@ pub mod graph;
 pub mod server;
 pub mod tools;
 
-pub use server::{GraphHost, Microsoft365Server};
+pub use server::{GraphHost, Microsoft365Server, ToolBackends};
 
 pub const SERVER_NAME: &str = "microsoft-365";
 

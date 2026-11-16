@@ -1,7 +1,9 @@
 //! Teams presence: the signed-in user's, another user's, and setting the
-//! user's own. Graph takes a presence set by an app as a session of that
-//! app, so `sessionId` is the Entra app's client id the endpoint carries
-//! (the Belgian server sent its `entra_client_id` the same way).
+//! user's own.
+//!
+//! Graph takes a presence set by an app as a session of that app, so
+//! `sessionId` is the Entra app's client id the endpoint carries (the Belgian
+//! server sent its `entra_client_id` the same way).
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -33,6 +35,10 @@ fn default_expiration() -> String {
     "PT1H".to_owned()
 }
 
+#[expect(
+    clippy::empty_structs_with_brackets,
+    reason = "MCP takes a tool's arguments as a JSON object: a unit struct deserializes only from null and its schema is not an object"
+)]
 #[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
 pub struct MyPresenceInput {}
 

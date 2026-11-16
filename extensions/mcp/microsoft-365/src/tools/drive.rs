@@ -1,8 +1,9 @@
-//! OneDrive reads on drive items: the user's drives, a folder's children,
-//! search within a drive, and an item's metadata and sharing permissions
-//! (the writes are in `drive_write`). Each tool works on the user's own
-//! drive (`/me/drive`) unless it is given a `drive_id` (a SharePoint
-//! library or a drive shared with the user).
+//! `OneDrive` reads on drive items: the user's drives, a folder's children,
+//! search within a drive, and an item's metadata and sharing permissions (the
+//! writes are in `drive_write`).
+//!
+//! Each tool works on the user's own drive (`/me/drive`) unless it is given a
+//! `drive_id` (a `SharePoint` library or a drive shared with the user).
 //!
 //! A location relative to the drive root is addressed as `root:/a/b:` (the
 //! root itself as `root`), with empty segments dropped, `..` refused and

@@ -1,6 +1,8 @@
-//! OneNote: the signed-in user's notebooks, sections and pages. A page's
-//! content is the HTML Graph returns, handed back as text like the Belgian
-//! server did; a new page is sent as an HTML document whose title is escaped.
+//! `OneNote`: the signed-in user's notebooks, sections and pages.
+//!
+//! A page's content is the HTML Graph returns, handed back as text like the
+//! Belgian server did; a new page is sent as an HTML document whose title is
+//! escaped.
 
 use reqwest::Method;
 use schemars::JsonSchema;

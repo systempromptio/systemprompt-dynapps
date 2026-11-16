@@ -1,7 +1,8 @@
 //! Microsoft Search across the user's content (`/search/query`), the same
-//! search narrowed to mail, and `d365_batch`: up to 20 Graph requests in one
-//! `$batch` call, which Graph runs as the signed-in user, relative to its
-//! own version root.
+//! search narrowed to mail, and `d365_batch`.
+//!
+//! `d365_batch` sends up to 20 Graph requests in one `$batch` call, which
+//! Graph runs as the signed-in user, relative to its own version root.
 
 use schemars::JsonSchema;
 use serde::Deserialize;

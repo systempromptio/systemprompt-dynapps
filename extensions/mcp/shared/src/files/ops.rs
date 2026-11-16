@@ -21,6 +21,12 @@ const UNIQUE_TAG_CHARS: usize = 8;
 const UPLOAD_LABEL: &str = "upload";
 const DOWNLOAD_LABEL: &str = "download";
 
+pub(super) struct Audit {
+    pub action: FileAction,
+    pub file: String,
+    pub size_bytes: Option<u64>,
+}
+
 pub(super) fn caller(ctx: &RequestContext) -> Result<&AuthenticatedUser, FilesError> {
     ctx.user.as_ref().ok_or(FilesError::Anonymous)
 }
@@ -55,8 +61,12 @@ impl McpFiles {
             |ticket| format!("{UPLOAD_LABEL}:{}", ticket.upload_id),
         );
         let declared = Some(request.size).filter(|size| *size > 0);
-        self.audited(call, FileAction::UploadOpened, label, declared, outcome)
-            .await
+        let audit = Audit {
+            action: FileAction::UploadOpened,
+            file: label,
+            size_bytes: declared,
+        };
+        self.audited(call, audit, outcome).await
     }
 
     pub async fn store_download(
@@ -70,18 +80,25 @@ impl McpFiles {
             |_refused| DOWNLOAD_LABEL.to_owned(),
             |out| format!("document:{}", out.file_ref.document_id),
         );
-        self.audited(call, FileAction::Stored, label, Some(size), outcome)
-            .await
+        let audit = Audit {
+            action: FileAction::Stored,
+            file: label,
+            size_bytes: Some(size),
+        };
+        self.audited(call, audit, outcome).await
     }
 
     pub(super) async fn audited<T>(
         &self,
         call: FileCall<'_>,
-        action: FileAction,
-        file: String,
-        size_bytes: Option<u64>,
+        audit: Audit,
         outcome: Result<T, FilesError>,
     ) -> Result<T, FilesError> {
+        let Audit {
+            action,
+            file,
+            size_bytes,
+        } = audit;
         let (action, reason) = match &outcome {
             Ok(_) => (action, None),
             Err(error) => (FileAction::Refused, Some(error.code().to_owned())),

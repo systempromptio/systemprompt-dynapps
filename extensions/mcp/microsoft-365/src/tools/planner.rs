@@ -1,8 +1,10 @@
-//! Planner plans, and the write rules every Planner tool shares. Planner
-//! versions each resource: a PATCH or DELETE carries the `@odata.etag` from
-//! a prior GET as `If-Match`, so every changing tool takes an `etag`, as in
-//! the Belgian server. A plan lives in a Microsoft 365 group or in a
-//! group-less roster; the tools that name a container take exactly one.
+//! Planner plans, and the write rules every Planner tool shares.
+//!
+//! Planner versions each resource: a PATCH or DELETE carries the
+//! `@odata.etag` from a prior GET as `If-Match`, so every changing tool takes
+//! an `etag`, as in the Belgian server. A plan lives in a Microsoft 365 group
+//! or in a group-less roster; the tools that name a container take exactly
+//! one.
 
 use reqwest::Method;
 use schemars::JsonSchema;
@@ -116,14 +118,14 @@ pub(super) async fn patch_versioned(
     graph: &GraphClient,
     path: &str,
     tag: &str,
-    patch: Map<String, Value>,
+    changes: Map<String, Value>,
 ) -> Result<GraphItem, GraphError> {
     let tag = etag(tag)?;
-    if patch.is_empty() {
+    if changes.is_empty() {
         return Err(GraphError::Invalid("No fields to update".to_owned()));
     }
     let request = GraphRequest::new(Method::PATCH, path)
-        .with_body(GraphBody::Json(Value::Object(patch)))
+        .with_body(GraphBody::Json(Value::Object(changes)))
         .with_header("If-Match", tag)
         .with_header("Prefer", "return=representation");
     let data = graph.send(&request).await?.json()?;
@@ -202,12 +204,12 @@ pub async fn update_planner_plan(
     input: UpdatePlanInput,
 ) -> Result<GraphItem, GraphError> {
     let plan = validate_id(&input.plan_id, "plan_id")?;
-    let mut patch = Map::new();
+    let mut changes = Map::new();
     if let Some(title) = input.title {
-        patch.insert("title".to_owned(), Value::String(title));
+        changes.insert("title".to_owned(), Value::String(title));
     }
     let path = format!("/planner/plans/{plan}");
-    patch_versioned(graph, &path, &input.etag, patch).await
+    patch_versioned(graph, &path, &input.etag, changes).await
 }
 
 pub async fn delete_planner_plan(

@@ -176,8 +176,7 @@ pub async fn exchange_with_client(
         access.services,
         Some(access.secrets),
         grant,
-        code,
-        callback,
+        super::AuthorizationCode { code, callback },
         http,
     )
     .await

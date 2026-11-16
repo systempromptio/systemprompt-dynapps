@@ -37,6 +37,10 @@ const fn default_top() -> i64 {
     10
 }
 
+#[expect(
+    clippy::empty_structs_with_brackets,
+    reason = "MCP takes a tool's arguments as a JSON object: a unit struct deserializes only from null and its schema is not an object"
+)]
 #[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
 pub struct MyProfileInput {}
 

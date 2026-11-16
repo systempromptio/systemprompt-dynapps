@@ -4,11 +4,12 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
+use systemprompt::config::GrantedSecrets;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::system::HostContext;
 use systemprompt::traits::SecretLookup;
 use systemprompt_mcp_microsoft_365::graph::{Broker, GraphLimits, http_client};
-use systemprompt_mcp_microsoft_365::{GraphHost, Microsoft365Server, UPLOAD_TOOL};
+use systemprompt_mcp_microsoft_365::{GraphHost, Microsoft365Server, ToolBackends, UPLOAD_TOOL};
 use systemprompt_mcp_shared::files::{FilePolicy, McpFiles};
 // Why: core discovers the governance authz hook, the connection snapshot
 // source, the group/project/role subject providers and the document template
@@ -109,7 +110,7 @@ async fn main() -> Result<()> {
         .context("Invalid MCP_SERVICE_ID")?;
 
     let limits = GraphLimits::default();
-    let secrets: Arc<dyn SecretLookup> = ctx.granted_secrets().clone();
+    let secrets: Arc<dyn SecretLookup> = Arc::<GrantedSecrets>::clone(ctx.granted_secrets());
     let graph = GraphHost {
         http: http_client(&limits).context("Failed to build the Graph HTTP client")?,
         broker: Broker::for_instance(ctx.config(), Arc::clone(&secrets), service_id.as_str()),
@@ -126,8 +127,7 @@ async fn main() -> Result<()> {
             services: ctx.services_state().watch().clone(),
         },
         ctx.artifact_ingest(),
-        graph,
-        files,
+        ToolBackends { graph, files },
     );
     let requires_oauth = ctx
         .services_state()

@@ -33,6 +33,10 @@ graph_tools! {
         DeleteRosterMemberInput, GraphItem, DELETE_MEMBER;
 }
 
+#[expect(
+    clippy::empty_structs_with_brackets,
+    reason = "MCP takes a tool's arguments as a JSON object: a unit struct deserializes only from null and its schema is not an object"
+)]
 #[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
 pub struct NewRosterInput {}
 

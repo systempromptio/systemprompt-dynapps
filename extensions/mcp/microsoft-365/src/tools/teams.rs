@@ -1,9 +1,10 @@
 //! Microsoft Teams reads: the teams the user has joined, a team's channels
-//! and members, and a channel's messages, replies and members. Graph v1.0
-//! refuses `$top` and `$skip` on `/me/joinedTeams`, so that list takes no
-//! paging; the others page with `skip` (and `top` for messages), walking
-//! `@odata.nextLink` where Graph rejects `$skip`, as the Belgian server's
-//! `get_collection` did.
+//! and members, and a channel's messages, replies and members.
+//!
+//! Graph v1.0 refuses `$top` and `$skip` on `/me/joinedTeams`, so that list
+//! takes no paging; the others page with `skip` (and `top` for messages),
+//! walking `@odata.nextLink` where Graph rejects `$skip`, as the Belgian
+//! server's `get_collection` did.
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -49,6 +50,10 @@ const fn default_top() -> i64 {
     25
 }
 
+#[expect(
+    clippy::empty_structs_with_brackets,
+    reason = "MCP takes a tool's arguments as a JSON object: a unit struct deserializes only from null and its schema is not an object"
+)]
 #[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
 pub struct JoinedTeamsInput {}
 
@@ -94,6 +99,10 @@ pub struct ChannelMessagesInput {
     pub skip: i64,
 }
 
+#[expect(
+    clippy::struct_field_names,
+    reason = "the fields are the d365_* tool's JSON parameters, kept identical to the Belgian server's"
+)]
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ChannelMessageIdInput {
     #[schemars(description = "The team ID.")]

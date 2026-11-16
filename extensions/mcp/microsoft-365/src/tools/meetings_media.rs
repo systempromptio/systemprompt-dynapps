@@ -1,9 +1,10 @@
 //! What a Teams meeting leaves behind: its transcripts, recordings and
-//! attendance reports. A transcript's content (WebVTT) is kept as one of the
-//! caller's documents and comes back as a `FileOut` (the Belgian server
-//! returned the whole text to the model). A recording is listed and read as
-//! Graph's metadata only, as the Belgian server did: its video is not
-//! downloaded.
+//! attendance reports.
+//!
+//! A transcript's content (`WebVTT`) is kept as one of the caller's documents
+//! and comes back as a `FileOut` (the Belgian server returned the whole text
+//! to the model). A recording is listed and read as Graph's metadata only, as
+//! the Belgian server did: its video is not downloaded.
 
 use reqwest::Method;
 use rmcp::ErrorData as McpError;

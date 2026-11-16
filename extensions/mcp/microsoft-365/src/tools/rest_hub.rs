@@ -1,4 +1,4 @@
-//! The rest of the surface — OneNote, groups, users, Microsoft Search and
+//! The rest of the surface — `OneNote`, groups, users, Microsoft Search and
 //! `d365_batch`: each tool's title and behaviour class from the Belgian
 //! `_annotations.py`, and one definition list and dispatch over them. The
 //! three `d365_app_*` entry points of the Belgian `apps/` (interactive HTML

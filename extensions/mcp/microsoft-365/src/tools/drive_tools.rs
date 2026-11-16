@@ -1,4 +1,4 @@
-//! The OneDrive domain's tool table: each `d365_*` drive tool bound to its
+//! The `OneDrive` domain's tool table: each `d365_*` drive tool bound to its
 //! function, input, reply and description, and its title and behaviour
 //! class from the Belgian `_annotations.py`. File content, downloads and
 //! uploads go through the file layer.

@@ -219,7 +219,7 @@ async fn m365_mail_add_mail_attachment_refuses_bad_sources_before_graph() {
     let (record, bobs) = document_of(BOB, "salaries.xlsx", "application/pdf", 4);
     h.store.put(record, b"%PDF");
     let (ctx, exec) = (signed_in(ALICE), exec_id());
-    let big_inline = STANDARD.encode(vec![7_u8; 70 * 1024]);
+    let big_inline = STANDARD.encode(vec![7u8; 70 * 1024]);
     for bad in [
         json!({"message_id": "d1", "filename": "x"}),
         json!({"message_id": "d1", "filename": "x", "content_base64": "aGk=", "file": {"document_id": bobs.to_string()}}),

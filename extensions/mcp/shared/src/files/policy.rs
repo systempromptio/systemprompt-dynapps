@@ -79,7 +79,7 @@ impl FilePolicy {
         }
     }
 
-    pub fn check_size(&self, size: u64) -> Result<(), FilesError> {
+    pub const fn check_size(&self, size: u64) -> Result<(), FilesError> {
         if size == 0 {
             return Err(FilesError::Empty);
         }

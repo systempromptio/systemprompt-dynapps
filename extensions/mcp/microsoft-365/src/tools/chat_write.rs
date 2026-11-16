@@ -1,8 +1,10 @@
-//! Teams chat writes: send a message, start a one-on-one or group chat,
-//! pin and unpin a message, and react to one. A new chat lists the caller
-//! too (Graph requires every member, the caller included), so its Graph id
-//! is read from `/me` first; members and pinned messages are bound by URL
-//! under the configured Graph root, which is Microsoft's in production.
+//! Teams chat writes: send a message, start a one-on-one or group chat, pin
+//! and unpin a message, and react to one.
+//!
+//! A new chat lists the caller too (Graph requires every member, the caller
+//! included), so its Graph id is read from `/me` first; members and pinned
+//! messages are bound by URL under the configured Graph root, which is
+//! Microsoft's in production.
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -124,7 +126,7 @@ pub async fn send_chat_message(
 ) -> Result<GraphItem, GraphError> {
     let path = format!("{}/messages", chat_path(&input.chat_id)?);
     let data = graph
-        .post_json(&path, message_body(input.body, input.is_html))
+        .post_json(&path, message_body(&input.body, input.is_html))
         .await?;
     Ok(GraphItem::new(data))
 }

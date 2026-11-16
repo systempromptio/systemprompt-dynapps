@@ -1,7 +1,8 @@
-//! The tool surface of the `microsoft-365` server: each tool's name, title
-//! and behaviour hints, which follow the Belgian server's
-//! `tools/_annotations.py` so clients see the same `d365_*` contract, and
-//! the dispatch from a tool name to its handler.
+//! The tool surface of the `microsoft-365` server.
+//!
+//! Each tool's name, title and behaviour hints follow the Belgian server's
+//! `tools/_annotations.py`, so clients see the same `d365_*` contract; the
+//! dispatch goes from a tool name to its handler.
 
 pub mod calendar;
 pub mod calendar_event;
@@ -56,10 +57,12 @@ pub const INSTRUCTIONS: &str = "Microsoft 365 through Microsoft Graph, acting as
     then reads or changes only what that user may reach in Graph. List tools page with `top` \
     and `skip`: when a reply says `has_more`, call again with `skip` increased by `top`.";
 
-/// The four behaviour classes of `_annotations.py`: `Read` for list, get,
-/// search and downloads; `Write` for creates (twice creates twice);
-/// `IdempotentWrite` for updates and responses; `Destructive` for deletes
-/// and sends. Every tool is open-world (it reaches Microsoft's service).
+/// The four behaviour classes of `_annotations.py`.
+///
+/// `Read` for list, get, search and downloads; `Write` for creates (twice
+/// creates twice); `IdempotentWrite` for updates and responses; `Destructive`
+/// for deletes and sends. Every tool is open-world (it reaches Microsoft's
+/// service).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolKind {
     Read,

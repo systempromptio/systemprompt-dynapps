@@ -1,11 +1,12 @@
-//! File content through the shared file layer. Graph answers an item's
-//! `/content` with a 302 to a pre-signed download URL; the Graph client
-//! follows it without the user's bearer (the Belgian server did not, so its
-//! `d365_get_file_content` returned `null`). Text of up to 256 KiB comes back
-//! inline for the model to read; any other file is kept as one of the
-//! caller's documents and comes back as a `FileOut`, never as base64 and
-//! never as Graph's pre-signed URL. An item without Graph's `file` facet
-//! (a folder) is refused before any download.
+//! File content through the shared file layer.
+//!
+//! Graph answers an item's `/content` with a 302 to a pre-signed download
+//! URL; the Graph client follows it without the user's bearer (the Belgian
+//! server did not, so its `d365_get_file_content` returned `null`). Text of
+//! up to 256 KiB comes back inline for the model to read; any other file is
+//! kept as one of the caller's documents and comes back as a `FileOut`, never
+//! as base64 and never as Graph's pre-signed URL. An item without Graph's
+//! `file` facet (a folder) is refused before any download.
 //!
 //! An upload comes in as a `FileRef`, or as base64 only up to the inline
 //! limit. Graph takes a file of under 4 MiB in one PUT and a larger one

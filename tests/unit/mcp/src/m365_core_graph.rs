@@ -4,6 +4,8 @@
 //! size limit.
 
 
+use std::sync::Arc;
+
 use axum::http::Method;
 use serde_json::json;
 use systemprompt_mcp_microsoft_365::graph::{GraphError, GraphLimits, GraphQuery, GraphRequest};
@@ -74,7 +76,11 @@ async fn m365_core_unauthorized_renews_the_token_once_and_retries() {
     })
     .await;
     let tokens = FakeTokens::new(&["stale", "fresh"]);
-    let graph = client(&sim.graph_url(), tokens.clone(), fast_limits());
+    let graph = client(
+        &sim.graph_url(),
+        Arc::<FakeTokens>::clone(&tokens),
+        fast_limits(),
+    );
     assert_eq!(
         graph.get_json("/me", &GraphQuery::new()).await.unwrap()["id"],
         "me"
@@ -97,13 +103,21 @@ async fn m365_core_unauthorized_renews_the_token_once_and_retries() {
 async fn m365_core_unauthorized_with_no_new_token_asks_to_reconnect() {
     let sim = Sim::start(|_, _| Reply::json(401, &json!({}))).await;
     let same = FakeTokens::new(&["same"]);
-    let graph = client(&sim.graph_url(), same.clone(), fast_limits());
+    let graph = client(
+        &sim.graph_url(),
+        Arc::<FakeTokens>::clone(&same),
+        fast_limits(),
+    );
     let error = graph.get_json("/me", &GraphQuery::new()).await.unwrap_err();
     assert!(matches!(error, GraphError::Unauthorized), "{error:?}");
     assert_eq!(sim.calls().len(), 1, "an unchanged token is not re-sent");
 
     let rotating = FakeTokens::new(&["a", "b", "c"]);
-    let graph = client(&sim.graph_url(), rotating.clone(), fast_limits());
+    let graph = client(
+        &sim.graph_url(),
+        Arc::<FakeTokens>::clone(&rotating),
+        fast_limits(),
+    );
     let error = graph.get_json("/me", &GraphQuery::new()).await.unwrap_err();
     assert!(matches!(error, GraphError::Unauthorized), "{error:?}");
     assert_eq!(rotating.asked().len(), 2, "one renewal, then stop");

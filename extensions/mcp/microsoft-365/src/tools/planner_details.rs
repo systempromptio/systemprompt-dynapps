@@ -68,14 +68,18 @@ pub async fn update_planner_task_details(
     input: UpdateDetailsInput,
 ) -> Result<GraphItem, GraphError> {
     let path = format!("{}/details", task_path(&input.task_id)?);
-    let mut patch = Map::new();
-    put(&mut patch, "description", input.description);
-    put(&mut patch, "previewType", input.preview_type);
-    put(&mut patch, "checklist", input.checklist.map(Value::Object));
+    let mut changes = Map::new();
+    put(&mut changes, "description", input.description);
+    put(&mut changes, "previewType", input.preview_type);
     put(
-        &mut patch,
+        &mut changes,
+        "checklist",
+        input.checklist.map(Value::Object),
+    );
+    put(
+        &mut changes,
         "references",
         input.references.map(Value::Object),
     );
-    patch_versioned(graph, &path, &input.etag, patch).await
+    patch_versioned(graph, &path, &input.etag, changes).await
 }

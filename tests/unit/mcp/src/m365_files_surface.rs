@@ -1,4 +1,4 @@
-//! The OneDrive and SharePoint tools on the server's tool list: every input
+//! The `OneDrive` and `SharePoint` tools on the server's tool list: every input
 //! schema is declarable to Gemini, the Belgian parameter names survive
 //! (`type` on a sharing link, `fields` as an open object), and
 //! `d365_upload_file` takes a file reference beside its inline base64.

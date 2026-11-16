@@ -1,4 +1,4 @@
-//! OneDrive writes on drive items: create a folder, create a sharing link,
+//! `OneDrive` writes on drive items: create a folder, create a sharing link,
 //! move or rename an item, and delete it. Paths and ids go through the same
 //! checks and encoding as the reads in `drive`.
 
@@ -102,15 +102,15 @@ pub async fn share_file(
 
 pub async fn move_file(graph: &GraphClient, input: MoveFileInput) -> Result<GraphItem, GraphError> {
     let path = item_path(&input.drive_id, &input.item_id, "")?;
-    let mut patch = json!({});
+    let mut changes = json!({});
     if !input.destination_folder_id.is_empty() {
         let folder = validate_id(&input.destination_folder_id, "destination_folder_id")?;
-        patch["parentReference"] = json!({ "id": folder });
+        changes["parentReference"] = json!({ "id": folder });
     }
     if !input.new_name.is_empty() {
-        patch["name"] = json!(&input.new_name);
+        changes["name"] = json!(&input.new_name);
     }
-    Ok(GraphItem::new(graph.patch_json(&path, patch).await?))
+    Ok(GraphItem::new(graph.patch_json(&path, changes).await?))
 }
 
 pub async fn delete_file(

@@ -53,7 +53,9 @@ async fn m365_teams_chat_list_expands_members_and_trims_them() {
             "userId": "u1", "tenantId": "t1", "visibleHistoryStartDateTime": "0001-01-01"
         }]
     });
-    let sim = Sim::start(move |_, _| Reply::json(200, &collection(&[chat.clone()], None))).await;
+    let sim =
+        Sim::start(move |_, _| Reply::json(200, &collection(std::slice::from_ref(&chat), None)))
+            .await;
     let reply = list_chats(&graph(&sim), args(json!({"top": 0, "skip": 5})))
         .await
         .unwrap();

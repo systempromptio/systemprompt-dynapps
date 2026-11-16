@@ -1,7 +1,9 @@
-//! Mail reads beside `d365_list_mail`: one message, a KQL search over every
-//! folder, the folder list, a message's attachment list, the inbox rules and
-//! another mailbox the user may read (shared or delegated). Each takes the
-//! Belgian server's parameters, defaults and `$select`.
+//! Mail reads beside `d365_list_mail`.
+//!
+//! They read one message, a KQL search over every folder, the folder list, a
+//! message's attachment list, the inbox rules and another mailbox the user
+//! may read (shared or delegated). Each takes the Belgian server's
+//! parameters, defaults and `$select`.
 
 use schemars::JsonSchema;
 use serde::Deserialize;

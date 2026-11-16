@@ -13,6 +13,8 @@ use super::{case, find, text_of};
 use crate::docs_smoke::mcp::McpClient;
 
 const OFFER_BYTES: usize = 100_000;
+// The part-number placeholder of core's signed `parts_url` template.
+const PART_NUMBER: &str = "{n}";
 const ANA: &str = "ana@empresa-a.example";
 const BRUNO: &str = "bruno@empresa-b.example";
 
@@ -42,7 +44,12 @@ fn offer() -> Vec<u8> {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    use std::fmt::Write as _;
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        write!(out, "{b:02x}").expect("writing to a String cannot fail");
+    }
+    out
 }
 
 impl<'a> Run<'a> {
@@ -89,7 +96,7 @@ impl<'a> Run<'a> {
             .expect("the simulator answers JSON")
     }
 
-    pub(super) async fn connect_both(&mut self, n: &mut u32) {
+    pub(super) async fn connect_both(&self, n: &mut u32) {
         let back = connect::consent(self.stack, &self.ana_web, "carla@empresa-c.example").await;
         connect::callback(&self.ana_web, &back).await;
         let ana_row = connect::linked(self.pool, &self.ana).await;
@@ -247,7 +254,7 @@ impl<'a> Run<'a> {
         let token = text_of(&ticket, "upload_token");
         let http = reqwest::Client::new();
         let part = http
-            .put(text_of(&ticket, "parts_url").replace("{n}", "1"))
+            .put(text_of(&ticket, "parts_url").replace(PART_NUMBER, "1"))
             .header(header.as_str(), token.as_str())
             .body(bytes.clone())
             .send()
@@ -395,7 +402,7 @@ impl<'a> Run<'a> {
         );
     }
 
-    pub(super) async fn audit(&mut self, n: &mut u32) {
+    pub(super) async fn audit(&self, n: &mut u32) {
         let rows = |user: &UserId, action: &str| {
             sqlx::query_scalar::<_, i64>(
                 "SELECT count(*) FROM user_activity

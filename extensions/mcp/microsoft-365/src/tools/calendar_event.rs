@@ -200,30 +200,30 @@ pub async fn update_event(
     input: UpdateEventInput,
 ) -> Result<GraphItem, GraphError> {
     let event_id = validate_id(&input.event_id, "event_id")?;
-    let mut patch = json!({});
+    let mut changes = json!({});
     if let Some(subject) = &input.subject {
-        patch["subject"] = json!(subject);
+        changes["subject"] = json!(subject);
     }
     if let Some(start) = &input.start_datetime {
-        patch["start"] = utc(start);
+        changes["start"] = utc(start);
     }
     if let Some(end) = &input.end_datetime {
-        patch["end"] = utc(end);
+        changes["end"] = utc(end);
     }
     if let Some(body) = &input.body {
-        patch["body"] = html(body);
+        changes["body"] = html(body);
     }
     if let Some(location) = &input.location {
-        patch["location"] = json!({ "displayName": location });
+        changes["location"] = json!({ "displayName": location });
     }
     if let Some(attendees) = &input.attendees {
-        patch["attendees"] = required_attendees(attendees);
+        changes["attendees"] = required_attendees(attendees);
     }
     if let Some(categories) = &input.categories {
-        patch["categories"] = json!(categories);
+        changes["categories"] = json!(categories);
     }
     let path = format!("/me/events/{event_id}");
-    Ok(GraphItem::new(graph.patch_json(&path, patch).await?))
+    Ok(GraphItem::new(graph.patch_json(&path, changes).await?))
 }
 
 pub async fn delete_event(

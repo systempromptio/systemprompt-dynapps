@@ -1,8 +1,10 @@
-//! Microsoft To Do tools: the user's task lists and the tasks in them —
-//! list, read, create, update and delete. Graph v1.0 refuses `$select` on
-//! `/me/todo/lists` and on a list's tasks (400 `RequestBroker--ParseUri`),
-//! so these reads take Graph's default fields; `$top` and `$skip` work.
-//! Due dates travel as `dateTimeTimeZone` in UTC.
+//! Microsoft To Do tools: the user's task lists and the tasks in them — list,
+//! read, create, update and delete.
+//!
+//! Graph v1.0 refuses `$select` on `/me/todo/lists` and on a list's tasks
+//! (400 `RequestBroker--ParseUri`), so these reads take Graph's default
+//! fields; `$top` and `$skip` work. Due dates travel as `dateTimeTimeZone` in
+//! UTC.
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -197,20 +199,20 @@ pub async fn update_todo_task(
     input: UpdateTodoTaskInput,
 ) -> Result<GraphItem, GraphError> {
     let path = task_path(&input.list_id, &input.task_id)?;
-    let mut patch = json!({});
+    let mut changes = json!({});
     if let Some(title) = &input.title {
-        patch["title"] = json!(title);
+        changes["title"] = json!(title);
     }
     if let Some(status) = &input.status {
-        patch["status"] = json!(status);
+        changes["status"] = json!(status);
     }
     if let Some(importance) = &input.importance {
-        patch["importance"] = json!(importance);
+        changes["importance"] = json!(importance);
     }
     if let Some(due_date) = &input.due_date {
-        patch["dueDateTime"] = due(due_date);
+        changes["dueDateTime"] = due(due_date);
     }
-    let data = graph.patch_json(&path, patch).await?;
+    let data = graph.patch_json(&path, changes).await?;
     Ok(GraphItem::new(data))
 }
 

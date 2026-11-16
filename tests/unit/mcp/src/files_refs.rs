@@ -114,12 +114,12 @@ fn files_ref_schema_is_inlined_and_gemini_declarable() {
 #[test]
 fn files_inline_base64_up_to_the_limit_decodes() {
     let policy = FilePolicy::new(UPLOAD_TOOL);
-    let body = vec![7_u8; usize::try_from(DEFAULT_INLINE_MAX_BYTES).expect("limit")];
+    let body = vec![7u8; usize::try_from(DEFAULT_INLINE_MAX_BYTES).expect("limit")];
     let encoded = STANDARD.encode(&body);
     let wrapped: String = encoded
         .as_bytes()
         .chunks(76)
-        .map(|line| format!("{}\n", String::from_utf8_lossy(line)))
+        .map(|line| String::from_utf8_lossy(line) + "\n")
         .collect();
     assert_eq!(policy.decode_inline(&wrapped).expect("at the limit"), body);
 }
@@ -127,7 +127,7 @@ fn files_inline_base64_up_to_the_limit_decodes() {
 #[test]
 fn files_inline_base64_over_the_limit_names_the_upload_tool() {
     let policy = FilePolicy::new(UPLOAD_TOOL);
-    let one_over = vec![1_u8; usize::try_from(DEFAULT_INLINE_MAX_BYTES + 1).expect("limit")];
+    let one_over = vec![1u8; usize::try_from(DEFAULT_INLINE_MAX_BYTES + 1).expect("limit")];
     let error = policy
         .decode_inline(&STANDARD.encode(&one_over))
         .expect_err("over the limit");

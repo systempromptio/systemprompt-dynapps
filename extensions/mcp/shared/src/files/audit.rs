@@ -111,16 +111,15 @@ impl FileAuditSink for DbFileAudit {
         };
         let pool = self.pool.pool();
         let server = event.server.to_string();
-        let user_id = match &event.user_id {
-            Some(user_id) => user_id.clone(),
-            None => {
-                let Some(anonymous) =
-                    resolve_anonymous_principal(pool.as_ref(), &server, &event.tool).await
-                else {
-                    return;
-                };
-                anonymous
-            },
+        let user_id = if let Some(user_id) = &event.user_id {
+            user_id.clone()
+        } else {
+            let Some(anonymous) =
+                resolve_anonymous_principal(pool.as_ref(), &server, &event.tool).await
+            else {
+                return;
+            };
+            anonymous
         };
         let description = event.description();
         let params = McpAccessParams {

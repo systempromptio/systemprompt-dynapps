@@ -1,7 +1,9 @@
 //! Teams chat reads: the user's chats with their members, one chat, and a
-//! chat's messages and members. `/me/chats` expands `members`, whose
-//! `$select` Graph ignores, so each member is cut down here to its id, name,
-//! roles and email, as the Belgian server's `_trim_members` did.
+//! chat's messages and members.
+//!
+//! `/me/chats` expands `members`, whose `$select` Graph ignores, so each
+//! member is cut down here to its id, name, roles and email, as the Belgian
+//! server's `_trim_members` did.
 
 use schemars::JsonSchema;
 use serde::Deserialize;

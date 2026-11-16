@@ -121,10 +121,10 @@ fn m365_core_every_listed_input_schema_is_gemini_declarable() {
 }
 
 fn broker(base: &str, secret: Option<&str>) -> Broker {
-    let secrets = match secret {
-        Some(value) => Secrets::with(&[("mcp_credential_broker_secret", value)]),
-        None => Secrets::with(&[]),
-    };
+    let secrets = secret.map_or_else(
+        || Secrets::with(&[]),
+        |value| Secrets::with(&[("mcp_credential_broker_secret", value)]),
+    );
     Broker::new(format!("{base}{BROKER_PATH}"), secrets, "microsoft-365")
 }
 

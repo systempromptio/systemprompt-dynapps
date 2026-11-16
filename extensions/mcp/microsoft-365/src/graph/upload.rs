@@ -1,10 +1,12 @@
-//! Upload sessions. Graph answers `createUploadSession` with a
-//! pre-authenticated `uploadUrl` (Outlook for mail attachments, SharePoint
-//! for drive items) that takes the bytes in `Content-Range` chunks and must
-//! not get the user's bearer. Only a URL on Microsoft's upload hosts, or on
-//! the configured Graph endpoint's own origin (a national cloud or a
-//! simulation), is admitted; it passes core's outbound guard on every chunk.
-//! The Belgian server PUT to whatever URL the model handed it.
+//! Upload sessions.
+//!
+//! Graph answers `createUploadSession` with a pre-authenticated `uploadUrl`
+//! (Outlook for mail attachments, `SharePoint` for drive items) that takes
+//! the bytes in `Content-Range` chunks and must not get the user's bearer.
+//! Only a URL on Microsoft's upload hosts, or on the configured Graph
+//! endpoint's own origin (a national cloud or a simulation), is admitted; it
+//! passes core's outbound guard on every chunk. The Belgian server PUT to
+//! whatever URL the model handed it.
 
 use reqwest::header::CONTENT_RANGE;
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
@@ -107,7 +109,7 @@ impl GraphClient {
         let url = self.admit_upload_url(upload_url)?;
         let total = bytes.len() as u64;
         let mut last = serde_json::Value::Null;
-        let mut start = 0_u64;
+        let mut start = 0u64;
         for chunk in bytes.chunks(UPLOAD_CHUNK_BYTES) {
             last = self.put_chunk(&url, chunk, start, total).await?.body;
             start += chunk.len() as u64;

@@ -1,4 +1,4 @@
-//! The OneDrive write tools against a simulated Graph: the exact request
+//! The `OneDrive` write tools against a simulated Graph: the exact request
 //! body of a new folder, a sharing link and a move or rename, the Belgian
 //! reply of a delete Graph answers with 204, and the drive tools' slice of
 //! the pinned Belgian surface.

@@ -1,6 +1,6 @@
 //! The `microsoft-365` value checks ported from the Belgian `sanitize.py`,
 //! the endpoint guard and the query encoding: what may reach a Graph path,
-//! an OData expression or the wire.
+//! an `OData` expression or the wire.
 
 use systemprompt::traits::SecretLookup;
 use systemprompt_mcp_microsoft_365::graph::sanitize::{

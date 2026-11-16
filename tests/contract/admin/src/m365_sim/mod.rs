@@ -7,7 +7,7 @@
 //! read their own mailbox through the MCP binary, whose Graph token comes from
 //! the connector broker, request an upload from the `documents` server, upload
 //! the bytes to the signed link, attach them to a draft, send it, mark mail as
-//! read, put a file on OneDrive and save an attachment as a document. The
+//! read, put a file on `OneDrive` and save an attachment as a document. The
 //! crossings are asserted on the same run: a tenant the installation does not
 //! admit is never linked, one person cannot complete another's consent, a
 //! token of tenant A never reads tenant B's mail, and none of Ana's file

@@ -30,7 +30,7 @@
 //! - the `microsoft-365` calendar, contacts and To Do tools (`m365_calendar_*`,
 //!   `m365_contacts`, `m365_todo`): the Graph request each builds and the
 //!   Belgian reply, against a simulated Graph
-//! - the `microsoft-365` OneDrive and SharePoint tools (`m365_files_*`,
+//! - the `microsoft-365` `OneDrive` and `SharePoint` tools (`m365_files_*`,
 //!   `m365_sharepoint`): drive paths percent-encoded, file content through the
 //!   file layer (redirect followed without the bearer, kept as documents,
 //!   uploads by reference or upload session) and the pinned surface
@@ -38,8 +38,8 @@
 //!   (`m365_teams*`, `m365_meetings`): the Graph request each builds, the
 //!   Belgian reply, the caller bound from `/me`, presence as a session of the
 //!   Entra app and meeting transcripts kept as documents
-//! - the `microsoft-365` Planner, OneNote, group, user, search and batch tools
-//!   (`m365_rest_*`), and the whole surface against the Belgian fixture
+//! - the `microsoft-365` Planner, `OneNote`, group, user, search and batch
+//!   tools (`m365_rest_*`), and the whole surface against the Belgian fixture
 //!   (`m365_parity`): its 147 tools, titles, hints and parameters, and the
 //!   three `apps/` entry points not served
 

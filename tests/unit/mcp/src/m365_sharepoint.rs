@@ -1,4 +1,4 @@
-//! The SharePoint tools against a simulated Graph: the site, list and item
+//! The `SharePoint` tools against a simulated Graph: the site, list and item
 //! paths, the Belgian `search`, `$select` and `$expand`, the list item
 //! bodies passed through as given, host names and ids that are not what
 //! they claim refused before any request, and the domain's slice of the

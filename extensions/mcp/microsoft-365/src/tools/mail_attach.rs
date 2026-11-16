@@ -1,10 +1,11 @@
-//! Mail attachments through the shared file layer. A downloaded attachment
-//! is kept as one of the caller's documents and comes back as a `FileOut`
-//! (the Belgian server returned its base64 to the model); an attachment to
-//! add comes in as a `FileRef`, or as base64 only up to the inline limit.
-//! Graph takes an attachment of under 3 MB in one POST and a larger one
-//! only through an upload session, which this server fills in chunks itself
-//! so the bytes never pass through the model.
+//! Mail attachments through the shared file layer.
+//!
+//! A downloaded attachment is kept as one of the caller's documents and comes
+//! back as a `FileOut` (the Belgian server returned its base64 to the model);
+//! an attachment to add comes in as a `FileRef`, or as base64 only up to the
+//! inline limit. Graph takes an attachment of under 3 MB in one POST and a
+//! larger one only through an upload session, which this server fills in
+//! chunks itself so the bytes never pass through the model.
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;

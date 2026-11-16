@@ -238,7 +238,7 @@ async fn files_size_limits_hold_on_requests_and_while_reading() {
             state: FileState::Ready { since: None },
             pinned: StoredRef::Blob(blob.clone()),
         },
-        &[0_u8; 40],
+        &[0u8; 40],
     );
     let reference = FileRef {
         blob_ref: blob.as_str().to_owned(),
@@ -258,7 +258,7 @@ async fn files_size_limits_hold_on_requests_and_while_reading() {
     assert_eq!(refused.reason.as_deref(), Some("too_large"));
 
     let (understated, id) = document_of(ALICE, "big.bin", "application/octet-stream", 10);
-    h.store.put(understated, &[0_u8; 40]);
+    h.store.put(understated, &[0u8; 40]);
     let reference = FileRef {
         document_id: id.as_str().to_owned(),
         ..FileRef::default()

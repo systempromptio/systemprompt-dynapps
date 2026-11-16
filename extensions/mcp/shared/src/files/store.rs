@@ -101,8 +101,9 @@ impl fmt::Debug for SignedDownload {
     }
 }
 
-/// The document store as the file layer sees it. Every call acts as the
-/// request's user; a file the user cannot see answers
+/// The document store as the file layer sees it.
+///
+/// Every call acts as the request's user; a file the user cannot see answers
 /// [`FilesError::NotFound`]. Held as `dyn FileStore` so tests can swap the
 /// core document store for an in-memory one.
 #[async_trait]

@@ -125,7 +125,7 @@ pub(super) async fn execute(
     let limits = client.limits();
     let mut token = client.current_token().await?;
     let mut renewed = false;
-    let mut throttled = 0_u32;
+    let mut throttled = 0u32;
     loop {
         let response = attempt(client, request, &url, &token).await?;
         let status = response.status();

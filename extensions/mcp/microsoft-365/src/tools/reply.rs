@@ -1,8 +1,9 @@
-//! The reply shapes of the tools. A list tool answers like the Belgian
-//! server's `paginated_response`: the items, and when more exist `has_more`,
-//! how many came back and a hint telling the model to page with `skip`. A
-//! single-item tool answers like its `success_response`: `data` and
-//! `message`.
+//! The reply shapes of the tools.
+//!
+//! A list tool answers like the Belgian server's `paginated_response`: the
+//! items, and when more exist `has_more`, how many came back and a hint
+//! telling the model to page with `skip`. A single-item tool answers like its
+//! `success_response`: `data` and `message`.
 
 use schemars::JsonSchema;
 use serde::Serialize;

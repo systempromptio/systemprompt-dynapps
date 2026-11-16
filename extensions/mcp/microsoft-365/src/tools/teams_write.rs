@@ -1,7 +1,9 @@
 //! Microsoft Teams writes: post a message to a channel, reply to one, and
-//! create or update a channel. A message is plain text unless `is_html`.
-//! A write Graph answers with an empty body comes back as the Belgian
-//! server's `success_response(None, message)`: `data` null and a message.
+//! create or update a channel.
+//!
+//! A message is plain text unless `is_html`. A write Graph answers with an
+//! empty body comes back as the Belgian server's
+//! `success_response(None, message)`: `data` null and a message.
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -95,7 +97,7 @@ pub struct UpdateChannelInput {
 }
 
 // JSON: a chatMessage as Graph takes it, shared by channel and chat posts.
-pub(super) fn message_body(content: String, is_html: bool) -> Value {
+pub(super) fn message_body(content: &str, is_html: bool) -> Value {
     let kind = if is_html { "html" } else { "text" };
     json!({ "body": { "content": content, "contentType": kind } })
 }
@@ -117,7 +119,7 @@ pub async fn send_channel_message(
         channel_path(&input.team_id, &input.channel_id)?
     );
     let data = graph
-        .post_json(&path, message_body(input.body, input.is_html))
+        .post_json(&path, message_body(&input.body, input.is_html))
         .await?;
     Ok(GraphItem::new(data))
 }
@@ -129,7 +131,7 @@ pub async fn reply_to_channel_message(
     let message = channel_message_path(&input.team_id, &input.channel_id, &input.message_id)?;
     let path = format!("{message}/replies");
     let data = graph
-        .post_json(&path, message_body(input.body, input.is_html))
+        .post_json(&path, message_body(&input.body, input.is_html))
         .await?;
     Ok(GraphItem::new(data))
 }
@@ -157,13 +159,13 @@ pub async fn update_channel(
     input: UpdateChannelInput,
 ) -> Result<GraphItem, GraphError> {
     let path = channel_path(&input.team_id, &input.channel_id)?;
-    let mut patch = json!({});
+    let mut changes = json!({});
     if let Some(name) = input.display_name {
-        patch["displayName"] = json!(name);
+        changes["displayName"] = json!(name);
     }
     if let Some(description) = input.description {
-        patch["description"] = json!(description);
+        changes["description"] = json!(description);
     }
-    let data = graph.patch_json(&path, patch).await?;
+    let data = graph.patch_json(&path, changes).await?;
     Ok(GraphItem::new(data))
 }

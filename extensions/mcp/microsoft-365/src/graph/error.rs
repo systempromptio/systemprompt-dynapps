@@ -75,7 +75,7 @@ impl GraphError {
 
     pub const fn kind(&self) -> &'static str {
         match self {
-            Self::Invalid(_) => "invalid",
+            Self::Invalid(_) | Self::Url(_) => "invalid",
             Self::NotConnected => "not_connected",
             Self::Unauthorized => "unauthorized",
             Self::Credentials(_) => "credentials",
@@ -86,7 +86,6 @@ impl GraphError {
             Self::Transport(_) => "transport",
             Self::Decode(_) => "decode",
             Self::Config(_) | Self::Endpoint(_) => "config",
-            Self::Url(_) => "invalid",
         }
     }
 }
@@ -119,8 +118,9 @@ impl From<GraphError> for ErrorData {
             GraphError::Invalid(_) | GraphError::Url(_) | GraphError::OffEndpoint => {
                 reply::invalid(text)
             },
-            GraphError::NotConnected | GraphError::Unauthorized => reply::forbidden(text),
-            GraphError::Api { status: 403, .. } => reply::forbidden(text),
+            GraphError::NotConnected
+            | GraphError::Unauthorized
+            | GraphError::Api { status: 403, .. } => reply::forbidden(text),
             GraphError::Api { status: 404, .. } => reply::not_found(text),
             GraphError::Api { status: 400, .. } => reply::invalid(text),
             GraphError::Credentials(_)

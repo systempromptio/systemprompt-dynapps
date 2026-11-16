@@ -140,7 +140,7 @@ async fn m365_files_upload_file_refuses_bad_sources_and_names_before_graph() {
     let (record, bobs) = document_of(BOB, "salaries.xlsx", "application/pdf", 4);
     h.store.put(record, b"%PDF");
     let (ctx, exec) = (signed_in(ALICE), exec_id());
-    let big_inline = STANDARD.encode(vec![7_u8; 70 * 1024]);
+    let big_inline = STANDARD.encode(vec![7u8; 70 * 1024]);
     let bob = json!({"document_id": bobs.to_string()});
     for bad in [
         json!({"folder_path": "/", "filename": "x"}),
@@ -173,7 +173,7 @@ async fn m365_files_upload_file_refuses_bad_sources_and_names_before_graph() {
 async fn m365_files_upload_file_fails_when_graph_opens_no_upload_session() {
     let sim = Sim::start(|_, _| Reply::json(200, &json!({"expirationDateTime": "soon"}))).await;
     let h = harness();
-    let bytes = vec![5_u8; SIMPLE_UPLOAD_MAX_BYTES];
+    let bytes = vec![5u8; SIMPLE_UPLOAD_MAX_BYTES];
     let (record, document) = document_of(
         ALICE,
         "big.bin",

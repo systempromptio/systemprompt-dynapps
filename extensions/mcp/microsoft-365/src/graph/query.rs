@@ -38,7 +38,7 @@ impl GraphQuery {
             .map(|(_, v)| v.as_str())
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.pairs.is_empty()
     }
 

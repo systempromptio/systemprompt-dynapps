@@ -13,7 +13,7 @@ use chrono::Utc;
 
 use super::audit::FileAction;
 use super::error::FilesError;
-use super::ops::{caller, ensure_owner};
+use super::ops::{Audit, caller, ensure_owner};
 use super::outputs::{ResolvedFile, ResolvedParts, read_capped};
 use super::policy::{OCTET_STREAM, check_name};
 use super::refs::{FileRef, FileSource, StoredRef};
@@ -44,8 +44,12 @@ impl McpFiles {
             ),
         };
         let size = outcome.as_ref().ok().and_then(|file| file.size_bytes);
-        self.audited(call, FileAction::Read, label, size, outcome)
-            .await
+        let audit = Audit {
+            action: FileAction::Read,
+            file: label,
+            size_bytes: size,
+        };
+        self.audited(call, audit, outcome).await
     }
 
     fn inline(
@@ -89,13 +93,12 @@ impl McpFiles {
         let mime = self.mime_or(file_ref, &record.mime)?;
         let max_bytes = self.policy.max_file_bytes;
         let body = self.store.open(call.ctx, &record.pinned, max_bytes).await?;
-        let (size_bytes, body) = match record.size_bytes {
-            Some(size) => (Some(size), body),
-            None => {
-                let bytes = read_capped(body, None, max_bytes).await?;
-                self.policy.check_size(bytes.len() as u64)?;
-                (Some(bytes.len() as u64), byte_stream(bytes))
-            },
+        let (size_bytes, body) = if let Some(size) = record.size_bytes {
+            (Some(size), body)
+        } else {
+            let bytes = read_capped(body, None, max_bytes).await?;
+            self.policy.check_size(bytes.len() as u64)?;
+            (Some(bytes.len() as u64), byte_stream(bytes))
         };
         Ok(ResolvedFile::new(ResolvedParts {
             file_ref: pinned_ref(file_ref, &record.pinned),

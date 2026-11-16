@@ -1,6 +1,7 @@
-//! The handler shared by every tool that needs only the caller's Graph
-//! client: the parsed input goes to one async function and its reply comes
-//! back through core's executor, like every other bundled server's tools.
+//! The handler shared by every tool that needs only the caller's Graph client.
+//!
+//! The parsed input goes to one async function and its reply comes back
+//! through core's executor, like every other bundled server's tools.
 //!
 //! [`graph_tools!`] declares a domain's tools from one table, so each tool's
 //! name, function, input, reply and description are written once and feed

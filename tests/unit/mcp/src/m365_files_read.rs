@@ -1,4 +1,4 @@
-//! The OneDrive read tools against a simulated Graph: the drive each one
+//! The `OneDrive` read tools against a simulated Graph: the drive each one
 //! addresses (`/me/drive` or `/drives/{id}`), drive-relative paths with
 //! every segment percent-encoded, the search literal escaped, the Belgian
 //! `$select`, `$top` and `$skip`, and ids or paths that try to leave the

@@ -27,7 +27,7 @@ pub struct ToolCall<'a> {
     pub hop: Option<&'a JwtToken>,
 }
 
-fn graph<'a>(graph: Option<&'a GraphClient>) -> Result<&'a GraphClient, McpError> {
+fn graph(graph: Option<&GraphClient>) -> Result<&GraphClient, McpError> {
     graph.ok_or_else(|| reply::failure("the Graph client is not attached"))
 }
 

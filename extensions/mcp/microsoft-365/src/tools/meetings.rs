@@ -1,9 +1,11 @@
 //! Teams online meetings: find one by its join URL, read, create and delete
-//! one. Graph will not enumerate `/me/onlineMeetings`: it needs
+//! one.
+//!
+//! Graph will not enumerate `/me/onlineMeetings`: it needs
 //! `$filter=JoinWebUrl eq '…'` (with `ConsistencyLevel: eventual`) and
-//! refuses `$top`, `$skip` and `$select` there, so `d365_list_online_meetings`
-//! and `d365_get_meeting_by_join_url` both answer the first match, or a
-//! null with a message, as the Belgian server did.
+//! refuses `$top`, `$skip` and `$select` there, so
+//! `d365_list_online_meetings` and `d365_get_meeting_by_join_url` both answer
+//! the first match, or a null with a message, as the Belgian server did.
 
 use reqwest::Method;
 use schemars::JsonSchema;

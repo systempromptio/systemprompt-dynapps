@@ -136,14 +136,14 @@ pub async fn update_planner_bucket(
     input: UpdateBucketInput,
 ) -> Result<GraphItem, GraphError> {
     let path = bucket_path(&input.bucket_id)?;
-    let mut patch = Map::new();
+    let mut changes = Map::new();
     if let Some(name) = input.name {
-        patch.insert("name".to_owned(), Value::String(name));
+        changes.insert("name".to_owned(), Value::String(name));
     }
     if let Some(hint) = input.order_hint {
-        patch.insert("orderHint".to_owned(), Value::String(hint));
+        changes.insert("orderHint".to_owned(), Value::String(hint));
     }
-    patch_versioned(graph, &path, &input.etag, patch).await
+    patch_versioned(graph, &path, &input.etag, changes).await
 }
 
 pub async fn delete_planner_bucket(

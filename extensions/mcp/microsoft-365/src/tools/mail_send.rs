@@ -1,5 +1,7 @@
 //! Mail writes on messages: send, reply, forward, drafts, update, delete and
-//! move. Sends, replies, forwards and deletes are destructive in the Belgian
+//! move.
+//!
+//! Sends, replies, forwards and deletes are destructive in the Belgian
 //! annotations (they cannot be taken back); the reply of a write Graph
 //! answers with 202/204 is the same summary the Belgian server returned.
 

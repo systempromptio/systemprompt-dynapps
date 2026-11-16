@@ -1,8 +1,8 @@
 //! OAuth token exchange and refresh, using only bound destinations.
-use super::Grant;
 use super::failure::{FailureKind, FlowFailure, FlowResult};
 use super::token_response::{Tokens, accepted_tokens};
 use super::transport::client;
+use super::{AuthorizationCode, Grant};
 use chrono::Utc;
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt::traits::SecretStore;
@@ -162,7 +162,11 @@ pub async fn exchange(
     code: &str,
 ) -> AdminResult<()> {
     let callback = grant.provider.callback(config);
-    exchange_request(services, None, grant, code, &callback, &client()?)
+    let code = AuthorizationCode {
+        code,
+        callback: &callback,
+    };
+    exchange_request(services, None, grant, code, &client()?)
         .await
         .map_err(|failure| *failure.error)
 }
@@ -178,8 +182,10 @@ pub(crate) async fn exchange_classified(
         access.services,
         Some(access.secrets),
         grant,
-        code,
-        &callback,
+        AuthorizationCode {
+            code,
+            callback: &callback,
+        },
         &client().map_err(FlowFailure::verification)?,
     )
     .await
@@ -192,7 +198,8 @@ pub async fn exchange_with_client(
     callback: &str,
     http: &reqwest::Client,
 ) -> AdminResult<()> {
-    exchange_request(services, None, grant, code, callback, http)
+    let code = AuthorizationCode { code, callback };
+    exchange_request(services, None, grant, code, http)
         .await
         .map_err(|failure| *failure.error)
 }
@@ -201,8 +208,7 @@ pub(super) async fn exchange_request(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     secrets: Option<&dyn SecretStore>,
     grant: &mut Grant,
-    code: &str,
-    callback: &str,
+    code: AuthorizationCode<'_>,
     http: &reqwest::Client,
 ) -> FlowResult<()> {
     let admission = if super::entra::is_entra(&services.config(), &grant.provider) {
@@ -213,8 +219,8 @@ pub(super) async fn exchange_request(
     let verifier = grant.verifier.clone();
     let fields = [
         ("grant_type", "authorization_code"),
-        ("code", code),
-        ("redirect_uri", callback),
+        ("code", code.code),
+        ("redirect_uri", code.callback),
         ("code_verifier", verifier.as_str()),
     ];
     let outcome = request_with_client(services, grant, &fields, http).await;

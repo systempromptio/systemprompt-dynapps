@@ -1,11 +1,11 @@
-//! Checks on every value a tool puts into a Graph path or OData expression,
+//! Checks on every value a tool puts into a Graph path or `OData` expression,
 //! ported from the Belgian server's `sanitize.py` with the same rules.
 //!
 //! Ids and folder names are validated rather than escaped, so a value that
 //! passes can sit in a path segment verbatim: an id is base64, a GUID, a
-//! Teams chat id (`19:x_y@unq.gbl.spaces`) or a SharePoint site id
+//! Teams chat id (`19:x_y@unq.gbl.spaces`) or a `SharePoint` site id
 //! (`host,guid,guid`), never a separator or `..`; a folder is a well-known
-//! name in any case or an id. OData string literals have their quotes
+//! name in any case or an id. `OData` string literals have their quotes
 //! doubled (`$search` also escapes `"`). Datetimes must be ISO 8601 with a
 //! zone and stay unquoted, because quoting makes Graph compare strings (400
 //! "incompatible types"). `$select` lists take property names and type-cast
@@ -36,7 +36,7 @@ const WELL_KNOWN_FOLDERS: [&str; 17] = [
 const MAX_HOSTNAME_LEN: usize = 253;
 pub const DEFAULT_MAX_TOP: i64 = 50;
 
-fn invalid(message: String) -> GraphError {
+const fn invalid(message: String) -> GraphError {
     GraphError::Invalid(message)
 }
 

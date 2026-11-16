@@ -1,6 +1,8 @@
-//! Microsoft 365 groups in the directory: list or search them, read one,
-//! and list its members, owners, conversations and threads. A search is an
-//! advanced directory query, so it rides with `ConsistencyLevel: eventual`.
+//! Microsoft 365 groups in the directory: list or search them, read one, and
+//! list its members, owners, conversations and threads.
+//!
+//! A search is an advanced directory query, so it rides with
+//! `ConsistencyLevel: eventual`.
 
 use schemars::JsonSchema;
 use serde::Deserialize;

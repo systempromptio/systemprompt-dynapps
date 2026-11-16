@@ -1,8 +1,9 @@
-//! Personal contact tools: list (with a keyword search), read, create,
-//! update and delete the signed-in user's contacts. `$search` on contacts
-//! needs Graph's `ConsistencyLevel: eventual`. An update sets only the
-//! fields given; an email or phone replaces the contact's whole list of
-//! them, as in the Belgian server.
+//! Personal contact tools: list (with a keyword search), read, create, update
+//! and delete the signed-in user's contacts.
+//!
+//! `$search` on contacts needs Graph's `ConsistencyLevel: eventual`. An
+//! update sets only the fields given; an email or phone replaces the
+//! contact's whole list of them, as in the Belgian server.
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -114,11 +115,12 @@ pub async fn list_contacts(
     input: ListContactsInput,
 ) -> Result<GraphList, GraphError> {
     let mut query = GraphQuery::new().with("$select", CONTACT_FIELDS);
-    let mut headers: &[(&str, &str)] = &[];
-    if !input.search.is_empty() {
+    let headers: &[(&str, &str)] = if input.search.is_empty() {
+        &[]
+    } else {
         query.set("$search", format!("\"{}\"", sanitize_search(&input.search)));
-        headers = &SEARCH_HEADERS;
-    }
+        &SEARCH_HEADERS
+    };
     let window = Window {
         skip: clamp_skip(input.skip),
         top: Some(clamp_top(input.top, DEFAULT_MAX_TOP)),
@@ -167,20 +169,20 @@ pub async fn update_contact(
     input: UpdateContactInput,
 ) -> Result<GraphItem, GraphError> {
     let path = contact_path(&input.contact_id)?;
-    let mut patch = json!({});
+    let mut changes = json!({});
     if let Some(given_name) = &input.given_name {
-        patch["givenName"] = json!(given_name);
+        changes["givenName"] = json!(given_name);
     }
     if let Some(surname) = &input.surname {
-        patch["surname"] = json!(surname);
+        changes["surname"] = json!(surname);
     }
     if let Some(email) = &input.email {
-        patch["emailAddresses"] = json!([{ "address": email }]);
+        changes["emailAddresses"] = json!([{ "address": email }]);
     }
     if let Some(phone) = &input.phone {
-        patch["businessPhones"] = json!([phone]);
+        changes["businessPhones"] = json!([phone]);
     }
-    let data = graph.patch_json(&path, patch).await?;
+    let data = graph.patch_json(&path, changes).await?;
     Ok(GraphItem::new(data))
 }
 

@@ -47,6 +47,12 @@ pub struct ConnectorAccess<'a> {
     pub secrets: &'a dyn SecretStore,
 }
 
+#[derive(Clone, Copy)]
+struct AuthorizationCode<'a> {
+    code: &'a str,
+    callback: &'a str,
+}
+
 /// Debug output never reveals credentials; serialization is only for the
 /// encrypted credential store, never an HTTP response.
 #[derive(Deserialize, Serialize)]

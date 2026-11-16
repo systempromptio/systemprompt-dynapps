@@ -1,7 +1,7 @@
 //! Offset paging that holds on every Graph collection.
 //!
-//! Outlook collections (mail, calendar, contacts, OneNote) honour `$skip`;
-//! Teams, the directory and SharePoint/OneDrive refuse it and only page
+//! Outlook collections (mail, calendar, contacts, `OneNote`) honour `$skip`;
+//! Teams, the directory and `SharePoint`/`OneDrive` refuse it and only page
 //! through `@odata.nextLink`. The fast path hands `$skip`/`$top` to Graph;
 //! on that refusal the cursor is walked here and the requested window
 //! sliced out, so every tool keeps one `skip`/`top` contract. Headers a
@@ -118,7 +118,7 @@ impl GraphClient {
         let max_pages = self.limits().max_pages.max(1);
         let mut items = Vec::new();
         let mut request = first;
-        let mut pages = 0_usize;
+        let mut pages = 0usize;
         let next = loop {
             let (page, next) = split(self.send(&request).await?.json()?);
             items.extend(page);

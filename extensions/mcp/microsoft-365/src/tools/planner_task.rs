@@ -216,24 +216,24 @@ pub async fn update_planner_task(
     input: UpdateTaskInput,
 ) -> Result<GraphItem, GraphError> {
     let path = task_path(&input.task_id)?;
-    let mut patch = Map::new();
-    put(&mut patch, "title", input.title);
+    let mut changes = Map::new();
+    put(&mut changes, "title", input.title);
     if let Some(bucket) = input.bucket_id {
         let bucket = validate_id(&bucket, "bucket_id")?;
-        patch.insert("bucketId".to_owned(), Value::from(bucket));
+        changes.insert("bucketId".to_owned(), Value::from(bucket));
     }
-    put(&mut patch, "priority", input.priority);
-    put(&mut patch, "percentComplete", input.percent_complete);
-    put(&mut patch, "dueDateTime", input.due_date);
-    put(&mut patch, "startDateTime", input.start_date);
+    put(&mut changes, "priority", input.priority);
+    put(&mut changes, "percentComplete", input.percent_complete);
+    put(&mut changes, "dueDateTime", input.due_date);
+    put(&mut changes, "startDateTime", input.start_date);
     if !input.assignees_to_add.is_empty() || !input.assignees_to_remove.is_empty() {
         let mut assigned = assignments(&input.assignees_to_add);
         for user in input.assignees_to_remove {
             assigned.insert(user, Value::Null);
         }
-        patch.insert("assignments".to_owned(), Value::Object(assigned));
+        changes.insert("assignments".to_owned(), Value::Object(assigned));
     }
-    patch_versioned(graph, &path, &input.etag, patch).await
+    patch_versioned(graph, &path, &input.etag, changes).await
 }
 
 pub async fn delete_planner_task(

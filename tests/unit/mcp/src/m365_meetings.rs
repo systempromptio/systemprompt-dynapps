@@ -1,7 +1,7 @@
 //! The online meeting tools against a simulated Graph and an in-memory file
 //! store: lookups by join URL (quoted, with eventual consistency, first match
 //! or a null), detail reads with the Belgian `$select`, transcripts,
-//! recordings and attendance paged with `skip`, a transcript's WebVTT kept as
+//! recordings and attendance paged with `skip`, a transcript's `WebVTT` kept as
 //! the caller's document instead of returned inline, meeting creation with
 //! attendees only, and the delete reply.
 

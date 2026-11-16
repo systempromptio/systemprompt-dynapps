@@ -40,6 +40,14 @@ pub struct GraphHost {
     pub limits: GraphLimits,
 }
 
+/// The backends a tool reaches beyond core: Microsoft Graph and the shared
+/// file layer.
+#[derive(Clone, Debug)]
+pub struct ToolBackends {
+    pub graph: GraphHost,
+    pub files: McpFiles,
+}
+
 impl GraphHost {
     pub fn client_for(
         &self,
@@ -71,9 +79,9 @@ impl Microsoft365Server {
         db_pool: DbPool,
         access: ServerAccess,
         artifact_ingest: Arc<ArtifactIngest>,
-        graph: GraphHost,
-        files: McpFiles,
+        backends: ToolBackends,
     ) -> Self {
+        let ToolBackends { graph, files } = backends;
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
         let executor = McpToolExecutor::new(
