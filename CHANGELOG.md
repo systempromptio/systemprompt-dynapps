@@ -20,10 +20,17 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.82.0 — 2026-11-16
+
 ### Added
 
 - **An HTML document opens as the page its author designed.** The Drive workspace shows an `.html` document in a sandboxed frame loaded from core's `GET /api/v1/documents/{id}/rendered` (`storage/files/js/workspace/doc/rendered.js`), with its own CSS, fonts and images, instead of reducing it to the rich-text schema. The frame carries no same origin, so the file cannot reach the session, cookies or API. An **Edit** switch (edit access only) opens the rich-text editor beside it and switching back reloads the page. Scripts and `https:` assets load only when the profile sets `files.documents.renderedHtml.scripts` and `files.documents.renderedHtml.remoteAssets`; both are off by default. Needs systemprompt-core 0.82.0.
 - **Present works for an HTML document.** The toolbar's Present puts the rendered page full screen.
+
+### Changed
+
+- **systemprompt-core 0.82.0.** Every `systemprompt*` requirement in `Cargo.toml` and `tests/Cargo.toml` moves from 0.81.1 to 0.82.0 and resolves from crates.io; only the core crates move in the three lockfiles. The `[patch.crates-io]` blocks stay commented out and `bridge/CORE_REF` names `v0.82.0`. Core 0.82.0 adds database migration `009` (`schema_trigger_digests`), and the 0.82.0 schema rung is `tests/fixtures/schema/release-baseline-0.82.0.sql`.
+- **An artifact resource is read as the caller.** The `systemprompt` MCP server authenticates a `resources/read` of `ui://<server>/artifact/<id>` and passes the caller to core, which answers only the user the artifact was stored for; any other caller receives the same answer as for an unknown artifact (`extensions/mcp/systemprompt/src/server/mod.rs`).
 
 ### Fixed
 

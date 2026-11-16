@@ -252,15 +252,27 @@ impl ServerHandler for SystempromptServer {
     async fn read_resource(
         &self,
         request: ReadResourceRequestParams,
-        _ctx: RequestContext<RoleServer>,
+        ctx: RequestContext<RoleServer>,
     ) -> Result<ReadResourceResponse, McpError> {
         if parse_artifact_resource_uri(&request.uri).is_some() {
+            let (caller, _) = authenticate_tool_request(
+                ToolAuth {
+                    db_pool: &self.db_pool,
+                    service_id: &self.service_id,
+                    authz_hook: &self.access.authz_hook,
+                    services_config: &self.access.services.get(),
+                },
+                "resources/read",
+                &ctx,
+            )
+            .await?;
             let repo = McpArtifactRepository::new(&self.db_pool);
             return read_artifact_resource(
                 &request,
                 &McpServerId::new(SERVER_NAME),
                 &repo,
                 &self.renderers,
+                caller.user_id(),
             )
             .await
             .map(Into::into);
