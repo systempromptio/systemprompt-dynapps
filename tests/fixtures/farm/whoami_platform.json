@@ -1,0 +1,22 @@
+{
+  "subject": "svc-governance-console",
+  "tenant": "dynapps-internal",
+  "scopes": [
+    "farm:credentials:read",
+    "farm:platform:read",
+    "farm:tasks:read"
+  ],
+  "is_admin": false,
+  "expires_at": "2027-10-26T00:00:00Z",
+  "free_prompt": false,
+  "tenants": [
+    {
+      "tenant": "dynapps-internal",
+      "name": "Dynapps internal"
+    },
+    {
+      "tenant": "lab-b",
+      "name": "Lab B"
+    }
+  ]
+}

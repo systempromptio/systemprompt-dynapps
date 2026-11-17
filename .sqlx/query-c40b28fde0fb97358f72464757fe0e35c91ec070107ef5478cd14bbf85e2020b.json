@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The model calls of many gateway sessions added up per session, in one\n-- query ($1 = the farm tasks' usage.gateway_session_id values).\nSELECT session_id AS \"gateway_session!\",\n       count(*)::bigint AS \"calls!\",\n       COALESCE(sum(input_tokens), 0)::bigint AS \"input_tokens!\",\n       COALESCE(sum(output_tokens), 0)::bigint AS \"output_tokens!\",\n       COALESCE(sum(cache_read_tokens), 0)::bigint AS \"cache_read_tokens!\",\n       COALESCE(sum(cache_creation_tokens), 0)::bigint AS \"cache_creation_tokens!\",\n       COALESCE(sum(cost_microdollars), 0)::bigint AS \"cost_microdollars!\"\nFROM ai_requests\nWHERE session_id = ANY($1::text[])\nGROUP BY session_id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "gateway_session!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "calls!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "input_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "output_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "cache_read_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "cache_creation_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c40b28fde0fb97358f72464757fe0e35c91ec070107ef5478cd14bbf85e2020b"
+}

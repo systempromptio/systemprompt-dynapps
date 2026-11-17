@@ -1,0 +1,41 @@
+{{!--
+  Farm › Dashboard: the farm at a glance across all tenants, or one if picked. Every tile is a
+  link to the view that holds its numbers. Read-only. Counts come from farm-api
+  through the console's service credential, the cost from what systemprompt
+  recorded for the tasks' gateway sessions, in USD. What could not be read
+  shows a dash, and the reason is in the shell's "could not be loaded" notice.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="The Dynapps Farm at a glance: every tenant mixed, or one if you pick it. Read-only."}}
+
+    <section class="sp-section" aria-label="Overview">
+    {{#if select.has_tenants}}
+    <form method="get" action="/admin/farm" class="sp-toolbar">
+        <label class="sp-toolbar__count" for="farm-tenant">Tenant</label>
+        <select id="farm-tenant" name="tenant" class="sp-search-input" data-autosubmit>
+            <option value=""{{#if select.all_selected}} selected{{/if}}>All tenants</option>
+            {{#each select.tenants}}<option value="{{slug}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+        <noscript><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Show</button></noscript>
+    </form>
+    {{/if}}
+
+    <div class="sp-kpi-grid">
+        {{#each overview}}{{> components/kpi this}}{{/each}}
+    </div>
+    </section>
+
+    <section class="sp-section" aria-label="Tasks">
+        {{> components/section title="Tasks, last 7 days" note=period}}
+        {{#if partial}}<p class="sp-u-text-tertiary"><strong>{{partial}}</strong></p>{{/if}}
+        <div class="sp-kpi-grid">
+            {{#each task_tiles}}{{> components/kpi this}}{{/each}}
+        </div>
+    </section>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm.js"></script>
+    {{/inline}}
+{{/layout}}

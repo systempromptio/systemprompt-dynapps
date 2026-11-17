@@ -94,6 +94,8 @@ mod entrypoint_role;
 #[cfg(test)]
 mod export_registry;
 #[cfg(test)]
+mod farm;
+#[cfg(test)]
 mod format_display;
 #[cfg(test)]
 mod groups_yaml_types;

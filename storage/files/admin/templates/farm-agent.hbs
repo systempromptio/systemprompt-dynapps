@@ -1,0 +1,57 @@
+{{!--
+  Farm › Agent: one agent's configuration. Read-only. Credentials, MCP
+  servers and environment variables are shown by name; a personal agent's
+  instructions are private to its owner and are not shown.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#if agent}}
+    {{#> components/page-header title=title subtitle=agent.description}}
+      {{#*inline "header_meta"}}
+        {{> components/badge tone=agent.scope_tone text=agent.scope}}
+      {{/inline}}
+      {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">All agents</a>
+      {{/inline}}
+    {{/components/page-header}}
+
+    <section class="sp-section" aria-label="Configuration">
+      <h2 class="sp-section__title">Configuration</h2>
+      <dl class="sp-kv-list">
+        {{#each agent.config}}<div class="sp-kv-row"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/each}}
+      </dl>
+    </section>
+
+    <section class="sp-section" aria-label="Default limits">
+      <h2 class="sp-section__title">Default limits</h2>
+      <dl class="sp-kv-list">
+        {{#each agent.limits}}<div class="sp-kv-row"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/each}}
+      </dl>
+    </section>
+
+    <section class="sp-section" aria-label="Access">
+      <h2 class="sp-section__title">What it may touch</h2>
+      <dl class="sp-kv-list">
+        <div class="sp-kv-row"><dt>Network</dt><dd>{{#each agent.egress}}<code class="sp-code-inline">{{this}}</code> {{else}}<span class="sp-u-text-tertiary">none beyond the tenant's policy</span>{{/each}}</dd></div>
+        <div class="sp-kv-row"><dt>Credentials (names)</dt><dd>{{#each agent.credentials}}<code class="sp-code-inline">{{this}}</code> {{else}}<span class="sp-u-text-tertiary">none</span>{{/each}}</dd></div>
+        <div class="sp-kv-row"><dt>Denied tools</dt><dd>{{#each agent.denied_tools}}<code class="sp-code-inline">{{this}}</code> {{else}}<span class="sp-u-text-tertiary">none</span>{{/each}}</dd></div>
+        <div class="sp-kv-row"><dt>Environment</dt><dd>{{#each agent.env_credentials}}<code class="sp-code-inline">{{name}}</code> ← <code class="sp-code-inline">{{target}}</code> {{else}}<span class="sp-u-text-tertiary">none</span>{{/each}}</dd></div>
+        <div class="sp-kv-row"><dt>MCP servers</dt><dd>{{#each agent.mcp_servers}}<code class="sp-code-inline">{{name}}</code> via <code class="sp-code-inline">{{target}}</code> {{else}}<span class="sp-u-text-tertiary">none</span>{{/each}}</dd></div>
+      </dl>
+    </section>
+
+    <section class="sp-section" aria-label="Instructions">
+      <h2 class="sp-section__title">Instructions</h2>
+      {{#if agent.instructions}}
+        <pre class="sp-connect__cmd"><code>{{agent.instructions}}</code></pre>
+      {{else}}
+        <p class="sp-u-text-tertiary">{{#if agent.instructions_note}}{{agent.instructions_note}}{{else}}This agent has no instructions of its own.{{/if}}</p>
+      {{/if}}
+    </section>
+    {{else}}
+    {{> components/page-header title=title subtitle="This agent could not be loaded; the notice above says why."}}
+    <p><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">All agents</a></p>
+    {{/if}}
+    {{/inline}}
+{{/layout}}

@@ -180,9 +180,10 @@ def write_plugin(plugin_id, meta, skill_ids, plugin_flags):
     pdir = services / "plugins" / plugin_id
     pdir.mkdir(parents=True)
     # Dynapps-side MCP bindings the upstream manifest cannot know: the farm
-    # plugin carries the portal servers its farm agents call
-    # (`mcp__dynapps-odoo__*`, `mcp__dynbrain__*`).
-    local_mcp = {"dynapps-farm": ["dynapps-odoo", "dynbrain"]}.get(plugin_id, [])
+    # plugin carries the Farm's own server (`mcp__dynapps-farm__*`) and the
+    # portal servers its farm agents call (`mcp__dynapps-odoo__*`,
+    # `mcp__dynbrain__*`).
+    local_mcp = {"dynapps-farm": ["dynapps-farm", "dynapps-odoo", "dynbrain"]}.get(plugin_id, [])
     short = plugin_id.removeprefix("dynapps-")
     plugin = {"plugin": {
         "id": plugin_id,
