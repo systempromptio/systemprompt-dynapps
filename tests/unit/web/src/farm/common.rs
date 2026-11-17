@@ -369,7 +369,7 @@ fn marketplace() -> MarketplaceContext {
 
 fn engine() -> Result<AdminTemplateEngine, Box<dyn Error>> {
     let admin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../storage/files/admin");
-    Ok(AdminTemplateEngine::new(&admin_dir)?)
+    Ok(AdminTemplateEngine::new(&admin_dir, &admin_dir)?)
 }
 
 pub(crate) struct Page {
