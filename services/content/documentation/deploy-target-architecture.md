@@ -157,7 +157,7 @@ secret). Replicas on GCP share one bucket and need no shared mount. On OCI the
 gap remains: an OCI Object Storage (or S3-compatible) backend behind the same
 interface is not written. The gateway journal and ad-hoc exports stay
 node-local by design; the weekly and monthly retention archives, which are the
-only copy of rows past their window, and the agent farm's eval files are
+only copy of rows past their window, are
 written through the file-storage backend instead, so any replica reads them.
 
 **Gap 3 — Generated static content is written to node-local disk.** The content

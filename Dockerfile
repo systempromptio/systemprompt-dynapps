@@ -49,9 +49,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && mkdir -p /out/bin \
     && cp target/release/systemprompt /out/bin/ \
     && cp target/release/systemprompt-mcp-agent /out/bin/ \
-    && cp target/release/systemprompt-mcp-agent-farm /out/bin/ \
-    && cp target/release/systemprompt-mcp-documents /out/bin/ \
-    && cp target/release/systemprompt-farm-worker /out/bin/
+    && cp target/release/systemprompt-mcp-documents /out/bin/
 
 # Binaries only — `docker build --target artifacts --output type=local,dest=…`
 # gives the release job its server tarball from the same compile.
@@ -160,18 +158,10 @@ COPY scripts/check-config-applied.sh /app/bin/check-config-applied.sh
 RUN chmod +x /app/entrypoint.sh /app/bin/* \
     && chown -R app:app /app
 
-# Agent farm runner confinement (farm crate: runner::fly::egress). The worker
-# is setuid root and executable only by the `app` group, so on a runner
-# machine it can load the nftables egress allowlist, then drops every id to
-# `farm-agent` (not in that group) before the agent starts: the agent can
-# neither flush the rules nor re-run the worker to regain root.
-RUN useradd --system --create-home --uid 10001 --shell /usr/sbin/nologin farm-agent \
-    && chown root:app /app/bin/systemprompt-farm-worker \
-    && chmod 4750 /app/bin/systemprompt-farm-worker \
-    && chmod 0755 /home/app
+RUN chmod 0755 /home/app
 
 USER app
-# Why: the agent farm spawns Claude Code (`claude`) for every run; the native
+# Why: core's agent runs spawn Claude Code (`claude`) for every run; the native
 # installer puts it under ~/.local/bin for the app user. The version is pinned
 # so an image rebuild reproduces the client the run was tested against
 # (scripts/check-claude-code-version.sh keeps every Dockerfile on one value).

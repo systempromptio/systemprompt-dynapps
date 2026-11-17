@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use systemprompt::extension::prelude::*;
-use systemprompt::traits::{Job, RunnerService};
+use systemprompt::traits::Job;
 
 use crate::SkillsPagePrerenderer;
 use crate::assets::web_assets;
@@ -141,7 +141,7 @@ impl Extension for WebExtension {
     }
 
     fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
-        crate::router::build(ctx, self)
+        crate::router::build(ctx)
     }
 
     fn site_auth(&self) -> Option<SiteAuthConfig> {
@@ -155,12 +155,6 @@ impl Extension for WebExtension {
 
     fn jobs(&self) -> Vec<Arc<dyn Job>> {
         crate::jobs::extension_jobs()
-    }
-
-    fn runner_services(&self) -> Vec<Arc<dyn RunnerService>> {
-        vec![Arc::new(crate::router::farm_public::FarmRunner {
-            runs: Arc::clone(&self.farm_runs),
-        })]
     }
 
     fn priority(&self) -> u32 {

@@ -106,13 +106,6 @@ docs_sidebar:
       - label: "Artifacts and the Tool-Call Ledger"
         href: "/documentation/artifacts-and-tool-calls"
 
-  - title: "Engineering"
-    links:
-      - label: "Agent Farm from Claude Code"
-        href: "/documentation/agent-farm"
-      - label: "Odoo and DynBrain in the Agent Farm"
-        href: "/documentation/agent-farm-odoo-dynbrain"
-
   - title: "Sync: Code and Instance"
     links:
       - label: "Sources, Planes and Sync"

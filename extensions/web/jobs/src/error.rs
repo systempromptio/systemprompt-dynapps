@@ -56,9 +56,6 @@ pub enum JobError {
     #[error("Extension registry error: {0}")]
     Extensions(#[from] systemprompt::extension::LoaderError),
 
-    #[error("Agent farm error: {0}")]
-    Farm(#[from] systemprompt_web_admin_farm::error::FarmError),
-
     #[error("Count does not fit the report: {0}")]
     Count(#[from] std::num::TryFromIntError),
 

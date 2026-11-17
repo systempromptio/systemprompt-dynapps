@@ -291,7 +291,6 @@ storage/.systemprompt/
 evals/
 # Source modules and test fixtures that happen to be named `evals` are code.
 !extensions/**/evals/
-!tests/unit/web/fixtures/agent-farm/evals/
 
 # Local kind load-test rig: credentials, rendered profile, staged binaries
 /deploy/loadtest/kind/.tokens/

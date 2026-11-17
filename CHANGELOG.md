@@ -20,6 +20,11 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Removed
+
+- **The agent farm leaves this instance.** The `systemprompt-web-admin-farm` crate, the `agent-farm` MCP server (`systemprompt-mcp-agent-farm`) and the `systemprompt-farm-worker` binary are gone, with everything that only served them: the `/admin/farm` console and its sidebar group, templates, CSS and page scripts; the `/admin/api/farm`, `/api/public/admin/agent-farm`, `/api/public/agent-farm` and `/api/public/agent-farm-worker` routes; the farm runner service and boot seed; the `farm_scheduled_run` job and its scheduler entry; the `farm_tool_allowlist` stage of the governance hook; the shared `agent_run_facts` repository the MCP server read; `services/mcp/agent-farm.yaml`, `services/web/config/agent-farms.yaml`, the `agent-farm` artifact, the `dynapps-engineering` plugin and marketplace, the `agent_farm_runs` skill and their access rules; the two farm documentation pages; `demo/agent-farm`; the binary copies in the Dockerfile and `CI_SERVER_BINS`; and the tests that exercised them. The `dynapps-farm` plugin and its `dynapps_agent_farm` launcher skill (vendored from `indawsodoo/ai-claude-farm`) stay.
+- **No data is dropped.** `schema/52_agent_farm.sql` and the farm migrations stay declared, so an established database keeps its `agent_farm*` and `clients` tables and rows untouched, and a fresh install still matches an upgraded one (the schema-upgrade ladder). Retiring those tables is a separate, deliberate migration.
+
 ## 0.82.0 — 2026-11-16
 
 ### Added

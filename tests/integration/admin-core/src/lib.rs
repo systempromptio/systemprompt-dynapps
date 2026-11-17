@@ -13,9 +13,6 @@
 //! suite asserts on rows it inserted and on deltas rather than on a table
 //! being empty; `fixtures` documents the baseline.
 
-
-#[cfg(test)]
-mod agent_run_facts;
 #[cfg(test)]
 mod analysis_report_digest;
 #[cfg(test)]
