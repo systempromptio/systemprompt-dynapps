@@ -10,8 +10,9 @@ describes what exists today.
 
 ## What exists
 
-The store and the HTTP API: threads, the changes feed, the message history, and server-side replies (`prompt`,
-`interrupt`, the `/log` stream). `models` and the relay change hint come in the next phases.
+The store and the HTTP API: threads, the changes feed, the message history, server-side replies (`prompt`,
+`interrupt`, the `/log` stream), the models list and the inactivity job. The relay change hint comes in the next
+phase.
 
 - `ChatsExtension` (`dynwork-chats`, "DynWork Chats"), depends on `users`; registers the schema and migrations and
   mounts `chats_router` at `EXTENSION_BASE_PATH` (`/api/dynwork/chats/v1`) as a public router: it does its own auth.
@@ -24,6 +25,8 @@ The store and the HTTP API: threads, the changes feed, the message history, and 
   changes feed (base64url of a `change_seq`, never parsed by clients). A reply's `MessageId` is derived from its
   prompt (`MessageId::derived_at`: the prompt's time and a hash of the thread and prompt ids in place of the random
   bits).
+- `catalog` and `config`: the models a chat can use, and the extension's settings (see Models and Settings below);
+  `retention`: the inactivity job.
 - `reply`: the model behind `ReplyModel`, the runner, the event builders, the message documents, the registry of
   running replies and the recovery of a reply an earlier process left unfinished (see Replies below).
 
@@ -35,6 +38,7 @@ path and the relay already holds `/api/dynwork`.
 
 | Method and path | Headers | Body | Answer |
 | --- | --- | --- | --- |
+| `GET /models` | | | `200 {models: [model]}` |
 | `GET /changes?since=<cursor>&limit=<n>` | | | `200 {threads: [thread], cursor, more}` |
 | `PUT /threads/{id}` | `If-Match: <revision>` (absent = create) | `{title?, model?, archived?}` | `200 thread`, `ETag: "<revision>"` |
 | `DELETE /threads/{id}` | `If-Match: <revision>` (required) | | `200 thread` (the tombstone) |
@@ -66,6 +70,25 @@ Every answer carries `Cache-Control: no-store`. Bodies are capped at 64 KiB (`ro
   empty page.
 - **Isolation.** Every row read or written belongs to the token's user. Another user's thread is `404`, never `403`,
   and its row is never shown.
+
+### Models
+
+`GET /models` answers `{models: [{id, name, providerID, provider: {id, name}, reasoning, tools}]}`, sorted by provider
+and id. The phone reads `providerID`, the desktop's Chats view reads `provider`; `providerID` and `id` are what a
+thread's `model` and a prompt's `model` take. It is `503 ai_unavailable` on an instance with no model service.
+
+The list comes from the instance's own model catalog (the one `AiService::catalog` serves), never from a constant
+(decision D3). A model is listed when the catalog advertises it and one of its enabled deployments has a platform
+credential that is configured: a secret the instance holds (`SecretStore::key_names`) or a workload identity. The
+provider is the first such deployment, which is the one `AiService` picks for `{providerID, id}`.
+
+What core 0.81 offers as "the user's models" is narrower than the wording suggests, and this is the whole of it:
+a gateway policy carries quotas, rate windows and safety scanners but no model list (only an API key can carry a
+model allowlist), and `/v1/models` is itself not per user. What does vary is the credential. A reply runs on the
+in-process `AiService`, which serves platform credentials and leaves member-paid ones (a personal key such as
+Dynapps' `opencode-go`, the caller's own login) to the gateway, so those models are not listed: a reply to one would
+fail. They join the list when replies go through the gateway (stage 2). Two users of one instance therefore see the
+same list today; the code is ready for a per-user filter at the `ModelSource::list` seam when core has one.
 
 ### Credentials
 
@@ -196,9 +219,35 @@ decides.
   events of replies compacted before `before`, and events that belong to no reply and are older than it. Events of a
   reply still running are never pruned.
 
+## Settings and the inactivity job
+
+The extension has an optional config file, `services/config/dynwork-chats.yaml` (config prefix `dynwork-chats`):
+
+```yaml
+inactive_days: 15
+web_search_per_thread: 100
+```
+
+Both keys are optional and unknown keys are refused. Core validates the file at startup (`validate_config`), and
+the job reads it on every run, so a change applies from the next run without a restart.
+
+- `inactive_days`: threads with no activity for longer than this are deleted by the job. Unset (the default) keeps
+  threads until a person deletes them. It must be at least 1, so a typo can never read as "delete everything idle".
+- `web_search_per_thread`: the per-thread web search ceiling of stage 3. It is read (`ChatsConfig`) and nothing uses
+  it yet.
+
+The job is `dynwork_chats_retention` (cron `0 30 3 * * *`), registered with `submit_job!` and listed in
+`services/scheduler/config.yaml`. Activity is the thread's `updated_at` (a message, the end of a reply, an edit by a
+person) or any event of a reply written since, so a reply still streaming keeps its thread. An idle thread, archived
+or not, is tombstoned through `ChatStore::delete_thread` at the revision the job read: the same tombstone a person's
+`DELETE` writes, with the messages and events dropped, so clients drop it on their next `changes` call. A thread
+edited between the read and the delete is left alone. The job never removes a row for good (a later purge is out of
+scope), works in batches of 200 threads, at most 100 batches a run, and the next night's run takes what is left. The
+store's `idle_threads` is the one read across users, with `prune_events`.
+
 ## Queries
 
-`PgChatStore` uses the compile-time checked `sqlx::query!` family, so the 22 queries have entries in the workspace's
+`PgChatStore` uses the compile-time checked `sqlx::query!` family, so the 23 queries have entries in the workspace's
 `.sqlx/` cache (`query-*.json`). After changing a query, regenerate them against a database that has the schema:
 run `cargo check -p dynwork-chats` with `DATABASE_URL` set, `SQLX_OFFLINE=false` and `SQLX_OFFLINE_DIR` pointing at an
 empty directory, and copy the resulting `query-*.json` files into `.sqlx/`. The Postgres suite then runs every query
@@ -206,7 +255,7 @@ against the real schema.
 
 ## Tests
 
-- `tests/unit/dynwork-chats`: ids, the cursor, error keys and statuses, the extension's registration, the memory
+- `tests/unit/dynwork-chats`: the config file and block, the model list over the committed catalog, ids, the cursor, error keys and statuses, the extension's registration, the memory
   store, `If-Match` and page sizes, the thread body, the wire shapes; the event envelope per type, derived ids, finish
   reasons, usage folding, the history sent to the model, the prompt body, the log query.
 - `tests/integration/dynwork-chats`: the store contract, and the HTTP suites (auth, threads, the feed, history) driven
@@ -214,7 +263,8 @@ against the real schema.
   RS256 desktop and mobile tokens. Each is stamped once onto the memory store and once onto Postgres (`db_or_skip!`
   throwaway database, dropped at the end of each test; with `CI=1` a missing database is a failure, not a skip). On
   Postgres the phone check runs against the relay's real device table. The reply suites (`http_replies`, `http_log`)
-  run the same way with a scripted `ReplyModel` in place of the AI service.
+  run the same way with a scripted `ReplyModel` in place of the AI service, as do `http_models` and the store-level
+  `retention` suite.
 - `tests/integration/dynwork-chats/fixtures/cloud-reply.jsonl`: written by the recorder test on every run (memory
   store, fixed thread, prompt and clock, so the file only changes when the events do), in the line format of the
   `@dynwork/mobile-model` fixtures: one `meta` line and one `{"kind": "event", "event"}` line per `/log` event. The

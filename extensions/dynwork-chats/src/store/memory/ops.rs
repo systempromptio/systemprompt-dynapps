@@ -6,8 +6,8 @@ use systemprompt::identifiers::UserId;
 use super::state::{Entry, State};
 use crate::ids::ThreadId;
 use crate::store::{
-    AppendOutcome, CompletedReply, CreateOutcome, MessageRecord, NewMessage, NewThread, ThreadEdit,
-    ThreadRecord, WriteOutcome,
+    AppendOutcome, CompletedReply, CreateOutcome, IdleThread, MessageRecord, NewMessage, NewThread,
+    ThreadEdit, ThreadRecord, WriteOutcome,
 };
 
 pub(super) fn create(
@@ -173,4 +173,31 @@ pub(super) fn compact(
     entry.record.change_seq = seq;
     state.change_seq = seq;
     Some(done)
+}
+
+pub(super) fn idle(state: &State, before: DateTime<Utc>, limit: usize) -> Vec<IdleThread> {
+    let mut found: Vec<&Entry> = state
+        .threads
+        .values()
+        .filter(|entry| entry.record.deleted_at.is_none() && entry.record.updated_at < before)
+        .filter(|entry| {
+            entry
+                .events
+                .iter()
+                .all(|event| event.record.created_at < before)
+        })
+        .collect();
+    found.sort_by(|a, b| {
+        (a.record.updated_at, a.record.id.as_str())
+            .cmp(&(b.record.updated_at, b.record.id.as_str()))
+    });
+    found
+        .into_iter()
+        .take(limit)
+        .map(|entry| IdleThread {
+            user: entry.record.user.clone(),
+            id: entry.record.id.clone(),
+            revision: entry.record.revision,
+        })
+        .collect()
 }

@@ -8,6 +8,7 @@
 //! the known ones are kept and anything else becomes `other`, so no provider
 //! text reaches the log.
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -19,7 +20,9 @@ use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::models::ai::StreamChunk;
 use systemprompt::models::execution::context::RequestContext;
+use systemprompt::traits::SecretStore;
 
+use crate::catalog::{self, ModelInfo};
 use crate::ids::ThreadId;
 use crate::store::{ModelRef, Role};
 
@@ -91,22 +94,50 @@ pub trait ReplyModel: Send + Sync + fmt::Debug {
     async fn stream(&self, request: ReplyRequest) -> Result<ChunkStream, ReplyError>;
 }
 
-/// Which model answers a request.
+/// Which model answers a request, and which models a chat can pick.
 ///
 /// Core hands each request the instance's AI service (wrapped as a
 /// [`GatewayModel`] by the handler, `None` when the instance has none);
-/// production answers with it, a suite with its fake.
+/// production answers with it, a suite with its fake. `list` is `None` when
+/// there is no AI service to list from.
 pub trait ModelSource: Send + Sync + fmt::Debug {
     fn pick(&self, gateway: Option<Arc<dyn ReplyModel>>) -> Option<Arc<dyn ReplyModel>>;
+
+    fn list(&self, ai: Option<&AiService>) -> Option<Vec<ModelInfo>>;
 }
 
-/// [`ModelSource`] of a real instance: the AI service of the request.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Gateway;
+/// [`ModelSource`] of a real instance: the AI service of the request and its
+/// catalog, filtered by the secrets the instance holds (see
+/// [`catalog::listed`]).
+#[derive(Debug)]
+pub struct Gateway {
+    secrets: Arc<dyn SecretStore>,
+}
+
+impl Gateway {
+    pub fn new(secrets: Arc<dyn SecretStore>) -> Self {
+        Self { secrets }
+    }
+
+    fn secret_names(&self) -> BTreeSet<String> {
+        match self.secrets.key_names() {
+            Ok(names) => names.into_iter().map(|name| name.to_lowercase()).collect(),
+            Err(error) => {
+                tracing::error!(error = %error, "dynwork chats could not list the instance secrets; no model is served");
+                BTreeSet::new()
+            },
+        }
+    }
+}
 
 impl ModelSource for Gateway {
     fn pick(&self, gateway: Option<Arc<dyn ReplyModel>>) -> Option<Arc<dyn ReplyModel>> {
         gateway
+    }
+
+    fn list(&self, ai: Option<&AiService>) -> Option<Vec<ModelInfo>> {
+        let names = self.secret_names();
+        ai.map(|ai| catalog::listed(ai.catalog(), |name| names.contains(&name.to_lowercase())))
     }
 }
 

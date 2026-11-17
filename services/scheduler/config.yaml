@@ -290,6 +290,15 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Tombstones cloud chat threads with no activity for the instance's
+    # `inactive_days` (services/config/dynwork-chats.yaml, unset keeps them
+    # forever), in batches of 200 threads, at 03:30 UTC (dynwork-chats
+    # extension).
+    - name: dynwork_chats_retention
+      extension: dynwork-chats
+      owner: admin
+      enabled: true
+
     # Data lifecycle: measure daily, archive raw weeks before they expire,
     # archive the rollups monthly (kept forever) and run the health check.
     # Archives land under storage/exports/{weekly,monthly}/ and are listed on

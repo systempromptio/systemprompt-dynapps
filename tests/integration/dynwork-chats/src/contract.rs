@@ -913,6 +913,8 @@ macro_rules! suite {
     };
 }
 
+pub(crate) use suite;
+
 suite!(
     a_thread_is_created_read_and_renamed_with_a_revision_bump,
     a_stale_revision_is_a_conflict_that_carries_the_current_row,

@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.user_id AS owner, t.revision\n               FROM dynwork_chat_threads t\n               WHERE t.deleted_at IS NULL\n                 AND t.updated_at < $1\n                 AND NOT EXISTS (\n                     SELECT 1 FROM dynwork_chat_events e\n                     WHERE e.thread_id = t.id AND e.created_at >= $1\n                 )\n               ORDER BY t.updated_at, t.id\n               LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "owner",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "revision"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5660948dd57aa0c7c6b3baddb90ed41edfcce2a04d20ce118b0cec79e5ed9bee"
+}

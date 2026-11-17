@@ -6,11 +6,11 @@ use systemprompt::identifiers::UserId;
 
 use super::PgChatStore;
 use super::support::{limit_param, lock_live_thread, lock_user};
-use super::types::ThreadRow;
+use super::types::{IdleRow, ThreadRow};
 use crate::ids::{Cursor, ThreadId};
 use crate::store::{
-    ChangePage, CreateOutcome, ModelRef, NewThread, StoreError, ThreadEdit, ThreadRecord,
-    WriteOutcome,
+    ChangePage, CreateOutcome, IdleThread, ModelRef, NewThread, StoreError, ThreadEdit,
+    ThreadRecord, WriteOutcome,
 };
 
 impl PgChatStore {
@@ -228,5 +228,32 @@ impl PgChatStore {
             cursor,
             has_more,
         })
+    }
+
+    pub(super) async fn run_idle_threads(
+        &self,
+        before: DateTime<Utc>,
+        limit: u32,
+    ) -> Result<Vec<IdleThread>, StoreError> {
+        sqlx::query_as!(
+            IdleRow,
+            r#"SELECT t.id, t.user_id AS owner, t.revision
+               FROM dynwork_chat_threads t
+               WHERE t.deleted_at IS NULL
+                 AND t.updated_at < $1
+                 AND NOT EXISTS (
+                     SELECT 1 FROM dynwork_chat_events e
+                     WHERE e.thread_id = t.id AND e.created_at >= $1
+                 )
+               ORDER BY t.updated_at, t.id
+               LIMIT $2"#,
+            before,
+            limit_param(limit)
+        )
+        .fetch_all(&*self.pool)
+        .await?
+        .into_iter()
+        .map(IdleThread::try_from)
+        .collect()
     }
 }

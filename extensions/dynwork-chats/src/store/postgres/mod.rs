@@ -1,8 +1,8 @@
 //! [`ChatStore`] over Postgres.
 //!
-//! The queries are plain `sqlx::query` on literal SQL, not the checked macros,
-//! so this crate adds nothing to the workspace's `.sqlx/` cache; the Postgres
-//! suite runs every one of them against the real schema.
+//! The queries are the checked `sqlx::query!` macros, so they have entries in
+//! the workspace's `.sqlx/` cache; the Postgres suite runs every one of them
+//! against the real schema.
 //!
 //! Every write that changes a thread starts by locking the owner's `users`
 //! row (`FOR NO KEY UPDATE`, which does not block the foreign-key checks of
@@ -19,7 +19,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use super::{
-    AppendOutcome, ChangePage, ChatStore, CompletedReply, CreateOutcome, EventRecord,
+    AppendOutcome, ChangePage, ChatStore, CompletedReply, CreateOutcome, EventRecord, IdleThread,
     MessageRecord, NewEvent, NewMessage, NewThread, StoreError, ThreadEdit, ThreadRecord,
     WriteOutcome,
 };
@@ -142,5 +142,13 @@ impl ChatStore for PgChatStore {
 
     async fn prune_events(&self, before: DateTime<Utc>) -> Result<u64, StoreError> {
         self.run_prune_events(before).await
+    }
+
+    async fn idle_threads(
+        &self,
+        before: DateTime<Utc>,
+        limit: u32,
+    ) -> Result<Vec<IdleThread>, StoreError> {
+        self.run_idle_threads(before, limit).await
     }
 }

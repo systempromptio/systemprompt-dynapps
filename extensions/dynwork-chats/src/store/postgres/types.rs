@@ -9,7 +9,7 @@ use sqlx::types::Json;
 use systemprompt::identifiers::UserId;
 
 use crate::ids::IdError;
-use crate::store::{EventRecord, MessageRecord, ModelRef, StoreError, ThreadRecord};
+use crate::store::{EventRecord, IdleThread, MessageRecord, ModelRef, StoreError, ThreadRecord};
 
 pub(super) struct ThreadRow {
     pub(super) id: String,
@@ -23,6 +23,12 @@ pub(super) struct ThreadRow {
     pub(super) updated_at: DateTime<Utc>,
     pub(super) change_seq: i64,
     pub(super) last_event_seq: i64,
+}
+
+pub(super) struct IdleRow {
+    pub(super) id: String,
+    pub(super) owner: String,
+    pub(super) revision: i64,
 }
 
 pub(super) struct MessageRow {
@@ -68,6 +74,18 @@ impl TryFrom<ThreadRow> for ThreadRecord {
             updated_at: row.updated_at,
             change_seq: row.change_seq,
             last_event_seq: row.last_event_seq,
+        })
+    }
+}
+
+impl TryFrom<IdleRow> for IdleThread {
+    type Error = StoreError;
+
+    fn try_from(row: IdleRow) -> Result<Self, StoreError> {
+        Ok(Self {
+            user: UserId::new(row.owner),
+            id: row.id.parse().map_err(corrupt("dynwork_chat_threads.id"))?,
+            revision: row.revision,
         })
     }
 }

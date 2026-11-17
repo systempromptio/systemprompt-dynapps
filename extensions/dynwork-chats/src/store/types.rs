@@ -72,6 +72,15 @@ pub struct ThreadRecord {
     pub last_event_seq: i64,
 }
 
+/// A live thread with no activity since a time, as the retention job finds
+/// it: whose it is and the revision to delete it at.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdleThread {
+    pub user: UserId,
+    pub id: ThreadId,
+    pub revision: i64,
+}
+
 #[derive(Debug, Clone)]
 pub struct NewThread {
     pub id: ThreadId,

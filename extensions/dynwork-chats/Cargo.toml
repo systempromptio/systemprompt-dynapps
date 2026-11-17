@@ -43,6 +43,8 @@ tokio-util = { workspace = true }
 futures-util = { workspace = true }
 # The request context of a model call: one context id per thread (v5).
 uuid = { workspace = true, features = ["v5"] }
+# The optional `services/config/dynwork-chats.yaml` (`inactive_days`, ...).
+serde_yaml = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true }
 

@@ -12,6 +12,10 @@
 //! suite.
 
 #[cfg(test)]
+mod catalog;
+#[cfg(test)]
+mod config;
+#[cfg(test)]
 mod errors;
 #[cfg(test)]
 mod extension;

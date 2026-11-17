@@ -8,15 +8,20 @@
 //! `/api/dynwork/chats/v1`, authenticated with the desktop or the mobile JWT:
 //! the threads, the changes feed, the message history, prompts that start a
 //! server-side reply, `interrupt`, and the `/log` stream of a thread's live
-//! events. The models list comes in a later phase of the plan.
+//! events. `GET /models` lists the models the instance can serve, and the
+//! retention job tombstones threads idle longer than the instance's
+//! `inactive_days`.
 
 pub mod auth;
+pub mod catalog;
 pub mod clock;
+pub mod config;
 pub mod error;
 pub mod extension;
 pub mod http;
 pub mod ids;
 pub mod reply;
+pub mod retention;
 pub mod router;
 pub mod schema;
 pub mod state;

@@ -19,8 +19,9 @@ use systemprompt::identifiers::UserId;
 use crate::ids::{Cursor, MessageId, ThreadId};
 
 pub use types::{
-    AppendOutcome, ChangePage, CompletedReply, CreateOutcome, EventRecord, MessageRecord, ModelRef,
-    NewEvent, NewMessage, NewThread, Role, ThreadEdit, ThreadPatch, ThreadRecord, WriteOutcome,
+    AppendOutcome, ChangePage, CompletedReply, CreateOutcome, EventRecord, IdleThread,
+    MessageRecord, ModelRef, NewEvent, NewMessage, NewThread, Role, ThreadEdit, ThreadPatch,
+    ThreadRecord, WriteOutcome,
 };
 
 pub const MAX_PAGE: u32 = 500;
@@ -51,8 +52,14 @@ pub enum StoreError {
 /// per-thread event log and do not change `change_seq`. `compact_reply` ends a
 /// reply: final info and parts into its message, its events marked compacted,
 /// the thread's next `change_seq`. `prune_events` drops events of replies
-/// compacted before a time, and orphan events older than it. Every method that
-/// takes a thread answers `None` or `NotFound` when it is not the caller's.
+/// compacted before a time, and orphan events older than it. `idle_threads`
+/// lists live threads of any user with no activity since a time, oldest
+/// first, at most `limit`: neither the thread (`updated_at`) nor any of its
+/// events changed since, so a reply that is still writing keeps its thread
+/// out. With `prune_events` it is a read across users, for the retention job
+/// only; the job deletes what it finds through `delete_thread`. Every method
+/// that takes a thread answers `None` or `NotFound` when it is not the
+/// caller's.
 #[async_trait]
 pub trait ChatStore: Send + Sync + Debug {
     async fn create_thread(
@@ -132,6 +139,12 @@ pub trait ChatStore: Send + Sync + Debug {
     ) -> Result<Option<MessageRecord>, StoreError>;
 
     async fn prune_events(&self, before: DateTime<Utc>) -> Result<u64, StoreError>;
+
+    async fn idle_threads(
+        &self,
+        before: DateTime<Utc>,
+        limit: u32,
+    ) -> Result<Vec<IdleThread>, StoreError>;
 }
 
 pub(crate) fn page_limit(limit: u32) -> u32 {

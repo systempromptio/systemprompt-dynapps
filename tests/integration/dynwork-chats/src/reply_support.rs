@@ -9,6 +9,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::{Method, StatusCode, header};
+use dynwork_chats::catalog::ModelInfo;
 use dynwork_chats::ids::ThreadId;
 use dynwork_chats::reply::model::{
     ChunkStream, ModelChunk, ModelSource, ReplyError, ReplyModel, ReplyRequest, Usage,
@@ -16,6 +17,7 @@ use dynwork_chats::reply::model::{
 use dynwork_chats::store::ModelRef;
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
+use systemprompt::ai::AiService;
 use tokio::sync::mpsc;
 
 use crate::http_support::{Answer, App, desktop_token};
@@ -85,11 +87,37 @@ impl FakeSource {
     }
 }
 
+pub(crate) fn listed_models() -> Vec<ModelInfo> {
+    vec![
+        ModelInfo {
+            id: "claude-sonnet".to_owned(),
+            name: "Claude Sonnet".to_owned(),
+            provider_id: "anthropic".to_owned(),
+            provider_name: "Anthropic".to_owned(),
+            reasoning: true,
+            tools: true,
+        },
+        ModelInfo {
+            id: "deepseek-chat".to_owned(),
+            name: "deepseek-chat".to_owned(),
+            provider_id: "deepseek".to_owned(),
+            provider_name: "deepseek".to_owned(),
+            reasoning: false,
+            tools: false,
+        },
+    ]
+}
+
 impl ModelSource for FakeSource {
     fn pick(&self, gateway: Option<Arc<dyn ReplyModel>>) -> Option<Arc<dyn ReplyModel>> {
         assert!(gateway.is_none(), "no AI service is mounted in the suites");
         let model: Arc<dyn ReplyModel> = Arc::<FakeModel>::clone(&self.model);
         self.available.load(Ordering::SeqCst).then_some(model)
+    }
+
+    fn list(&self, ai: Option<&AiService>) -> Option<Vec<ModelInfo>> {
+        assert!(ai.is_none(), "no AI service is mounted in the suites");
+        self.available.load(Ordering::SeqCst).then(listed_models)
     }
 }
 

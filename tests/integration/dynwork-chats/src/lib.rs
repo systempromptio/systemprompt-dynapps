@@ -26,6 +26,11 @@
 //!   model service, a model error, `interrupt` keeping the partial text, the
 //!   history sent to the model, compaction into the messages, a reply an
 //!   earlier process left unfinished
+//! - the models list: the shape the phone and the desktop read, a phone, auth,
+//!   `503` without a model service
+//! - the inactivity sweep: past the window or inside it, a message, an edit or
+//!   a streaming reply as activity, batches, every user's threads, tombstones
+//!   in the feed
 //! - the `/log` stream: replay then follow, a reader joining mid-reply, `after`
 //!   and `Last-Event-ID`, `follow=0`, a follower going away
 //! - the recorder: a cloud reply's events written to
@@ -44,6 +49,8 @@ mod http_log;
 #[cfg(test)]
 mod http_messages;
 #[cfg(test)]
+mod http_models;
+#[cfg(test)]
 mod http_replies;
 #[cfg(test)]
 mod http_support;
@@ -53,3 +60,5 @@ mod http_threads;
 mod recorder;
 #[cfg(test)]
 mod reply_support;
+#[cfg(test)]
+mod retention;

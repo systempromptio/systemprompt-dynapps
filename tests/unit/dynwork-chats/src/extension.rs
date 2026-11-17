@@ -38,3 +38,26 @@ fn the_system_clock_reads_the_wall_clock() {
     let read = SystemClock.now();
     assert!(read >= before && read <= Utc::now());
 }
+
+#[test]
+fn the_extension_reads_its_config_block_and_registers_the_retention_job() {
+    let extension = ChatsExtension::default();
+    assert_eq!(extension.config_prefix(), Some("dynwork-chats"));
+    assert!(extension.validate_config(&serde_json::json!({})).is_ok());
+    assert!(
+        extension
+            .validate_config(&serde_json::json!({ "inactive_days": 15 }))
+            .is_ok()
+    );
+    for bad in [
+        serde_json::json!({ "inactive_days": 0 }),
+        serde_json::json!({ "inactive_days": "soon" }),
+        serde_json::json!({ "other": 1 }),
+    ] {
+        assert!(extension.validate_config(&bad).is_err(), "{bad}");
+    }
+    let jobs = extension.jobs();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].name(), "dynwork_chats_retention");
+    assert_eq!(jobs[0].schedule(), "0 30 3 * * *");
+}

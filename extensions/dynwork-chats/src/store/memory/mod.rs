@@ -14,12 +14,12 @@ use chrono::{DateTime, Utc};
 use systemprompt::identifiers::UserId;
 
 use super::{
-    AppendOutcome, ChangePage, ChatStore, CompletedReply, CreateOutcome, EventRecord,
+    AppendOutcome, ChangePage, ChatStore, CompletedReply, CreateOutcome, EventRecord, IdleThread,
     MessageRecord, NewEvent, NewMessage, NewThread, StoreError, ThreadEdit, ThreadRecord,
     WriteOutcome,
 };
 use crate::ids::{Cursor, MessageId, ThreadId};
-use ops::{append, compact, create, delete, update};
+use ops::{append, compact, create, delete, idle, update};
 use state::{State, StoredEvent, usize_from};
 
 #[derive(Debug, Default)]
@@ -236,5 +236,13 @@ impl ChatStore for MemoryChatStore {
             }
             removed
         }))
+    }
+
+    async fn idle_threads(
+        &self,
+        before: DateTime<Utc>,
+        limit: u32,
+    ) -> Result<Vec<IdleThread>, StoreError> {
+        Ok(self.with(|state| idle(state, before, usize_from(limit))))
     }
 }

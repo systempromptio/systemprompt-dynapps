@@ -18,6 +18,7 @@ pub const MAX_BODY_BYTES: usize = 64 * 1024;
 
 pub fn chats_router(state: ChatsState) -> Router {
     Router::new()
+        .route("/models", get(http::models::list))
         .route("/changes", get(http::changes::list))
         .route(
             "/threads/{id}",
