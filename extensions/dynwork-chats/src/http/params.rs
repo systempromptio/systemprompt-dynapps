@@ -56,7 +56,7 @@ impl ThreadInput {
     }
 }
 
-fn valid_model(model: &WireModel) -> bool {
+pub(crate) fn valid_model(model: &WireModel) -> bool {
     [&model.provider_id, &model.id]
         .iter()
         .all(|part| !part.trim().is_empty() && part.len() <= MAX_MODEL_PART_BYTES)

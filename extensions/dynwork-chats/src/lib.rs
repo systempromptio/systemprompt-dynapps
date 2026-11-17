@@ -6,8 +6,9 @@
 //! messages and the live events of a running reply, behind one trait with a
 //! memory and a Postgres implementation) and the HTTP API under
 //! `/api/dynwork/chats/v1`, authenticated with the desktop or the mobile JWT:
-//! the threads, the changes feed and the message history. Replies, the `/log`
-//! stream and the models list come in later phases of the plan.
+//! the threads, the changes feed, the message history, prompts that start a
+//! server-side reply, `interrupt`, and the `/log` stream of a thread's live
+//! events. The models list comes in a later phase of the plan.
 
 pub mod auth;
 pub mod clock;
@@ -15,6 +16,7 @@ pub mod error;
 pub mod extension;
 pub mod http;
 pub mod ids;
+pub mod reply;
 pub mod router;
 pub mod schema;
 pub mod state;

@@ -130,6 +130,12 @@ fn every_http_error_has_its_status_and_key() {
             "revision_conflict",
         ),
         (ChatsError::IdTaken, StatusCode::CONFLICT, "id_taken"),
+        (ChatsError::Busy, StatusCode::CONFLICT, "busy"),
+        (
+            ChatsError::AiUnavailable,
+            StatusCode::SERVICE_UNAVAILABLE,
+            "ai_unavailable",
+        ),
         (
             ChatsError::Devices(dynwork_relay::store::StoreError::Corrupt("x")),
             StatusCode::INTERNAL_SERVER_ERROR,

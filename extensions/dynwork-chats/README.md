@@ -10,18 +10,22 @@ describes what exists today.
 
 ## What exists
 
-The store and the first half of the HTTP API: threads, the changes feed and the message history. Replies (`prompt`,
-`interrupt`, the `/log` stream), `models` and the relay change hint come in the next phases.
+The store and the HTTP API: threads, the changes feed, the message history, and server-side replies (`prompt`,
+`interrupt`, the `/log` stream). `models` and the relay change hint come in the next phases.
 
 - `ChatsExtension` (`dynwork-chats`, "DynWork Chats"), depends on `users`; registers the schema and migrations and
   mounts `chats_router` at `EXTENSION_BASE_PATH` (`/api/dynwork/chats/v1`) as a public router: it does its own auth.
-  The state (`ChatsState`: store, token authority, device check, clock) is built on core's first `router` call and
-  kept in the extension value.
+  The state (`ChatsState`: store, token authority, device check, clock, model source, the registry of running replies)
+  is built on core's first `router` call and kept in the extension value.
 - `store::ChatStore`, an async trait with two implementations: `store::postgres::PgChatStore` (production) and
   `store::memory::MemoryChatStore` (the seam the suites use to run the HTTP layer without a database). Both pass
   the same contract suite in `tests/integration/dynwork-chats`.
 - `ids`: `ThreadId` (`ses_` and a ULID), `MessageId` (`msg_` and a ULID), and `Cursor`, the opaque cursor of the
-  changes feed (base64url of a `change_seq`, never parsed by clients).
+  changes feed (base64url of a `change_seq`, never parsed by clients). A reply's `MessageId` is derived from its
+  prompt (`MessageId::derived_at`: the prompt's time and a hash of the thread and prompt ids in place of the random
+  bits).
+- `reply`: the model behind `ReplyModel`, the runner, the event builders, the message documents, the registry of
+  running replies and the recovery of a reply an earlier process left unfinished (see Replies below).
 
 ## Routes
 
@@ -35,6 +39,9 @@ path and the relay already holds `/api/dynwork`.
 | `PUT /threads/{id}` | `If-Match: <revision>` (absent = create) | `{title?, model?, archived?}` | `200 thread`, `ETag: "<revision>"` |
 | `DELETE /threads/{id}` | `If-Match: <revision>` (required) | | `200 thread` (the tombstone) |
 | `GET /threads/{id}/messages?before=<message id>&limit=<n>` | | | `200 {messages: [message], more, before}` |
+| `POST /threads/{id}/prompt` | | `{messageID, parts: [{type: "text", text}], model?}` | `202 {assistantMessageID}` |
+| `POST /threads/{id}/interrupt` | | | `204` |
+| `GET /threads/{id}/log?after=<seq>&follow=1` | `Last-Event-ID: <seq>` (optional) | | `200 text/event-stream` |
 
 Every answer carries `Cache-Control: no-store`. Bodies are capped at 64 KiB (`router::MAX_BODY_BYTES`).
 
@@ -82,16 +89,72 @@ logged. The status mapping follows the relay's.
 
 | Status | `key` | When |
 | --- | --- | --- |
-| 400 | `bad_request` | a malformed body (not JSON, wrong types, a title over 512 characters, a model part empty or over 128 bytes, a create with `archived: true`), `If-Match`, `limit` or query string |
+| 400 | `bad_request` | a malformed body (not JSON, wrong types, a title over 512 characters, a model part empty or over 128 bytes, a create with `archived: true`; a prompt with no text, a part that is not text, or a malformed `messageID`), `If-Match`, `limit`, `after`, `follow`, `Last-Event-ID` or query string; a prompt with no model on the prompt, the thread or the instance |
 | 400 | `invalid_id` | a thread id or a `before` message id that is not `ses_`/`msg_` and 8 to 40 letters or digits |
 | 400 | `invalid_cursor` | a `since` this server did not issue |
 | 401 | `unauthorized` | a missing, malformed, forged, expired or wrong-audience token; a token that is not a signed-in person's; a revoked or unknown phone; a deleted account |
 | 404 | `not_found` | a thread that is not the caller's or does not exist; an unknown route |
 | 409 | `revision_conflict` | a stale `If-Match`, a write to a tombstone, a create of an existing id; the body carries `current` |
-| 409 | `id_taken` | a create of an id another user holds |
+| 409 | `id_taken` | a create of an id another user holds; a prompt whose `messageID` is already a message of the thread that is not a prompt |
+| 409 | `busy` | a prompt while another reply of the thread runs |
 | 413 | `too_large` | a body over 64 KiB |
 | 428 | `precondition_required` | a `DELETE` without `If-Match` |
+| 503 | `ai_unavailable` | a prompt on an instance with no model service |
 | 500 | `internal` | the store or the device check failed |
+
+## Replies
+
+A prompt starts a reply that runs on the server, in-process, with the `AiService` core attaches to the request
+(`Extension<Option<Arc<AiService>>>`), as the user (`Actor::user`), so the instance's quotas, policies and audit
+(`ai_requests`) apply. Stage 1 streams through `AiService::generate_stream`, which yields text and usage only: no
+reasoning, no tools. The call sits behind `reply::model::ReplyModel` (`GatewayModel`), so stage 2 swaps it for
+`generate_events_stream` (decision D1) without touching the runner or the wire.
+
+- **Starting.** The thread must be the caller's and live. The model is the prompt's, else the thread's, else the
+  instance's default. The prompt is stored as the user message (`{id, type: "user", text, time, metadata:
+  {assistantMessageID}}`), the history (the thread's last 200 messages, text only, oldest first, roles alternating)
+  goes to the model, and an empty assistant message is stored before the answer `202 {assistantMessageID}`. The same
+  `messageID` again, while its reply runs or after, answers the same reply and starts nothing; another prompt while a
+  reply runs is `409 busy`.
+- **Running.** One task per reply on the registry's `BackgroundTasks`, holding the thread's claim until it ends.
+  Every event is written to `dynwork_chat_events` first and then published to the thread's in-memory broadcast.
+  A follower going away never stops it.
+- **Events.** OpenCode v2 envelopes: `session.created` (the thread's first event, before its first reply);
+  `session.execution.started`, `session.step.started`, `session.text.started`, one `session.text.delta` per chunk the
+  model emits, `session.text.ended` with the whole text; then `session.step.ended` (`finish`, `rawFinish`, `tokens`,
+  `cost`), `session.usage.updated` (the thread's running token total) and `session.execution.succeeded`; or
+  `session.execution.interrupted` (`reason: "user"`); or `session.execution.failed` (`error: {type, message}`).
+  Each event carries exactly the fields the desktop fixtures carry for its type: `location` is `{directory: ""}` and
+  `subpath` `""` (a cloud thread has no directory); `durable: {aggregateID, seq, version: 1}` on every type except
+  `session.text.delta` and `session.usage.updated`, which the desktop sends without it. `id` is derived from the row
+  (`evt_`, the time in hex, the `seq`), so a replay is byte for byte the live copy. `cost` is `0`: stage 1 has no
+  pricing outside core's audit.
+- **Ending.** The closing events are written, the reply is compacted into its assistant message (the whole OpenCode
+  v2 document: `content: [{type: "text", text}]`, `finish`, `rawFinish`, `tokens`, `cost`, `time.completed`, and
+  `error` when it did not succeed: `aborted` for an interrupt, the model's error for a failure), and only then are the
+  closing events published, so a client that reloads the history on the terminal event finds the finished message.
+- **Interrupt.** Cancels the running reply, waits up to 10 s for its last events and answers `204`, also when nothing
+  runs. The partial text is kept: `session.text.ended` with it, then `session.execution.interrupted`.
+- **Restart.** The registry is in process, so an unfinished assistant message nothing here has claimed was being
+  written when the server stopped. It is settled on the first touch of its thread (a prompt, an `interrupt` or a
+  `/log` reader): the missing `session.text.ended`, then `session.execution.failed` with error type `restarted`, and
+  the compaction with its partial text.
+
+### The `/log` stream
+
+`text/event-stream`, one `data:` line of JSON (the envelope) per event, `id:` its `seq`, and a comment heartbeat
+every 15 s. It replays the stored events after `after` or `Last-Event-ID` (the later of the two), then, with
+`follow=1`, the live ones until the client goes away; `follow=0` (the default) closes after the replay. The live feed
+is subscribed before the store is read, and an event at or below the last `seq` sent is dropped, so a resume has no
+gap and no duplicate; a reader that falls behind the feed (or sees a `seq` jump) reads the store again. Events of
+finished replies are pruned 24 h after their compaction, so a resume older than that starts from what remains (the
+history route has the messages).
+
+### One replica
+
+The claims and the live broadcasts are in memory, like the relay's hub: the extension supports one server replica.
+Behind two, a follower on one replica would not see a reply running on the other until it reconnects (the store
+still has every event), and a reply running on one would look abandoned to the other.
 
 ## Tables
 
@@ -144,9 +207,15 @@ against the real schema.
 ## Tests
 
 - `tests/unit/dynwork-chats`: ids, the cursor, error keys and statuses, the extension's registration, the memory
-  store, `If-Match` and page sizes, the thread body, the wire shapes.
+  store, `If-Match` and page sizes, the thread body, the wire shapes; the event envelope per type, derived ids, finish
+  reasons, usage folding, the history sent to the model, the prompt body, the log query.
 - `tests/integration/dynwork-chats`: the store contract, and the HTTP suites (auth, threads, the feed, history) driven
   in process through the router as core mounts it, beside a stand-in for the relay's `/api/dynwork` mount, with real
   RS256 desktop and mobile tokens. Each is stamped once onto the memory store and once onto Postgres (`db_or_skip!`
   throwaway database, dropped at the end of each test; with `CI=1` a missing database is a failure, not a skip). On
-  Postgres the phone check runs against the relay's real device table.
+  Postgres the phone check runs against the relay's real device table. The reply suites (`http_replies`, `http_log`)
+  run the same way with a scripted `ReplyModel` in place of the AI service.
+- `tests/integration/dynwork-chats/fixtures/cloud-reply.jsonl`: written by the recorder test on every run (memory
+  store, fixed thread, prompt and clock, so the file only changes when the events do), in the line format of the
+  `@dynwork/mobile-model` fixtures: one `meta` line and one `{"kind": "event", "event"}` line per `/log` event. The
+  phone's and the desktop's shape checks read it.

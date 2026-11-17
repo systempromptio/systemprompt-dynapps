@@ -1,7 +1,8 @@
 //! The chats router as core mounts it, beside a stand-in for the relay's
 //! `/api/dynwork` mount, over the memory store or Postgres, with a real RS256
 //! token authority, a stepping clock and a device check that is either a fake
-//! (memory) or the relay's own device table (Postgres).
+//! (memory) or the relay's own device table (Postgres), and a scripted model
+//! in place of the instance's AI service.
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -11,11 +12,13 @@ use async_trait::async_trait;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
+use axum::response::Response;
 use axum::routing::get;
 use chrono::{DateTime, Utc};
 use dynapps_test_common::TempDb;
 use dynwork_chats::auth::{DeviceCheck, RelayDevices};
 use dynwork_chats::clock::Clock;
+use dynwork_chats::reply::registry::Replies;
 use dynwork_chats::store::ChatStore;
 use dynwork_chats::store::memory::MemoryChatStore;
 use dynwork_chats::store::postgres::PgChatStore;
@@ -35,6 +38,7 @@ use systemprompt_security::keys::{RsaSigningKey, SigningKeys};
 use tower::ServiceExt;
 
 use crate::fixture::{at, seed_users};
+use crate::reply_support::{FakeModel, FakeSource};
 
 pub(crate) const ISSUER: &str = "https://chats.test";
 pub(crate) const RELAY_PING: &str = "/api/dynwork/relay/v1/ping";
@@ -164,42 +168,49 @@ enum Phones {
 pub(crate) struct App {
     router: Router,
     pub(crate) store: Arc<dyn ChatStore>,
+    pub(crate) state: ChatsState,
+    pub(crate) model: Arc<FakeModel>,
+    pub(crate) source: Arc<FakeSource>,
     phones: Phones,
 }
 
-fn mount(store: Arc<dyn ChatStore>, devices: Arc<dyn DeviceCheck>) -> Router {
+fn mount(store: Arc<dyn ChatStore>, devices: Arc<dyn DeviceCheck>, phones: Phones) -> App {
+    let model = Arc::new(FakeModel::default());
+    let source = Arc::new(FakeSource::new(Arc::clone(&model)));
     let state = ChatsState::new(Shared {
-        store,
+        store: Arc::clone(&store),
         authority: authority(),
         devices,
         clock: Arc::new(StepClock(AtomicI64::new(0))),
+        models: Arc::<FakeSource>::clone(&source),
+        replies: Replies::default(),
     });
     let relay = Router::new().route("/relay/v1/ping", get(|| async { "relay" }));
-    Router::new()
+    let router = Router::new()
         .nest("/api/dynwork", relay)
-        .nest(EXTENSION_BASE_PATH, chats_router(state))
+        .nest(EXTENSION_BASE_PATH, chats_router(state.clone()));
+    App {
+        router,
+        store,
+        state,
+        model,
+        source,
+        phones,
+    }
 }
 
 pub(crate) fn memory() -> App {
     let store: Arc<dyn ChatStore> = Arc::new(MemoryChatStore::new());
     let fake = Arc::new(FakeDevices::default());
     let devices: Arc<dyn DeviceCheck> = Arc::<FakeDevices>::clone(&fake);
-    App {
-        router: mount(Arc::clone(&store), devices),
-        store,
-        phones: Phones::Fake(fake),
-    }
+    mount(store, devices, Phones::Fake(fake))
 }
 
 pub(crate) async fn postgres(db: TempDb) -> App {
     seed_users(&db).await;
     let store: Arc<dyn ChatStore> = Arc::new(PgChatStore::new(Arc::clone(&db.pool)));
     let devices: Arc<dyn DeviceCheck> = Arc::new(RelayDevices::new(Arc::clone(&db.pool)));
-    App {
-        router: mount(Arc::clone(&store), devices),
-        store,
-        phones: Phones::Relay(db),
-    }
+    mount(store, devices, Phones::Relay(db))
 }
 
 pub(crate) struct Answer {
@@ -244,18 +255,22 @@ impl Call<'_> {
         self
     }
 
-    pub(crate) async fn send(self) -> Answer {
+    // The response as it arrives, for a streamed body such as `/log`.
+    pub(crate) async fn open(self) -> Response {
         let request = self
             .request
             .body(Body::from(self.body))
             .expect("build a request");
-        let response = self
-            .app
+        self.app
             .router
             .clone()
             .oneshot(request)
             .await
-            .expect("the router answers");
+            .expect("the router answers")
+    }
+
+    pub(crate) async fn send(self) -> Answer {
+        let response = self.open().await;
         let status = response.status();
         let headers = response.headers().clone();
         let bytes = response
@@ -333,6 +348,13 @@ impl App {
     }
 
     pub(crate) async fn finish(self) {
+        let drained = self
+            .state
+            .replies
+            .tasks()
+            .drain(std::time::Duration::from_secs(10))
+            .await;
+        assert!(drained.is_drained(), "a reply task outlived its test");
         if let Phones::Relay(db) = self.phones {
             db.cleanup().await;
         }

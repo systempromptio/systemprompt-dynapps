@@ -2,7 +2,8 @@
 //!
 //! Core asks an extension for its router more than once (to validate the
 //! path, then to mount it), so the state is built on the first call and kept
-//! in the extension value: one store and one device check per process.
+//! in the extension value: one store, one device check and one registry of
+//! running replies per process.
 
 use std::sync::{Arc, OnceLock};
 
@@ -11,6 +12,8 @@ use systemprompt::extension::prelude::*;
 
 use crate::auth::RelayDevices;
 use crate::clock::SystemClock;
+use crate::reply::model::Gateway;
+use crate::reply::registry::Replies;
 use crate::router::{EXTENSION_BASE_PATH, chats_router};
 use crate::schema;
 use crate::state::{ChatsState, Shared};
@@ -39,6 +42,8 @@ impl ChatsExtension {
             authority: ctx.token_authority(),
             devices: Arc::new(RelayDevices::new(pool)),
             clock: Arc::new(SystemClock),
+            models: Arc::new(Gateway),
+            replies: Replies::default(),
         });
         Some(self.state.get_or_init(|| built).clone())
     }

@@ -5,9 +5,14 @@
 //! millisecond time and 80 random bits, Crockford base32), so they sort by
 //! creation. A client may supply its own (a prompt's `messageID` makes a retry
 //! idempotent), so parsing accepts any prefix plus 8 to 40 ASCII
-//! alphanumerics, which is also what the schema's `CHECK` enforces.
+//! alphanumerics, which is also what the schema's `CHECK` enforces. A reply's
+//! id is derived from its prompt instead ([`MessageId::derived_at`]): the
+//! prompt's time and a hash of a seed take the place of the random bits, so
+//! the same prompt at the same time always names the same reply.
 
+use std::collections::hash_map::DefaultHasher;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 use base64::Engine;
@@ -31,8 +36,23 @@ pub enum IdError {
 }
 
 fn ulid(now: DateTime<Utc>) -> String {
+    encode(now, rand::random::<u128>())
+}
+
+fn seeded_ulid(now: DateTime<Utc>, seed: &str) -> String {
+    let mut high = DefaultHasher::new();
+    seed.hash(&mut high);
+    let mut low = DefaultHasher::new();
+    (seed, RANDOM_BITS).hash(&mut low);
+    encode(
+        now,
+        (u128::from(high.finish()) << 64) | u128::from(low.finish()),
+    )
+}
+
+fn encode(now: DateTime<Utc>, random: u128) -> String {
     let millis = u128::try_from(now.timestamp_millis()).unwrap_or(0) & ((1 << 48) - 1);
-    let random = rand::random::<u128>() & ((1 << RANDOM_BITS) - 1);
+    let random = random & ((1 << RANDOM_BITS) - 1);
     let mut value = (millis << RANDOM_BITS) | random;
     let mut text = [0u8; 26];
     for slot in text.iter_mut().rev() {
@@ -63,6 +83,10 @@ macro_rules! chat_id {
 
             pub fn generate_at(now: DateTime<Utc>) -> Self {
                 Self(format!("{}{}", $prefix, ulid(now)))
+            }
+
+            pub fn derived_at(now: DateTime<Utc>, seed: &str) -> Self {
+                Self(format!("{}{}", $prefix, seeded_ulid(now, seed)))
             }
 
             pub fn as_str(&self) -> &str {

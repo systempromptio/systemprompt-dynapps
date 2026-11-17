@@ -21,6 +21,15 @@
 //!   a bare delete, tombstones, `404` across users, bad requests
 //! - the changes feed: the full list, the cursor round trip, paging
 //! - message history: newest first, `before` and `more`
+//! - replies: a prompt answers `202` with its reply, the same `messageID` twice
+//!   is one reply, `409` while one runs, `404` across users, `503` without a
+//!   model service, a model error, `interrupt` keeping the partial text, the
+//!   history sent to the model, compaction into the messages, a reply an
+//!   earlier process left unfinished
+//! - the `/log` stream: replay then follow, a reader joining mid-reply, `after`
+//!   and `Last-Event-ID`, `follow=0`, a follower going away
+//! - the recorder: a cloud reply's events written to
+//!   `fixtures/cloud-reply.jsonl` for the phone's shape check
 
 #[cfg(test)]
 mod contract;
@@ -31,8 +40,16 @@ mod http_auth;
 #[cfg(test)]
 mod http_changes;
 #[cfg(test)]
+mod http_log;
+#[cfg(test)]
 mod http_messages;
+#[cfg(test)]
+mod http_replies;
 #[cfg(test)]
 mod http_support;
 #[cfg(test)]
 mod http_threads;
+#[cfg(test)]
+mod recorder;
+#[cfg(test)]
+mod reply_support;

@@ -1,6 +1,8 @@
-//! What every chats route shares, built once per process by the extension
-//! (or by a suite, with a memory store, a fake device check and its own
-//! clock).
+//! What every chats route shares, built once per process.
+//!
+//! The extension builds it, or a suite with a memory store, a fake device
+//! check, its own clock and a scripted model. It includes the replies running
+//! in this process.
 
 use std::ops::Deref;
 use std::sync::Arc;
@@ -9,6 +11,8 @@ use systemprompt::models::auth::TokenAuthority;
 
 use crate::auth::DeviceCheck;
 use crate::clock::Clock;
+use crate::reply::model::ModelSource;
+use crate::reply::registry::Replies;
 use crate::store::ChatStore;
 
 /// The collaborators behind [`ChatsState`].
@@ -18,6 +22,8 @@ pub struct Shared {
     pub authority: Arc<dyn TokenAuthority>,
     pub devices: Arc<dyn DeviceCheck>,
     pub clock: Arc<dyn Clock>,
+    pub models: Arc<dyn ModelSource>,
+    pub replies: Replies,
 }
 
 /// The state of the chats router: cheap to clone, one [`Shared`] behind it.

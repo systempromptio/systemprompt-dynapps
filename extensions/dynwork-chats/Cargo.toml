@@ -17,9 +17,10 @@ ignored = ["systemprompt-extension"]
 workspace = true
 
 [dependencies]
-# Audit: uses extension (Extension, SchemaDefinition) and identifiers (UserId)
-# — the workspace's `core`, `database` and `config` features.
-systemprompt = { workspace = true }
+# Audit: uses extension (Extension, SchemaDefinition), identifiers (UserId),
+# traits (BackgroundTasks) and, through `full`, `ai` (AiService, the model a
+# reply streams from), as the farm admin does.
+systemprompt = { workspace = true, features = ["full"] }
 # Direct dep so the `extension_migrations!()` expansion resolves.
 systemprompt-extension = { workspace = true }
 
@@ -35,6 +36,13 @@ sqlx = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+# A reply runs as a task the extension owns; its events fan out to `/log`
+# followers over a broadcast, and `interrupt` cancels it with a token.
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
+# The request context of a model call: one context id per thread (v5).
+uuid = { workspace = true, features = ["v5"] }
 base64 = { workspace = true }
 rand = { workspace = true }
 

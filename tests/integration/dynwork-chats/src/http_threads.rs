@@ -65,7 +65,10 @@ async fn creating_answers_revision_one_in_the_wire_shape(app: &App) {
     );
     assert!(thread["time"]["created"].as_i64() >= Some(at(0).timestamp_millis()));
     assert_eq!(
-        answer.headers.get("etag").map(axum::http::HeaderValue::as_bytes),
+        answer
+            .headers
+            .get("etag")
+            .map(axum::http::HeaderValue::as_bytes),
         Some(&b"\"1\""[..])
     );
 

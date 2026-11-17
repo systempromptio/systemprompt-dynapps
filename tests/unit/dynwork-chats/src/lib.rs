@@ -5,6 +5,8 @@
 //! - the HTTP helpers: `If-Match`, page sizes, the thread body, the wire shapes
 //!   of a thread and a message
 //! - the memory store's own edges (page limits, the cursor it hands back)
+//! - replies: the event envelope per type, derived ids, finish reasons, the
+//!   history sent to the model, usage folding, the prompt and log inputs
 //!
 //! The store contract itself runs against both stores in the integration
 //! suite.
@@ -19,3 +21,5 @@ mod http;
 mod ids;
 #[cfg(test)]
 mod memory;
+#[cfg(test)]
+mod reply;

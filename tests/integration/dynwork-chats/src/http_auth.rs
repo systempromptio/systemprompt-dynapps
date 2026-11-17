@@ -135,7 +135,10 @@ async fn the_chats_api_sits_beside_the_relay_mount(app: &App) {
         .await;
     assert_eq!(chats.status, StatusCode::OK);
     assert_eq!(
-        chats.headers.get("cache-control").map(axum::http::HeaderValue::as_bytes),
+        chats
+            .headers
+            .get("cache-control")
+            .map(axum::http::HeaderValue::as_bytes),
         Some(&b"no-store"[..])
     );
 }

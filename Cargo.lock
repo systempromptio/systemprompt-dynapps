@@ -1674,6 +1674,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "dynwork-relay",
+ "futures-util",
  "rand 0.9.5",
  "serde",
  "serde_json",
@@ -1681,7 +1682,10 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension",
  "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

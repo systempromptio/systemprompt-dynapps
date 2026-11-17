@@ -2366,6 +2366,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "dynwork-relay",
+ "futures-util",
  "rand 0.9.5",
  "serde",
  "serde_json",
@@ -2373,7 +2374,10 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -2386,6 +2390,7 @@ dependencies = [
  "dynapps-test-common",
  "dynwork-chats",
  "dynwork-relay",
+ "futures-util",
  "http-body-util",
  "serde_json",
  "sqlx",

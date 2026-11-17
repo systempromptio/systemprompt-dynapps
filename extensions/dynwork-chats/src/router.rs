@@ -7,7 +7,7 @@
 
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
-use axum::routing::{get, put};
+use axum::routing::{get, post, put};
 
 use crate::error::ChatsError;
 use crate::http;
@@ -24,6 +24,9 @@ pub fn chats_router(state: ChatsState) -> Router {
             put(http::threads::put).delete(http::threads::delete),
         )
         .route("/threads/{id}/messages", get(http::messages::list))
+        .route("/threads/{id}/prompt", post(http::prompt::prompt))
+        .route("/threads/{id}/interrupt", post(http::prompt::interrupt))
+        .route("/threads/{id}/log", get(http::log::log))
         .fallback(|| async { ChatsError::NotFound })
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(state)

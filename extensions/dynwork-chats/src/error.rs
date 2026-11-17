@@ -33,6 +33,10 @@ pub enum ChatsError {
     Conflict(Box<ThreadRecord>),
     #[error("the thread id is already in use")]
     IdTaken,
+    #[error("a reply is already running in this thread")]
+    Busy,
+    #[error("no model service is available on this instance")]
+    AiUnavailable,
 }
 
 impl ChatsError {
@@ -47,6 +51,8 @@ impl ChatsError {
             Self::PreconditionRequired => "precondition_required",
             Self::Conflict(_) => "revision_conflict",
             Self::IdTaken => "id_taken",
+            Self::Busy => "busy",
+            Self::AiUnavailable => "ai_unavailable",
             Self::Store(_) | Self::Devices(_) => "internal",
         }
     }
@@ -58,7 +64,8 @@ impl ChatsError {
             Self::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::PreconditionRequired => StatusCode::PRECONDITION_REQUIRED,
-            Self::Conflict(_) | Self::IdTaken => StatusCode::CONFLICT,
+            Self::Conflict(_) | Self::IdTaken | Self::Busy => StatusCode::CONFLICT,
+            Self::AiUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             Self::Store(_) | Self::Devices(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
