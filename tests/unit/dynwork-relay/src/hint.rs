@@ -62,7 +62,7 @@ fn every_desktop_of_the_user_but_the_caller_gets_the_hint() {
     let mut phone_rx = attach(&hub, &phone);
     let mut stranger_rx = attach(&hub, &stranger);
 
-    let sent = hub.notify_user_desktops(&caller.user, Some(caller.peer), "routines");
+    let sent = hub.notify_desktops(Some(&caller.user), Some(caller.peer), "routines");
 
     assert_eq!(sent, 1);
     assert_eq!(hints(&mut other_rx), vec![json!({"t": "routines.changed"})]);
@@ -79,9 +79,35 @@ fn without_a_caller_peer_every_desktop_of_the_user_gets_it() {
     let mut one_rx = attach(&hub, &one);
     let mut two_rx = attach(&hub, &two);
 
-    assert_eq!(hub.notify_user_desktops(&one.user, None, "chats"), 2);
+    assert_eq!(hub.notify_desktops(Some(&one.user), None, "chats"), 2);
     assert_eq!(hints(&mut one_rx), vec![json!({"t": "chats.changed"})]);
     assert_eq!(hints(&mut two_rx), vec![json!({"t": "chats.changed"})]);
+}
+
+#[test]
+fn without_a_user_every_desktop_of_every_person_gets_it() {
+    let hub = Hub::new(RingLimits::default(), 8);
+    let alice = endpoint("alice", 1, PeerKind::Desktop);
+    let bob = endpoint("bob", 2, PeerKind::Desktop);
+    let phone = endpoint("bob", 3, PeerKind::Phone);
+    let mut alice_rx = attach(&hub, &alice);
+    let mut bob_rx = attach(&hub, &bob);
+    let mut phone_rx = attach(&hub, &phone);
+
+    assert_eq!(hub.notify_desktops(None, None, "templates"), 2);
+    assert_eq!(
+        hints(&mut alice_rx),
+        vec![json!({"t": "templates.changed"})]
+    );
+    assert_eq!(hints(&mut bob_rx), vec![json!({"t": "templates.changed"})]);
+    assert!(hints(&mut phone_rx).is_empty());
+
+    let payload = json!({ "user": null, "except": null, "kind": "templates" }).to_string();
+    assert_eq!(
+        deliver(&hub, &payload),
+        2,
+        "a NOTIFY without a user reaches everyone"
+    );
 }
 
 #[test]

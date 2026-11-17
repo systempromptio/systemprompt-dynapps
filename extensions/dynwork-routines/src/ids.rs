@@ -1,8 +1,9 @@
-//! The ids a desktop picks for its routines and their runs, and the states a
-//! run reports.
+//! The ids a desktop picks for its routines and their runs, the id an admin
+//! picks for a template, and the states a run reports.
 //!
 //! An id is 1 to 128 letters, digits, `-`, `_`, `.` or `:`, so it fits a path
-//! segment as it is. It is scoped to its user: two people may use the same.
+//! segment as it is. A routine or run id is scoped to its user, so two people
+//! may use the same; a template id is one for the whole instance.
 
 use std::fmt;
 use std::str::FromStr;
@@ -64,6 +65,7 @@ macro_rules! text_id {
 
 text_id!(RoutineId, "a routine id");
 text_id!(RunId, "a run id");
+text_id!(TemplateId, "a template id");
 
 /// Where a run is, as `DynWork`'s routines contract names it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

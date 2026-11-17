@@ -5,8 +5,10 @@
 //! Postgres `NOTIFY` on [`CHANNEL`], so the writer needs no handle on the
 //! relay's process and the hint reaches whichever process holds the
 //! desktops' sockets. The relay's listener ([`spawn`]) hands each
-//! notification to [`Hub::notify_user_desktops`], which writes the control
-//! frame `{"t":"<kind>.changed"}` to the user's desktops but the caller's.
+//! notification to [`Hub::notify_desktops`], which writes the control frame
+//! `{"t":"<kind>.changed"}` to the user's desktops but the caller's. Something
+//! every person shares ([`publish_to_all`]) names no user and reaches every
+//! connected desktop.
 //!
 //! A hint is advisory. One sent while the listener reconnects, or to a
 //! desktop that is offline or whose queue is full, is lost; the desktop
@@ -31,7 +33,7 @@ const RETRY: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Deserialize)]
 struct Hint {
-    user: UserId,
+    user: Option<UserId>,
     except: Option<PeerId>,
     kind: String,
 }
@@ -42,8 +44,22 @@ pub async fn publish(
     except: Option<PeerId>,
     kind: &str,
 ) -> Result<(), sqlx::Error> {
+    notify(pool, Some(user), except, kind).await
+}
+
+pub async fn publish_to_all(pool: &PgPool, kind: &str) -> Result<(), sqlx::Error> {
+    notify(pool, None, None, kind).await
+}
+
+async fn notify(
+    pool: &PgPool,
+    user: Option<&UserId>,
+    except: Option<PeerId>,
+    kind: &str,
+) -> Result<(), sqlx::Error> {
     // JSON: outgoing fixed-shape construction (the NOTIFY payload).
-    let payload = json!({ "user": user.as_str(), "except": except, "kind": kind }).to_string();
+    let payload =
+        json!({ "user": user.map(UserId::as_str), "except": except, "kind": kind }).to_string();
     sqlx::query_scalar!(
         r#"SELECT 1 AS "sent!" FROM pg_notify($1, $2)"#,
         CHANNEL,
@@ -85,7 +101,7 @@ pub async fn listen(hub: Arc<Hub>, pool: Arc<PgPool>, token: CancellationToken) 
 
 pub fn deliver(hub: &Hub, payload: &str) -> usize {
     match serde_json::from_str::<Hint>(payload) {
-        Ok(hint) => hub.notify_user_desktops(&hint.user, hint.except, &hint.kind),
+        Ok(hint) => hub.notify_desktops(hint.user.as_ref(), hint.except, &hint.kind),
         Err(error) => {
             tracing::warn!(%error, "dynwork desktop hint payload is not a hint");
             0

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (\n               SELECT 1 FROM dynwork_routines WHERE user_id = $1 AND template_id = $2\n           ) AS \"had!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "had!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0b4ce5035ed594e3f60a93bf54d79196dafa2c8a9809af9fbe2416b6c4e8caa1"
+}

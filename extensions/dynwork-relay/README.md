@@ -165,8 +165,8 @@ A desktop must check byte 0 before decoding an envelope: `0x01` is an envelope, 
 ### Change hints
 
 Other extensions tell a user's desktops that something of theirs changed on the server, so the desktop pulls its
-feed now instead of at the next poll. `dynwork-routines` sends `routines.changed`; any other extension can send its
-own kind the same way.
+feed now instead of at the next poll. `dynwork-routines` sends `routines.changed`, and `templates.changed` to every
+connected desktop when an admin publishes a template; any other extension can send its own kind the same way.
 
 | Offset | Size | Field | Value |
 | --- | --- | --- | --- |
@@ -175,11 +175,12 @@ own kind the same way.
 | 17 | rest | `body` | UTF-8 JSON `{"t":"<kind>.changed"}` |
 
 - **Who gets it.** Every live desktop socket of the user, except the caller's own peer (the writer names it with
-  `X-Dynwork-Peer`). Phones never get it. It is not held in a ring: an offline desktop catches up by polling.
-- **How a writer sends it.** `dynwork_relay::hint::publish(pool, user, except, kind)` after its transaction commits.
-  It is a Postgres `NOTIFY` on `dynwork_desktop_hints`, so the writer needs no handle on the relay. The relay's
-  listener (`hint::spawn`, a background task beside the revocation watch) hands each notification to
-  `Hub::notify_user_desktops(user, except, kind)`.
+  `X-Dynwork-Peer`); a hint that names no user, every live desktop socket of every person. Phones never get it. It
+  is not held in a ring: an offline desktop catches up by polling.
+- **How a writer sends it.** `dynwork_relay::hint::publish(pool, user, except, kind)` after its transaction commits,
+  or `hint::publish_to_all(pool, kind)` for something every person shares. It is a Postgres `NOTIFY` on
+  `dynwork_desktop_hints`, so the writer needs no handle on the relay. The relay's listener (`hint::spawn`, a
+  background task beside the revocation watch) hands each notification to `Hub::notify_desktops(user, except, kind)`.
 - **Best effort.** A hint sent while the listener reconnects, or to a desktop whose queue is full, is lost. The
   desktop must poll anyway; the hint only shortens the wait.
 - **Old desktops.** A hint is never a 34-byte message with a valid event byte, so a desktop that only decodes

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT template_id AS \"template_id!\"\n           FROM dynwork_routines\n           WHERE user_id = $1 AND deleted_at IS NULL AND template_id IS NOT NULL\n           ORDER BY 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "template_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "5923f23e4e14e92e25178966d6c388bd1245a4507e44dfa60b6c33412f1721ec"
+}

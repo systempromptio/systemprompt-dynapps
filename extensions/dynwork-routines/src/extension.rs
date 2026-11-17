@@ -7,6 +7,7 @@ use std::sync::OnceLock;
 
 use systemprompt::database::Database;
 use systemprompt::extension::prelude::*;
+use systemprompt_web_admin_core::extension_services::ExtensionServices;
 
 use crate::router::{BASE_PATH, routines_router};
 use crate::schema;
@@ -32,6 +33,7 @@ impl RoutinesExtension {
         let built = RoutinesState {
             pool: database.write_pool(),
             authority: ctx.token_authority(),
+            services: ExtensionServices::from_context(ctx),
         };
         Some(self.state.get_or_init(|| built).clone())
     }

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynwork_routine_template_revisions\n             (template_id, revision, mandatory, body, published_by, published_at)\n         VALUES ($1, $2, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Bool",
+        "Jsonb",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "78ac8ac11eb70ea1f1bbf7f5f7b050e07f129a8486aee2279be8391365f30d10"
+}

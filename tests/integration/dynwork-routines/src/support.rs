@@ -44,6 +44,9 @@ pub(crate) fn router(pool: &Arc<PgPool>) -> Router {
     routines_router(RoutinesState {
         pool: Arc::clone(pool),
         authority,
+        services: dynapps_test_common::offline_extension_services(
+            dynapps_test_common::empty_services_view(),
+        ),
     })
 }
 

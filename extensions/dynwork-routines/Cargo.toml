@@ -17,12 +17,14 @@ ignored = ["systemprompt-extension"]
 workspace = true
 
 [dependencies]
-systemprompt = { workspace = true }
+# `security` for the access resolution that decides who sees a template.
+systemprompt = { workspace = true, features = ["security"] }
 # Direct dep so the `extension_migrations!()` expansion resolves.
 systemprompt-extension = { workspace = true }
 # The desktop credential check and the change hint.
 dynwork-relay = { workspace = true }
-# The admin shell the "My routines" page renders in.
+# The admin shell the "My routines" page renders in, the admin role check
+# and the services view the template visibility resolves against.
 systemprompt-web-admin-core = { workspace = true }
 
 axum = { workspace = true }
@@ -32,6 +34,8 @@ sqlx = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+# The ETag of GET /templates.
+sha2 = { workspace = true }
 
 [build-dependencies]
 systemprompt-extension = { workspace = true }

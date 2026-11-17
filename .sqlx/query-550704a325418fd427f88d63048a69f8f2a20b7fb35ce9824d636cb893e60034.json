@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE dynwork_routines\n         SET revision = revision + 1, change_seq = $3,\n             definition = jsonb_set(definition, '{enabled}', to_jsonb($4::boolean)),\n             updated_at = $5\n         WHERE user_id = $1 AND id = $2\n         RETURNING id, revision, change_seq, owner_device, owner_name, definition,\n                   deleted_at, updated_at",
+  "query": "UPDATE dynwork_routines\n         SET revision = revision + 1, change_seq = $3, definition = '{}'::jsonb,\n             deleted_at = $4, updated_at = $4\n         WHERE user_id = $1 AND id = $2\n         RETURNING id, revision, change_seq, owner_device, owner_name, definition,\n                   deleted_at, updated_at, template_id, template_revision",
   "describe": {
     "columns": [
       {
@@ -90,6 +90,28 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "template_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "template_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_revision"
+          }
+        }
       }
     ],
     "parameters": {
@@ -97,7 +119,6 @@
         "Text",
         "Text",
         "Int8",
-        "Bool",
         "Timestamptz"
       ]
     },
@@ -109,8 +130,10 @@
       false,
       false,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "f29e592dc5af517de4063689af818a79c899e1d131cecba5201ef62089e4ae90"
+  "hash": "550704a325418fd427f88d63048a69f8f2a20b7fb35ce9824d636cb893e60034"
 }

@@ -1,0 +1,150 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_routine_templates\n           SET state = 'closed', updated_by = $2, updated_at = $3\n           WHERE id = $1 AND state = 'published'\n           RETURNING id, revision, state, retire_mode, mandatory, plugins, source,\n                     body AS \"body: Json<TemplateBody>\", created_by, updated_by, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "retire_mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "retire_mode"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "mandatory",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "mandatory"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "plugins",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "plugins"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "body: Json<TemplateBody>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "created_by"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "updated_by"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_templates",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "fe518c04118a34db853b8496e3dd3a553e942003ef22226da3fd1d1059fcc9ae"
+}

@@ -2426,6 +2426,7 @@ dependencies = [
  "dynwork-relay",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "systemprompt",
  "systemprompt-extension 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2448,9 +2449,12 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-security 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-shared",
  "tokio",
  "tokio-util",
  "tower",
+ "url",
 ]
 
 [[package]]
@@ -11284,6 +11288,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",

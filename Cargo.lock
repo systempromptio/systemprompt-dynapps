@@ -1699,6 +1699,7 @@ dependencies = [
  "dynwork-relay",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "systemprompt",
  "systemprompt-extension",
