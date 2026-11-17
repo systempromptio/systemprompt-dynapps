@@ -5,7 +5,7 @@
     "columns": [
       {
         "ordinal": 0,
-        "name": "session_id!",
+        "name": "gateway_session!",
         "type_info": "Varchar",
         "origin": {
           "Table": {

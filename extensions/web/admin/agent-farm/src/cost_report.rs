@@ -106,8 +106,10 @@ pub fn task_session(task: &TaskOut) -> Option<String> {
 }
 
 pub fn aggregate(tasks: &[(String, TaskOut)], totals: &[SessionTotalRow]) -> CostReport {
-    let by_session: HashMap<&str, &SessionTotalRow> =
-        totals.iter().map(|t| (t.gateway_session.as_str(), t)).collect();
+    let by_session: HashMap<&str, &SessionTotalRow> = totals
+        .iter()
+        .map(|t| (t.gateway_session.as_str(), t))
+        .collect();
     let mut agents: BTreeMap<String, Bucket> = BTreeMap::new();
     let mut tenants: BTreeMap<String, Bucket> = BTreeMap::new();
     let mut people: BTreeMap<String, Bucket> = BTreeMap::new();

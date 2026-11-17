@@ -92,8 +92,11 @@ fn tenant_of(own: Option<&String>) -> Option<&str> {
     own.map(String::as_str).filter(|t| !t.is_empty())
 }
 
-fn count_in(tenants: impl Iterator<Item = Option<&String>>, slug: &str) -> usize {
-    tenants.filter(|t| tenant_of(*t) == Some(slug)).count()
+fn count_in<T>(items: &[T], tenant: impl Fn(&T) -> Option<&String>, slug: &str) -> usize {
+    items
+        .iter()
+        .filter(|item| tenant_of(tenant(item)) == Some(slug))
+        .count()
 }
 
 fn counted(value: Option<usize>, view: &str, slug: &str) -> Counted {
@@ -130,7 +133,7 @@ fn tenant_row(
     let slug = t.tenant.as_str();
     let task_count = input
         .tasks
-        .map(|tasks| count_in(tasks.iter().map(|(_, task)| task.tenant.as_ref()), slug));
+        .map(|tasks| count_in(&tasks[..], |(_, task)| task.tenant.as_ref(), slug));
     let name = t
         .name
         .as_deref()
@@ -150,14 +153,14 @@ fn tenant_row(
         agents: counted(
             input
                 .agents
-                .map(|a| count_in(a.items.iter().map(|x| x.tenant.as_ref()), slug)),
+                .map(|a| count_in(&a.items[..], |x| x.tenant.as_ref(), slug)),
             "agents",
             slug,
         ),
         schedules: counted(
             input
                 .schedules
-                .map(|s| count_in(s.items.iter().map(|x| x.tenant.as_ref()), slug)),
+                .map(|s| count_in(&s.items[..], |x| x.tenant.as_ref(), slug)),
             "schedules",
             slug,
         ),
