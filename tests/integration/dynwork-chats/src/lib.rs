@@ -31,6 +31,9 @@
 //! - the inactivity sweep: past the window or inside it, a message, an edit or
 //!   a streaming reply as activity, batches, every user's threads, tombstones
 //!   in the feed
+//! - the change hint: every kind of thread change, a reply starting and ending,
+//!   and the inactivity sweep send one `chats` hint to the right user, a
+//!   refused write sends none, and the relay's `NOTIFY` carries it
 //! - the `/log` stream: replay then follow, a reader joining mid-reply, `after`
 //!   and `Last-Event-ID`, `follow=0`, a follower going away
 //! - the recorder: a cloud reply's events written to
@@ -40,6 +43,8 @@
 mod contract;
 #[cfg(test)]
 mod fixture;
+#[cfg(test)]
+mod hints;
 #[cfg(test)]
 mod http_auth;
 #[cfg(test)]

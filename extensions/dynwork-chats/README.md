@@ -11,13 +11,12 @@ describes what exists today.
 ## What exists
 
 The store and the HTTP API: threads, the changes feed, the message history, server-side replies (`prompt`,
-`interrupt`, the `/log` stream), the models list and the inactivity job. The relay change hint comes in the next
-phase.
+`interrupt`, the `/log` stream), the models list, the inactivity job and the relay change hint.
 
 - `ChatsExtension` (`dynwork-chats`, "DynWork Chats"), depends on `users`; registers the schema and migrations and
   mounts `chats_router` at `EXTENSION_BASE_PATH` (`/api/dynwork/chats/v1`) as a public router: it does its own auth.
-  The state (`ChatsState`: store, token authority, device check, clock, model source, the registry of running replies)
-  is built on core's first `router` call and kept in the extension value.
+  The state (`ChatsState`: store, token authority, device check, clock, model source, change hints, the registry of
+  running replies) is built on core's first `router` call and kept in the extension value.
 - `store::ChatStore`, an async trait with two implementations: `store::postgres::PgChatStore` (production) and
   `store::memory::MemoryChatStore` (the seam the suites use to run the HTTP layer without a database). Both pass
   the same contract suite in `tests/integration/dynwork-chats`.
@@ -178,6 +177,31 @@ history route has the messages).
 The claims and the live broadcasts are in memory, like the relay's hub: the extension supports one server replica.
 Behind two, a follower on one replica would not see a reply running on the other until it reconnects (the store
 still has every event), and a reply running on one would look abandoned to the other.
+
+## The change hint
+
+Every change to a thread tells the person's other desktops to pull `GET /changes` now, through the relay's hint
+(`dynwork_relay::hint::publish`, kind `chats`): a Postgres `NOTIFY` on `dynwork_desktop_hints` that the relay's
+listener turns into the control frame `{"t":"chats.changed"}` for each live desktop socket of the user. The hint
+carries no data, never goes to a phone, and is not held for an offline desktop. This crate only publishes; the relay
+owns the channel and the frame.
+
+| Change | When it is sent | `except` |
+| --- | --- | --- |
+| Thread created, renamed, archived, unarchived, model changed, deleted | after the store committed the write, before the answer | the desktop in `X-Dynwork-Peer`, if the header is a peer id |
+| A reply starts (`prompt` accepted) | once the reply task is running | the same desktop |
+| A reply ends (succeeded, failed, interrupted, or settled after a restart) | after its closing events and the compaction | nobody |
+| The inactivity job tombstones threads | once per person whose threads a run removed, after the run | nobody |
+
+Nothing is sent for a write the store refused or did not change: a stale or missing `If-Match`, a create of an
+existing id, another user's thread, an empty patch, a duplicate prompt, a prompt while a reply runs, or a prompt with
+no model service. The hint is never published inside a store write, so it cannot announce one that rolls back.
+
+It is advisory. A publish that fails is logged (`dynwork chats change hint not published`) and the route answers
+as if it had worked, because every client also polls `GET /changes` (desktops on a timer, phones on foreground and
+pull-to-refresh). Behind a transaction-mode pooler the `NOTIFY` would be lost; the poll covers that too. The
+suites drive a recorder in place of the relay (`hint::Hints`) and check the real `NOTIFY` payload on the relay's
+channel.
 
 ## Tables
 

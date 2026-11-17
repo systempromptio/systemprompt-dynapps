@@ -3,7 +3,7 @@
 
 use chrono::Duration;
 use dynwork_chats::ids::{Cursor, MessageId, ThreadId};
-use dynwork_chats::retention::sweep;
+use dynwork_chats::retention::{Run, sweep};
 use dynwork_chats::store::{
     AppendOutcome, CreateOutcome, NewEvent, NewMessage, NewThread, Role, ThreadEdit, ThreadPatch,
     ThreadRecord, WriteOutcome,
@@ -13,6 +13,7 @@ use systemprompt::identifiers::UserId;
 
 use crate::contract::suite;
 use crate::fixture::{Fixture, at};
+use crate::hints::RecordingHints;
 
 const WINDOW_DAYS: i64 = 15;
 const DAY: i64 = 86_400;
@@ -40,12 +41,23 @@ async fn create(f: &Fixture, owner: &UserId, title: &str, secs: i64) -> ThreadRe
 }
 
 async fn run(f: &Fixture, now: i64) -> dynwork_chats::retention::Sweep {
+    run_with(f, &RecordingHints::default(), now).await
+}
+
+async fn run_with(
+    f: &Fixture,
+    hints: &RecordingHints,
+    now: i64,
+) -> dynwork_chats::retention::Sweep {
     sweep(
         f.store.as_ref(),
-        Some(Duration::days(WINDOW_DAYS)),
-        at(now),
-        BATCH,
-        BATCHES,
+        hints,
+        Run {
+            window: Some(Duration::days(WINDOW_DAYS)),
+            now: at(now),
+            batch: BATCH,
+            max_batches: BATCHES,
+        },
     )
     .await
     .expect("sweep")
@@ -99,9 +111,18 @@ async fn event(f: &Fixture, owner: &UserId, thread: &ThreadId, secs: i64) {
 
 async fn without_a_window_nothing_is_deleted(f: &Fixture) {
     let old = create(f, &f.alice, "ancient", 0).await;
-    let done = sweep(f.store.as_ref(), None, at(400 * DAY), BATCH, BATCHES)
-        .await
-        .expect("sweep");
+    let done = sweep(
+        f.store.as_ref(),
+        &RecordingHints::default(),
+        Run {
+            window: None,
+            now: at(400 * DAY),
+            batch: BATCH,
+            max_batches: BATCHES,
+        },
+    )
+    .await
+    .expect("sweep");
     assert_eq!(done.tombstoned, 0);
     assert!(!done.more);
     let kept = f.store.get_thread(&f.alice, &old.id).await.expect("get");
@@ -274,15 +295,33 @@ async fn the_sweep_works_in_batches_and_says_when_more_remain(f: &Fixture) {
     }
     let now = WINDOW_DAYS * DAY + 100;
     let window = Some(Duration::days(WINDOW_DAYS));
-    let first = sweep(f.store.as_ref(), window, at(now), 2, 1)
-        .await
-        .expect("sweep");
+    let first = sweep(
+        f.store.as_ref(),
+        &RecordingHints::default(),
+        Run {
+            window,
+            now: at(now),
+            batch: 2,
+            max_batches: 1,
+        },
+    )
+    .await
+    .expect("sweep");
     assert_eq!((first.tombstoned, first.more), (2, true));
     assert_eq!(live_titles(f, &f.alice).await.len(), 3);
 
-    let rest = sweep(f.store.as_ref(), window, at(now + 1), 2, 10)
-        .await
-        .expect("sweep");
+    let rest = sweep(
+        f.store.as_ref(),
+        &RecordingHints::default(),
+        Run {
+            window,
+            now: at(now + 1),
+            batch: 2,
+            max_batches: 10,
+        },
+    )
+    .await
+    .expect("sweep");
     assert_eq!((rest.tombstoned, rest.more), (3, false));
     assert!(live_titles(f, &f.alice).await.is_empty());
 }
@@ -299,6 +338,42 @@ async fn a_tombstoned_thread_drops_its_messages(f: &Fixture) {
     assert!(history.is_none(), "a tombstone has no history");
 }
 
+async fn the_sweep_hints_each_person_it_removed_threads_of_once(f: &Fixture) {
+    create(f, &f.alice, "alice one", 0).await;
+    create(f, &f.alice, "alice two", 1).await;
+    create(f, &f.bob, "bob one", 2).await;
+    let fresh = WINDOW_DAYS * DAY + 100;
+    create(f, &f.alice, "alice fresh", fresh - 10).await;
+    let hints = RecordingHints::default();
+    let done = run_with(f, &hints, fresh).await;
+    assert_eq!(done.tombstoned, 3);
+    let mut users = hints.users();
+    users.sort();
+    assert_eq!(users, vec!["alice".to_owned(), "bob".to_owned()]);
+    assert!(hints.sent().iter().all(|(_, except)| except.is_none()));
+}
+
+async fn a_sweep_that_removes_nothing_hints_nobody(f: &Fixture) {
+    create(f, &f.alice, "fresh", 0).await;
+    let hints = RecordingHints::default();
+    let done = run_with(f, &hints, DAY).await;
+    assert_eq!(done.tombstoned, 0);
+    let ancient = sweep(
+        f.store.as_ref(),
+        &hints,
+        Run {
+            window: None,
+            now: at(400 * DAY),
+            batch: BATCH,
+            max_batches: BATCHES,
+        },
+    )
+    .await
+    .expect("sweep");
+    assert_eq!(ancient.tombstoned, 0);
+    assert!(hints.sent().is_empty(), "{:?}", hints.sent());
+}
+
 suite!(
     without_a_window_nothing_is_deleted,
     a_thread_just_past_the_window_is_tombstoned_and_shows_in_changes,
@@ -311,4 +386,6 @@ suite!(
     archived_threads_age_out_too_and_a_second_sweep_finds_nothing,
     the_sweep_works_in_batches_and_says_when_more_remain,
     a_tombstoned_thread_drops_its_messages,
+    the_sweep_hints_each_person_it_removed_threads_of_once,
+    a_sweep_that_removes_nothing_hints_nobody,
 );

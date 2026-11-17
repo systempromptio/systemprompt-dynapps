@@ -6,7 +6,9 @@
 //! it renames, archives, unarchives or changes the model. A `DELETE` needs
 //! `If-Match` (`428` without it) and answers the tombstone. A stale revision,
 //! or a write to a tombstone, answers `409` with the current row; a thread
-//! that is not the caller's is `404`, never `403`.
+//! that is not the caller's is `404`, never `403`. Each write that changed the
+//! thread tells the caller's other desktops, once it has committed, except the
+//! desktop named by `X-Dynwork-Peer`; a refused or empty write tells nobody.
 
 use axum::body::Bytes;
 use axum::extract::rejection::{BytesRejection, PathRejection};
@@ -45,7 +47,7 @@ pub async fn put(
                 .store
                 .update_thread(&caller.user, &id, &edit, state.clock.now())
                 .await?;
-            written(&state, &caller, &id, outcome).await
+            written(&state, &caller, &id, outcome, expected_revision).await
         },
     }
 }
@@ -63,7 +65,7 @@ pub async fn delete(
         .store
         .delete_thread(&caller.user, &id, expected, state.clock.now())
         .await?;
-    written(&state, &caller, &id, outcome).await
+    written(&state, &caller, &id, outcome, expected).await
 }
 
 async fn create(
@@ -86,7 +88,10 @@ async fn create(
         .create_thread(&caller.user, &thread, state.clock.now())
         .await?
     {
-        CreateOutcome::Created(record) => Ok(response::thread(&record)),
+        CreateOutcome::Created(record) => {
+            state.hints.changed(&caller.user, caller.peer).await;
+            Ok(response::thread(&record))
+        },
         CreateOutcome::Exists(record) => Err(ChatsError::Conflict(Box::new(record))),
         CreateOutcome::IdTaken => Err(ChatsError::IdTaken),
         CreateOutcome::UnknownUser => Err(AuthError::UnknownUser.into()),
@@ -98,9 +103,15 @@ async fn written(
     caller: &Caller,
     id: &ThreadId,
     outcome: WriteOutcome,
+    expected: i64,
 ) -> Result<Response, ChatsError> {
     match outcome {
-        WriteOutcome::Done(record) => Ok(response::thread(&record)),
+        WriteOutcome::Done(record) => {
+            if record.revision != expected {
+                state.hints.changed(&caller.user, caller.peer).await;
+            }
+            Ok(response::thread(&record))
+        },
         WriteOutcome::Conflict(record) => Err(ChatsError::Conflict(Box::new(record))),
         WriteOutcome::NotFound => match state.store.get_thread(&caller.user, id).await? {
             Some(tombstone) if tombstone.deleted_at.is_some() => {

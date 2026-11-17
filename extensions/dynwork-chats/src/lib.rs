@@ -10,7 +10,8 @@
 //! server-side reply, `interrupt`, and the `/log` stream of a thread's live
 //! events. `GET /models` lists the models the instance can serve, and the
 //! retention job tombstones threads idle longer than the instance's
-//! `inactive_days`.
+//! `inactive_days`. Every change to a thread is announced to the person's other
+//! desktops with the relay's change hint (`hint`).
 
 pub mod auth;
 pub mod catalog;
@@ -18,6 +19,7 @@ pub mod clock;
 pub mod config;
 pub mod error;
 pub mod extension;
+pub mod hint;
 pub mod http;
 pub mod ids;
 pub mod reply;

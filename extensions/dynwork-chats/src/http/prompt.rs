@@ -101,7 +101,7 @@ pub async fn prompt(
         .models
         .pick(gateway)
         .ok_or(ChatsError::AiUnavailable)?;
-    let reply = start::start(&state, &caller.user, &thread, prompt, engine).await?;
+    let reply = start::start(&state, &caller, &thread, prompt, engine).await?;
     let body = Accepted {
         assistant_message_id: reply.as_str().to_owned(),
     };

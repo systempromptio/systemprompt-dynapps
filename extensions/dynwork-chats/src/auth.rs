@@ -18,7 +18,7 @@ use axum::extract::FromRequestParts;
 use axum::http::HeaderMap;
 use axum::http::request::Parts;
 use dynwork_relay::auth::{bearer, verify_desktop};
-use dynwork_relay::ids::{DeviceId, PeerKind};
+use dynwork_relay::ids::{DeviceId, PeerId, PeerKind};
 use dynwork_relay::mobile_auth::jwt;
 use dynwork_relay::store::postgres::PgRelayStore;
 use dynwork_relay::store::{RelayStore, StoreError};
@@ -26,6 +26,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::error::ChatsError;
+use crate::hint::caller_peer;
 use crate::state::ChatsState;
 
 /// Which client a caller presented.
@@ -35,11 +36,14 @@ pub enum Client {
     Phone(DeviceId),
 }
 
-/// An authenticated caller: the user every row it reads or writes belongs to.
+/// An authenticated caller: the user every row it reads or writes belongs to,
+/// and the desktop peer it named in `X-Dynwork-Peer`, which its own writes do
+/// not send a change hint to.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Caller {
     pub user: UserId,
     pub client: Client,
+    pub peer: Option<PeerId>,
 }
 
 /// Whether a phone's device row is still live.
@@ -80,12 +84,14 @@ impl DeviceCheck for RelayDevices {
 
 pub async fn authenticate(state: &ChatsState, headers: &HeaderMap) -> Result<Caller, ChatsError> {
     let token = bearer(headers)?;
+    let peer = caller_peer(headers);
     let authority = state.authority.as_ref();
     let desktop = match verify_desktop(authority, token) {
         Ok(identity) => {
             return Ok(Caller {
                 user: identity.user,
                 client: Client::Desktop,
+                peer,
             });
         },
         Err(refused) => refused,
@@ -104,6 +110,7 @@ pub async fn authenticate(state: &ChatsState, headers: &HeaderMap) -> Result<Cal
     Ok(Caller {
         user: phone.user,
         client: Client::Phone(phone.device),
+        peer,
     })
 }
 

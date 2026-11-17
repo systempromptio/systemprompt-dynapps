@@ -4,14 +4,18 @@
 //! its reply runs, or after, answers with the same reply and starts nothing.
 //! Another prompt while a reply runs is refused (`409 busy`). The reply's id
 //! is derived from the prompt's time and ids, its model is the prompt's, else
-//! the thread's, else the instance's default.
+//! the thread's, else the instance's default. Once the reply is running the
+//! caller's other desktops get the change hint (not the one that prompted,
+//! which follows the `/log`); a prompt that starts nothing sends none.
 
 use std::sync::Arc;
 use std::time::Duration;
 
+use chrono::{DateTime, Utc};
 use systemprompt::identifiers::UserId;
 use tokio_util::sync::CancellationToken;
 
+use crate::auth::Caller;
 use crate::error::ChatsError;
 use crate::ids::{MessageId, ThreadId};
 use crate::reply::document::{self, ReplyDoc};
@@ -49,11 +53,12 @@ async fn live_thread(
 
 pub async fn start(
     state: &ChatsState,
-    user: &UserId,
+    caller: &Caller,
     thread: &ThreadId,
     prompt: Prompt,
     engine: Arc<dyn ReplyModel>,
 ) -> Result<MessageId, ChatsError> {
+    let user = &caller.user;
     let record = live_thread(state, user, thread).await?;
     let mut claim = match state.replies.claim(thread) {
         Ok(claim) => claim,
@@ -85,22 +90,7 @@ pub async fn start(
         model: model.clone(),
         created,
     };
-    let answer = NewMessage {
-        id: reply.clone(),
-        role: Role::Assistant,
-        info: doc.started(),
-        parts: document::text_parts(""),
-        completed_at: None,
-    };
-    if !matches!(
-        state
-            .store
-            .append_message(user, thread, &answer, now)
-            .await?,
-        AppendOutcome::Appended(_)
-    ) {
-        return Err(ChatsError::IdTaken);
-    }
+    open_reply(state, user, thread, &doc, now).await?;
     if record.last_event_seq == 0 {
         announce(state, user, &claim, &record, &model).await?;
     }
@@ -126,7 +116,32 @@ pub async fn start(
         prior: document::prior_tokens(&rows),
         cancel,
     });
+    state.hints.changed(user, caller.peer).await;
     Ok(reply)
+}
+
+async fn open_reply(
+    state: &ChatsState,
+    user: &UserId,
+    thread: &ThreadId,
+    doc: &ReplyDoc,
+    now: DateTime<Utc>,
+) -> Result<(), ChatsError> {
+    let answer = NewMessage {
+        id: doc.id.clone(),
+        role: Role::Assistant,
+        info: doc.started(),
+        parts: document::text_parts(""),
+        completed_at: None,
+    };
+    match state
+        .store
+        .append_message(user, thread, &answer, now)
+        .await?
+    {
+        AppendOutcome::Appended(_) => Ok(()),
+        AppendOutcome::Duplicate(_) | AppendOutcome::NoThread => Err(ChatsError::IdTaken),
+    }
 }
 
 async fn ask(

@@ -38,6 +38,7 @@ use systemprompt_security::keys::{RsaSigningKey, SigningKeys};
 use tower::ServiceExt;
 
 use crate::fixture::{at, seed_users};
+use crate::hints::RecordingHints;
 use crate::reply_support::{FakeModel, FakeSource};
 
 pub(crate) const ISSUER: &str = "https://chats.test";
@@ -171,18 +172,21 @@ pub(crate) struct App {
     pub(crate) state: ChatsState,
     pub(crate) model: Arc<FakeModel>,
     pub(crate) source: Arc<FakeSource>,
+    pub(crate) hints: Arc<RecordingHints>,
     phones: Phones,
 }
 
 fn mount(store: Arc<dyn ChatStore>, devices: Arc<dyn DeviceCheck>, phones: Phones) -> App {
     let model = Arc::new(FakeModel::default());
     let source = Arc::new(FakeSource::new(Arc::clone(&model)));
+    let hints = Arc::new(RecordingHints::default());
     let state = ChatsState::new(Shared {
         store: Arc::clone(&store),
         authority: authority(),
         devices,
         clock: Arc::new(StepClock(AtomicI64::new(0))),
         models: Arc::<FakeSource>::clone(&source),
+        hints: Arc::<RecordingHints>::clone(&hints),
         replies: Replies::default(),
     });
     let relay = Router::new().route("/relay/v1/ping", get(|| async { "relay" }));
@@ -195,6 +199,7 @@ fn mount(store: Arc<dyn ChatStore>, devices: Arc<dyn DeviceCheck>, phones: Phone
         state,
         model,
         source,
+        hints,
         phones,
     }
 }

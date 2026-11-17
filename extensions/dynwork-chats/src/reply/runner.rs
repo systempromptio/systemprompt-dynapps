@@ -13,7 +13,8 @@
 //! `interrupt`); `session.execution.failed` (a model error). The last events
 //! are written, the reply is compacted into its message, and only then are
 //! they published, so a client that reloads the history on the terminal
-//! event finds the finished message.
+//! event finds the finished message. Then the person's desktops get the change
+//! hint, whichever way the reply ended.
 
 use std::sync::Arc;
 
@@ -120,22 +121,26 @@ impl Writer<'_> {
             info: doc.finished(fold, ending, now.timestamp_millis()),
             parts: text_parts(&fold.text),
         };
-        match self
+        let compacted = match self
             .state
             .store
             .compact_reply(self.user, thread, &completed, now)
             .await
         {
-            Ok(Some(_)) => {},
+            Ok(Some(_)) => true,
             Ok(None) => {
                 tracing::debug!(%thread, "dynwork chats reply ended on a thread that is gone");
+                false
             },
             Err(error) => {
                 tracing::error!(error = ?error, %thread, "dynwork chats reply not compacted");
                 return Err(Stop);
             },
-        }
+        };
         self.claim.publish(&records);
+        if compacted {
+            self.state.hints.changed(self.user, None).await;
+        }
         Ok(())
     }
 }

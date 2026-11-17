@@ -15,6 +15,7 @@ use systemprompt::traits::Job;
 use crate::auth::RelayDevices;
 use crate::clock::SystemClock;
 use crate::config::{CONFIG_PREFIX, ChatsConfig};
+use crate::hint::RelayHints;
 use crate::reply::model::Gateway;
 use crate::reply::registry::Replies;
 use crate::retention::ChatsRetentionJob;
@@ -44,9 +45,10 @@ impl ChatsExtension {
         let built = ChatsState::new(Shared {
             store: Arc::new(PgChatStore::new(Arc::clone(&pool))),
             authority: ctx.token_authority(),
-            devices: Arc::new(RelayDevices::new(pool)),
+            devices: Arc::new(RelayDevices::new(Arc::clone(&pool))),
             clock: Arc::new(SystemClock),
             models: Arc::new(Gateway::new(ctx.secrets())),
+            hints: Arc::new(RelayHints::new(pool)),
             replies: Replies::default(),
         });
         Some(self.state.get_or_init(|| built).clone())

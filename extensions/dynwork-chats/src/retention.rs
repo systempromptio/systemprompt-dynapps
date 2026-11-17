@@ -14,18 +14,22 @@
 //! the read and the delete (its revision moved) is left alone: that edit was
 //! activity. The config is read on every run, so a changed or removed
 //! `inactive_days` applies from the next one. [`sweep`] tombstones the threads
-//! idle for longer than a window at a given time; with no window it does
-//! nothing and reads nothing.
+//! idle for longer than a window at a given time ([`Run`]); with no window it
+//! does nothing and reads nothing. When it has tombstoned threads it sends each
+//! person whose threads it removed one change hint (not one per thread), after
+//! the run, so their desktops pull the tombstones now.
 
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
 use systemprompt::database::DbPool;
 use systemprompt::extension::ExtensionContext;
+use systemprompt::identifiers::UserId;
 use systemprompt::traits::{Job, JobContext, JobResult, MissingDependency, ProviderError};
 
 use crate::clock::{Clock, SystemClock};
 use crate::config::{CONFIG_PREFIX, ChatsConfig, ConfigError};
+use crate::hint::{Hints, RelayHints};
 use crate::store::postgres::PgChatStore;
 use crate::store::{ChatStore, StoreError, WriteOutcome};
 
@@ -42,13 +46,40 @@ pub struct Sweep {
     pub more: bool,
 }
 
+/// One run: the window (none keeps everything), the time it runs at, and its
+/// size limits.
+#[derive(Debug, Clone, Copy)]
+pub struct Run {
+    pub window: Option<Duration>,
+    pub now: DateTime<Utc>,
+    pub batch: u32,
+    pub max_batches: u32,
+}
+
 pub async fn sweep(
     store: &dyn ChatStore,
-    window: Option<Duration>,
-    now: DateTime<Utc>,
-    batch: u32,
-    max_batches: u32,
+    hints: &dyn Hints,
+    run: Run,
 ) -> Result<Sweep, StoreError> {
+    let mut touched = Vec::new();
+    let swept = walk(store, run, &mut touched).await;
+    for user in &touched {
+        hints.changed(user, None).await;
+    }
+    swept
+}
+
+async fn walk(
+    store: &dyn ChatStore,
+    run: Run,
+    touched: &mut Vec<UserId>,
+) -> Result<Sweep, StoreError> {
+    let Run {
+        window,
+        now,
+        batch,
+        max_batches,
+    } = run;
     let mut sweep = Sweep::default();
     let Some(window) = window else {
         return Ok(sweep);
@@ -65,7 +96,12 @@ pub async fn sweep(
                 .delete_thread(&thread.user, &thread.id, thread.revision, now)
                 .await?
             {
-                WriteOutcome::Done(_) => sweep.tombstoned += 1,
+                WriteOutcome::Done(_) => {
+                    sweep.tombstoned += 1;
+                    if !touched.contains(&thread.user) {
+                        touched.push(thread.user);
+                    }
+                },
                 WriteOutcome::Conflict(_) | WriteOutcome::NotFound => sweep.skipped += 1,
             }
         }
@@ -106,8 +142,15 @@ impl ChatsRetentionJob {
                 .with_message("inactive_days is not set: threads are kept"));
         };
         let pool = ctx.get::<DbPool>()?.write_pool();
-        let store = PgChatStore::new(pool);
-        let done = sweep(&store, Some(window), SystemClock.now(), BATCH, MAX_BATCHES).await?;
+        let store = PgChatStore::new(Arc::clone(&pool));
+        let hints = RelayHints::new(pool);
+        let run = Run {
+            window: Some(window),
+            now: SystemClock.now(),
+            batch: BATCH,
+            max_batches: MAX_BATCHES,
+        };
+        let done = sweep(&store, &hints, run).await?;
         let more = if done.more { "; more remain" } else { "" };
         Ok(JobResult::success()
             .with_stats(done.tombstoned, done.skipped)
