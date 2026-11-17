@@ -1667,7 +1667,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "dynwork-relay"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -1692,7 +1692,7 @@ dependencies = [
 
 [[package]]
 name = "dynwork-routines"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "chrono",
@@ -7154,7 +7154,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dev-login"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -7169,7 +7169,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dynapps"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "dynwork-relay",
@@ -7409,7 +7409,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-kit-export"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -7588,7 +7588,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -7613,7 +7613,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-documents"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -7632,7 +7632,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-shared"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "jsonschema 0.60.0",
@@ -7901,7 +7901,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-secrets-onepassword"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "reqwest",
@@ -8105,7 +8105,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-agent-farm"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8125,7 +8125,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-analytics"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8150,7 +8150,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-catalog"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8172,7 +8172,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-core"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8204,7 +8204,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-governance"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8230,7 +8230,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-identity"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8259,7 +8259,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-platform"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8291,7 +8291,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-content"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "chrono",
@@ -8310,7 +8310,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-extension"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "dynwork-routines",
@@ -8339,7 +8339,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-jobs"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -8368,7 +8368,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-shared"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "chrono",
@@ -8387,7 +8387,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-site"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "chrono",
