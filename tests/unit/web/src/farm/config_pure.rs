@@ -12,7 +12,10 @@ use super::common::{Mode, TestResult, fake_farm};
 #[test]
 fn an_empty_or_missing_file_is_a_console_without_a_farm() -> TestResult {
     assert_eq!(FarmConfig::parse("")?, FarmConfig::default());
-    assert_eq!(FarmConfig::parse("# only a comment\n")?, FarmConfig::default());
+    assert_eq!(
+        FarmConfig::parse("# only a comment\n")?,
+        FarmConfig::default()
+    );
     let dir = tempfile::tempdir()?;
     assert_eq!(FarmConfig::load(dir.path()), FarmConfig::default());
     assert_eq!(FarmConfig::default().token_secret, DEFAULT_TOKEN_SECRET);
@@ -58,7 +61,10 @@ async fn a_missing_secret_is_not_configured_and_a_present_one_is_sent() -> TestR
     };
     let api = FarmApi::from_config(&missing, Arc::clone(&store));
     assert!(api.is_configured());
-    assert!(matches!(api.whoami().await, Err(FarmApiError::NotConfigured)));
+    assert!(matches!(
+        api.whoami().await,
+        Err(FarmApiError::NotConfigured)
+    ));
 
     // A key the fixture store holds: its value is read and sent, and the fake
     // farm-api, which expects another token, answers 401.

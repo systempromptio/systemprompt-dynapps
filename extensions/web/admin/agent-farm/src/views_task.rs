@@ -1,11 +1,14 @@
 //! The single task page's view models: the task, its result, its logs.
 
-use serde::Serialize;
-use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use crate::client::FarmApiError;
 use crate::models::{TaskLogs, TaskOut, TaskResult};
 use crate::usage::{SpTaskView, gateway_session_id};
-use crate::views::{KeyValue, NONE, agent_label, format_duration, format_time, list_href, opt_num, opt_text, short_id, state_tone};
+use crate::views::{
+    KeyValue, NONE, agent_label, format_duration, format_time, list_href, opt_num, opt_text,
+    short_id, state_tone,
+};
+use serde::Serialize;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 #[derive(Debug, Serialize)]
 pub struct ResultView {
@@ -164,8 +167,6 @@ pub fn task_detail(task: &TaskOut, tenant: &str) -> TaskDetailView {
     }
 }
 
-/// farm-api answers some result reads with an expected "nothing here" code
-/// rather than a fault; those become a note on the page.
 pub fn result_note(error: &FarmApiError) -> Option<&'static str> {
     match error.code() {
         Some("task_not_terminal") => {

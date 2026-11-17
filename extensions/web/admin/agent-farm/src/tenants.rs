@@ -85,7 +85,6 @@ pub struct TenantsInput<'a> {
     pub tasks: Option<&'a [(String, TaskOut)]>,
     pub totals: Option<&'a [SessionTotalRow]>,
     pub partial: Option<String>,
-    /// Whether the tenant list itself could be read.
     pub loaded: bool,
 }
 
@@ -104,7 +103,6 @@ fn counted(value: Option<usize>, view: &str, slug: &str) -> Counted {
     }
 }
 
-/// The tasks of one tenant by state, `running` first.
 fn state_counts(tasks: &[(String, TaskOut)], slug: &str) -> Vec<StateCount> {
     let mut by_state: BTreeMap<(u8, &str), usize> = BTreeMap::new();
     for (_, t) in tasks
@@ -247,8 +245,6 @@ pub async fn tenants_page(
         );
         agents = or_fault(a, "Agents", &mut s.faults);
         schedules = or_fault(sc, "Schedules", &mut s.faults);
-        // Nothing read and a fault recorded: the tasks are unavailable, which
-        // is not the same as none.
         let unread = read.0.is_empty() && !errors.as_slice().is_empty();
         s.faults.extend(errors.into_vec());
         tasks = (!unread).then_some(read.0);

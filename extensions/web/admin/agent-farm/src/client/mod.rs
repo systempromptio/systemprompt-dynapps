@@ -21,8 +21,8 @@ use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt::traits::SecretStore;
 
 pub use self::error::{FarmApiError, status_error};
-pub use self::ids::{is_agent_slug, is_task_id};
 use self::ids::task_path;
+pub use self::ids::{is_agent_slug, is_task_id};
 use self::token::Token;
 use crate::config::FarmConfig;
 use crate::models::{
@@ -30,21 +30,15 @@ use crate::models::{
     WhoAmI,
 };
 
-/// The `tenant` value the list calls take for "every tenant this credential
-/// can see". Detail calls need a concrete tenant.
 pub const ALL_TENANTS: &str = "*";
 
-/// Whether a tenant filter means every tenant: nothing, or [`ALL_TENANTS`].
 pub fn is_all_tenants(tenant: &str) -> bool {
     tenant.is_empty() || tenant == ALL_TENANTS
 }
 
 const HTTP_TIMEOUT: Duration = Duration::from_secs(10);
-/// Page size of the task list (farm-api allows at most 100).
 pub const PAGE_SIZE: u32 = 50;
-/// Page size when reading tasks for the cost totals (farm-api's maximum).
 pub const COST_PAGE_SIZE: u32 = 100;
-/// Log lines shown on the task page (farm-api allows at most 1000).
 pub const TAIL_LINES: u32 = 200;
 
 #[derive(Clone)]
@@ -72,22 +66,20 @@ impl fmt::Debug for FarmApi {
 }
 
 impl FarmApi {
-    /// The client the console uses: the base URL from `config`, the token
-    /// read from `secrets` under `config.token_secret` on every call. A blank
-    /// URL leaves the client unconfigured; a missing secret makes each call
-    /// fail with [`FarmApiError::NotConfigured`].
     pub fn from_config(config: &FarmConfig, secrets: Arc<dyn SecretStore>) -> Self {
         let key = config.token_secret.trim().to_owned();
         if key.is_empty() {
             return Self::disabled();
         }
-        Self::build(&config.api_url, Token::Store {
-            store: secrets,
-            key,
-        })
+        Self::build(
+            &config.api_url,
+            Token::Store {
+                store: secrets,
+                key,
+            },
+        )
     }
 
-    /// A client with a fixed token (tests and tools).
     pub fn new(base_url: &str, token: &str) -> Self {
         let token = token.trim().to_owned();
         if token.is_empty() {
@@ -141,8 +133,6 @@ impl FarmApi {
         self.get("/tasks", &query).await
     }
 
-    /// Tasks created in `[since, until)` (RFC 3339 instants), newest first,
-    /// at farm-api's maximum page size: what the cost totals are summed from.
     pub async fn list_tasks_between(
         &self,
         tenant: &str,
@@ -179,8 +169,6 @@ impl FarmApi {
         self.get("/schedules", &[("tenant", tenant)]).await
     }
 
-    /// Credential metadata. `scope` is `personal` or `shared`; farm-api never
-    /// returns a value on either.
     pub async fn list_credentials(
         &self,
         tenant: &str,
@@ -195,11 +183,7 @@ impl FarmApi {
         self.get(&path, &[("tenant", tenant)]).await
     }
 
-    pub async fn get_result(
-        &self,
-        tenant: &str,
-        id: &str,
-    ) -> Result<TaskResult, FarmApiError> {
+    pub async fn get_result(&self, tenant: &str, id: &str) -> Result<TaskResult, FarmApiError> {
         let path = task_path(id, "/result")?;
         self.get(&path, &[("tenant", tenant)]).await
     }
@@ -219,8 +203,12 @@ impl FarmApi {
         let inner = self.inner.as_ref().ok_or(FarmApiError::NotConfigured)?;
         let token = inner.token.current().ok_or(FarmApiError::NotConfigured)?;
         let target = format!("{}{path}", inner.base);
-        let url = validate_outbound_url(&target, LoopbackPolicy::Allow)
-            .map_err(|source| FarmApiError::BadUrl { url: target, source })?;
+        let url = validate_outbound_url(&target, LoopbackPolicy::Allow).map_err(|source| {
+            FarmApiError::BadUrl {
+                url: target,
+                source,
+            }
+        })?;
         let response = inner
             .http
             .get(url.as_str())

@@ -23,22 +23,19 @@ use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 use crate::client::{COST_PAGE_SIZE, FarmApi, is_all_tenants};
+pub use crate::cost_range::{CostQuery, DEFAULT_DAYS, DayRange, clean, parse_day, resolve_range};
+pub use crate::cost_report::{
+    Bucket, CostReport, CostRow, aggregate, rows, sessions, task_session,
+};
 use crate::handlers::{TenantQuery, require_console, scope};
 use crate::models::{TaskOut, TenantRef};
 use crate::sp::SharedSp;
 use crate::types::SessionTotalRow;
 use crate::views::{TenantSelect, tenant_select};
-pub use crate::cost_range::{CostQuery, DEFAULT_DAYS, DayRange, clean, parse_day, resolve_range};
-pub use crate::cost_report::{Bucket, CostReport, CostRow, aggregate, rows, sessions, task_session};
 
 const URL: &str = "/admin/farm/cost";
-/// farm-api pages read for one request, across all tenants. With
-/// [`COST_PAGE_SIZE`] this is the most tasks one cost page counts.
 pub const MAX_PAGES: u32 = 20;
 
-/// systemprompt's totals for the sessions of `tasks`, in one query. `None`
-/// when there are no tasks to ask about (they could not be read) or
-/// systemprompt failed (the fault is recorded).
 pub async fn session_totals(
     sp: &SharedSp,
     tasks: Option<&[(String, TaskOut)]>,
@@ -75,8 +72,6 @@ pub struct CostInput<'a> {
     pub tenants: &'a [TenantRef],
     pub range: &'a DayRange,
     pub tasks: Option<&'a [(String, TaskOut)]>,
-    /// systemprompt's totals for the tasks' sessions; `None` when it could
-    /// not be read (the fault is on the page).
     pub totals: Option<&'a [SessionTotalRow]>,
     pub partial: Option<String>,
 }
@@ -101,10 +96,6 @@ pub fn cost_view(input: &CostInput<'_>) -> CostPageContext {
     }
 }
 
-/// Reads the tasks of `tenants` created in `range`, spending at most
-/// `max_pages` farm-api calls in total. A tenant that means "all" is one
-/// stream across tenants: farm-api pages it with a single cursor. The second
-/// value says why the result is not the whole range, if it is not.
 pub async fn fetch(
     api: &FarmApi,
     tenants: &[String],
@@ -173,8 +164,6 @@ pub async fn cost_page(
         clean(query.to.as_ref()),
         Utc::now().date_naive(),
     );
-    // "All" is one stream of farm-api pages (`tenant=*`), so the page budget
-    // is the same for one tenant and for every tenant.
     let (tasks, partial) = if s.ready {
         let (tasks, partial) = fetch(
             &api,

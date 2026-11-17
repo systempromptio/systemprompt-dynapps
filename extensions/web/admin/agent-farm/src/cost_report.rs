@@ -1,11 +1,12 @@
-//! The Cost page's totals: farm tasks joined to systemprompt's per-session costs, by agent, person and tenant.
+//! The Cost page's totals: farm tasks joined to systemprompt's per-session
+//! costs, by agent, person and tenant.
 
-use std::collections::{BTreeMap, HashMap};
-use serde::Serialize;
 use crate::client::is_all_tenants;
 use crate::models::TaskOut;
 use crate::types::SessionTotalRow;
 use crate::usage::{count_label, format_usd, gateway_session_id};
+use serde::Serialize;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Default, Clone)]
 pub struct Bucket {
@@ -87,7 +88,6 @@ pub fn rows(buckets: BTreeMap<String, Bucket>) -> Vec<CostRow> {
     out
 }
 
-/// The gateway sessions of `tasks`, each once, in task order.
 pub fn sessions(tasks: &[(String, TaskOut)]) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
     tasks
@@ -105,13 +105,9 @@ pub fn task_session(task: &TaskOut) -> Option<String> {
     )
 }
 
-/// Groups `(tenant the task was read from, task)` pairs with systemprompt's
-/// totals per gateway session. A task without a gateway session is counted
-/// but adds nothing, and is reported; so is a linked task systemprompt has no
-/// calls for.
 pub fn aggregate(tasks: &[(String, TaskOut)], totals: &[SessionTotalRow]) -> CostReport {
     let by_session: HashMap<&str, &SessionTotalRow> =
-        totals.iter().map(|t| (t.session_id.as_str(), t)).collect();
+        totals.iter().map(|t| (t.gateway_session.as_str(), t)).collect();
     let mut agents: BTreeMap<String, Bucket> = BTreeMap::new();
     let mut tenants: BTreeMap<String, Bucket> = BTreeMap::new();
     let mut people: BTreeMap<String, Bucket> = BTreeMap::new();

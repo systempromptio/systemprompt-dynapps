@@ -1,5 +1,12 @@
-//! The single task page: the task, its result and logs from farm-api, and its calls and conversation from systemprompt.
+//! The single task page: the task, its result and logs from farm-api, and its
+//! calls and conversation from systemprompt.
 
+use crate::client::{FarmApi, FarmApiError};
+use crate::handlers::{SP_FAULT, TenantQuery, identify, pick_tenant, require_console};
+use crate::models::TaskOut;
+use crate::sp::{SharedSp, SpError};
+use crate::usage::{self, CallsRead, ContextsRead, SpTaskView};
+use crate::views::{self, TaskInput};
 use axum::Extension;
 use axum::extract::{Path, Query};
 use axum::response::Response;
@@ -7,12 +14,6 @@ use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::page::Page;
-use crate::client::{FarmApi, FarmApiError};
-use crate::models::TaskOut;
-use crate::sp::{SharedSp, SpError};
-use crate::usage::{self, CallsRead, ContextsRead, SpTaskView};
-use crate::views::{self, TaskInput};
-use crate::handlers::{SP_FAULT, TenantQuery, identify, pick_tenant, require_console};
 
 pub async fn task_page(
     shell: Page,
@@ -54,8 +55,6 @@ pub async fn task_page(
     ))
 }
 
-/// systemprompt's record of one task: its calls and their totals by the
-/// gateway session, its conversation by the Claude Code session.
 pub async fn read_sp(sp: &SharedSp, task: &TaskOut, faults: &mut Faults) -> SpTaskView {
     let gateway = usage::gateway_session_id(
         task.usage
@@ -115,10 +114,7 @@ pub async fn read_task(api: &FarmApi, tenant: &str, id: &str, faults: &mut Fault
             return (None, None, None);
         },
     };
-    let (result, logs) = tokio::join!(
-        api.get_result(tenant, id),
-        api.get_logs(tenant, id)
-    );
+    let (result, logs) = tokio::join!(api.get_result(tenant, id), api.get_logs(tenant, id));
     let result = match result {
         Ok(r) => Some(views::result_view(&r)),
         Err(e) => result_or_fault(&e, faults),

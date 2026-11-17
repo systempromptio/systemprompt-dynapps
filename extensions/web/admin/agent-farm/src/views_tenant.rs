@@ -1,8 +1,8 @@
 //! The tenant selector every Farm page carries.
 
-use serde::Serialize;
 use crate::client::is_all_tenants;
 use crate::models::TenantRef;
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct TenantOption {
@@ -22,7 +22,6 @@ pub struct TenantSelect {
     pub has_tenants: bool,
 }
 
-/// `selected` is the filter: a tenant slug, or the all-tenants value.
 pub fn tenant_select(action: &'static str, tenants: &[TenantRef], selected: &str) -> TenantSelect {
     TenantSelect {
         action,

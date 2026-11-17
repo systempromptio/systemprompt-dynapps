@@ -12,11 +12,11 @@ use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults}
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
+pub use crate::agents_detail::{AgentDetailView, NamePair, agent_detail, limit_rows};
 use crate::client::FarmApi;
 use crate::handlers::{TenantQuery, require_console, scope};
 use crate::models::{AgentOut, TenantRef};
 use crate::views::{TenantSelect, href, opt_text, row_tenant, tenant_label, tenant_select};
-pub use crate::agents_detail::{AgentDetailView, NamePair, agent_detail, limit_rows};
 
 const LIST_URL: &str = "/admin/farm/agents";
 
@@ -68,8 +68,6 @@ fn list_href(tenant: &str) -> String {
     href(LIST_URL, &[("tenant", tenant)])
 }
 
-/// The link to one agent. `tenant` is the row's own; without one the detail
-/// page falls back to the credential's home tenant.
 pub fn agent_href(slug: &str, tenant: Option<&str>) -> String {
     href(
         &format!("{LIST_URL}/{}", urlencoding::encode(slug)),

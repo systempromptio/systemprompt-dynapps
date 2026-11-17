@@ -25,7 +25,7 @@ fn task(agent: Option<&str>, owner: Option<&str>, session: Option<&str>) -> (Str
 
 fn total(session: &str, micros: i64) -> SessionTotalRow {
     SessionTotalRow {
-        session_id: session.to_owned(),
+        gateway_session: session.to_owned(),
         calls: 2,
         input_tokens: 10,
         output_tokens: 5,

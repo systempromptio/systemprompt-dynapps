@@ -2,8 +2,12 @@
 
 use std::collections::HashMap;
 
-use systemprompt_web_admin_agent_farm::models::{ResultObject, TaskList, TaskOut, TaskResult, TaskUsage};
-use systemprompt_web_admin_agent_farm::views::{TasksInput, format_duration, format_time, result_view, state_tone, task_row, tasks_page};
+use systemprompt_web_admin_agent_farm::models::{
+    ResultObject, TaskList, TaskOut, TaskResult, TaskUsage,
+};
+use systemprompt_web_admin_agent_farm::views::{
+    TasksInput, format_duration, format_time, result_view, state_tone, task_row, tasks_page,
+};
 
 #[test]
 fn tones_cover_every_farm_state() {

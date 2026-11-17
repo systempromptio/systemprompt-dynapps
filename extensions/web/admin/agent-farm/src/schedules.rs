@@ -58,7 +58,6 @@ pub fn state_tone(state: &str) -> &'static str {
     match state {
         "active" => "ok",
         "finished" => "muted",
-        // `paused`, and any state a newer farm-api adds, draw attention.
         _ => "warn",
     }
 }

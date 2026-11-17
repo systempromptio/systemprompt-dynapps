@@ -1,4 +1,5 @@
-//! The Cost page's period: the query, its parsing and the instants farm-api is asked for.
+//! The Cost page's period: the query, its parsing and the instants farm-api is
+//! asked for.
 
 use chrono::{Duration, NaiveDate};
 use serde::Deserialize;
@@ -28,7 +29,6 @@ pub struct DayRange {
 }
 
 impl DayRange {
-    /// `[from 00:00 UTC, day after `to` 00:00 UTC)` as farm-api instants.
     pub fn instants(&self) -> (String, String) {
         let until = self.to + Duration::days(1);
         (
@@ -51,7 +51,6 @@ pub fn parse_day(label: &str, raw: Option<&str>, notes: &mut Vec<String>) -> Opt
     )
 }
 
-/// Default: the last seven days up to and including `today`.
 pub fn resolve_range(from: Option<&str>, to: Option<&str>, today: NaiveDate) -> DayRange {
     let mut notes = Vec::new();
     let to = parse_day("to", to, &mut notes).unwrap_or(today);

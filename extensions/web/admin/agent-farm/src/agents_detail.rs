@@ -1,9 +1,9 @@
 //! The single agent page's view model.
 
-use serde::Serialize;
+use crate::agents::{scope_tone, yes_no};
 use crate::models::AgentOut;
 use crate::views::{KeyValue, format_duration, opt_text};
-use crate::agents::{scope_tone, yes_no};
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct NamePair {

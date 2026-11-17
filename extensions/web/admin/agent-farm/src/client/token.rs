@@ -5,8 +5,6 @@ use std::sync::Arc;
 
 use systemprompt::traits::SecretStore;
 
-/// Where the token comes from: the secrets store, read on every call, or a
-/// fixed value (tests).
 #[derive(Clone)]
 pub(super) enum Token {
     Store {

@@ -28,7 +28,6 @@ use sqlx::PgPool;
 
 use crate::types::SessionTotalRow;
 
-/// The most calls the task page lists (the totals by model cover them all).
 pub const MAX_CALLS: i64 = 500;
 
 /// One model call of a task, from `ai_requests`.
@@ -84,18 +83,13 @@ impl From<sqlx::Error> for SpError {
 /// swap in a fake): a dyn-compatible trait cannot use native async fns.
 #[async_trait]
 pub trait SpUsage: Send + Sync {
-    /// The calls of one gateway session, oldest first, at most [`MAX_CALLS`].
     async fn calls(&self, gateway_session_id: &str) -> Result<Vec<SpCall>, SpError>;
 
-    /// The calls of one gateway session added up per model, costliest first.
     async fn totals_by_model(&self, gateway_session_id: &str)
     -> Result<Vec<SpModelTotal>, SpError>;
 
-    /// The conversation contexts of one Claude Code session.
     async fn contexts(&self, client_session_id: &str) -> Result<Vec<String>, SpError>;
 
-    /// The calls of each of the given gateway sessions added up. Sessions
-    /// with no calls are absent from the answer.
     async fn session_totals(
         &self,
         gateway_session_ids: &[String],

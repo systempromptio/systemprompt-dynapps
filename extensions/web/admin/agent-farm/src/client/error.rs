@@ -7,7 +7,10 @@ use crate::models::ApiErrorBody;
 
 #[derive(Debug, Error)]
 pub enum FarmApiError {
-    #[error("the console has no farm-api credential: set api_url in {} and the secret it names", crate::config::CONFIG_FILE)]
+    #[error(
+        "the console has no farm-api credential: set api_url in {} and the secret it names",
+        crate::config::CONFIG_FILE
+    )]
     NotConfigured,
     #[error("farm-api URL {url} refused: {source}")]
     BadUrl {
@@ -32,8 +35,6 @@ pub enum FarmApiError {
 }
 
 impl FarmApiError {
-    /// The farm-api error code (`task_has_no_result`, `not_found`, …), if it
-    /// answered with one.
     pub fn code(&self) -> Option<&str> {
         match self {
             Self::Status { code, .. } => code.as_deref(),
@@ -42,8 +43,6 @@ impl FarmApiError {
     }
 }
 
-/// The error a non-2xx answer becomes, with farm-api's code when its body
-/// carries one.
 pub fn status_error(status: u16, body: &[u8]) -> FarmApiError {
     match serde_json::from_slice::<ApiErrorBody>(body) {
         Ok(parsed) => FarmApiError::Status {

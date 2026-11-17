@@ -14,11 +14,13 @@ use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use crate::client::is_all_tenants;
 use crate::models::{TaskList, TaskOut, TenantRef};
 use crate::usage::{format_usd, gateway_session_id};
-pub use crate::views_task::{LogsView, ResultView, TaskDetailView, TaskInput, TaskPageContext, identity, limits, logs_view, result_note, result_note_view, result_view, task_detail, task_page, times, usage};
+pub use crate::views_task::{
+    LogsView, ResultView, TaskDetailView, TaskInput, TaskPageContext, identity, limits, logs_view,
+    result_note, result_note_view, result_view, task_detail, task_page, times, usage,
+};
 pub use crate::views_tenant::{TenantOption, TenantSelect, tenant_options, tenant_select};
 
 pub const BASE_URL: &str = "/admin/farm/tasks";
-/// What a row shows when it names no tenant and the page is not filtered.
 const UNKNOWN_TENANT: &str = "—";
 pub const NONE: &str = "—";
 
@@ -109,18 +111,12 @@ pub fn opt_text(value: Option<&str>) -> String {
 }
 
 pub fn agent_label(task: &TaskOut) -> (String, bool) {
-    task.agent
-        .as_deref()
-        .filter(|a| !a.is_empty())
-        .map_or_else(
-            || ("free prompt".to_owned(), true),
-            |a| (a.to_owned(), false),
-        )
+    task.agent.as_deref().filter(|a| !a.is_empty()).map_or_else(
+        || ("free prompt".to_owned(), true),
+        |a| (a.to_owned(), false),
+    )
 }
 
-/// `base` with the query pairs given. A pair with an empty value is left out,
-/// and so is a `tenant` that means "every tenant": all is the default, so its
-/// URLs stay clean.
 pub fn href(base: &str, pairs: &[(&str, &str)]) -> String {
     let mut url = base.to_owned();
     let mut sep = '?';
@@ -137,21 +133,16 @@ pub fn href(base: &str, pairs: &[(&str, &str)]) -> String {
     url
 }
 
-/// The tenant a row belongs to: its own, else the filter when that names one.
-/// `None` when the row names none and the page shows every tenant.
 pub fn row_tenant(own: Option<&str>, filter: &str) -> Option<String> {
     own.filter(|t| !t.is_empty())
         .or_else(|| Some(filter).filter(|f| !is_all_tenants(f)))
         .map(ToOwned::to_owned)
 }
 
-/// A row's tenant as the table shows it.
 pub fn tenant_label(tenant: Option<&str>) -> String {
     tenant.map_or_else(|| UNKNOWN_TENANT.to_owned(), ToOwned::to_owned)
 }
 
-/// The link to one task. `tenant` is the row's own; without one the detail
-/// page falls back to the credential's home tenant.
 pub fn task_href(id: &str, tenant: Option<&str>) -> String {
     href(
         &format!("{BASE_URL}/{}", urlencoding::encode(id)),
@@ -170,8 +161,6 @@ pub fn short_id(id: &str) -> String {
     id.chars().take(8).collect()
 }
 
-/// systemprompt's cost of a task, from the page's per-session totals: `—`
-/// when the task has no gateway session or systemprompt was not read.
 fn row_cost<H: BuildHasher>(task: &TaskOut, costs: Option<&HashMap<String, i64, H>>) -> String {
     let session = gateway_session_id(
         task.usage
@@ -184,8 +173,6 @@ fn row_cost<H: BuildHasher>(task: &TaskOut, costs: Option<&HashMap<String, i64, 
     }
 }
 
-/// One row of the list. `costs` maps gateway session id to systemprompt's
-/// cost in microdollars; `None` when systemprompt was not read.
 pub fn task_row<H: BuildHasher>(
     task: &TaskOut,
     tenant: &str,
@@ -219,7 +206,6 @@ pub struct TasksInput<'a> {
     pub tenants: &'a [TenantRef],
     pub cursor: Option<&'a str>,
     pub list: Option<&'a TaskList>,
-    /// systemprompt's cost per gateway session, when it could be read.
     pub costs: Option<&'a HashMap<String, i64>>,
 }
 

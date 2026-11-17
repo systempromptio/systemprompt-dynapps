@@ -1,7 +1,10 @@
 //! Pure halves of the Farm console's `usage` module.
 
 use systemprompt_web_admin_agent_farm::sp::{MAX_CALLS, SpCall, SpModelTotal};
-use systemprompt_web_admin_agent_farm::usage::{CallsRead, ContextsRead, client_session_id, format_latency, format_usd, gateway_session_id, sp_task_view};
+use systemprompt_web_admin_agent_farm::usage::{
+    CallsRead, ContextsRead, client_session_id, format_latency, format_usd, gateway_session_id,
+    sp_task_view,
+};
 
 #[test]
 fn usd_has_sensible_decimals() {

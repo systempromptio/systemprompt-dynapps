@@ -12,7 +12,6 @@ use serde::Deserialize;
 
 pub const CONFIG_FILE: &str = "web/config/farm.yaml";
 
-/// The secrets-store key the token is read from when the file names none.
 pub const DEFAULT_TOKEN_SECRET: &str = "farm_api_token";
 
 fn default_token_secret() -> String {
@@ -22,10 +21,8 @@ fn default_token_secret() -> String {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FarmConfig {
-    /// farm-api's base URL, ending in `/farm/api/v1`. Empty: no farm.
     #[serde(default)]
     pub api_url: String,
-    /// The secrets-store key holding the farm-api token.
     #[serde(default = "default_token_secret")]
     pub token_secret: String,
 }
@@ -40,7 +37,6 @@ impl Default for FarmConfig {
 }
 
 impl FarmConfig {
-    /// Parses the file's text; an empty document is the default.
     pub fn parse(text: &str) -> Result<Self, serde_yaml::Error> {
         if text.trim().is_empty() {
             return Ok(Self::default());
@@ -48,7 +44,6 @@ impl FarmConfig {
         serde_yaml::from_str(text)
     }
 
-    /// Reads [`CONFIG_FILE`] under `services_root`.
     pub fn load(services_root: &Path) -> Self {
         let path = services_root.join(CONFIG_FILE);
         let text = match std::fs::read_to_string(&path) {

@@ -14,10 +14,8 @@ use crate::views::{format_time, state_tone};
 
 const NONE: &str = "—";
 const MICROS_PER_DOLLAR: f64 = 1_000_000.0;
-/// From one cent up, two decimals are enough; below it, four.
 const ONE_CENT_MICROS: i64 = 10_000;
 
-/// USD from systemprompt's `cost_microdollars`: `$1.25`, `$0.0024`, `$0.00`.
 pub fn format_usd(micros: i64) -> String {
     let dollars = micros as f64 / MICROS_PER_DOLLAR;
     if micros == 0 || micros.abs() >= ONE_CENT_MICROS {
@@ -27,7 +25,6 @@ pub fn format_usd(micros: i64) -> String {
     }
 }
 
-/// `450 ms` under a second, `8.2 s` from a second up.
 pub fn format_latency(ms: Option<i32>) -> String {
     match ms {
         Some(ms) if ms < 0 => NONE.to_owned(),
@@ -49,7 +46,6 @@ fn tokens(value: Option<i32>) -> String {
     value.map_or_else(|| NONE.to_owned(), |v| v.to_string())
 }
 
-/// The status of a call, toned like the rest of the console.
 fn call_tone(status: &str) -> &'static str {
     match status {
         "completed" | "succeeded" | "success" => "ok",
@@ -95,7 +91,6 @@ pub struct ConversationLink {
 #[derive(Debug, Serialize)]
 pub struct SpTaskView {
     pub gateway_session_id: Option<String>,
-    /// Why there is nothing to list, when there is not.
     pub note: Option<String>,
     pub calls: Vec<CallRow>,
     pub has_calls: bool,
@@ -110,9 +105,7 @@ pub struct SpTaskView {
 /// What reading a task's calls gave.
 #[derive(Debug)]
 pub enum CallsRead {
-    /// farm-api has no gateway session for the task: nothing to look up.
     NoSession,
-    /// systemprompt could not be read (the fault is on the page).
     Failed,
     Read {
         calls: Vec<SpCall>,
@@ -123,7 +116,6 @@ pub enum CallsRead {
 /// What reading a task's conversation gave.
 #[derive(Debug)]
 pub enum ContextsRead {
-    /// farm-api has no Claude Code session for the task.
     NoSession,
     Failed,
     Read {
@@ -132,7 +124,6 @@ pub enum ContextsRead {
     },
 }
 
-/// The Claude Code session of a task: its `session_ref` without `sess_`.
 pub fn client_session_id(session_ref: Option<&str>) -> Option<String> {
     let raw = session_ref?.trim();
     let id = raw.strip_prefix("sess_").unwrap_or(raw);
@@ -141,7 +132,6 @@ pub fn client_session_id(session_ref: Option<&str>) -> Option<String> {
     valid.then(|| id.to_owned())
 }
 
-/// A gateway session id as farm-api reports it (`sess_<uuid>`), or nothing.
 pub fn gateway_session_id(raw: Option<&str>) -> Option<String> {
     let id = raw?.trim();
     let body = id.strip_prefix("sess_")?;

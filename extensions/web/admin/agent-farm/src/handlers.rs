@@ -16,15 +16,13 @@ use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults}
 use systemprompt_web_admin_core::ssr::page::Page;
 
 use crate::client::{ALL_TENANTS, FarmApi, FarmApiError, is_all_tenants};
+pub use crate::handlers_task::{TaskRead, read_sp, read_task, result_or_fault, task_page};
 use crate::models::{TaskList, TenantRef, WhoAmI};
 use crate::sp::SharedSp;
 use crate::usage;
 use crate::views::{self, TasksInput};
-pub use crate::handlers_task::{TaskRead, read_sp, read_task, result_or_fault, task_page};
 
-/// What a fault from systemprompt's tables is filed under.
 pub const SP_FAULT: &str = "Systemprompt usage";
-/// The value the Cost page used for "every tenant" before `*`.
 const LEGACY_ALL: &str = "all";
 
 #[derive(Debug, Default, Deserialize)]
@@ -36,8 +34,6 @@ pub struct TenantQuery {
 }
 
 impl TenantQuery {
-    /// The tenant asked for, if the request names one. Empty, `*` and the
-    /// legacy `all` of the old Cost page all mean "every tenant".
     pub fn tenant(&self) -> Option<&str> {
         self.tenant
             .as_deref()
@@ -45,8 +41,6 @@ impl TenantQuery {
             .filter(|t| !is_all_tenants(t) && *t != LEGACY_ALL)
     }
 
-    /// The filter a list page sends to farm-api: the tenant asked for, else
-    /// [`ALL_TENANTS`].
     pub fn filter(&self) -> String {
         self.tenant()
             .map_or_else(|| ALL_TENANTS.to_owned(), ToOwned::to_owned)
@@ -68,8 +62,6 @@ pub fn require_console(shell: &Page) -> Result<(), AdminError> {
     }
 }
 
-/// Who the console's credential is, and so which tenants it may read. `None`
-/// when farm-api could not say; the reason is on `faults`.
 pub async fn identify(api: &FarmApi, faults: &mut Faults) -> Option<WhoAmI> {
     match api.whoami().await {
         Ok(who) => Some(who),
@@ -80,16 +72,12 @@ pub async fn identify(api: &FarmApi, faults: &mut Faults) -> Option<WhoAmI> {
     }
 }
 
-/// The one tenant a detail page reads: the one asked for, else the
-/// credential's home tenant. Detail reads never take "all".
 pub fn pick_tenant(query: &TenantQuery, who: &WhoAmI) -> String {
     query
         .tenant()
         .map_or_else(|| who.tenant.clone(), ToOwned::to_owned)
 }
 
-/// The tenants to offer. A credential without the platform scope gets no
-/// `tenants` list from farm-api: offer its home tenant alone.
 pub fn tenant_list(who: &WhoAmI) -> Vec<TenantRef> {
     if who.tenants.is_empty() && !who.tenant.is_empty() {
         return vec![TenantRef {
@@ -107,16 +95,12 @@ pub fn tenant_list(who: &WhoAmI) -> Vec<TenantRef> {
 pub struct Scope {
     pub faults: Faults,
     pub tenant: String,
-    /// The credential's own tenant: what a detail page reads when the request
-    /// names none.
     pub home: String,
     pub tenants: Vec<TenantRef>,
     pub ready: bool,
 }
 
 impl Scope {
-    /// The tenant a detail read needs: the filter when it names one, else the
-    /// home tenant.
     pub fn concrete(&self) -> &str {
         if is_all_tenants(&self.tenant) {
             &self.home
@@ -143,8 +127,6 @@ pub async fn scope(api: &FarmApi, query: &TenantQuery) -> Scope {
     }
 }
 
-/// systemprompt's cost per gateway session for the tasks of one list page,
-/// in one query. `None` when systemprompt could not be read.
 async fn page_costs(
     sp: &SharedSp,
     list: Option<&TaskList>,
@@ -168,7 +150,7 @@ async fn page_costs(
         Ok(totals) => Some(
             totals
                 .into_iter()
-                .map(|t| (t.session_id, t.cost_microdollars))
+                .map(|t| (t.gateway_session, t.cost_microdollars))
                 .collect(),
         ),
         Err(e) => {
@@ -178,8 +160,6 @@ async fn page_costs(
     }
 }
 
-/// The value of a farm-api read, or `None` with the failure filed under
-/// `what` on the page's faults.
 pub fn or_fault<T>(
     result: Result<T, FarmApiError>,
     what: &'static str,

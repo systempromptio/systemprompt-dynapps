@@ -3,15 +3,10 @@
 
 use super::FarmApiError;
 
-/// A farm task id is a UUID: hex digits and dashes. Anything else never
-/// reaches the URL path.
 pub fn is_task_id(id: &str) -> bool {
-    !id.is_empty()
-        && id.len() <= 64
-        && id.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+    !id.is_empty() && id.len() <= 64 && id.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
 }
 
-/// An agent slug as farm-api defines it: lowercase letters, digits and dashes.
 pub fn is_agent_slug(slug: &str) -> bool {
     !slug.is_empty()
         && slug.len() <= 32

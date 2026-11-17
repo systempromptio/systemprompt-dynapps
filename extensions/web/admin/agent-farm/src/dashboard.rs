@@ -35,7 +35,6 @@ use crate::views::{TenantSelect, href, state_tone, tenant_select};
 
 const URL: &str = "/admin/farm";
 pub const NONE: &str = "—";
-/// farm-api task pages the dashboard reads, at most (100 tasks each).
 pub const TASK_PAGES: u32 = 3;
 
 /// One clickable tile (`components/kpi`).
@@ -68,7 +67,6 @@ pub struct DashboardInput<'a> {
     pub range: &'a DayRange,
     pub agents: Option<&'a AgentList>,
     pub schedules: Option<&'a ScheduleList>,
-    /// Personal plus shared; `None` unless both scopes were read.
     pub credentials: Option<usize>,
     pub tasks: Option<&'a [(String, TaskOut)]>,
     pub totals: Option<&'a [SessionTotalRow]>,
@@ -83,7 +81,6 @@ pub fn count_or_dash(n: Option<usize>) -> String {
     n.map_or_else(|| NONE.to_owned(), |n| n.to_string())
 }
 
-/// `running` first, then what is waiting, then how it ended.
 pub fn state_rank(state: &str) -> u8 {
     match state {
         "running" => 0,
@@ -259,8 +256,6 @@ pub async fn dashboard_page(
             (Some(p), Some(sh)) => Some(credential_count(&p, &sh)),
             _ => None,
         };
-        // Nothing read and a fault recorded: the tasks are unavailable, which
-        // is not the same as none.
         let unread = read.0.is_empty() && !errors.as_slice().is_empty();
         s.faults.extend(errors.into_vec());
         tasks = (!unread).then_some(read.0);

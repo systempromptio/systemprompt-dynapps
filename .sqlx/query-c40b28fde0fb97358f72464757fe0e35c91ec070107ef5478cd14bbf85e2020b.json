@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "-- The model calls of many gateway sessions added up per session, in one\n-- query ($1 = the farm tasks' usage.gateway_session_id values).\nSELECT session_id AS \"session_id!\",\n       count(*)::bigint AS \"calls!\",\n       COALESCE(sum(input_tokens), 0)::bigint AS \"input_tokens!\",\n       COALESCE(sum(output_tokens), 0)::bigint AS \"output_tokens!\",\n       COALESCE(sum(cache_read_tokens), 0)::bigint AS \"cache_read_tokens!\",\n       COALESCE(sum(cache_creation_tokens), 0)::bigint AS \"cache_creation_tokens!\",\n       COALESCE(sum(cost_microdollars), 0)::bigint AS \"cost_microdollars!\"\nFROM ai_requests\nWHERE session_id = ANY($1::text[])\nGROUP BY session_id\n",
+  "query": "-- The model calls of many gateway sessions added up per session, in one\n-- query ($1 = the farm tasks' usage.gateway_session_id values).\nSELECT session_id AS \"gateway_session!\",\n       count(*)::bigint AS \"calls!\",\n       COALESCE(sum(input_tokens), 0)::bigint AS \"input_tokens!\",\n       COALESCE(sum(output_tokens), 0)::bigint AS \"output_tokens!\",\n       COALESCE(sum(cache_read_tokens), 0)::bigint AS \"cache_read_tokens!\",\n       COALESCE(sum(cache_creation_tokens), 0)::bigint AS \"cache_creation_tokens!\",\n       COALESCE(sum(cost_microdollars), 0)::bigint AS \"cost_microdollars!\"\nFROM ai_requests\nWHERE session_id = ANY($1::text[])\nGROUP BY session_id\n",
   "describe": {
     "columns": [
       {
@@ -66,5 +66,5 @@
       null
     ]
   },
-  "hash": "3013d7b8df1a09f5d8b86a9955add5064290ffb8775ec8027ed4bf54c853b387"
+  "hash": "c40b28fde0fb97358f72464757fe0e35c91ec070107ef5478cd14bbf85e2020b"
 }

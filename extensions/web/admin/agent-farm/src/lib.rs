@@ -3,11 +3,11 @@
 //!
 //! The console holds one service credential with farm-api's platform read
 //! scope, so an admin sees every tenant: `services/web/config/farm.yaml`
-//! names farm-api's URL and the secrets-store key of its token ([`config`]). The list pages show all tenants mixed, by asking farm-api for
-//! `?tenant=*`; `?tenant=<slug>` narrows a page to one tenant. A detail page
-//! names the row's own tenant. When the credential is missing or farm-api
-//! fails, the page says so in the shell's "could not be loaded" notice; it
-//! never answers 500.
+//! names farm-api's URL and the secrets-store key of its token ([`config`]).
+//! The list pages show all tenants mixed, by asking farm-api for `?tenant=*`;
+//! `?tenant=<slug>` narrows a page to one tenant. A detail page names the row's
+//! own tenant. When the credential is missing or farm-api fails, the page says
+//! so in the shell's "could not be loaded" notice; it never answers 500.
 //!
 //! The pages: a dashboard that summarises and links the rest, Tenants (one row
 //! each), Tasks (and one task), Agents (and one agent), Schedules, Credentials

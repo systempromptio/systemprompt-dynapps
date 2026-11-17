@@ -368,8 +368,7 @@ fn marketplace() -> MarketplaceContext {
 }
 
 fn engine() -> Result<AdminTemplateEngine, Box<dyn Error>> {
-    let admin_dir =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../storage/files/admin");
+    let admin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../storage/files/admin");
     Ok(AdminTemplateEngine::new(&admin_dir)?)
 }
 
@@ -646,7 +645,7 @@ impl SpUsage for FakeSp {
                     .map(|(_, c)| c)
                     .collect();
                 (!of.is_empty()).then(|| SessionTotalRow {
-                    session_id: id.clone(),
+                    gateway_session: id.clone(),
                     calls: of.len() as i64,
                     input_tokens: sum(&of, |c| c.input_tokens),
                     output_tokens: sum(&of, |c| c.output_tokens),

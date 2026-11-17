@@ -4,7 +4,7 @@
 /// list read these for many sessions in one query).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SessionTotalRow {
-    pub session_id: String,
+    pub gateway_session: String,
     pub calls: i64,
     pub input_tokens: i64,
     pub output_tokens: i64,

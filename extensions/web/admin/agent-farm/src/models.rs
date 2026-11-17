@@ -13,7 +13,6 @@ pub struct WhoAmI {
     pub subject: String,
     #[serde(default)]
     pub tenant: String,
-    /// Only present for a credential with `farm:platform:read`.
     #[serde(default)]
     pub tenants: Vec<TenantRef>,
 }
@@ -146,7 +145,6 @@ pub struct AgentList {
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct AgentOut {
     pub slug: String,
-    /// Present on every item of a list read with `?tenant=*`.
     #[serde(default)]
     pub tenant: Option<String>,
     #[serde(default)]
