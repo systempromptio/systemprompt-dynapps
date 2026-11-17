@@ -1,0 +1,28 @@
+{
+  "slug": "code-reviewer",
+  "scope": "platform",
+  "owner": null,
+  "description": "Reviews a merge request and posts findings",
+  "instructions": null,
+  "plugin_agent": "developer-skills:code-reviewer",
+  "mcp_servers": [],
+  "env_credentials": {},
+  "harness": "claude-code",
+  "requires_workspace": true,
+  "capabilities": {
+    "credentials": [
+      "shared:team-gitlab"
+    ],
+    "egress": [
+      "gitlab.dynapps.be"
+    ],
+    "denied_tools": [
+      "WebFetch"
+    ]
+  },
+  "default_limits": {
+    "timeout_s": 900,
+    "memory": "2Gi"
+  },
+  "model_alias": "haiku"
+}

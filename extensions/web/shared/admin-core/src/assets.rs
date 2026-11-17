@@ -53,6 +53,7 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
         page_js!(&pages, "admin-drive-document.js"),
         page_js!(&pages, "drive.js"),
         page_js!(&pages, "admin-entity-access.js"),
+        page_js!(&pages, "admin-farm.js"),
         page_js!(&pages, "admin-gateway.js"),
         page_js!(&pages, "admin-gateway-policies.js"),
         page_js!(&pages, "admin-governance.js"),

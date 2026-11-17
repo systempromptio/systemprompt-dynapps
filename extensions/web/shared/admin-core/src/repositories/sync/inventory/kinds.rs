@@ -170,6 +170,12 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "web/config/connectors.yaml",
     ),
     file(
+        "farm",
+        "Farm console",
+        "where farm-api answers and which secret holds the console's token",
+        "web/config/farm.yaml",
+    ),
+    file(
         "homepage",
         "Homepage",
         "the public landing page's sections",

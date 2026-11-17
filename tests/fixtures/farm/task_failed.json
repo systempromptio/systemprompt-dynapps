@@ -1,0 +1,55 @@
+{
+  "task_id": "01a167f2-0f8f-7e40-b9cb-9f1db758922a",
+  "tenant": "dynapps-internal",
+  "scope": null,
+  "agent_id": null,
+  "prompt": "[fixture: prompt redacted]",
+  "input": null,
+  "state": "failed",
+  "failure_reason": "runtime_error",
+  "correlation_id": "01a167f2-0f67-788d-86f7-a5fdc137f424",
+  "origin": "api",
+  "limits": {
+    "cpu": "1",
+    "ttl_s": 3600,
+    "memory": "1Gi",
+    "timeout_s": 600
+  },
+  "marketplace": null,
+  "mcp_servers": [],
+  "session_ref": null,
+  "resumable": false,
+  "session_agent_changed": false,
+  "created_at": "2026-10-23T08:47:59.310358Z",
+  "started_at": "2026-10-23T08:48:00Z",
+  "finished_at": "2026-10-23T08:48:40Z",
+  "updated_at": "2026-10-23T08:48:40.534987Z",
+  "owner": "person.two",
+  "resources_resolved": {
+    "cpu": {
+      "limit": {
+        "value": "1",
+        "source": "catalog"
+      },
+      "request": {
+        "value": "500m",
+        "source": "default"
+      }
+    },
+    "disk": {
+      "value": "4Gi",
+      "source": "default"
+    },
+    "memory": {
+      "limit": {
+        "value": "1Gi",
+        "source": "catalog"
+      },
+      "request": {
+        "value": "1Gi",
+        "source": "default"
+      }
+    },
+    "profile": null
+  }
+}

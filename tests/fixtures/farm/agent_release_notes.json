@@ -1,0 +1,36 @@
+{
+  "slug": "release-notes",
+  "scope": "team",
+  "owner": null,
+  "description": "Drafts release notes from merged MRs",
+  "instructions": "Write release notes in English, grouped by module.",
+  "plugin_agent": null,
+  "mcp_servers": [
+    {
+      "name": "odoo",
+      "url": null,
+      "credential": "mcp-odoo-dynapps",
+      "header": "Authorization"
+    }
+  ],
+  "env_credentials": {
+    "GITLAB_TOKEN": "shared:team-gitlab"
+  },
+  "harness": "claude-code",
+  "requires_workspace": false,
+  "capabilities": {
+    "credentials": [
+      "mcp-odoo-dynapps"
+    ],
+    "egress": [
+      "github.com"
+    ],
+    "denied_tools": []
+  },
+  "default_limits": {
+    "timeout_s": 600
+  },
+  "model_alias": "sonnet",
+  "image": "registry.example.invalid/agents/notes:1",
+  "work_size": "4Gi"
+}

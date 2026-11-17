@@ -1,0 +1,33 @@
+[package]
+name = "systemprompt-web-admin-agent-farm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Farm domain of the admin dashboard: read-only pages over the Dynapps farm-api (tenants, tasks, agents, schedules, credentials metadata and cost), for console admins, through one service credential, complemented with each task's model calls, cost and conversation from systemprompt's own tables."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+systemprompt-web-admin-core = { workspace = true }
+systemprompt = { workspace = true }
+
+axum = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+urlencoding = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-web-shared = { workspace = true }
+tower = { workspace = true }
+
+[lints]
+workspace = true

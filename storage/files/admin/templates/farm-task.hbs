@@ -1,0 +1,113 @@
+{{!--
+  Farm › Task: one farm-api task — state, failure reason, limits, times,
+  usage, the result's summary and the latest log lines — plus what
+  systemprompt recorded for it: its model calls (cost in USD, as systemprompt
+  stores it), their totals by model and a link to its conversation. Read-only.
+  The result download link is a short-lived presigned credential and is never
+  shown.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#if task}}
+    {{#> components/page-header title=title subtitle="One headless agent task run by the Dynapps Farm. Read-only."}}
+      {{#*inline "header_meta"}}
+        {{> components/badge tone=task.state_tone text=task.state}}
+        {{#if task.failure_reason}} · <code class="sp-code-inline">{{task.failure_reason}}</code>{{/if}}
+        · <code class="sp-code-inline">{{task.agent}}</code>
+        · {{task.owner}}
+        · {{task.tenant}}
+      {{/inline}}
+      {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">All tasks</a>
+      {{/inline}}
+    {{/components/page-header}}
+
+    <section class="sp-section" aria-label="Task">
+      <h2 class="sp-section__title">Task</h2>
+      <dl class="sp-kv-list">
+        {{#each task.identity}}<div class="sp-kv-row"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/each}}
+        {{#if task.failure_reason}}<div class="sp-kv-row"><dt>Failure reason</dt><dd><code class="sp-code-inline">{{task.failure_reason}}</code></dd></div>{{/if}}
+      </dl>
+    </section>
+
+    <section class="sp-section" aria-label="Times">
+      <h2 class="sp-section__title">Times</h2>
+      <dl class="sp-kv-list">
+        {{#each task.times}}<div class="sp-kv-row"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/each}}
+      </dl>
+    </section>
+
+    <section class="sp-section" aria-label="Limits">
+      <h2 class="sp-section__title">Limits</h2>
+      <dl class="sp-kv-list">
+        {{#each task.limits}}<div class="sp-kv-row"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/each}}
+      </dl>
+    </section>
+
+    <section class="sp-section" aria-label="Usage">
+      <h2 class="sp-section__title">Usage</h2>
+      <dl class="sp-kv-list">
+        {{#each task.usage}}<div class="sp-kv-row"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/each}}
+      </dl>
+    </section>
+
+    <section class="sp-section" aria-label="Model calls">
+      <h2 class="sp-section__title">Model calls (systemprompt)</h2>
+      {{#if sp}}
+        {{#if sp.gateway_session_id}}<p class="sp-u-text-tertiary">Gateway session <code class="sp-code-inline">{{sp.gateway_session_id}}</code> · {{sp.total_calls}} · {{sp.total_cost}}</p>{{/if}}
+        {{#if sp.note}}<p class="sp-u-text-tertiary">{{sp.note}}</p>{{/if}}
+        {{#if sp.has_calls}}
+        <h3 class="sp-section__title">Totals by model</h3>
+        {{#> components/table caption="Model calls by model"}}
+          <thead><tr><th scope="col">Model</th><th scope="col">Calls</th><th scope="col">Failed</th><th scope="col">Input</th><th scope="col">Output</th><th scope="col">Cache read</th><th scope="col">Cache creation</th><th scope="col">Cost (USD)</th></tr></thead>
+          <tbody>{{#each sp.totals}}<tr><td class="sp-table__cell--primary"><code class="sp-code-inline">{{model}}</code></td><td>{{calls}}</td><td>{{failed}}</td><td>{{input_tokens}}</td><td>{{output_tokens}}</td><td>{{cache_read_tokens}}</td><td>{{cache_creation_tokens}}</td><td>{{cost}}</td></tr>{{/each}}</tbody>
+        {{/components/table}}
+        <h3 class="sp-section__title">Calls</h3>
+        {{#if sp.truncated}}<p class="sp-u-text-tertiary">{{sp.truncated}}</p>{{/if}}
+        {{#> components/table caption="Model calls of this task"}}
+          <thead><tr><th scope="col" class="sp-col-date">Time</th><th scope="col">Model</th><th scope="col">Status</th><th scope="col">Kind</th><th scope="col">Input</th><th scope="col">Output</th><th scope="col">Cache read</th><th scope="col">Cache creation</th><th scope="col">Cost (USD)</th><th scope="col">Latency</th></tr></thead>
+          <tbody>{{#each sp.calls}}<tr><td class="sp-col-date">{{time}}</td><td><code class="sp-code-inline">{{model}}</code></td><td>{{> components/badge tone=status_tone text=status}}</td><td>{{kind}}</td><td>{{input_tokens}}</td><td>{{output_tokens}}</td><td>{{cache_read_tokens}}</td><td>{{cache_creation_tokens}}</td><td>{{cost}}</td><td>{{latency}}</td></tr>{{/each}}</tbody>
+        {{/components/table}}
+        {{/if}}
+      {{/if}}
+    </section>
+
+    <section class="sp-section" aria-label="Conversation">
+      <h2 class="sp-section__title">Conversation</h2>
+      {{#if sp}}
+        {{#if sp.conversation_note}}<p class="sp-u-text-tertiary">{{sp.conversation_note}}</p>{{/if}}
+        {{#each sp.conversations}}<p><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{href}}">Open the conversation</a> <code class="sp-code-inline">{{context_id}}</code></p>{{/each}}
+      {{/if}}
+    </section>
+
+    <section class="sp-section" aria-label="Result">
+      <h2 class="sp-section__title">Result</h2>
+      {{#if result}}
+        {{#if result.note}}<p class="sp-u-text-tertiary">{{result.note}}</p>{{/if}}
+        {{#if result.summary}}<pre class="sp-connect__cmd"><code>{{result.summary}}</code></pre>{{else}}{{#if result.note}}{{else}}<p class="sp-u-text-tertiary">farm-api keeps no summary for this result.</p>{{/if}}{{/if}}
+        {{#if result.facts}}<dl class="sp-kv-list">{{#each result.facts}}<div class="sp-kv-row"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/each}}</dl>{{/if}}
+      {{else}}
+        <p class="sp-u-text-tertiary">The result could not be read.</p>
+      {{/if}}
+    </section>
+
+    <section class="sp-section" aria-label="Logs">
+      <h2 class="sp-section__title">Logs</h2>
+      {{#if logs}}
+        {{#if logs.has_lines}}
+          {{#if logs.truncated}}<p class="sp-u-text-tertiary">The latest lines only.</p>{{/if}}
+          <pre class="sp-connect__cmd"><code>{{logs.text}}</code></pre>
+        {{else}}
+          <p class="sp-u-text-tertiary">{{logs.note}}</p>
+        {{/if}}
+      {{else}}
+        <p class="sp-u-text-tertiary">The logs could not be read.</p>
+      {{/if}}
+    </section>
+    {{else}}
+    {{> components/page-header title=title subtitle="This task could not be loaded; the notice above says why."}}
+    <p><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">All tasks</a></p>
+    {{/if}}
+    {{/inline}}
+{{/layout}}

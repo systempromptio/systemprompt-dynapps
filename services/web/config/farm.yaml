@@ -1,0 +1,19 @@
+# The admin console's Farm pages (/admin/farm): where farm-api answers and
+# which secrets-store key holds the console's farm-api token.
+#
+# Read by the admin console at boot
+# (extensions/web/admin/agent-farm/src/config.rs). A missing or empty file, or
+# an empty `api_url`, is a console without a farm: every Farm page says it
+# could not be loaded. A file that does not parse is logged and treated the
+# same way.
+#
+# api_url        farm-api's base URL, ending in /farm/api/v1, e.g.
+#                https://farm.example/farm/api/v1
+# token_secret   the secrets-store key whose value is the token (default
+#                farm_api_token). The token is a farm-api credential with the
+#                platform read scope; it is read on every call, so a reload of
+#                the secrets store reaches the next page. Never write the token
+#                in this file.
+#
+# This repository ships no farm: the deployment's services tree sets api_url.
+api_url: ""

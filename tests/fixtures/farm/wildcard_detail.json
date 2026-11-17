@@ -1,0 +1,1 @@
+{"error":{"code":"tenant_not_concrete","message":"a detail read needs one tenant, not *"}}

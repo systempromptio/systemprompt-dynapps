@@ -47,6 +47,13 @@ groups:
       /admin/identity/service-accounts places it here, and rules.yaml grants
       this group the internal Odoo server.
     ad_groups: []
+  - id: farm-pilot
+    name: Farm pilot
+    description: >-
+      People piloting the Dynapps Farm through this instance. No directory
+      mapping: members are added in the console. rules.yaml grants this group
+      the dynapps-farm MCP server.
+    ad_groups: []
 
 projects:
   # No directory mapping: delivery work is assigned per engagement in the

@@ -68,6 +68,10 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
         .merge(platform_ssr::data_routes().with_state(db.write_pool()))
         .merge(dynwork_routines::page::routes().with_state(db.write_pool()))
         .merge(account_routes())
+        .merge(systemprompt_web_admin_agent_farm::routes::routes(
+            Arc::clone(&pool),
+            &boot,
+        ))
         .merge(api_routes())
         .merge(redirects::legacy_routes())
         .layer(Extension(engine.clone()))
