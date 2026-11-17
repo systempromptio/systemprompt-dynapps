@@ -1,13 +1,15 @@
-//! What the desktop API answers with: a routine (or its tombstone) and a
-//! page of the change feed. A run answers as its [`crate::store::RunRecord`].
+//! What the desktop API answers with: a routine (or its tombstone), a page of
+//! the change feed, and the templates a person sees with their links. A run
+//! answers as its [`crate::store::RunRecord`].
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 // JSON: protocol boundary — the definition is DynWork's, stored as it sent it.
 use serde_json::Value;
 
-use crate::ids::RoutineId;
+use crate::ids::{RoutineId, TemplateId};
 use crate::store::RoutineRecord;
+use crate::template::{LinkState, RetireMode, TemplateView};
 
 // JSON: protocol boundary — the definition is DynWork's, stored as it sent it.
 #[derive(Debug, Clone, Serialize)]
@@ -45,4 +47,21 @@ pub struct ChangesPage {
     pub routines: Vec<RoutineView>,
     pub cursor: String,
     pub more: bool,
+}
+
+/// `GET /templates`: the published templates the person sees, and one link
+/// per template they have a live task of, seen or not.
+#[derive(Debug, Clone, Serialize)]
+pub struct TemplatesPage {
+    pub templates: Vec<TemplateView>,
+    pub links: Vec<LinkView>,
+}
+
+/// `retire` says what retiring did to the person's task; it is set exactly
+/// when `state` is `retired`.
+#[derive(Debug, Clone, Serialize)]
+pub struct LinkView {
+    pub id: TemplateId,
+    pub state: LinkState,
+    pub retire: Option<RetireMode>,
 }

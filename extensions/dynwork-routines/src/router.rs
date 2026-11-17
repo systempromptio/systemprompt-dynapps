@@ -17,5 +17,10 @@ pub fn routines_router(state: RoutinesState) -> Router {
             put(http::routines::put).delete(http::routines::delete),
         )
         .route("/runs/{id}", put(http::runs::put))
+        .route("/templates", get(http::templates::list))
+        .route(
+            "/templates/{id}/revisions/{revision}",
+            get(http::templates::revision),
+        )
         .with_state(state)
 }

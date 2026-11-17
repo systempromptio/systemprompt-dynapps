@@ -9,6 +9,9 @@
 -- has. A delete keeps the row as a tombstone (`deleted_at`, the definition
 -- emptied) so every desktop learns of it. `owner_device` is the computer
 -- that runs the routine; the conversation of a run never leaves it.
+-- `template_id` and `template_revision` name the template a routine was
+-- activated from (the definition's `template`); a tombstone keeps them, and a
+-- person has at most one live routine per template.
 
 CREATE TABLE IF NOT EXISTS dynwork_routines (
     user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -20,11 +23,17 @@ CREATE TABLE IF NOT EXISTS dynwork_routines (
     definition    JSONB NOT NULL,
     deleted_at    TIMESTAMPTZ,
     updated_at    TIMESTAMPTZ NOT NULL,
+    template_id       TEXT,
+    template_revision BIGINT,
     PRIMARY KEY (user_id, id)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_dynwork_routines_changes
     ON dynwork_routines(user_id, change_seq);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dynwork_routines_template
+    ON dynwork_routines(user_id, template_id)
+    WHERE deleted_at IS NULL AND template_id IS NOT NULL;
 
 -- One row per run, written by the routine's owner device: its state and
 -- timestamps only, never the conversation.

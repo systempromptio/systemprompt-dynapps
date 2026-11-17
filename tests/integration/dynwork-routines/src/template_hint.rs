@@ -64,7 +64,14 @@ async fn a_publish_hints_every_connected_desktop() {
     // The listener subscribes asynchronously: publish until the hint arrives.
     let mut hint = None;
     for attempt in 0..20 {
-        publish(&db.pool, &admin, "daily", &["sales"], &format!("Daily {attempt}")).await;
+        publish(
+            &db.pool,
+            &admin,
+            "daily",
+            &["sales"],
+            &format!("Daily {attempt}"),
+        )
+        .await;
         hint = next_hint(&mut alice_rx, Duration::from_millis(250)).await;
         if hint.is_some() {
             break;

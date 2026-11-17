@@ -8,6 +8,7 @@
 pub mod changes;
 pub mod routines;
 pub mod runs;
+pub mod templates;
 
 use axum::http::{HeaderMap, header};
 use dynwork_relay::auth::{DesktopIdentity, bearer, verify_desktop};
@@ -19,6 +20,7 @@ use crate::error::RoutinesError;
 use crate::state::RoutinesState;
 
 pub const HINT_KIND: &str = "routines";
+pub const TEMPLATES_HINT_KIND: &str = "templates";
 
 pub(crate) fn caller(
     state: &RoutinesState,
@@ -59,5 +61,13 @@ pub(crate) fn if_match(headers: &HeaderMap) -> Result<Option<i64>, RoutinesError
 pub async fn hint(state_pool: &sqlx::PgPool, user: &UserId, except: Option<PeerId>) {
     if let Err(error) = dynwork_relay::hint::publish(state_pool, user, except, HINT_KIND).await {
         tracing::warn!(%error, "dynwork routines change hint not published");
+    }
+}
+
+// Why: advisory, like the per-person hint: every desktop polls GET /templates
+// anyway.
+pub async fn templates_hint(pool: &sqlx::PgPool) {
+    if let Err(error) = dynwork_relay::hint::publish_to_all(pool, TEMPLATES_HINT_KIND).await {
+        tracing::warn!(%error, "dynwork templates change hint not published");
     }
 }

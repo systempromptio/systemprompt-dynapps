@@ -9,8 +9,8 @@
 //! - run summaries only from the routine's owner device
 //! - the change hint reaching the user's other desktops through the relay
 //! - the page's writes: pause, resume and delete without `If-Match`
-//! - the template library: publish validation, revisions and admin-only
-//!   writes, and `GET /templates` filtered by the anchor plugins' access rules
+//! - the template library: publish validation, revisions and admin-only writes,
+//!   and `GET /templates` filtered by the anchor plugins' access rules
 
 #[cfg(test)]
 mod support;

@@ -9,17 +9,21 @@
 //! change hint, `{"t":"routines.changed"}`.
 //!
 //! The extension also serves the "My routines" page, mounted by the admin
-//! router ([`page::routes`]).
+//! router ([`page::routes`]), and keeps the library of scheduled task
+//! templates an admin publishes ([`library`]): `GET /templates` serves each
+//! person the published templates their access rules admit.
 
 pub mod error;
 pub mod extension;
 pub mod http;
 pub mod ids;
+pub mod library;
 pub mod page;
 pub mod router;
 pub mod schema;
 pub mod state;
 pub mod store;
+pub mod template;
 pub mod view;
 
 pub use extension::RoutinesExtension;

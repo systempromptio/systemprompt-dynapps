@@ -6,6 +6,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use dynwork_relay::auth::AuthError;
 use serde_json::json;
+use systemprompt::governance::authz::AuthzError;
+use systemprompt::models::authz::SubjectSourceError;
 
 use crate::store::StoreError;
 use crate::view::RoutineView;
@@ -26,6 +28,12 @@ pub enum RoutinesError {
     RunConflict,
     #[error("routines store failure")]
     Store(#[from] StoreError),
+    #[error("access rules could not be resolved")]
+    Access(#[from] AuthzError),
+    #[error("subject attributes could not be resolved")]
+    Subjects(#[from] SubjectSourceError),
+    #[error("the answer could not be encoded")]
+    Encode(#[from] serde_json::Error),
 }
 
 impl RoutinesError {
@@ -36,7 +44,9 @@ impl RoutinesError {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict(_) | Self::RunConflict => StatusCode::CONFLICT,
             Self::NotOwnerDevice => StatusCode::FORBIDDEN,
-            Self::Store(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Store(_) | Self::Access(_) | Self::Subjects(_) | Self::Encode(_) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            },
         }
     }
 
@@ -48,7 +58,7 @@ impl RoutinesError {
             Self::Conflict(_) => "revision_conflict",
             Self::NotOwnerDevice => "not_owner_device",
             Self::RunConflict => "run_conflict",
-            Self::Store(_) => "internal",
+            Self::Store(_) | Self::Access(_) | Self::Subjects(_) | Self::Encode(_) => "internal",
         }
     }
 }

@@ -9,6 +9,7 @@
 
 mod routines;
 mod runs;
+mod templates;
 mod types;
 
 use chrono::{DateTime, Utc};
@@ -19,8 +20,14 @@ use systemprompt::identifiers::UserId;
 
 pub use routines::{delete_routine, list_changes, list_live_routines, put_routine, set_enabled};
 pub use runs::{list_recent_runs, put_run};
+pub use templates::{
+    find_template_revision, has_had_template, list_linked_template_ids, list_templates,
+    publish_template, save_template_draft,
+};
 
-use crate::ids::{RoutineId, RunId, RunState};
+use crate::ids::{RoutineId, RunId, RunState, TemplateId};
+pub use crate::template::TemplateState;
+use crate::template::{RetireMode, TemplateBody, TemplateSource};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -99,4 +106,32 @@ pub enum RunOutcome {
     RoutineNotFound,
     NotOwnerDevice,
     RoutineMismatch,
+}
+
+/// A template in the library. Once published, `body`, `mandatory` and
+/// `plugins` are those of revision `revision`; a draft is at revision 0.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateRecord {
+    pub id: TemplateId,
+    pub revision: i64,
+    pub state: TemplateState,
+    pub retire_mode: Option<RetireMode>,
+    pub mandatory: bool,
+    pub plugins: Vec<String>,
+    pub source: TemplateSource,
+    pub body: TemplateBody,
+    pub created_by: UserId,
+    pub updated_by: UserId,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// A published revision as it was published, and who published it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevisionRecord {
+    pub template_id: TemplateId,
+    pub revision: i64,
+    pub mandatory: bool,
+    pub body: TemplateBody,
+    pub published_by: UserId,
+    pub published_at: DateTime<Utc>,
 }

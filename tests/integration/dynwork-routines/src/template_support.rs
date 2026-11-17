@@ -67,9 +67,14 @@ pub(crate) async fn publish(
     plugins: &[&str],
     name: &str,
 ) -> TemplateRecord {
-    library::publish(pool, &draft(id, plugins, false, body(name)), author, Utc::now())
-        .await
-        .expect("publish the template")
+    library::publish(
+        pool,
+        &draft(id, plugins, false, body(name)),
+        author,
+        Utc::now(),
+    )
+    .await
+    .expect("publish the template")
 }
 
 // An anchor plugin as a catalogue entity closed by default, with one rule.
@@ -125,7 +130,12 @@ pub(crate) struct Answer {
     pub(crate) body: Value,
 }
 
-pub(crate) async fn get(router: &Router, uri: &str, who: &str, if_none_match: Option<&str>) -> Answer {
+pub(crate) async fn get(
+    router: &Router,
+    uri: &str,
+    who: &str,
+    if_none_match: Option<&str>,
+) -> Answer {
     let mut request = Request::builder()
         .uri(uri)
         .header("authorization", format!("Bearer {}", desktop_token(who)));

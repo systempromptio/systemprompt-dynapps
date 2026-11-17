@@ -14,7 +14,7 @@
 //! ([`crate::envelope::presence`]) on the same queue as the envelopes, so a
 //! desktop sees a phone's last envelope before its departure. Other
 //! extensions reach a user's desktops through the change hint
-//! ([`Hub::notify_user_desktops`], fed by [`crate::hint`]).
+//! ([`Hub::notify_desktops`], fed by [`crate::hint`]).
 
 pub mod control;
 mod inner;
@@ -225,13 +225,21 @@ impl Hub {
 
     // Why: a desktop whose queue is full misses the hint rather than being
     // closed as a slow consumer: the hint is advisory and the desktop polls.
-    pub fn notify_user_desktops(&self, user: &UserId, except: Option<PeerId>, kind: &str) -> usize {
+    // No user: every connected desktop gets it.
+    pub fn notify_desktops(
+        &self,
+        user: Option<&UserId>,
+        except: Option<PeerId>,
+        kind: &str,
+    ) -> usize {
         let inner = self.lock();
         inner
             .live
             .iter()
             .filter(|(key, slot)| {
-                &key.user == user && slot.kind == PeerKind::Desktop && Some(key.peer) != except
+                (user.is_none() || user == Some(&key.user))
+                    && slot.kind == PeerKind::Desktop
+                    && Some(key.peer) != except
             })
             .filter(|(key, slot)| {
                 slot.tx

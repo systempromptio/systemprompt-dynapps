@@ -39,15 +39,30 @@ async fn publishing_refuses_what_the_contract_rules_out() {
     let admin = seed_admin(&db.pool, "admin").await;
     let cases = [
         (
-            draft("no-connectors", &["sales"], false, bypass(json!([]), "required")),
+            draft(
+                "no-connectors",
+                &["sales"],
+                false,
+                bypass(json!([]), "required"),
+            ),
             Refusal::BypassWithoutConnectors,
         ),
         (
-            draft("no-folder", &["sales"], false, bypass(json!(["dynapps-odoo"]), "none")),
+            draft(
+                "no-folder",
+                &["sales"],
+                false,
+                bypass(json!(["dynapps-odoo"]), "none"),
+            ),
             Refusal::BypassWithoutFolder,
         ),
         (
-            draft("mandatory-bypass", &["sales"], true, bypass(json!(["dynapps-odoo"]), "none")),
+            draft(
+                "mandatory-bypass",
+                &["sales"],
+                true,
+                bypass(json!(["dynapps-odoo"]), "none"),
+            ),
             Refusal::BypassMandatory,
         ),
         (
@@ -72,10 +87,18 @@ async fn publishing_refuses_what_the_contract_rules_out() {
         ),
     ];
     for (draft, expected) in &cases {
-        assert_eq!(refused(&db.pool, &admin, draft).await, *expected, "{}", draft.id);
+        assert_eq!(
+            refused(&db.pool, &admin, draft).await,
+            *expected,
+            "{}",
+            draft.id
+        );
     }
     let kept = store::list_templates(&db.pool).await.expect("list");
-    assert!(kept.is_empty(), "a refused publish writes nothing: {kept:?}");
+    assert!(
+        kept.is_empty(),
+        "a refused publish writes nothing: {kept:?}"
+    );
 }
 
 #[tokio::test]
@@ -84,7 +107,12 @@ async fn a_bypass_template_with_its_controls_publishes() {
     let admin = seed_admin(&db.pool, "admin").await;
     let published = library::publish(
         &db.pool,
-        &draft("unattended", &["sales"], false, bypass(json!(["dynapps-odoo"]), "required")),
+        &draft(
+            "unattended",
+            &["sales"],
+            false,
+            bypass(json!(["dynapps-odoo"]), "required"),
+        ),
         &admin,
         Utc::now(),
     )
@@ -124,7 +152,12 @@ async fn a_draft_waits_and_every_publish_keeps_the_revision_before_it() {
 
     let first = library::publish(
         &db.pool,
-        &draft("daily-odoo-review", &["sales"], false, body("Daily Odoo review")),
+        &draft(
+            "daily-odoo-review",
+            &["sales"],
+            false,
+            body("Daily Odoo review"),
+        ),
         &admin,
         Utc::now(),
     )
@@ -133,7 +166,12 @@ async fn a_draft_waits_and_every_publish_keeps_the_revision_before_it() {
     assert_eq!((first.revision, first.state), (1, TemplateState::Published));
     let second = library::publish(
         &db.pool,
-        &draft("daily-odoo-review", &["sales", "ops"], false, body("Odoo review")),
+        &draft(
+            "daily-odoo-review",
+            &["sales", "ops"],
+            false,
+            body("Odoo review"),
+        ),
         &admin,
         Utc::now(),
     )
@@ -155,7 +193,12 @@ async fn a_draft_waits_and_every_publish_keeps_the_revision_before_it() {
 
     let late = library::save_draft(
         &db.pool,
-        &draft("daily-odoo-review", &["sales"], false, body("Back to draft")),
+        &draft(
+            "daily-odoo-review",
+            &["sales"],
+            false,
+            body("Back to draft"),
+        ),
         &admin,
         Utc::now(),
     )
@@ -172,7 +215,10 @@ async fn only_an_admin_writes_the_library() {
     let person = seed_user(&db.pool, "alice").await;
     let template = draft("daily", &["sales"], false, body("Daily"));
     let published = library::publish(&db.pool, &template, &person, Utc::now()).await;
-    assert!(matches!(published, Err(LibraryError::NotAdmin)), "{published:?}");
+    assert!(
+        matches!(published, Err(LibraryError::NotAdmin)),
+        "{published:?}"
+    );
     let saved = library::save_draft(&db.pool, &template, &person, Utc::now()).await;
     assert!(matches!(saved, Err(LibraryError::NotAdmin)), "{saved:?}");
     assert!(

@@ -95,12 +95,19 @@ fn without_a_user_every_desktop_of_every_person_gets_it() {
     let mut phone_rx = attach(&hub, &phone);
 
     assert_eq!(hub.notify_desktops(None, None, "templates"), 2);
-    assert_eq!(hints(&mut alice_rx), vec![json!({"t": "templates.changed"})]);
+    assert_eq!(
+        hints(&mut alice_rx),
+        vec![json!({"t": "templates.changed"})]
+    );
     assert_eq!(hints(&mut bob_rx), vec![json!({"t": "templates.changed"})]);
     assert!(hints(&mut phone_rx).is_empty());
 
     let payload = json!({ "user": null, "except": null, "kind": "templates" }).to_string();
-    assert_eq!(deliver(&hub, &payload), 2, "a NOTIFY without a user reaches everyone");
+    assert_eq!(
+        deliver(&hub, &payload),
+        2,
+        "a NOTIFY without a user reaches everyone"
+    );
 }
 
 #[test]
