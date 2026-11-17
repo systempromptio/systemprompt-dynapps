@@ -28,7 +28,6 @@ use systemprompt_web_admin_analytics::routes::{
 };
 use systemprompt_web_admin_catalog::routes::ssr as catalog_ssr;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_farm::routes::{farm_fragments, farm_ssr};
 use systemprompt_web_admin_governance::routes::ssr_governance;
 use systemprompt_web_admin_identity::SsoDeps;
 use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as sign_in};
@@ -65,11 +64,14 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
         .merge(ai_activity_routes())
         .merge(analysis_routes())
         .merge(governance_routes())
-        .merge(farm_routes())
         .merge(platform_routes())
         .merge(platform_ssr::data_routes().with_state(db.write_pool()))
         .merge(dynwork_routines::page::routes().with_state(db.write_pool()))
         .merge(account_routes())
+        .merge(systemprompt_web_admin_agent_farm::routes::routes(
+            Arc::clone(&pool),
+            &boot,
+        ))
         .merge(api_routes())
         .merge(redirects::legacy_routes())
         .layer(Extension(engine.clone()))
@@ -129,10 +131,6 @@ fn ai_activity_routes() -> Router<Arc<PgPool>> {
 
 fn analysis_routes() -> Router<Arc<PgPool>> {
     catalog_ssr::analysis_routes().merge(analysis_ssr::routes())
-}
-
-fn farm_routes() -> Router<Arc<PgPool>> {
-    farm_ssr::routes().merge(farm_fragments::routes())
 }
 
 fn governance_routes() -> Router<Arc<PgPool>> {

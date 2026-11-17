@@ -37,7 +37,7 @@ Access control answers one question: *may this person reach this entity?* The en
 |---|---|---|
 | `marketplace` | `dynapps-commons`, `dynapps-portal` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
 | `plugin` | `dynapps-super-admin`, `dynapps-portal` | The plugin is offered |
-| `skill` | `systemprompt_cli`, `agent_farm_runs` | The skill is offered and may run |
+| `skill` | `systemprompt_cli` | The skill is offered and may run |
 | `mcp_server` | `odoo`, `dynapps-odoo`, `systemprompt` | The server is listed and its tools may be called |
 | `gateway_route` | `claude-star-4203d1`, … | Requests may be routed to that model |
 

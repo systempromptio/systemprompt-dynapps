@@ -1,0 +1,55 @@
+{{!--
+  Farm › Tenants: one row per tenant the console's credential can see, with
+  its agents, its tasks of the last seven days by state, its schedules and
+  what systemprompt recorded they cost (USD). Every number links to the view
+  that holds it, filtered by that tenant. Read-only. What could not be read
+  shows a dash; the reason is in the shell's "could not be loaded" notice.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="The tenants of the Dynapps Farm and what each one runs. Read-only."}}
+
+    <section class="sp-section" aria-label="Tenants">
+    {{#if partial}}<p class="sp-u-text-tertiary"><strong>{{partial}}</strong></p>{{/if}}
+    <p class="sp-u-text-tertiary">{{period}}</p>
+
+    {{#if has_rows}}
+    {{#> components/table caption=count_label}}
+      <thead><tr>
+        <th scope="col">Tenant</th>
+        <th scope="col">Agents</th>
+        <th scope="col">Tasks, last 7 days</th>
+        <th scope="col">Schedules</th>
+        <th scope="col">Cost (USD)</th>
+        <th scope="col">Open</th>
+      </tr></thead>
+      <tbody>
+        {{#each rows}}
+        <tr>
+          <td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}">{{name}}</a>{{#if has_name}} <code class="sp-code-inline">{{slug}}</code>{{/if}}</td>
+          <td><a class="sp-table__link" href="{{agents.href}}">{{agents.value}}</a></td>
+          <td><a class="sp-table__link" href="{{tasks.href}}">{{tasks.value}}</a>{{#each states}} {{> components/badge tone=tone text=label}}{{/each}}</td>
+          <td><a class="sp-table__link" href="{{schedules.href}}">{{schedules.value}}</a></td>
+          <td><a class="sp-table__link" href="{{cost.href}}">{{cost.value}}</a></td>
+          <td>
+            <a class="sp-table__link" href="{{tasks.href}}">Tasks</a> ·
+            <a class="sp-table__link" href="{{agents.href}}">Agents</a> ·
+            <a class="sp-table__link" href="{{schedules.href}}">Schedules</a> ·
+            <a class="sp-table__link" href="{{credentials_href}}">Credentials</a> ·
+            <a class="sp-table__link" href="{{cost.href}}">Cost</a>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    {{/components/table}}
+    {{else}}
+    {{#if loaded}}
+    {{> components/empty-state heading="No tenants" message="farm-api lists no tenants for this credential."}}
+    {{else}}
+    {{> components/empty-state heading="Tenants unavailable" message="The farm could not be read; the notice above says why."}}
+    {{/if}}
+    {{/if}}
+    </section>
+    {{/inline}}
+{{/layout}}

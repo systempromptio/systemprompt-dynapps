@@ -24,9 +24,9 @@ systemprompt = { workspace = true, features = ["full"] }
 
 # Local sub-crates
 systemprompt-web-shared = { workspace = true }
+systemprompt-web-admin-agent-farm = { workspace = true }
 systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-admin-catalog = { workspace = true }
-systemprompt-web-admin-farm = { workspace = true }
 systemprompt-web-admin-governance = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
@@ -46,9 +46,6 @@ inventory = { workspace = true }
 
 # Web framework
 axum = { workspace = true }
-tokio = { workspace = true }
-tokio-util = { workspace = true }
-async-trait = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
 

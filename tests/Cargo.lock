@@ -51,7 +51,6 @@ dependencies = [
  "systemprompt-provider-contracts 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-security 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-web-admin-core",
- "systemprompt-web-admin-farm",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
  "systemprompt-web-extension",
@@ -2360,7 +2359,7 @@ dependencies = [
 
 [[package]]
 name = "dynwork-relay"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -2420,7 +2419,7 @@ dependencies = [
 
 [[package]]
 name = "dynwork-routines"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "chrono",
@@ -5006,18 +5005,14 @@ name = "mcp-unit-tests"
 version = "0.0.0"
 dependencies = [
  "axum",
- "chrono",
  "rmcp",
  "serde",
  "serde_json",
  "serde_yaml_ng",
  "systemprompt",
  "systemprompt-mcp-agent",
- "systemprompt-mcp-agent-farm",
  "systemprompt-mcp-documents",
  "systemprompt-mcp-shared",
- "systemprompt-web-admin-core",
- "systemprompt-web-shared",
  "tempfile",
  "tokio",
 ]
@@ -9944,7 +9939,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-kit-export"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -10279,7 +10274,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -10303,36 +10298,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "systemprompt-mcp-agent-farm"
-version = "0.83.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "rmcp",
- "rustls",
- "schemars 1.2.3",
- "serde",
- "serde_json",
- "sqlx",
- "systemprompt",
- "systemprompt-mcp-shared",
- "systemprompt-secrets-onepassword",
- "systemprompt-web-admin-analytics",
- "systemprompt-web-admin-core",
- "systemprompt-web-admin-farm",
- "systemprompt-web-admin-governance",
- "systemprompt-web-admin-identity",
- "systemprompt-web-admin-platform",
- "systemprompt-web-shared",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "systemprompt-mcp-documents"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -10351,7 +10318,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-shared"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "jsonschema 0.60.0",
@@ -10832,7 +10799,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-secrets-onepassword"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "reqwest",
@@ -11101,8 +11068,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-web-admin-agent-farm"
+version = "0.84.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-web-admin-core",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
 name = "systemprompt-web-admin-analytics"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11127,7 +11114,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-catalog"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11149,7 +11136,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-core"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11180,37 +11167,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "systemprompt-web-admin-farm"
-version = "0.83.0"
-dependencies = [
- "async-trait",
- "axum",
- "base64 0.22.1",
- "chrono",
- "futures-util",
- "hex",
- "inventory",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.10.9",
- "sqlx",
- "systemprompt",
- "systemprompt-web-admin-core",
- "systemprompt-web-shared",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
- "walkdir",
-]
-
-[[package]]
 name = "systemprompt-web-admin-governance"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11236,7 +11194,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-identity"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11265,7 +11223,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-platform"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11297,7 +11255,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-content"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "chrono",
@@ -11316,9 +11274,8 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-extension"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
- "async-trait",
  "axum",
  "dynwork-routines",
  "inventory",
@@ -11330,7 +11287,6 @@ dependencies = [
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
- "systemprompt-web-admin-farm",
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
@@ -11338,8 +11294,6 @@ dependencies = [
  "systemprompt-web-jobs",
  "systemprompt-web-shared",
  "systemprompt-web-site",
- "tokio",
- "tokio-util",
  "tower",
  "tower-http 0.7.1",
  "tracing",
@@ -11348,7 +11302,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-jobs"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -11364,7 +11318,6 @@ dependencies = [
  "systemprompt",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-core",
- "systemprompt-web-admin-farm",
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
@@ -11378,7 +11331,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-shared"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "axum",
  "chrono",
@@ -11397,7 +11350,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-site"
-version = "0.83.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -12660,7 +12613,6 @@ dependencies = [
  "chrono",
  "dynapps-test-common",
  "http-body-util",
- "reqwest",
  "rmcp",
  "serde_json",
  "serde_yaml_ng",
@@ -12670,8 +12622,6 @@ dependencies = [
  "systemprompt-mcp-agent",
  "systemprompt-mcp-shared",
  "systemprompt-web-admin-analytics",
- "systemprompt-web-admin-farm",
- "systemprompt-web-admin-platform",
  "systemprompt-web-content",
  "systemprompt-web-extension",
  "systemprompt-web-jobs",
@@ -12723,10 +12673,10 @@ dependencies = [
  "systemprompt-kit-export",
  "systemprompt-mcp-shared",
  "systemprompt-provider-contracts 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
- "systemprompt-web-admin-farm",
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",

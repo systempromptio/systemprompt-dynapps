@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The conversation contexts of one Claude Code session ($1 = the farm task's\n-- session_ref without its sess_ prefix).\nSELECT context_id\nFROM conversation_session_contexts\nWHERE client_session_id = $1\nORDER BY context_id\nLIMIT 10\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "context_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_session_contexts",
+            "name": "context_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4ec1014e91c5089e46ba0cb80f86676cafb94ab41dac5950cdf35d1956897229"
+}

@@ -1,0 +1,3 @@
+{"items":[
+{"tenant":"lab-b","slug":"lab-helper","scope":"team","owner":null,"description":"Lab B helper","instructions":"Lab B instructions.","plugin_agent":null,"mcp_servers":[],"env_credentials":{},"harness":"claude-code","requires_workspace":false,"capabilities":{"credentials":[],"egress":[],"denied_tools":[]},"default_limits":{},"model_alias":"haiku"}
+]}

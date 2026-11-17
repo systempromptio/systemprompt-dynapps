@@ -1,0 +1,24 @@
+{
+  "task_id": "01a17751-467a-7792-b87c-8b67e9d8fa36",
+  "tenant": "dynapps-internal",
+  "scope": null,
+  "state": "succeeded",
+  "result": {
+    "s3_key": "dynapps-internal/_/tasks/01a17751-467a-7792-b87c-8b67e9d8fa36/result.json",
+    "sha256": "2e3dbcf979805d74b847085a4a73cf34021f67fc03304bc6b492e06c4c929a7c",
+    "size_bytes": 5802,
+    "content_type": "application/json",
+    "url": "https://objects.invalid/redacted-presigned-url",
+    "expires_at": "2026-10-27T08:18:01.244556Z"
+  },
+  "summary": null,
+  "usage": {
+    "input_tokens": 2,
+    "output_tokens": 4315,
+    "cost_eur": null,
+    "duration_s": 22,
+    "gateway_session_id": "sess_3eb3e826-fad4-460b-b35f-e7ce2b3ad9eb"
+  },
+  "session_ref": "sess_547de7ed-4450-4a6a-8dff-d8cf287f9746",
+  "resumable": true
+}

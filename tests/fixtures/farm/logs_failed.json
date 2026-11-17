@@ -1,0 +1,19 @@
+{
+  "task_id": "01a167f2-0f8f-7e40-b9cb-9f1db758922a",
+  "tenant": "dynapps-internal",
+  "scope": null,
+  "state": "failed",
+  "lines": [
+    "[run-agent] plugin: /opt/agent-plugins/common-skills",
+    "[run-agent] cwd: /work/scratch",
+    "[run-agent] WARNING: bridge sync exited non-zero; the check is whether the CLI profile installs",
+    "[run-agent] gateway bridge: up (proxy pid 30), gateway https://governance.dev01.ai.dyncloud.es",
+    "[run-agent] ERROR: no model to request: neither ANTHROPIC_MODEL nor AGENT_MODEL_ALIAS is set and the bridge seeded no default_model (the gateway names none, or the sync above failed)"
+  ],
+  "truncated": true,
+  "full_logs": {
+    "s3_key": "dynapps-internal/_/tasks/01a167f2-0f8f-7e40-b9cb-9f1db758922a/logs/__prompt__-01a167f2-0f8f-7e40-b9cb-9f1db758922a.jsonl",
+    "url": "https://objects.invalid/redacted-presigned-url",
+    "expires_at": "2026-10-27T08:18:32.251025Z"
+  }
+}

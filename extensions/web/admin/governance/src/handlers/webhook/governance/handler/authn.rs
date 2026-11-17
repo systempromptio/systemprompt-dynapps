@@ -5,7 +5,7 @@
 
 use axum::http::HeaderMap;
 use systemprompt::governance::authz::{Decision, DenyReason};
-use systemprompt::identifiers::{ClientId, SessionId, UserId};
+use systemprompt::identifiers::{ClientId, UserId};
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::OauthError;
 use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
@@ -19,7 +19,6 @@ use super::spawn_auth_denial;
 pub(super) struct Principal {
     pub user_id: UserId,
     pub client_id: Option<ClientId>,
-    pub gateway_session: Option<SessionId>,
 }
 
 pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
@@ -72,7 +71,6 @@ pub(super) fn authenticate_request(
     Ok(Principal {
         user_id: UserId::new(&claims.registered.sub),
         client_id: claims.custom.client_id,
-        gateway_session: claims.custom.session_id,
     })
 }
 

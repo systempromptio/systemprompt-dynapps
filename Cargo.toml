@@ -3,9 +3,9 @@ members = [
     "extensions/web",
     "extensions/web/shared",
     "extensions/web/shared/admin-core",
+    "extensions/web/admin/agent-farm",
     "extensions/web/admin/analytics",
     "extensions/web/admin/catalog",
-    "extensions/web/admin/farm",
     "extensions/web/admin/governance",
     "extensions/web/admin/identity",
     "extensions/web/admin/platform",
@@ -13,12 +13,10 @@ members = [
     "extensions/web/site",
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
-    "extensions/mcp/agent-farm",
     "extensions/mcp/documents",
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",
-    "extensions/cli/farm-worker",
     "extensions/secrets/onepassword",
     "extensions/dynwork-relay",
     "extensions/dynwork-routines",
@@ -42,7 +40,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.83.0"
+version = "0.84.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -63,9 +61,9 @@ systemprompt-provider-contracts = { version = "0.82.0" }
 systemprompt-web-extension = { path = "extensions/web" }
 systemprompt-web-shared = { path = "extensions/web/shared" }
 systemprompt-web-admin-core = { path = "extensions/web/shared/admin-core" }
+systemprompt-web-admin-agent-farm = { path = "extensions/web/admin/agent-farm" }
 systemprompt-web-admin-analytics = { path = "extensions/web/admin/analytics" }
 systemprompt-web-admin-catalog = { path = "extensions/web/admin/catalog" }
-systemprompt-web-admin-farm = { path = "extensions/web/admin/farm" }
 systemprompt-web-admin-governance = { path = "extensions/web/admin/governance" }
 systemprompt-web-admin-identity = { path = "extensions/web/admin/identity" }
 systemprompt-web-admin-platform = { path = "extensions/web/admin/platform" }
@@ -114,7 +112,6 @@ chacha20poly1305 = { version = "0.10", features = ["std"] }
 schemars = { version = "1.2", features = ["derive"] }
 inventory = "0.3"
 walkdir = "2.0"
-nix = { version = "0.31", default-features = false, features = ["user"] }
 tempfile = "3.0"
 zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
 url = "2.5"

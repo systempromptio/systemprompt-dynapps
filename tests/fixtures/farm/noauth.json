@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "token_invalid",
+    "message": "missing or invalid credential",
+    "retryable": false
+  }
+}
