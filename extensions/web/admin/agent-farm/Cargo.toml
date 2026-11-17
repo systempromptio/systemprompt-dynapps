@@ -16,6 +16,7 @@ axum = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
 urlencoding = { workspace = true }
@@ -23,11 +24,6 @@ tracing = { workspace = true }
 tokio = { workspace = true }
 sqlx = { workspace = true }
 async-trait = { workspace = true }
-
-[dev-dependencies]
-systemprompt = { workspace = true, features = ["full"] }
-systemprompt-web-shared = { workspace = true }
-tower = { workspace = true }
 
 [lints]
 workspace = true

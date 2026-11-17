@@ -9,11 +9,11 @@ pub const DEFAULT_DAYS: i64 = 7;
 #[derive(Debug, Default, Deserialize)]
 pub struct CostQuery {
     #[serde(default)]
-    tenant: Option<String>,
+    pub tenant: Option<String>,
     #[serde(default)]
-    from: Option<String>,
+    pub from: Option<String>,
     #[serde(default)]
-    to: Option<String>,
+    pub to: Option<String>,
 }
 
 pub fn clean(value: Option<&String>) -> Option<&str> {

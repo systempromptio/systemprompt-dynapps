@@ -92,7 +92,7 @@ fn tenant_of(own: Option<&String>) -> Option<&str> {
     own.map(String::as_str).filter(|t| !t.is_empty())
 }
 
-fn count_in<'a>(tenants: impl Iterator<Item = Option<&'a String>>, slug: &str) -> usize {
+fn count_in(tenants: impl Iterator<Item = Option<&String>>, slug: &str) -> usize {
     tenants.filter(|t| tenant_of(*t) == Some(slug)).count()
 }
 

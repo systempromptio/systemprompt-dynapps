@@ -2,7 +2,7 @@
 
 use crate::client::FarmApiError;
 use crate::models::{TaskLogs, TaskOut, TaskResult};
-use crate::usage::{SpTaskView, gateway_session_id};
+use crate::usage::SpTaskView;
 use crate::views::{
     KeyValue, NONE, agent_label, format_duration, format_time, list_href, opt_num, opt_text,
     short_id, state_tone,
