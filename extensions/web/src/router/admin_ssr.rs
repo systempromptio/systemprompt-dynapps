@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::{Extension, Router};
+use axum::Router;
 
 use systemprompt_web_site::navigation::BrandingConfig;
 
@@ -49,8 +49,7 @@ pub(crate) fn build(
             boot: db.boot.clone(),
             ai: Arc::clone(&db.ai),
         },
-    )
-    .layer(Extension(Arc::clone(&db.farm)));
+    );
     Some(SsrRouters {
         drive: documents
             .service

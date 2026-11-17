@@ -13,7 +13,6 @@
 pub(crate) mod admin;
 mod admin_ssr;
 mod api;
-pub(crate) mod farm_public;
 mod pools;
 mod sign_out;
 mod sso;
@@ -26,7 +25,6 @@ use systemprompt::extension::prelude::{ExtensionContext, ExtensionRouter};
 use systemprompt_web_shared::config::BlogConfigValidated;
 use systemprompt_web_site::config_loader::SiteConfig;
 
-use crate::extension::WebExtension;
 use pools::DbHandles;
 
 fn documents_enabled(ctx: &dyn ExtensionContext) -> bool {
@@ -53,8 +51,8 @@ fn drive_documents(
         .ok()
 }
 
-pub(crate) fn build(ctx: &dyn ExtensionContext, web: &WebExtension) -> Option<ExtensionRouter> {
-    let db = DbHandles::from_context(ctx, Arc::clone(&web.farm_runs))?;
+pub(crate) fn build(ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
+    let db = DbHandles::from_context(ctx)?;
     let session_service = pools::build_session_service(&db);
     let services_root = db.boot.services_root().to_path_buf();
     let site = Arc::new(SiteConfig::load_from(&services_root));

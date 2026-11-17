@@ -423,7 +423,7 @@ A dedicated "system" identity would be either a synthesized principal (impersona
 
 ## Service accounts and machine credentials
 
-A workflow or farm run that writes to a provider with a machine credential acts as a **service account**, never as a shared global key. A service account is a `users` row with `account_kind = 'service'`. Core refuses every interactive login for it: session login, passkey, bridge code and OAuth authorization code. Each workflow definition names the account it runs as, and an agent farm names one with `run_as` in `services/web/config/agent-farms.yaml`: its runs mint their credentials for that account and carry the purpose `farm:<run_id>`.
+A workflow or farm run that writes to a provider with a machine credential acts as a **service account**, never as a shared global key. A service account is a `users` row with `account_kind = 'service'`. Core refuses every interactive login for it: session login, passkey, bridge code and OAuth authorization code. Each workflow definition names the account it runs as.
 
 Administrators manage them at **People & access → Service accounts** (`/admin/identity/service-accounts`):
 

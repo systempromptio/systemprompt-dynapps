@@ -154,7 +154,6 @@ dynapps-test-common = { path = "common" }
 # Local extension crates under test (paths relative to tests/).
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
-systemprompt-mcp-agent-farm = { path = "../extensions/mcp/agent-farm" }
 systemprompt-mcp-documents = { path = "../extensions/mcp/documents" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }
 systemprompt-web-admin-core = { path = "../extensions/web/shared/admin-core" }
@@ -163,7 +162,6 @@ systemprompt-web-admin-catalog = { path = "../extensions/web/admin/catalog" }
 systemprompt-web-admin-governance = { path = "../extensions/web/admin/governance", features = ["governance-ssr"] }
 systemprompt-web-admin-identity = { path = "../extensions/web/admin/identity" }
 systemprompt-web-admin-platform = { path = "../extensions/web/admin/platform" }
-systemprompt-web-admin-farm = { path = "../extensions/web/admin/farm" }
 systemprompt-web-content = { path = "../extensions/web/content" }
 systemprompt-web-jobs = { path = "../extensions/web/jobs" }
 systemprompt-secrets-onepassword = { path = "../extensions/secrets/onepassword" }

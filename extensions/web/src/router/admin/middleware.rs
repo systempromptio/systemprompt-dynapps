@@ -2,11 +2,10 @@
 //!
 //! `user_context_middleware` runs first and puts a [`UserContext`] on the
 //! request — from the session cookie, or from a personal access token on the
-//! export routes (`pat`). [`resolve_session`] and [`resolve_user_context`]
-//! are shared with the agent farm's router, which admits a token on every
-//! route. `systemprompt_web_admin_core::middleware::gates` then decides whether
-//! the request may proceed, and `marketplace_context_middleware` supplies what
-//! a page needs to render.
+//! export routes (`pat`), resolved by [`resolve_session`] and
+//! [`resolve_user_context`]. `systemprompt_web_admin_core::middleware::gates`
+//! then decides whether the request may proceed, and
+//! `marketplace_context_middleware` supplies what a page needs to render.
 //!
 //! The marketplace counts injected into every render are cached because they
 //! are derived from a remote catalog and are identical for every user holding

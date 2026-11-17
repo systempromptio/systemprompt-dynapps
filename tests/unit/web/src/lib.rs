@@ -396,52 +396,8 @@ mod connector_recovery;
 #[cfg(test)]
 mod data_console;
 
-
-#[cfg(test)]
-mod farm_agent_host;
-#[cfg(test)]
-mod farm_definitions;
-#[cfg(test)]
-mod farm_host_kind;
-
-#[cfg(test)]
-mod farm_clients;
-#[cfg(test)]
-mod farm_cost_window;
-#[cfg(test)]
-mod farm_eval_mean;
-#[cfg(test)]
-mod farm_eval_resume;
-#[cfg(test)]
-mod farm_run_as;
-
-#[cfg(test)]
-mod farm_mcp_tools;
-
 #[cfg(test)]
 mod governance_dynapps_odoo_gate;
-
-#[cfg(test)]
-mod farm_assertions;
-
-#[cfg(test)]
-mod farm_curl_snippet;
-#[cfg(test)]
-mod farm_people_rows;
-#[cfg(test)]
-mod farm_status_view;
-
-#[cfg(test)]
-mod farm_sync_card;
-
-#[cfg(test)]
-mod farm_eval_matrix;
-
-#[cfg(test)]
-mod farm_eval_history;
-
-#[cfg(test)]
-mod farm_eval_judge_config;
 
 #[cfg(test)]
 mod catalogue_integrity;
@@ -455,20 +411,6 @@ mod drive_extension_points;
 mod drive_pages;
 #[cfg(test)]
 mod drive_pdf;
-#[cfg(test)]
-mod farm_attribution;
-#[cfg(test)]
-mod farm_egress;
-#[cfg(test)]
-mod farm_fly_runner;
-#[cfg(test)]
-mod farm_run_events_view;
-#[cfg(test)]
-mod farm_tool_allowlist;
-#[cfg(test)]
-mod farm_tool_policy;
-#[cfg(test)]
-mod farm_tool_tally;
 #[cfg(test)]
 mod personal_upstream_headers;
 #[cfg(test)]

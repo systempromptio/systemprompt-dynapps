@@ -2,27 +2,19 @@
 //!
 //! The site and blog config are loaded from the active services root the
 //! extension context hands out, in the router and in the content-pipeline
-//! hooks (`extension_impl`), so nothing here reads the profile. The value owns
-//! the agent farm's in-flight remote-run registry, which the runner service and
-//! the worker routes share.
-
-use std::sync::Arc;
-
-use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
+//! hooks (`extension_impl`), so nothing here reads the profile.
 
 use systemprompt::extension::prelude::*;
 
-#[derive(Debug, Clone, Default)]
-pub struct WebExtension {
-    pub(crate) farm_runs: Arc<RemoteRuns>,
-}
+#[derive(Debug, Default, Clone, Copy)]
+pub struct WebExtension;
 
 impl WebExtension {
     pub const PREFIX: &'static str = "web";
 
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self
     }
 }
 
