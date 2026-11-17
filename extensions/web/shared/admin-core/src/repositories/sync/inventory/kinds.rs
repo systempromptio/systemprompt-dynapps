@@ -140,12 +140,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "config/blog.yaml",
     ),
     file(
-        "agent_farms",
-        "Agent farms",
-        "the Git-sourced agent farms this instance syncs and runs",
-        "web/config/agent-farms.yaml",
-    ),
-    file(
         "web_config",
         "Web config",
         "the public site's settings",
@@ -168,6 +162,18 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "Security policy",
         "session, token and origin rules",
         "web/config/security.yaml",
+    ),
+    file(
+        "connectors",
+        "Connector discovery",
+        "which MCP connectors accept lenient OAuth discovery",
+        "web/config/connectors.yaml",
+    ),
+    file(
+        "farm",
+        "Farm console",
+        "where farm-api answers and which secret holds the console's token",
+        "web/config/farm.yaml",
     ),
     file(
         "homepage",

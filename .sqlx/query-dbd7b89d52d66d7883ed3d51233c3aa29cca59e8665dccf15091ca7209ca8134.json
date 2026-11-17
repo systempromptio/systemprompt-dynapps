@@ -1,0 +1,114 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, revision, change_seq, owner_device, owner_name, definition,\n                deleted_at, updated_at\n         FROM dynwork_routines\n         WHERE user_id = $1 AND change_seq > $2\n         ORDER BY change_seq\n         LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "change_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "change_seq"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_device",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "owner_device"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "owner_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "owner_name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "definition",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "definition"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "deleted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "dbd7b89d52d66d7883ed3d51233c3aa29cca59e8665dccf15091ca7209ca8134"
+}

@@ -3,7 +3,6 @@
 
 mod authn;
 mod denial;
-mod farm_allowlist;
 mod governed;
 mod response;
 use response::HookVerdict;
@@ -86,7 +85,6 @@ struct Governed<'a> {
     roles: &'a [String],
     plugin_id: Option<&'a PluginId>,
     tool_use_id: Option<&'a str>,
-    allowlist_violation: Option<String>,
 }
 
 async fn evaluate_and_record(
@@ -95,7 +93,7 @@ async fn evaluate_and_record(
     governed: Governed<'_>,
 ) -> Result<Decision, &'static str> {
     let call_id = CallId::generate();
-    let mut evaluation = engine
+    let evaluation = engine
         .charge_and_evaluate(PolicyRequest {
             target: governed.target.clone(),
             agent_scope: AgentScope::User {
@@ -109,9 +107,6 @@ async fn evaluate_and_record(
             call_id: &call_id,
         })
         .await;
-    if let Some(detail) = governed.allowlist_violation {
-        farm_allowlist::enforce(&mut evaluation, detail);
-    }
     let audit = DecisionAudit {
         id: uuid::Uuid::new_v4().to_string(),
         call_id: call_id.clone(),
@@ -231,16 +226,6 @@ pub(crate) async fn govern_tool_use(
             Err(reason) => return HookVerdict::new(deny_for_auth_failure(reason), response_event),
         };
 
-    let allowlist_violation = match farm_allowlist::allowlist_violation(
-        &pool,
-        principal.gateway_session.as_ref(),
-        &target,
-    )
-    .await
-    {
-        Ok(violation) => violation,
-        Err(reason) => return HookVerdict::new(deny_for_auth_failure(reason), response_event),
-    };
     let governed = Governed {
         target: &target,
         input: &input,
@@ -251,7 +236,6 @@ pub(crate) async fn govern_tool_use(
         roles: &roles,
         plugin_id,
         tool_use_id: payload.tool_use_id(),
-        allowlist_violation,
     };
     let decision = evaluate_and_record(&pool, &engine, governed)
         .await

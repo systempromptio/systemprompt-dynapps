@@ -73,12 +73,11 @@ What the secret and PII scanners detect on the gateway is covered in
 ## The MCP server registry
 
 Each server is one YAML file under `services/mcp/`. This instance declares
-four:
+three:
 
 | Server | What it reaches |
 |---|---|
 | `systemprompt` | this platform's admin CLI. It cannot be removed and is admin-only |
-| `agent-farm` | the agent farm's run server: launch, inspect and cost farm runs |
 | `dynapps-odoo` | the Dynapps portal's hosted Odoo server, as each person's own portal account |
 | `dynbrain` | the Dynapps portal's hosted DynBrain documentation server, as each person's own portal account |
 

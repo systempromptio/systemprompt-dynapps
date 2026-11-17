@@ -1,0 +1,63 @@
+{{!--
+  Farm › Cost: what the farm's tasks of a date range cost in
+  systemprompt, by agent, tenant and person, in USD as systemprompt stores it.
+  Read-only. The console reads the tasks of the range from farm-api (a bounded
+  number of pages; when the range is longer the total says it is partial) and
+  sums systemprompt's model calls for their gateway sessions. Tasks without a
+  gateway session are counted apart.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="What the Dynapps Farm's tasks cost in systemprompt in a date range, every tenant mixed unless you pick one, by agent, tenant and person. USD, as systemprompt records it. Days are UTC. Read-only."}}
+
+    <section class="sp-section" aria-label="Cost">
+    <form method="get" action="/admin/farm/cost" class="sp-toolbar">
+        <label class="sp-toolbar__count" for="farm-tenant">Tenant</label>
+        <select id="farm-tenant" name="tenant" class="sp-search-input" data-autosubmit>
+            <option value=""{{#if select.all_selected}} selected{{/if}}>All tenants</option>
+            {{#each select.tenants}}<option value="{{slug}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+        <label class="sp-toolbar__count" for="farm-from">From</label>
+        <input id="farm-from" type="date" name="from" value="{{from}}" class="sp-search-input" data-autosubmit>
+        <label class="sp-toolbar__count" for="farm-to">To</label>
+        <input id="farm-to" type="date" name="to" value="{{to}}" class="sp-search-input" data-autosubmit>
+        <noscript><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Show</button></noscript>
+    </form>
+
+    {{#each notes}}<p class="sp-u-text-tertiary">{{this}}</p>{{/each}}
+    {{#if partial}}<p class="sp-u-text-tertiary"><strong>{{partial}}</strong></p>{{/if}}
+
+    {{#if report}}
+    <dl class="sp-kv-list">
+      <div class="sp-kv-row"><dt>Total cost (USD)</dt><dd>{{report.total_cost}}</dd></div>
+      <div class="sp-kv-row"><dt>Tasks</dt><dd>{{report.tasks_label}} · {{report.calls_label}}{{#if report.unlinked_label}} · {{report.unlinked_label}}{{/if}}{{#if report.empty_label}} · {{report.empty_label}}{{/if}}</dd></div>
+      <div class="sp-kv-row"><dt>Tokens</dt><dd>{{report.input_tokens}} in · {{report.output_tokens}} out · {{report.cache_read_tokens}} cache read</dd></div>
+    </dl>
+
+    <h2 class="sp-section__title">By agent</h2>
+    {{#> components/table caption="Cost by agent"}}
+      <thead><tr><th scope="col">Agent</th><th scope="col">Tasks</th><th scope="col">Calls</th><th scope="col">Cost (USD)</th><th scope="col">No SP link</th><th scope="col">Tokens in</th><th scope="col">Tokens out</th><th scope="col">Cache read</th></tr></thead>
+      <tbody>{{#each report.by_agent}}<tr><td class="sp-table__cell--primary">{{key}}</td><td>{{tasks}}</td><td>{{calls}}</td><td>{{cost}}</td><td>{{unlinked}}</td><td>{{input_tokens}}</td><td>{{output_tokens}}</td><td>{{cache_read_tokens}}</td></tr>{{/each}}</tbody>
+    {{/components/table}}
+
+    <h2 class="sp-section__title">By tenant</h2>
+    {{#> components/table caption="Cost by tenant"}}
+      <thead><tr><th scope="col">Tenant</th><th scope="col">Tasks</th><th scope="col">Calls</th><th scope="col">Cost (USD)</th><th scope="col">No SP link</th><th scope="col">Tokens in</th><th scope="col">Tokens out</th><th scope="col">Cache read</th></tr></thead>
+      <tbody>{{#each report.by_tenant}}<tr><td class="sp-table__cell--primary">{{key}}</td><td>{{tasks}}</td><td>{{calls}}</td><td>{{cost}}</td><td>{{unlinked}}</td><td>{{input_tokens}}</td><td>{{output_tokens}}</td><td>{{cache_read_tokens}}</td></tr>{{/each}}</tbody>
+    {{/components/table}}
+
+    <h2 class="sp-section__title">By person</h2>
+    {{#> components/table caption="Cost by person"}}
+      <thead><tr><th scope="col">Person</th><th scope="col">Tasks</th><th scope="col">Calls</th><th scope="col">Cost (USD)</th><th scope="col">No SP link</th><th scope="col">Tokens in</th><th scope="col">Tokens out</th><th scope="col">Cache read</th></tr></thead>
+      <tbody>{{#each report.by_person}}<tr><td class="sp-table__cell--primary">{{key}}</td><td>{{tasks}}</td><td>{{calls}}</td><td>{{cost}}</td><td>{{unlinked}}</td><td>{{input_tokens}}</td><td>{{output_tokens}}</td><td>{{cache_read_tokens}}</td></tr>{{/each}}</tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state heading="Cost unavailable" message="The farm or systemprompt could not be read; the notice above says why."}}
+    {{/if}}
+    </section>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm.js"></script>
+    {{/inline}}
+{{/layout}}

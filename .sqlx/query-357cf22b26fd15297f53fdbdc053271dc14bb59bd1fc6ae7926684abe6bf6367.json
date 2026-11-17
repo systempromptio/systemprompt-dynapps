@@ -1,0 +1,149 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The model calls of one farm task: every ai_requests row of its gateway\n-- session ($1 = usage.gateway_session_id), oldest first, at most $2.\nSELECT id,\n       created_at,\n       model,\n       status,\n       request_kind,\n       input_tokens,\n       output_tokens,\n       cache_read_tokens,\n       cache_creation_tokens,\n       cost_microdollars,\n       latency_ms\nFROM ai_requests\nWHERE session_id = $1\nORDER BY created_at, id\nLIMIT $2\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "request_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "request_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "input_tokens",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "input_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "output_tokens",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "output_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "cache_read_tokens",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "cache_read_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "cache_creation_tokens",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "cache_creation_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "cost_microdollars",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "latency_ms",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "latency_ms"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "357cf22b26fd15297f53fdbdc053271dc14bb59bd1fc6ae7926684abe6bf6367"
+}

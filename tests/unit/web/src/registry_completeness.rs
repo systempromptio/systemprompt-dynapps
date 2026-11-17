@@ -20,7 +20,6 @@ fn all_jobs_registered() {
         "conversation_judge",
         "conversation_rollup",
         "copy_extension_assets",
-        "farm_scheduled_run",
         "gateway_overhead_rollup",
         "governance_bootstrap",
         "llms_txt_generation",

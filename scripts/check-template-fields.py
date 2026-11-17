@@ -33,7 +33,9 @@ TEMPLATES = sorted(
     list((ROOT / "storage/files/admin/templates").rglob("*.hbs"))
     + list((ROOT / "storage/files/admin/partials").rglob("*.hbs"))
 )
-SOURCES = list((ROOT / "extensions/web").rglob("*.rs"))
+SOURCES = list((ROOT / "extensions/web").rglob("*.rs")) + list(
+    (ROOT / "extensions/dynwork-routines").rglob("*.rs")
+)
 # These core DTO modules are serialized directly by the baseline views.
 # Read their real fields from the coordinated sibling checkout, rather than
 # allowing field-name literals that would conceal a renamed/deleted contract.

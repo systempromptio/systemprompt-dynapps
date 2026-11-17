@@ -670,7 +670,7 @@ _prepare-uncoordinated:
     export DATABASE_URL="$DB_URL"
     ROOT="{{justfile_directory()}}"
     # Crates whose own .sqlx cache this recipe creates as scratch.
-    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/agent-farm"
+    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt"
     # The tracked cache is never written in place. `cargo sqlx prepare`
     # truncates and rewrites .sqlx as it goes, and this recipe runs it several
     # times, so an in-place run that dies part-way (a failed pass, or a SIGKILL
@@ -1254,7 +1254,6 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     # `just migrate` below still applies every registered migration; this only
     # decides where the compile-time query check reads its schema from.
     SQLX_OFFLINE=true just build --release
-    python3 scripts/setup-local-kit-source.py "$PROFILE_DIR/profile.yaml" "$PROFILE_DIR/secrets.json"
     echo "Running database migrations..."
     just migrate
     echo "Ensuring bootstrap admin user ($ADMIN_EMAIL)..."

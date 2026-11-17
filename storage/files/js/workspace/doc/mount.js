@@ -130,6 +130,7 @@ export const mount = async (slot, { root, doc, access, readOnly }) => {
       session.state.doc.commit();
     },
   });
+  root.addEventListener('ws:reveal', (event) => comments.focusBlock(event.detail?.node));
   awareness.hello();
   comments.load().catch(() => undefined);
   return { readOnly: session.state.mode !== 'edit', view };

@@ -17,7 +17,6 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt as _;
 use sqlx::PgPool;
-use systemprompt_web_admin_farm as farm;
 use systemprompt_web_admin_identity as identity;
 use systemprompt_web_admin_platform as platform;
 use systemprompt_web_extension::admin;
@@ -33,7 +32,6 @@ pub(crate) struct DocumentsMount {
     pub drive: platform::routes::drive_user::DriveDocuments,
     pub bridge: Router,
 }
-pub(crate) const FARM_PUBLIC_PREFIX: &str = "/api/public/agent-farm";
 
 pub(crate) struct App {
     router: Router,
@@ -80,25 +78,6 @@ fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
         write_pool: Arc::clone(pool),
         session_service: sessions,
     }
-}
-
-// A farm state over the test pool whose data root is a fresh directory under
-// the system temp dir: no run is ever spawned, so nothing is written there.
-fn farm_state(pool: &Arc<PgPool>) -> Arc<farm::state::FarmState> {
-    let data_root = std::env::temp_dir().join(format!("farm-contract-{}", uuid::Uuid::new_v4()));
-    farm::state::build_farm_state(
-        Arc::clone(pool),
-        farm::state::FarmPaths::new(data_root, globals::repo_root().join("services")),
-        farm::state::GatewayEndpoints {
-            internal_base: String::new(),
-            external_base: String::new(),
-        },
-        farm::state::RunnerLimits::default(),
-        systemprompt_web_admin_core::extension_boot::BootServices {
-            boot: globals::boot().clone(),
-            services: dynapps_test_common::extension_services(pool, globals::services().clone()),
-        },
-    )
 }
 
 // Core's three planes over the fixture services tree, as the runtime builds
@@ -167,7 +146,6 @@ impl App {
             None,
             globals::boot().services_root(),
         ));
-        let farm_state = farm_state(pool);
         let api = Router::new()
             .nest(
                 "/admin",
@@ -175,7 +153,6 @@ impl App {
                     Arc::clone(pool),
                     pool,
                     Arc::clone(&managed),
-                    Arc::clone(&farm_state),
                     Arc::clone(globals::boot().secrets()),
                 ),
             )
@@ -194,7 +171,9 @@ impl App {
                 engine: engine.clone(),
                 sso_deps,
                 managed,
-                files: Arc::clone(&farm_state.artefacts),
+                files: Arc::new(systemprompt::storage::LocalFileStorage::new(
+                    std::env::temp_dir(),
+                )),
                 boot: globals::boot().clone(),
                 ai: Arc::new(systemprompt::ai::repository::AiRepositories::new(
                     &database,
@@ -202,8 +181,7 @@ impl App {
                 )),
             },
         )
-        .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>))
-        .layer(axum::Extension(Arc::clone(&farm_state)));
+        .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>));
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine.clone());
 
         // Core layers the governance engine and artifact ingest onto every
@@ -222,8 +200,6 @@ impl App {
         let hooks = admin::hooks_webhook_router(&database, Arc::clone(pool), session_service(pool))
             .layer(axum::Extension(governance))
             .layer(axum::Extension(artifact_ingest));
-
-        let farm = admin::farm_public_router(Arc::clone(pool), farm_state);
 
         let secrets = admin::secrets_router(Arc::clone(pool));
         let share = admin::share_manifest_router(Arc::clone(pool));
@@ -246,7 +222,6 @@ impl App {
             .nest_service(SSR_PREFIX, ssr)
             .nest_service("/bridge-auth", bridge_auth)
             .nest("/api/public", api)
-            .nest(FARM_PUBLIC_PREFIX, farm)
             .merge(hooks)
             .merge(secrets)
             .merge(share)

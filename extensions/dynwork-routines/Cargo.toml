@@ -1,0 +1,37 @@
+[package]
+name = "dynwork-routines"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "DynWork routines for the Dynapps instance: each person's routine definitions, shared by all of their DynWork desktops through a change feed with optimistic concurrency, a summary of each routine's runs, and the \"My routines\" page."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+# extension_migrations!() expands to ::systemprompt_extension paths; machete
+# cannot see macro-expansion usage.
+[package.metadata.cargo-machete]
+ignored = ["systemprompt-extension"]
+
+[lints]
+workspace = true
+
+[dependencies]
+systemprompt = { workspace = true }
+# Direct dep so the `extension_migrations!()` expansion resolves.
+systemprompt-extension = { workspace = true }
+# The desktop credential check and the change hint.
+dynwork-relay = { workspace = true }
+# The admin shell the "My routines" page renders in.
+systemprompt-web-admin-core = { workspace = true }
+
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[build-dependencies]
+systemprompt-extension = { workspace = true }

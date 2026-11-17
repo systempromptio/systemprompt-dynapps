@@ -36,7 +36,6 @@ extensions/web/admin/catalog/src/repositories/mcp/runtime/call_log.rs#645e9b21a8
 extensions/web/admin/catalog/src/repositories/mcp/runtime/call_log.rs#b5f9cabd55
 extensions/web/admin/catalog/src/repositories/mcp/runtime/executions.rs#16413c0fa5
 extensions/web/admin/catalog/src/repositories/mcp/runtime/executions.rs#75baff25ab
-extensions/web/admin/farm/src/repositories/reports/count_run_warnings.sql#7390880ff0
 extensions/web/admin/governance/src/repositories/governance/counts.rs#68d67ad393
 extensions/web/admin/governance/src/repositories/governance/counts.rs#77280129d1
 extensions/web/admin/governance/src/repositories/governance/counts.rs#b569e46ad6
@@ -61,7 +60,6 @@ extensions/web/admin/identity/src/repositories/users/roster/page.sql#c4cb2de7ca
 extensions/web/jobs/src/conversation_judge/discovery.rs#a0499efeb0
 extensions/web/jobs/src/retention/daily_report.rs#635270f466
 extensions/web/jobs/src/retention/health.rs#2e46ca66e4
-extensions/web/shared/admin-core/src/repositories/agent_run_facts/facts.sql#b19e4497bc
 extensions/web/shared/admin-core/src/repositories/conversations/history_page.sql#062a0806d3
 extensions/web/shared/admin-core/src/repositories/conversations/rows/page.sql#eece7328c4
 extensions/web/shared/admin-core/src/repositories/filter_options.rs#4f1826b4dc

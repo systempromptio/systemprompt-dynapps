@@ -11,9 +11,6 @@
 //! - the passthrough result bound: the overflow decision, the pointer sent in
 //!   place of a stored oversize result, and the trimming fallback
 //! - Gemini declarability of every listed tool's input schema
-//! - the `agent-farm` server's tool surface, schemas, run authorisation and the
-//!   administrator-only `all` scope, and `farm_dashboard`'s JSON shape against
-//!   the fields its dashboard artifact reads
 //! - the `documents` server's tool surface and its manifest/services yaml
 //! - the issue report tools on the `systemprompt` server and their config
 //! - `systemprompt-mcp-shared`'s file layer: `FileRef` parsing and schema, the
@@ -133,13 +130,9 @@ mod truncate_on_char_boundary;
 #[cfg(test)]
 mod admin_reports;
 #[cfg(test)]
-mod agent_farm_tools;
-#[cfg(test)]
 mod bounds;
 #[cfg(test)]
 mod documents_tools;
-#[cfg(test)]
-mod farm_dashboard_shape;
 #[cfg(test)]
 mod issues_tools;
 #[cfg(test)]

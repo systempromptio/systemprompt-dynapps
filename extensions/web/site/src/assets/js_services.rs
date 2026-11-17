@@ -150,6 +150,7 @@ fn editor_js(p: &Path) -> Vec<AssetDefinition> {
         ws_js!(p, "doc/menus.js"),
         ws_js!(p, "doc/model.js"),
         ws_js!(p, "doc/mount.js"),
+        ws_js!(p, "doc/rendered.js"),
         ws_js!(p, "doc/schema.js"),
         ws_js!(p, "doc/session.js"),
         ws_js!(p, "doc/source.js"),

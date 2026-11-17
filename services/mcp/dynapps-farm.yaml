@@ -1,0 +1,29 @@
+# The Dynapps Farm, hosted outside this instance, reached as the signed-in
+# user. It trusts the identity this instance signs: on every call the gateway
+# asks /api/public/identity/dynapps-farm/token for a short-lived RS256 JWT
+# (aud = `endpoint` below, exactly as written) and sends it as the bearer; the
+# farm checks it against /.well-known/jwks.json and maps the person to its own
+# tenant and roles. See docs/EXTERNAL-MCP-IDENTITY.md.
+#
+# Who reaches it is decided only by `mcp_server/dynapps-farm` in
+# services/access-control/rules.yaml. `tool_policy` is required on every
+# managed server. See docs/CONFIGURED-CONNECTORS.md.
+mcp_servers:
+  dynapps-farm:
+    server_type: external
+    endpoint: https://farm-dev.ai.dyncloud.es/farm/mcp
+    enabled: true
+    tool_policy: prompt
+    display_in_web: false
+    removable: true
+    description: Dynapps Farm; launches and follows agent tasks as the signed-in user
+    external_auth:
+      token_endpoint: /api/public/identity/dynapps-farm/token
+      header: Authorization
+      scheme: Bearer
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

@@ -1,0 +1,101 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id!\", routine_id AS \"routine_id!\", state AS \"state!\", reason,\n                  started_at, ended_at, updated_at AS \"updated_at!\"\n           FROM (\n               SELECT runs.*, row_number() OVER (\n                   PARTITION BY routine_id\n                   ORDER BY COALESCE(started_at, updated_at) DESC, id DESC\n               ) AS position\n               FROM dynwork_routine_runs runs\n               WHERE user_id = $1\n           ) ranked\n           WHERE position <= $2\n           ORDER BY routine_id, COALESCE(started_at, updated_at) DESC, id DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "routine_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_runs",
+            "name": "routine_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "state!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_runs",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_runs",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_runs",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "ended_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_runs",
+            "name": "ended_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routine_runs",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "2df16574277ea78f8df64b768e9ce24ba108cee5487a0507c913c2686ef093fd"
+}

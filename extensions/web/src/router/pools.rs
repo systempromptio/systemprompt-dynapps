@@ -1,15 +1,13 @@
 //! Database handle extraction from the type-erased extension context, plus
 //! the managed-resource services built once over them (their Git checkouts
-//! are staged under the profile's storage scratch root) and the agent farm
-//! state (run directories under the storage data root).
+//! are staged under the profile's storage scratch root).
 
 use std::sync::Arc;
 
 use systemprompt::config::AppPaths;
 use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
+use systemprompt_web_admin_core::repositories::connector_discovery::ConnectorDiscoveryPolicy;
 use systemprompt_web_admin_core::state::ManagedState;
-use systemprompt_web_admin_farm::services::runner::fly::registry::RemoteRuns;
-use systemprompt_web_admin_farm::state::FarmState;
 
 use systemprompt::ai::repository::AiRepositories;
 use systemprompt::database::{Database, DbPool};
@@ -25,7 +23,6 @@ pub(crate) struct DbHandles {
     pub read: Arc<PgPool>,
     pub write: Arc<PgPool>,
     pub db: DbPool,
-    pub farm: Arc<FarmState>,
     pub files: Arc<dyn FileStorage>,
     pub services: systemprompt_web_admin_core::extension_services::ExtensionServices,
     pub boot: ExtensionBoot,
@@ -34,7 +31,7 @@ pub(crate) struct DbHandles {
 }
 
 impl DbHandles {
-    pub(crate) fn from_context(ctx: &dyn ExtensionContext, runs: Arc<RemoteRuns>) -> Option<Self> {
+    pub(crate) fn from_context(ctx: &dyn ExtensionContext) -> Option<Self> {
         let db_handle = ctx.database();
         let db = db_handle.as_any().downcast_ref::<Database>()?;
         let read = db.pool();
@@ -66,26 +63,15 @@ impl DbHandles {
         ));
         let files = ctx.file_storage();
         let services =
-            systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx);
-        let farm = super::farm_public::build_state(
-            Arc::clone(&write),
-            paths.as_ref(),
-            systemprompt_web_admin_farm::state::FarmHost {
-                artefacts: Arc::clone(&files),
-                instance: ctx.instance_id(),
-                runs,
-                tasks: ctx.background_tasks(),
-                services: services.clone(),
-                boot: boot.clone(),
-            },
-        );
-        super::farm_public::start(&farm, paths.as_ref());
+            systemprompt_web_admin_core::extension_services::ExtensionServices::from_context(ctx)
+                .with_connector_discovery(
+                    ConnectorDiscoveryPolicy::load_discovery_policy_or_strict(boot.services_root()),
+                );
         Some(Self {
             managed,
             read,
             write,
             db,
-            farm,
             files,
             services,
             boot,

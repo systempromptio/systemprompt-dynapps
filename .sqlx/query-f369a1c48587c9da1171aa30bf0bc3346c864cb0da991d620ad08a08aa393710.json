@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The model calls of one farm task added up per model ($1 = gateway session).\nSELECT model,\n       count(*)::bigint AS \"calls!\",\n       count(*) FILTER (WHERE status = 'failed')::bigint AS \"failed!\",\n       COALESCE(sum(input_tokens), 0)::bigint AS \"input_tokens!\",\n       COALESCE(sum(output_tokens), 0)::bigint AS \"output_tokens!\",\n       COALESCE(sum(cache_read_tokens), 0)::bigint AS \"cache_read_tokens!\",\n       COALESCE(sum(cache_creation_tokens), 0)::bigint AS \"cache_creation_tokens!\",\n       COALESCE(sum(cost_microdollars), 0)::bigint AS \"cost_microdollars!\"\nFROM ai_requests\nWHERE session_id = $1\nGROUP BY model\nORDER BY 8 DESC, model\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "calls!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "input_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "output_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "cache_read_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "cache_creation_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f369a1c48587c9da1171aa30bf0bc3346c864cb0da991d620ad08a08aa393710"
+}

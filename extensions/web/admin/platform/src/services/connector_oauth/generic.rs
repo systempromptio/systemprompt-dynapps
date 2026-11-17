@@ -5,6 +5,9 @@ pub use super::generic_discovery::{
     authorization_response_issuer_matches, same_issuer, validate_endpoint,
 };
 use super::generic_discovery::{bounded_json, metadata, trusted_endpoint};
+pub use super::lenient_discovery::{
+    MetadataDocument, advertised_metadata_document, resource_matches,
+};
 use super::transport::client;
 use super::{Grant, Provider, config};
 use base64::Engine;

@@ -1,0 +1,63 @@
+{{!--
+  Farm › Schedules: the recurring tasks of every tenant (or one). Read-only. The
+  stored prompt is never shown; only the agent the schedule launches.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="Recurring tasks of the Dynapps Farm, every tenant mixed unless you pick one: when they fire next and how the last firing went. Read-only."}}
+
+    <section class="sp-section" aria-label="Schedules">
+    {{#if select.has_tenants}}
+    <form method="get" action="{{select.action}}" class="sp-toolbar">
+        <label class="sp-toolbar__count" for="farm-tenant">Tenant</label>
+        <select id="farm-tenant" name="tenant" class="sp-search-input" data-autosubmit>
+            <option value=""{{#if select.all_selected}} selected{{/if}}>All tenants</option>
+            {{#each select.tenants}}<option value="{{slug}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+        <noscript><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Show</button></noscript>
+    </form>
+    {{/if}}
+
+    {{#if has_rows}}
+    {{#> components/table caption=count_label}}
+      <thead><tr>
+        <th scope="col">Schedule</th>
+        <th scope="col">Agent</th>
+        <th scope="col">Tenant</th>
+        <th scope="col">Owner</th>
+        <th scope="col">Cron</th>
+        <th scope="col">State</th>
+        <th scope="col" class="sp-col-date">Next firing</th>
+        <th scope="col" class="sp-col-date">Last firing</th>
+        <th scope="col">Runs</th>
+      </tr></thead>
+      <tbody>
+        {{#each rows}}
+        <tr>
+          <td class="sp-table__cell--primary"><span class="sp-u-mono" title="{{schedule_id}}">{{short_id}}</span></td>
+          <td>{{#if is_prompt}}<span class="sp-u-text-tertiary">{{agent}}</span>{{else}}<code class="sp-code-inline">{{agent}}</code>{{/if}}{{#if scope}} <span class="sp-chip sp-chip--muted">{{scope}}</span>{{/if}}</td>
+          <td>{{tenant}}</td>
+          <td>{{owner}}</td>
+          <td><code class="sp-code-inline">{{cron}}</code> {{timezone}}{{#if window}}<br><span class="sp-u-text-tertiary">{{window}}</span>{{/if}}<br><span class="sp-u-text-tertiary">overlap: {{overlap}}</span></td>
+          <td>{{> components/badge tone=state_tone text=state}}</td>
+          <td class="sp-col-date">{{next_fire}}</td>
+          <td class="sp-col-date">{{last_fired}}<br>{{> components/badge tone=last_tone text=last_state}}{{#if last_error}}<br><span class="sp-u-text-tertiary">{{last_error}}</span>{{/if}}</td>
+          <td>{{runs}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    {{/components/table}}
+    {{else}}
+    {{#if loaded}}
+    {{> components/empty-state heading="No schedules" message="farm-api has no schedules to show."}}
+    {{else}}
+    {{> components/empty-state heading="Schedules unavailable" message="The farm could not be read; the notice above says why."}}
+    {{/if}}
+    {{/if}}
+    </section>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm.js"></script>
+    {{/inline}}
+{{/layout}}

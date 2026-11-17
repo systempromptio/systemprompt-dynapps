@@ -11,6 +11,7 @@ workspace = true
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 sqlx = { workspace = true }
 systemprompt-web-shared = { workspace = true }
+systemprompt-web-admin-agent-farm = { workspace = true }
 systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
@@ -18,7 +19,6 @@ systemprompt-web-admin-core = { workspace = true }
 systemprompt-mcp-shared = { workspace = true }
 systemprompt-web-admin-catalog = { workspace = true }
 systemprompt-web-admin-governance = { workspace = true }
-systemprompt-web-admin-farm = { workspace = true }
 systemprompt-web-extension = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-web-jobs = { workspace = true }

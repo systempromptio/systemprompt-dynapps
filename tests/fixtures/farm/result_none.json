@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "task_has_no_result",
+    "message": "the task finished without producing a result",
+    "retryable": false
+  }
+}

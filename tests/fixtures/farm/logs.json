@@ -1,0 +1,13 @@
+{
+  "task_id": "01a17751-467a-7792-b87c-8b67e9d8fa36",
+  "tenant": "dynapps-internal",
+  "scope": null,
+  "state": "succeeded",
+  "lines": [],
+  "truncated": true,
+  "full_logs": {
+    "s3_key": "dynapps-internal/_/tasks/01a17751-467a-7792-b87c-8b67e9d8fa36/logs/developer-skills.code-reviewer-01a17751-467a-7792-b87c-8b67e9d8fa36.jsonl",
+    "url": "https://objects.invalid/redacted-presigned-url",
+    "expires_at": "2026-10-27T08:18:01.292758Z"
+  }
+}

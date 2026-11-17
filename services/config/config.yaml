@@ -7,14 +7,14 @@
 
 includes:
   # MCP servers
-  # The internal `systemprompt` control plane and the internal `agent-farm` run
-  # server.
+  # The internal `systemprompt` control plane. `dynapps-farm` is the Dynapps
+  # Farm, reached with the identity this instance signs.
   # `dynapps-odoo` and `dynbrain` are the Dynapps portal's hosted servers,
   # each connected per user through the generic OAuth connector.
   # `microsoft-365` is internal and connected per user through the Entra
   # connector (ships disabled until the Entra app's secrets are set).
   - ../mcp/systemprompt.yaml
-  - ../mcp/agent-farm.yaml
+  - ../mcp/dynapps-farm.yaml
   - ../mcp/documents.yaml
   - ../mcp/microsoft-365.yaml
   - ../mcp/dynapps-odoo.yaml

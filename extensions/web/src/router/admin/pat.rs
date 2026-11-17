@@ -1,5 +1,5 @@
 //! A personal access token in place of a browser session, on the export
-//! routes and the agent farm's public run API only.
+//! routes only.
 //!
 //! A kit repository's CI reads its release figures from
 //! `/admin/export/{dataset}`, and an analysis job reads conversation records
@@ -9,7 +9,7 @@
 //! — a transcript outside the owner's view is a 404, the same as in the
 //! console. Every other admin route still refuses it. Which requests may
 //! carry one is the caller's decision: the admin router admits the export
-//! GETs ([`is_export_request`]), the farm router admits every request.
+//! GETs ([`is_export_request`]).
 
 use axum::Json;
 use axum::extract::Request;

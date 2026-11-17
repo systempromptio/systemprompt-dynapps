@@ -28,6 +28,7 @@ plugin:
   mcp_servers:
     source: explicit
     include:
+    - dynapps-farm
     - dynapps-odoo
     - dynbrain
   content_sources: {}

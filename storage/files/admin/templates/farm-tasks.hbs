@@ -1,0 +1,69 @@
+{{!--
+  Farm › Tasks: one page of farm-api tasks for every tenant (or one), newest first.
+  Read-only. Rows, tenants and the next-page cursor come from farm-api through
+  the console's service credential; each row's cost is what systemprompt
+  recorded for its gateway session, in USD. What could not be read is in the
+  shell's "could not be loaded" notice above the content.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="Headless agent tasks run by the Dynapps Farm, every tenant mixed unless you pick one. Read-only."}}
+
+    <section class="sp-section" aria-label="Tasks">
+    {{#if select.has_tenants}}
+    <form method="get" action="/admin/farm/tasks" class="sp-toolbar">
+        <label class="sp-toolbar__count" for="farm-tenant">Tenant</label>
+        <select id="farm-tenant" name="tenant" class="sp-search-input" data-autosubmit>
+            <option value=""{{#if select.all_selected}} selected{{/if}}>All tenants</option>
+            {{#each select.tenants}}<option value="{{slug}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+        <noscript><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Show</button></noscript>
+    </form>
+    {{/if}}
+
+    {{#if has_rows}}
+    {{#> components/table caption=count_label}}
+      <thead><tr>
+        <th scope="col">Task</th>
+        <th scope="col">Agent</th>
+        <th scope="col">Tenant</th>
+        <th scope="col">Owner</th>
+        <th scope="col">State</th>
+        <th scope="col" class="sp-col-date">Started</th>
+        <th scope="col" class="sp-col-date">Finished</th>
+        <th scope="col">Cost (USD)</th>
+      </tr></thead>
+      <tbody>
+        {{#each rows}}
+        <tr>
+          <td class="sp-table__cell--primary"><a class="sp-table__link sp-u-mono" href="{{href}}" title="{{task_id}}">{{short_id}}</a></td>
+          <td>{{#if is_prompt}}<span class="sp-u-text-tertiary">{{agent}}</span>{{else}}<code class="sp-code-inline">{{agent}}</code>{{/if}}{{#if scope}} <span class="sp-chip sp-chip--muted">{{scope}}</span>{{/if}}</td>
+          <td>{{tenant}}</td>
+          <td>{{owner}}</td>
+          <td>{{> components/badge tone=state_tone text=state}}{{#if failure_reason}} <code class="sp-code-inline">{{failure_reason}}</code>{{/if}}</td>
+          <td class="sp-col-date">{{started}}</td>
+          <td class="sp-col-date">{{finished}}</td>
+          <td>{{cost}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    {{/components/table}}
+    {{else}}
+    {{#if loaded}}
+    {{> components/empty-state heading="No tasks" message="farm-api has no tasks to show."}}
+    {{else}}
+    {{> components/empty-state heading="Tasks unavailable" message="The farm could not be read; the notice above says why."}}
+    {{/if}}
+    {{/if}}
+
+    <nav class="sp-toolbar" aria-label="Pages">
+        {{#if first_url}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{first_url}}">Newest</a>{{/if}}
+        {{#if next_url}}<div class="sp-toolbar__actions"><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{next_url}}">Older tasks</a></div>{{/if}}
+    </nav>
+    </section>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm.js"></script>
+    {{/inline}}
+{{/layout}}

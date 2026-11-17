@@ -1,0 +1,200 @@
+{
+  "items": [
+    {
+      "task_id": "01a17c32-14a4-704b-936a-1c221451d8d5",
+      "tenant": "dynapps-internal",
+      "scope": "odoo-bridge",
+      "agent_id": null,
+      "prompt": "[fixture: prompt redacted]",
+      "input": null,
+      "state": "succeeded",
+      "failure_reason": null,
+      "correlation_id": "odoo-007c5273-2711-47c3-8c1a-01fe754de852",
+      "origin": "api",
+      "limits": {
+        "cpu": "1",
+        "ttl_s": 3600,
+        "memory": "1Gi",
+        "timeout_s": 600
+      },
+      "marketplace": null,
+      "mcp_servers": [],
+      "session_ref": "sess_1d1c744d-99f2-4ab9-acfe-c5b8979db529",
+      "resumable": true,
+      "session_agent_changed": false,
+      "created_at": "2026-10-27T07:10:19.294603Z",
+      "started_at": "2026-10-27T07:10:20Z",
+      "finished_at": "2026-10-27T07:10:41Z",
+      "updated_at": "2026-10-27T07:10:41.876959Z",
+      "owner": "person.one",
+      "resources_resolved": {
+        "cpu": {
+          "limit": {
+            "value": "1",
+            "source": "catalog"
+          },
+          "request": {
+            "value": "500m",
+            "source": "default"
+          }
+        },
+        "disk": {
+          "value": "4Gi",
+          "source": "default"
+        },
+        "memory": {
+          "limit": {
+            "value": "1Gi",
+            "source": "catalog"
+          },
+          "request": {
+            "value": "1Gi",
+            "source": "default"
+          }
+        },
+        "profile": null
+      },
+      "result": {
+        "s3_key": "dynapps-internal/odoo-bridge/tasks/01a17c32-14a4-704b-936a-1c221451d8d5/result.json",
+        "sha256": "d7fed65ba2649dce4dd34dcd856d42acf454815bcbeea16f7c9e44d108de7b4d",
+        "size_bytes": 783
+      },
+      "logs": {
+        "s3_prefix": "dynapps-internal/odoo-bridge/tasks/01a17c32-14a4-704b-936a-1c221451d8d5/logs/"
+      },
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 822,
+        "cost_eur": null,
+        "duration_s": 7,
+        "gateway_session_id": "sess_9e954023-f3a5-491f-b050-203823c9390c"
+      }
+    },
+    {
+      "task_id": "01a17751-467a-7792-b87c-8b67e9d8fa36",
+      "tenant": "dynapps-internal",
+      "scope": null,
+      "agent_id": "developer-skills:code-reviewer",
+      "prompt": null,
+      "input": "[fixture: input redacted]",
+      "state": "succeeded",
+      "failure_reason": null,
+      "correlation_id": "01a17751-4674-796b-ae63-5d4e917d7702",
+      "origin": "api",
+      "limits": {
+        "cpu": "1",
+        "ttl_s": 3600,
+        "memory": "1Gi",
+        "timeout_s": 600
+      },
+      "marketplace": null,
+      "mcp_servers": [],
+      "session_ref": "sess_547de7ed-4450-4a6a-8dff-d8cf287f9746",
+      "resumable": true,
+      "session_agent_changed": false,
+      "created_at": "2026-10-26T08:26:17.586194Z",
+      "started_at": "2026-10-26T08:26:18Z",
+      "finished_at": "2026-10-26T08:26:55Z",
+      "updated_at": "2026-10-26T08:26:56.217429Z",
+      "owner": "alpha-test-person3",
+      "resources_resolved": {
+        "cpu": {
+          "limit": {
+            "value": "1",
+            "source": "catalog"
+          },
+          "request": {
+            "value": "500m",
+            "source": "default"
+          }
+        },
+        "disk": {
+          "value": "4Gi",
+          "source": "default"
+        },
+        "memory": {
+          "limit": {
+            "value": "1Gi",
+            "source": "catalog"
+          },
+          "request": {
+            "value": "1Gi",
+            "source": "default"
+          }
+        },
+        "profile": null
+      },
+      "result": {
+        "s3_key": "dynapps-internal/_/tasks/01a17751-467a-7792-b87c-8b67e9d8fa36/result.json",
+        "sha256": "2e3dbcf979805d74b847085a4a73cf34021f67fc03304bc6b492e06c4c929a7c",
+        "size_bytes": 5802
+      },
+      "logs": {
+        "s3_prefix": "dynapps-internal/_/tasks/01a17751-467a-7792-b87c-8b67e9d8fa36/logs/"
+      },
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 4315,
+        "cost_eur": null,
+        "duration_s": 22,
+        "gateway_session_id": "sess_3eb3e826-fad4-460b-b35f-e7ce2b3ad9eb"
+      }
+    },
+    {
+      "task_id": "01a167f2-0f8f-7e40-b9cb-9f1db758922a",
+      "tenant": "dynapps-internal",
+      "scope": null,
+      "agent_id": null,
+      "prompt": "[fixture: prompt redacted]",
+      "input": null,
+      "state": "failed",
+      "failure_reason": "runtime_error",
+      "correlation_id": "01a167f2-0f67-788d-86f7-a5fdc137f424",
+      "origin": "api",
+      "limits": {
+        "cpu": "1",
+        "ttl_s": 3600,
+        "memory": "1Gi",
+        "timeout_s": 600
+      },
+      "marketplace": null,
+      "mcp_servers": [],
+      "session_ref": null,
+      "resumable": false,
+      "session_agent_changed": false,
+      "created_at": "2026-10-23T08:47:59.310358Z",
+      "started_at": "2026-10-23T08:48:00Z",
+      "finished_at": "2026-10-23T08:48:40Z",
+      "updated_at": "2026-10-23T08:48:40.534987Z",
+      "owner": "person.two",
+      "resources_resolved": {
+        "cpu": {
+          "limit": {
+            "value": "1",
+            "source": "catalog"
+          },
+          "request": {
+            "value": "500m",
+            "source": "default"
+          }
+        },
+        "disk": {
+          "value": "4Gi",
+          "source": "default"
+        },
+        "memory": {
+          "limit": {
+            "value": "1Gi",
+            "source": "catalog"
+          },
+          "request": {
+            "value": "1Gi",
+            "source": "default"
+          }
+        },
+        "profile": null
+      }
+    }
+  ],
+  "next_cursor": "159"
+}

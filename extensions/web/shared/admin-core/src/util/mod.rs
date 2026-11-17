@@ -10,4 +10,3 @@ pub mod skill_ref;
 pub mod source_path;
 pub mod svg;
 pub mod time_range;
-pub mod tool_allowlist;

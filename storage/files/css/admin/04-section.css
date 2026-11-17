@@ -63,3 +63,22 @@
 }
 
 }
+
+/* The Farm pages put a title straight above a table or a list: give it
+   the same gap a section head has, and keep the filter row clear of what it
+   filters. */
+[data-section^="farm"] .sp-section__title {
+    margin-bottom: var(--sp-space-3);
+}
+
+[data-section^="farm"] .sp-section__head .sp-section__title {
+    margin-bottom: 0;
+}
+
+[data-section^="farm"] .sp-section > .sp-section__title:not(:first-child) {
+    margin-top: var(--sp-density-section);
+}
+
+[data-section^="farm"] .sp-toolbar {
+    margin-bottom: var(--sp-space-4);
+}

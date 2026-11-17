@@ -1,0 +1,62 @@
+{{!--
+  Farm › Agents: the agent catalogue of every tenant (or one), read from farm-api.
+  Read-only. Credentials and MCP servers are named on the agent page, never
+  their secrets (farm-api sends none).
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="The agents the Dynapps Farm offers, every tenant mixed unless you pick one: platform, team and personal. Read-only."}}
+
+    <section class="sp-section" aria-label="Agents">
+    {{#if select.has_tenants}}
+    <form method="get" action="{{select.action}}" class="sp-toolbar">
+        <label class="sp-toolbar__count" for="farm-tenant">Tenant</label>
+        <select id="farm-tenant" name="tenant" class="sp-search-input" data-autosubmit>
+            <option value=""{{#if select.all_selected}} selected{{/if}}>All tenants</option>
+            {{#each select.tenants}}<option value="{{slug}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+        <noscript><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Show</button></noscript>
+    </form>
+    {{/if}}
+
+    {{#if has_rows}}
+    {{#> components/table caption=count_label}}
+      <thead><tr>
+        <th scope="col">Agent</th>
+        <th scope="col">Tenant</th>
+        <th scope="col">Level</th>
+        <th scope="col">Description</th>
+        <th scope="col">Plugin agent</th>
+        <th scope="col">Model</th>
+        <th scope="col">Harness</th>
+        <th scope="col">Workspace</th>
+      </tr></thead>
+      <tbody>
+        {{#each rows}}
+        <tr>
+          <td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}">{{slug}}</a></td>
+          <td>{{tenant}}</td>
+          <td>{{> components/badge tone=scope_tone text=scope}}</td>
+          <td>{{description}}</td>
+          <td>{{plugin_agent}}</td>
+          <td>{{model}}</td>
+          <td>{{harness}}</td>
+          <td>{{workspace}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    {{/components/table}}
+    {{else}}
+    {{#if loaded}}
+    {{> components/empty-state heading="No agents" message="farm-api lists no agents to show."}}
+    {{else}}
+    {{> components/empty-state heading="Agents unavailable" message="The farm could not be read; the notice above says why."}}
+    {{/if}}
+    {{/if}}
+    </section>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm.js"></script>
+    {{/inline}}
+{{/layout}}

@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "insufficient_scope",
+    "message": "the credential does not have the farm:platform:read scope",
+    "retryable": false,
+    "details": {
+      "required": "farm:platform:read"
+    }
+  }
+}

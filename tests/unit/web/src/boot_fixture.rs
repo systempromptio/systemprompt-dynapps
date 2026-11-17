@@ -24,6 +24,10 @@ pub(crate) struct Fixture {
 
 impl Fixture {
     pub(crate) fn new() -> Self {
+        Self::with_secrets(&[])
+    }
+
+    pub(crate) fn with_secrets(extra: &[(&str, &str)]) -> Self {
         let dir = tempfile::tempdir().expect("profile directory");
         let yaml = FIXTURE_PROFILE
             .replace("__PROFILE_DIR__", &dir.path().to_string_lossy())
@@ -37,14 +41,17 @@ impl Fixture {
         let path = dir.path().join("profile.yaml");
         std::fs::write(&path, yaml).expect("fixture profile");
         let profile = LoadedProfile::from_path(&path).expect("load the fixture profile");
-        let secrets = serde_json::from_value(serde_json::json!({
+        let mut document = serde_json::json!({
             "database_url": "postgres://unused:unused@localhost:5432/postgres",
             "oauth_at_rest_pepper": "unit-fixture-pepper-not-a-real-secret",
             "manifest_signing_secret_seed": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
             "encryption_master_key":
                 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-        }))
-        .expect("fixture secrets document");
+        });
+        for (key, value) in extra {
+            document[*key] = serde_json::Value::from(*value);
+        }
+        let secrets = serde_json::from_value(document).expect("fixture secrets document");
         let secrets = SecretsService::from_secrets(Arc::clone(&profile), secrets);
         Self {
             dir,
@@ -102,4 +109,8 @@ pub(crate) fn services_view(config: &Path) -> ServicesView {
 
 pub(crate) fn secret_store() -> Arc<dyn SecretStore> {
     Fixture::new().secrets()
+}
+
+pub(crate) fn secret_store_with(extra: &[(&str, &str)]) -> Arc<dyn SecretStore> {
+    Fixture::with_secrets(extra).secrets()
 }
