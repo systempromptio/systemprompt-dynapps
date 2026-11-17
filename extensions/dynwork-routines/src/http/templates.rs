@@ -4,8 +4,9 @@
 //! least one of its anchor plugins, exactly as the bridge manifest is
 //! filtered: the subject's roles from `find_user_access_profile`, its
 //! attributes from the services' subject sources, and the plugin →
-//! marketplace parent chain of the services config. `links` names every
-//! template the person has a live task of, visible or not. The answer carries
+//! marketplace parent chain of the services config. A closed template is
+//! served only to whoever has a live task of it. `links` names every template
+//! the person has a live task of, visible or not. The answer carries
 //! an `ETag` over its bytes, and `If-None-Match` with it answers `304`.
 
 use std::collections::{BTreeSet, HashSet};
@@ -65,7 +66,7 @@ pub async fn list(
     let page = TemplatesPage {
         templates: templates
             .into_iter()
-            .filter(|template| template.state == TemplateState::Published && visible(template))
+            .filter(|template| served(template, visible(template), &linked))
             .map(|template| TemplateView {
                 id: template.id,
                 revision: template.revision,
@@ -150,6 +151,16 @@ async fn visible_plugins(
     )
     .await?;
     Ok(allowed)
+}
+
+// Why: a closed template stays served to whoever has a task of it, so that
+// task's desktop can read its locks and merge its revisions.
+fn served(template: &TemplateRecord, visible: bool, linked: &[TemplateId]) -> bool {
+    match template.state {
+        TemplateState::Published => visible,
+        TemplateState::Closed => linked.contains(&template.id),
+        TemplateState::Draft | TemplateState::Retired => false,
+    }
 }
 
 const fn link_state(state: TemplateState, visible: bool) -> LinkState {

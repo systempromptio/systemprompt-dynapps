@@ -10,6 +10,9 @@ mod check;
 mod state;
 
 use serde::{Deserialize, Serialize};
+// JSON: protocol boundary — `recover` and `catchUp` are DynWork's option
+// defaults, passed through as the admin wrote them.
+use serde_json::Value;
 
 use crate::ids::TemplateId;
 
@@ -74,6 +77,8 @@ pub struct Schedule {
     pub cron: String,
 }
 
+// JSON: protocol boundary — `recover` ("recent" | "none") and `catchUp` (hours)
+// are DynWork's to interpret; Governance stores and serves them as sent.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TemplateOptions {
@@ -83,9 +88,9 @@ pub struct TemplateOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub time_limit: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub recover: Option<u32>,
+    pub recover: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub catch_up: Option<bool>,
+    pub catch_up: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notify: Option<String>,
 }

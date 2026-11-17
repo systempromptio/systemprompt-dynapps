@@ -42,6 +42,8 @@ pub(crate) fn body(name: &str) -> Value {
                 "permissions": "ask",
                 "connectors": ["dynapps-odoo"],
                 "timeLimit": 30,
+                "recover": "recent",
+                "catchUp": 6,
                 "notify": "failures",
             },
         },

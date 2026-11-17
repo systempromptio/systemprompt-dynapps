@@ -201,3 +201,38 @@ async fn a_revision_is_served_only_to_someone_linked_to_the_template() {
     .await;
     assert_eq!(malformed.status, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn a_closed_template_is_served_only_to_whoever_has_a_task_of_it() {
+    let db = db_or_skip!();
+    let admin = seed_admin(&db.pool, "admin").await;
+    seed_user(&db.pool, "alice").await;
+    seed_user(&db.pool, "bob").await;
+    rule(&db.pool, "sales", "role", "user", "allow").await;
+    publish(&db.pool, &admin, "sales-review", &["sales"], "Sales review").await;
+    sqlx::query("UPDATE dynwork_routine_templates SET state = 'closed' WHERE id = 'sales-review'")
+        .execute(&*db.pool)
+        .await
+        .expect("close the template");
+    let router = router(&db.pool);
+    create(&router, "alice", "task-1", "mac-1").await;
+    link(&db.pool, "alice", "task-1", "sales-review", 1).await;
+
+    let alice = get(&router, "/templates", "alice", None).await;
+    assert_eq!(
+        ids(&alice),
+        ["sales-review"],
+        "her task still reads its locks"
+    );
+    assert_eq!(alice.body["templates"][0]["locks"]["schedule"], "time");
+    assert_eq!(
+        alice.body["links"],
+        json!([{ "id": "sales-review", "state": "closed", "retire": null }])
+    );
+    let bob = get(&router, "/templates", "bob", None).await;
+    assert!(
+        ids(&bob).is_empty(),
+        "a closed template takes no new activations"
+    );
+    assert_eq!(bob.body["links"], json!([]));
+}

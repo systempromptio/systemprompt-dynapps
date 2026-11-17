@@ -82,7 +82,8 @@ An admin publishes **templates** of scheduled tasks; each person who may see one
 Templates) and activates it as a task of their own. The wire shape is fixed by the contract DynWork implements too.
 
 - **A template** answers `{id, revision, mandatory, name, description, where, definition, locks, personal}`:
-  `definition` is the template's part of a task (`instructions`, `agent?`, `model?`, `schedule.cron`, `options`),
+  `definition` is the template's part of a task (`instructions`, `agent?`, `model?`, `schedule.cron`, `options`;
+  the option defaults `recover` and `catchUp` are passed through as written),
   `locks` what the person may not change (`model`, `schedule`: `free` | `time` | `locked`, `timeLimitMax`) and
   `personal` what activation asks for (`folder`: `none` | `required`, `hint`). `where` is `local`. A template never
   carries a timezone, a folder, a task id or a device: those are the person's, and a body that names one is refused.
@@ -91,7 +92,9 @@ Templates) and activates it as a task of their own. The wire shape is fixed by t
   `find_user_access_profile` reads, the services' subject attributes and the plugin → marketplace parent chain of the
   services config, the resolution the bridge manifest is filtered with. Access is managed where it always is
   (`rules.yaml`, `/admin/access`, a group's Access tab); there are no template groups.
-- **`GET /templates`.** `templates` holds the published templates the caller sees, mandatory ones included; `links`
+- **`GET /templates`.** `templates` holds the published templates the caller sees, mandatory ones included, and each
+  closed template the caller has a live task of (so that task's desktop can read its locks and merge its revisions);
+  `links`
   holds one `{id, state, retire}` per template the caller has a live task of, seen or not. `state` is `published`,
   `closed` (no new activations; linked tasks keep following it), `retired` (`retire` says what that did to the task:
   `unlink`, `pause` or `remove`) or `no_access` (none of its anchor plugins admits the caller any more). The `ETag`
