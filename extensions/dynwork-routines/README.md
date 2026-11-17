@@ -133,13 +133,15 @@ Templates) and activates it as a task of their own. The wire shape is fixed by t
   Governance admin writes it: the author's roles, read with `find_user_access_profile`, must grant management
   (`roles_grant_manage`). A draft is kept at revision 0 until it is published. A published template changes only by
   publishing again: each publish adds one to the revision and keeps the published copy in the history with its
-  author; publishing a closed template reopens it, a retired one takes no new revision. Publishing refuses a template with no
-  anchor plugin; a blank name, schedule, plugin or connector; the connector `"all"`; "Don't ask"
-  (`permissions: "bypass"`) without connectors, without `personal.folder: "required"`, or on a mandatory template; a
-  mandatory template that requires a folder; and a `timeLimit` above `locks.timeLimitMax`.
+  author; a closed template stays closed (only its linked tasks receive the new revision), a retired one takes no
+  new revision. Publishing refuses a template with no anchor plugin; a blank name, schedule, plugin or connector;
+  the connector `"all"`; "Don't ask" (`permissions: "bypass"`) without connectors, without `personal.folder:
+  "required"`, or on a mandatory template; a mandatory template that requires a folder; and a `timeLimit` above
+  `locks.timeLimitMax`.
 - **Closing and retiring** (`library::close`, `library::retire`, admin only, for the console and the YAML sync).
   `close` turns a published template `closed`: no new activations, linked tasks unchanged and still following its
-  revisions. `retire(mode)` turns a published or closed template `retired`, once, and records the mode:
+  revisions; publishing it again keeps it closed. There is no reopen yet. `retire(mode)` turns a published or
+  closed template `retired`, once, and records the mode:
   - `unlink`: the template only; each desktop drops the link and keeps the task;
   - `pause`: also writes `enabled: false` on every live linked task, a new revision each;
   - `remove`: also tombstones every live linked task (the tombstones keep `template_id`).

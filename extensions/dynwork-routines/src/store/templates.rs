@@ -47,8 +47,8 @@ pub async fn save_template_draft(
     row.map(TemplateRecord::try_from).transpose()
 }
 
-// Why: retired templates take no revision (`None`); publishing a closed one
-// reopens it to new activations.
+// Why: retired templates take no revision (`None`); a closed one does and
+// stays closed, since its linked tasks keep following it.
 pub async fn publish_template(
     pool: &PgPool,
     draft: &TemplateDraft,
@@ -64,7 +64,8 @@ pub async fn publish_template(
            VALUES ($1, 1, 'published', $2, $3, $4, $5, $6, $6, $7)
            ON CONFLICT (id) DO UPDATE
            SET revision = dynwork_routine_templates.revision + 1,
-               state = 'published',
+               state = CASE WHEN dynwork_routine_templates.state = 'closed'
+                            THEN 'closed' ELSE 'published' END,
                mandatory = EXCLUDED.mandatory, plugins = EXCLUDED.plugins,
                source = EXCLUDED.source, body = EXCLUDED.body,
                updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at

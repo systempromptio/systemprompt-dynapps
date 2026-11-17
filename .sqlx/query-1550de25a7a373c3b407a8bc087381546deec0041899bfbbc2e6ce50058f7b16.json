@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO dynwork_routine_templates\n               (id, revision, state, mandatory, plugins, source, body, created_by, updated_by, updated_at)\n           VALUES ($1, 1, 'published', $2, $3, $4, $5, $6, $6, $7)\n           ON CONFLICT (id) DO UPDATE\n           SET revision = dynwork_routine_templates.revision + 1,\n               state = 'published',\n               mandatory = EXCLUDED.mandatory, plugins = EXCLUDED.plugins,\n               source = EXCLUDED.source, body = EXCLUDED.body,\n               updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at\n           WHERE dynwork_routine_templates.state <> 'retired'\n           RETURNING id, revision, state, retire_mode, mandatory, plugins, source,\n                     body AS \"body: Json<TemplateBody>\", created_by, updated_by, updated_at",
+  "query": "INSERT INTO dynwork_routine_templates\n               (id, revision, state, mandatory, plugins, source, body, created_by, updated_by, updated_at)\n           VALUES ($1, 1, 'published', $2, $3, $4, $5, $6, $6, $7)\n           ON CONFLICT (id) DO UPDATE\n           SET revision = dynwork_routine_templates.revision + 1,\n               state = CASE WHEN dynwork_routine_templates.state = 'closed'\n                            THEN 'closed' ELSE 'published' END,\n               mandatory = EXCLUDED.mandatory, plugins = EXCLUDED.plugins,\n               source = EXCLUDED.source, body = EXCLUDED.body,\n               updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at\n           WHERE dynwork_routine_templates.state <> 'retired'\n           RETURNING id, revision, state, retire_mode, mandatory, plugins, source,\n                     body AS \"body: Json<TemplateBody>\", created_by, updated_by, updated_at",
   "describe": {
     "columns": [
       {
@@ -150,5 +150,5 @@
       false
     ]
   },
-  "hash": "736f4006a4c2bf563a24207e0a9292de67ee0be79d2fb1aadf7e370d25442d73"
+  "hash": "1550de25a7a373c3b407a8bc087381546deec0041899bfbbc2e6ce50058f7b16"
 }

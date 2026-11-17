@@ -1,10 +1,11 @@
 //! Closing and retiring a template (contract §8), on two people's tasks:
 //! close and retire·unlink change the template only; retire·pause writes
 //! `enabled = false` and retire·remove tombstones every live linked task, each
-//! a change in its person's feed. Re-publishing a closed template reopens it.
+//! a change in its person's feed. A closed template keeps taking revisions,
+//! which reach its holders only.
 
 use axum::Router;
-use axum::http::StatusCode;
+use axum::http::{Method, StatusCode};
 use chrono::Utc;
 use dynapps_test_common::db_or_skip;
 use dynwork_routines::ids::TemplateId;
@@ -14,7 +15,7 @@ use dynwork_routines::template::RetireMode;
 use serde_json::{Value, json};
 use systemprompt::identifiers::UserId;
 
-use crate::support::{drain_feed, router, seed_user};
+use crate::support::{Call, drain_feed, router, seed_user};
 use crate::template_support::{activate, get, linked, publish, rule, seed_admin, template_columns};
 
 fn template_id(text: &str) -> TemplateId {
@@ -49,7 +50,7 @@ async fn links(router: &Router, who: &str) -> Value {
 }
 
 #[tokio::test]
-async fn closing_takes_no_new_activations_and_republishing_reopens() {
+async fn closing_takes_no_new_activations_and_leaves_the_tasks_alone() {
     let db = db_or_skip!();
     let router = router(&db.pool);
     let (admin, cursors) = two_holders(&db.pool, &router).await;
@@ -77,8 +78,19 @@ async fn closing_takes_no_new_activations_and_republishing_reopens() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "closed: {refused}");
+}
 
-    let reopened = publish(
+#[tokio::test]
+async fn a_closed_template_keeps_its_revisions_for_its_holders_only() {
+    let db = db_or_skip!();
+    let router = router(&db.pool);
+    let (admin, _) = two_holders(&db.pool, &router).await;
+    seed_user(&db.pool, "carol").await;
+    library::close(&db.pool, &template_id("sales-review"), &admin, Utc::now())
+        .await
+        .expect("close");
+
+    let second = publish(
         &db.pool,
         &admin,
         "sales-review",
@@ -87,17 +99,39 @@ async fn closing_takes_no_new_activations_and_republishing_reopens() {
     )
     .await;
     assert_eq!(
-        (reopened.state, reopened.revision),
-        (TemplateState::Published, 2)
+        (second.state, second.revision),
+        (TemplateState::Closed, 2),
+        "a new revision does not reopen it"
     );
-    let (status, created) = activate(
+
+    let alice = get(&router, "/templates", "alice", None).await;
+    let served = alice.body["templates"].as_array().expect("templates");
+    assert_eq!(served.len(), 1, "{served:?}");
+    assert_eq!(served[0]["id"], "sales-review");
+    assert_eq!(served[0]["revision"], 2, "the holder receives revision 2");
+    assert_eq!(
+        alice.body["links"],
+        json!([{ "id": "sales-review", "state": "closed", "retire": null }])
+    );
+    let (status, merged) = Call::new(Method::PUT, "/routines/task-1", "alice")
+        .if_match(1)
+        .body(json!({ "definition": linked("Sales review", "sales-review", 2) }))
+        .send(&router)
+        .await;
+    assert_eq!(status, StatusCode::OK, "the merge to revision 2: {merged}");
+    assert_eq!(merged["definition"]["template"]["revision"], 2);
+
+    let carol = get(&router, "/templates", "carol", None).await;
+    assert_eq!(carol.body["templates"], json!([]), "nobody else sees it");
+    assert_eq!(carol.body["links"], json!([]));
+    let (status, refused) = activate(
         &router,
         "carol",
         "task-1",
         linked("Sales review, v2", "sales-review", 2),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "reopened: {created}");
+    assert_eq!(status, StatusCode::BAD_REQUEST, "no new link: {refused}");
 }
 
 #[tokio::test]
