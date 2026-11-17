@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.84.0 — 2026-11-17
+
 ### Added
 
 - **Farm console.** `systemprompt-web-admin-agent-farm` serves read-only Farm pages under `/admin/farm` (dashboard, tenants, tasks and one task with its systemprompt calls, cost and conversation, agents, schedules, credential metadata, cost) over the Dynapps farm-api. `services/web/config/farm.yaml` names farm-api's URL (empty here: no farm) and the secrets-store key of its platform-read token (default `farm_api_token`), read on every call. The `dynapps-farm` MCP server (external, signed identity) is declared, bound to the `dynapps-farm` plugin and open to the new `farm-pilot` group.
