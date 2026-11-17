@@ -4,7 +4,7 @@
 //! The types follow the wire contract field for field and refuse any field it
 //! does not name, so a timezone, a folder, a task id or a typo never reaches
 //! the library: those are personal and stay on the person's computer.
-//! Publishing checks the rest ([`check`]).
+//! Publishing checks the rest ([`check_publishable`]).
 
 mod check;
 mod state;

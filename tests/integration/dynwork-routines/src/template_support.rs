@@ -51,13 +51,9 @@ pub(crate) fn body(name: &str) -> Value {
 }
 
 pub(crate) fn draft(id: &str, plugins: &[&str], mandatory: bool, body: Value) -> TemplateDraft {
-    serde_json::from_value(json!({
-        "id": id,
-        "mandatory": mandatory,
-        "plugins": plugins,
-        "body": body,
-    }))
-    .expect("a template draft")
+    let mut draft = json!({ "id": id, "mandatory": mandatory, "plugins": plugins });
+    draft["body"] = body;
+    serde_json::from_value(draft).expect("a template draft")
 }
 
 pub(crate) async fn publish(
