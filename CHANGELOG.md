@@ -20,10 +20,28 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **Farm console.** `systemprompt-web-admin-agent-farm` serves read-only Farm pages under `/admin/farm` (dashboard, tenants, tasks and one task with its systemprompt calls, cost and conversation, agents, schedules, credential metadata, cost) over the Dynapps farm-api. `services/web/config/farm.yaml` names farm-api's URL (empty here: no farm) and the secrets-store key of its platform-read token (default `farm_api_token`), read on every call. The `dynapps-farm` MCP server (external, signed identity) is declared, bound to the `dynapps-farm` plugin and open to the new `farm-pilot` group.
+
 ### Removed
 
 - **The agent farm leaves this instance.** The `systemprompt-web-admin-farm` crate, the `agent-farm` MCP server (`systemprompt-mcp-agent-farm`) and the `systemprompt-farm-worker` binary are gone, with everything that only served them: the `/admin/farm` console and its sidebar group, templates, CSS and page scripts; the `/admin/api/farm`, `/api/public/admin/agent-farm`, `/api/public/agent-farm` and `/api/public/agent-farm-worker` routes; the farm runner service and boot seed; the `farm_scheduled_run` job and its scheduler entry; the `farm_tool_allowlist` stage of the governance hook; the shared `agent_run_facts` repository the MCP server read; `services/mcp/agent-farm.yaml`, `services/web/config/agent-farms.yaml`, the `agent-farm` artifact, the `dynapps-engineering` plugin and marketplace, the `agent_farm_runs` skill and their access rules; the two farm documentation pages; `demo/agent-farm`; the binary copies in the Dockerfile and `CI_SERVER_BINS`; and the tests that exercised them. The `dynapps-farm` plugin and its `dynapps_agent_farm` launcher skill (vendored from `indawsodoo/ai-claude-farm`) stay.
 - **No data is dropped.** `schema/52_agent_farm.sql` and the farm migrations stay declared, so an established database keeps its `agent_farm*` and `clients` tables and rows untouched, and a fresh install still matches an upgraded one (the schema-upgrade ladder). Retiring those tables is a separate, deliberate migration.
+- The inert `dynapps-agent-farm` kit: its `deploy/kit/known-kits.json` entry, its marketplace rule and `scripts/setup-local-kit-source.py`.
+
+## 0.83.0 — 2026-11-17
+
+### Added
+
+- **DynWork routines sync through Governance.** The new `extensions/dynwork-routines` extension makes Governance the source of truth for each person's DynWork routines, so they follow the person across computers. `/api/dynwork/routines/v1` checks the same desktop credential as the relay: `GET /changes?since=<cursor>` returns the routines and tombstones changed after a cursor (each write locks the user's row and numbers its change, so a page never skips one); `PUT /routines/{id}` with `If-Match: <revision>` creates or updates and answers `409` with the current row on a stale revision; `DELETE /routines/{id}` with `If-Match` leaves a tombstone; `PUT /runs/{id}` records a run summary from the routine's owner device only. The schema is `extensions/dynwork-routines/schema/01_dynwork_routines.sql`, installed at boot.
+- **My routines page.** `/admin/routines` lists the signed-in person's routines (schedule, owner computer, on/off, last run) and recent runs, with pause, resume and delete. Creating and editing stay in DynWork.
+- **Relay change hint.** `dynwork-relay` gains `Hub::notify_user_desktops`, which sends a `{"t":"<kind>.changed"}` control frame to a user's other desktops. Extensions publish it with `dynwork_relay::hint::publish` (a Postgres `NOTIFY` the relay listens to), because core gives one extension no handle on another; routines send `routines.changed`. Behind a transaction-mode pooler the notification is lost and desktops fall back to polling.
+
+### Fixed
+
+- `ammonia` 4.2.4 → 4.2.5 in `Cargo.lock` and `tests/Cargo.lock` (RUSTSEC-2026-0533).
+- `deny.toml` ignores RUSTSEC-2026-0543 and RUSTSEC-2026-0555 (chrono and chrono-tz unmaintained, published 2026-11-17): not a vulnerability, and both come in through core, which has to move off chrono first.
 
 ## 0.82.0 — 2026-11-16
 
