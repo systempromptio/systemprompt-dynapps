@@ -159,8 +159,31 @@ It is exactly 34 bytes and carries ids only.
 - **Spoofing.** A client cannot forge presence: the relay drops every envelope whose version is not `1`, and
   `0xFF` included.
 
-A desktop must check byte 0 before decoding an envelope: `0x01` is an envelope, `0xFF` is presence, and anything
-else is ignored.
+A desktop must check byte 0 before decoding an envelope: `0x01` is an envelope, `0xFF` is a relay control message
+(presence when it is exactly 34 bytes, otherwise a change hint), and anything else is ignored.
+
+### Change hints
+
+Other extensions tell a user's desktops that something of theirs changed on the server, so the desktop pulls its
+feed now instead of at the next poll. `dynwork-routines` sends `routines.changed`; any other extension can send its
+own kind the same way.
+
+| Offset | Size | Field | Value |
+| --- | --- | --- | --- |
+| 0 | 1 | `version` | `0xFF` (relay control) |
+| 1 | 16 | `to` | the desktop's peer id |
+| 17 | rest | `body` | UTF-8 JSON `{"t":"<kind>.changed"}` |
+
+- **Who gets it.** Every live desktop socket of the user, except the caller's own peer (the writer names it with
+  `X-Dynwork-Peer`). Phones never get it. It is not held in a ring: an offline desktop catches up by polling.
+- **How a writer sends it.** `dynwork_relay::hint::publish(pool, user, except, kind)` after its transaction commits.
+  It is a Postgres `NOTIFY` on `dynwork_desktop_hints`, so the writer needs no handle on the relay. The relay's
+  listener (`hint::spawn`, a background task beside the revocation watch) hands each notification to
+  `Hub::notify_user_desktops(user, except, kind)`.
+- **Best effort.** A hint sent while the listener reconnects, or to a desktop whose queue is full, is lost. The
+  desktop must poll anyway; the hint only shortens the wait.
+- **Old desktops.** A hint is never a 34-byte message with a valid event byte, so a desktop that only decodes
+  presence ignores it.
 
 ## Limits
 

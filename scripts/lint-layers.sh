@@ -5,8 +5,9 @@
 #   facade (src/) -> aggregator (extensions/web) -> app (site, jobs)
 #     -> domain (admin/*, content) -> shared (web/shared/*, mcp/shared, secrets/*)
 #
-# extensions/cli/*, extensions/mcp/* (non-shared) and extensions/dynwork-relay
-# are entry-tier peers of the aggregator. Three properties must hold exactly:
+# extensions/cli/*, extensions/mcp/* (non-shared), extensions/dynwork-relay and
+# extensions/dynwork-routines are entry-tier peers of the aggregator. Three
+# properties must hold exactly:
 #
 #   1. No dependency points upward through the layer stack.
 #   2. No dependency cycles.
@@ -37,7 +38,7 @@ RULES = [
     (r"/extensions/web/(site|jobs)/", "app"),
     (r"/extensions/web/Cargo\.toml$", "entry"),
     (r"/extensions/(cli|mcp)/", "entry"),
-    (r"/extensions/dynwork-relay/", "entry"),
+    (r"/extensions/dynwork-(relay|routines)/", "entry"),
 ]
 
 md = json.load(sys.stdin)

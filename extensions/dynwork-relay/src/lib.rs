@@ -10,6 +10,9 @@
 //! envelopes per desktop so a peer that reconnects can pick up what it
 //! missed.
 //!
+//! Other extensions tell a user's desktops that something changed through
+//! the change hint ([`hint`]).
+//!
 //! Routing is in process: one replica only (see the crate README).
 
 pub mod audit;
@@ -20,6 +23,7 @@ pub mod credential;
 pub mod envelope;
 pub mod error;
 pub mod extension;
+pub mod hint;
 pub mod http;
 pub mod hub;
 pub mod ids;
