@@ -1,0 +1,144 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_routines\n             SET revision = revision + 1, change_seq = $3,\n                 owner_device = COALESCE($4, owner_device),\n                 owner_name = COALESCE($5, owner_name),\n                 definition = $6, updated_at = $7,\n                 template_id = $8, template_revision = $9\n             WHERE user_id = $1 AND id = $2\n             RETURNING id, revision, change_seq, owner_device, owner_name, definition,\n                       deleted_at, updated_at, template_id, template_revision",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "change_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "change_seq"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_device",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "owner_device"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "owner_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "owner_name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "definition",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "definition"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "deleted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "template_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "template_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_revision"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Timestamptz",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "da0acb021f23b99b968e03f2f7cc035222477b3e1a56adc7a434cf1c763b73b7"
+}

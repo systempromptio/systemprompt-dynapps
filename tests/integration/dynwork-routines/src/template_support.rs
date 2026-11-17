@@ -75,22 +75,14 @@ pub(crate) async fn publish(
     .expect("publish the template")
 }
 
-pub(crate) async fn publish_body(
+pub(crate) async fn publish_draft(
     pool: &PgPool,
     author: &UserId,
-    id: &str,
-    plugins: &[&str],
-    mandatory: bool,
-    body: Value,
+    draft: TemplateDraft,
 ) -> TemplateRecord {
-    library::publish(
-        pool,
-        &draft(id, plugins, mandatory, body),
-        author,
-        Utc::now(),
-    )
-    .await
-    .expect("publish the template")
+    library::publish(pool, &draft, author, Utc::now())
+        .await
+        .expect("publish the template")
 }
 
 // A task activated from revision `revision` of a template with `body`'s

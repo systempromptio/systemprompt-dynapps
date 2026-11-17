@@ -5,12 +5,15 @@
 //! it while it stays mandatory for them.
 
 use axum::http::{Method, StatusCode};
+use chrono::Utc;
 use dynapps_test_common::db_or_skip;
+use dynwork_routines::ids::{RoutineId, TemplateId};
+use dynwork_routines::store::{self, DeleteRoutine, WriteOutcome};
 use serde_json::json;
 
 use crate::support::{Call, drain_feed, router, seed_user};
 use crate::template_support::{
-    body, drop_rules, get, publish_body, rule, seed_admin, template_columns,
+    body, draft, drop_rules, get, publish_draft, rule, seed_admin, template_columns,
 };
 
 async fn live_tasks(pool: &sqlx::PgPool, who: &str) -> i64 {
@@ -29,13 +32,10 @@ async fn a_mandatory_template_is_made_once_unclaimed_and_claimed_with_a_time_zon
     let admin = seed_admin(&db.pool, "admin").await;
     seed_user(&db.pool, "alice").await;
     rule(&db.pool, "sales", "user", "alice", "allow").await;
-    publish_body(
+    publish_draft(
         &db.pool,
         &admin,
-        "morning",
-        &["sales"],
-        true,
-        body("Morning check"),
+        draft("morning", &["sales"], true, body("Morning check")),
     )
     .await;
     let router = router(&db.pool);
@@ -107,15 +107,12 @@ async fn a_mandatory_template_is_made_once_unclaimed_and_claimed_with_a_time_zon
 async fn a_mandatory_task_is_paused_but_never_deleted_while_it_stays_mandatory() {
     let db = db_or_skip!();
     let admin = seed_admin(&db.pool, "admin").await;
-    seed_user(&db.pool, "alice").await;
+    let alice = seed_user(&db.pool, "alice").await;
     rule(&db.pool, "sales", "user", "alice", "allow").await;
-    publish_body(
+    publish_draft(
         &db.pool,
         &admin,
-        "morning",
-        &["sales"],
-        true,
-        body("Morning check"),
+        draft("morning", &["sales"], true, body("Morning check")),
     )
     .await;
     let router = router(&db.pool);
@@ -129,6 +126,19 @@ async fn a_mandatory_task_is_paused_but_never_deleted_while_it_stays_mandatory()
         .await;
     assert_eq!(status, StatusCode::CONFLICT, "{refused}");
     assert_eq!(refused["error"], "template_mandatory");
+    let page_delete = store::delete_routine(
+        &db.pool,
+        &DeleteRoutine {
+            user: &alice,
+            id: &RoutineId::parse(&id).expect("a routine id"),
+            expected: None,
+            mandatory: &[TemplateId::parse("morning").expect("a template id")],
+            now: Utc::now(),
+        },
+    )
+    .await
+    .expect("the page's delete");
+    assert_eq!(page_delete, WriteOutcome::Mandatory, "nor from the page");
 
     let mut paused = feed[0]["definition"].clone();
     paused["enabled"] = json!(false);
@@ -158,13 +168,10 @@ async fn whoever_does_not_see_a_mandatory_template_gets_no_task_of_it() {
     seed_user(&db.pool, "alice").await;
     seed_user(&db.pool, "bob").await;
     rule(&db.pool, "sales", "user", "alice", "allow").await;
-    publish_body(
+    publish_draft(
         &db.pool,
         &admin,
-        "morning",
-        &["sales"],
-        true,
-        body("Morning check"),
+        draft("morning", &["sales"], true, body("Morning check")),
     )
     .await;
     let router = router(&db.pool);

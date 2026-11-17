@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynwork_routines\n                 (user_id, id, revision, change_seq, owner_device, owner_name, definition,\n                  updated_at, template_id, template_revision)\n             SELECT $1, 'tpl_' || gen_random_uuid()::text, 1, $3, '', '', $4, $5, t.id, t.revision\n             FROM dynwork_routine_templates t\n             WHERE t.id = $2 AND t.revision = $6 AND t.state = 'published' AND t.mandatory\n               AND NOT EXISTS (\n                   SELECT 1 FROM dynwork_routines r\n                   WHERE r.user_id = $1 AND r.template_id = $2 AND r.deleted_at IS NULL\n               )\n             ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8",
+        "Jsonb",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "aeff4af8a45fe2b2c2e928f47b7a94eb8d1fb270933d0457ef9c4888555a644e"
+}

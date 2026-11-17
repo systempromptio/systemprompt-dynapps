@@ -7,6 +7,7 @@
 //! two pages. Every time the store compares against "now" it takes it as an
 //! argument.
 
+mod linked;
 mod routines;
 mod runs;
 mod templates;
@@ -18,11 +19,12 @@ use serde::Serialize;
 use serde_json::Value;
 use systemprompt::identifiers::UserId;
 
+pub use linked::{Retired, make_unclaimed, retire_template};
 pub use routines::{delete_routine, list_changes, list_live_routines, put_routine, set_enabled};
 pub use runs::{list_recent_runs, put_run};
 pub use templates::{
-    find_template_revision, has_had_template, list_linked_template_ids, list_templates,
-    publish_template, save_template_draft,
+    close_template, find_template, find_template_revision, has_had_template,
+    list_linked_template_ids, list_templates, publish_template, save_template_draft,
 };
 
 use crate::ids::{RoutineId, RunId, RunState, TemplateId};
@@ -48,6 +50,8 @@ pub struct RoutineRecord {
     pub definition: Value,
     pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
+    pub template_id: Option<TemplateId>,
+    pub template_revision: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -63,6 +67,7 @@ pub struct RunRecord {
 
 // JSON: protocol boundary — the definition is DynWork's, stored as it sent it.
 /// A create (`expected: None`) or an update of the revision `expected`.
+/// `link` is the definition's `template`, if it has one.
 #[derive(Debug, Clone)]
 pub struct PutRoutine<'a> {
     pub user: &'a UserId,
@@ -71,11 +76,52 @@ pub struct PutRoutine<'a> {
     pub owner_device: Option<&'a str>,
     pub owner_name: Option<&'a str>,
     pub definition: &'a Value,
+    pub link: Option<PutLink<'a>>,
     pub now: DateTime<Utc>,
 }
 
-/// A routine write's result. `Conflict` carries the current row: the routine
-/// exists on a create, is a tombstone, or is at another revision.
+/// A delete of the revision `expected` (`None`: whichever is current), unless
+/// the routine follows one of the `mandatory` templates.
+#[derive(Debug, Clone)]
+pub struct DeleteRoutine<'a> {
+    pub user: &'a UserId,
+    pub id: &'a RoutineId,
+    pub expected: Option<i64>,
+    pub mandatory: &'a [TemplateId],
+    pub now: DateTime<Utc>,
+}
+
+/// A write's link to revision `revision` of `template`.
+///
+/// `keeps_locks`: the definition keeps the fields that revision locks.
+/// `open`: the template takes a new link from this person (it is published
+/// and they see it).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PutLink<'a> {
+    pub template: &'a TemplateId,
+    pub revision: i64,
+    pub keeps_locks: bool,
+    pub open: bool,
+}
+
+// JSON: protocol boundary — the template's defaults in DynWork's shape.
+/// The routine a mandatory template owes a person: its definition at the
+/// template's `revision`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnclaimedRoutine<'a> {
+    pub template: &'a TemplateId,
+    pub revision: i64,
+    pub definition: Value,
+}
+
+/// A routine write's result.
+///
+/// `Conflict` carries the current row: the routine exists on a create, is a
+/// tombstone, or is at another revision. `AlreadyActivated` carries the
+/// person's live routine of the template, and `TemplateLocked` the current
+/// row, if there is one. `TemplateUnavailable`: a new link to a template that
+/// is not published or not seen. `Mandatory`: a delete of a routine of a
+/// template mandatory for its person.
 #[derive(Debug, Clone, PartialEq)]
 pub enum WriteOutcome {
     Written(RoutineRecord),
@@ -83,6 +129,10 @@ pub enum WriteOutcome {
     NotFound,
     OwnerRequired,
     UnknownUser,
+    AlreadyActivated(RoutineRecord),
+    TemplateLocked(Option<RoutineRecord>),
+    TemplateUnavailable,
+    Mandatory,
 }
 
 #[derive(Debug, Clone)]

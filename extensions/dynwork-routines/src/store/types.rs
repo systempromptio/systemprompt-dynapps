@@ -23,6 +23,8 @@ pub(super) struct RoutineRow {
     pub(super) definition: Value,
     pub(super) deleted_at: Option<DateTime<Utc>>,
     pub(super) updated_at: DateTime<Utc>,
+    pub(super) template_id: Option<String>,
+    pub(super) template_revision: Option<i64>,
 }
 
 impl From<RoutineRow> for RoutineRecord {
@@ -36,6 +38,8 @@ impl From<RoutineRow> for RoutineRecord {
             definition: row.definition,
             deleted_at: row.deleted_at,
             updated_at: row.updated_at,
+            template_id: row.template_id.map(TemplateId::from_stored),
+            template_revision: row.template_revision,
         }
     }
 }

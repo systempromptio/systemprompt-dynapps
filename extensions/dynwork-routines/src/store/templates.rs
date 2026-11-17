@@ -1,7 +1,7 @@
-//! The template library: drafts, publishes with their revisions, and what
-//! `GET /templates` reads. A publish writes the template's next revision and
-//! its copy in the history in one transaction; the row lock the upsert takes
-//! orders concurrent publishes of one template.
+//! The template library: drafts, publishes with their revisions, closing,
+//! and what `GET /templates` reads. A publish writes the template's next
+//! revision and its copy in the history in one transaction; the row lock the
+//! upsert takes orders concurrent publishes of one template.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -47,8 +47,8 @@ pub async fn save_template_draft(
     row.map(TemplateRecord::try_from).transpose()
 }
 
-// Why: retired templates take no revision (`None`); a closed one does and
-// stays closed, since its linked tasks keep following it.
+// Why: retired templates take no revision (`None`); publishing a closed one
+// reopens it to new activations.
 pub async fn publish_template(
     pool: &PgPool,
     draft: &TemplateDraft,
@@ -64,8 +64,7 @@ pub async fn publish_template(
            VALUES ($1, 1, 'published', $2, $3, $4, $5, $6, $6, $7)
            ON CONFLICT (id) DO UPDATE
            SET revision = dynwork_routine_templates.revision + 1,
-               state = CASE WHEN dynwork_routine_templates.state = 'closed'
-                            THEN 'closed' ELSE 'published' END,
+               state = 'published',
                mandatory = EXCLUDED.mandatory, plugins = EXCLUDED.plugins,
                source = EXCLUDED.source, body = EXCLUDED.body,
                updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at
@@ -100,6 +99,47 @@ pub async fn publish_template(
     .await?;
     tx.commit().await?;
     TemplateRecord::try_from(row).map(Some)
+}
+
+pub async fn find_template(
+    pool: &PgPool,
+    template: &TemplateId,
+) -> Result<Option<TemplateRecord>, StoreError> {
+    let row = sqlx::query_as!(
+        TemplateRow,
+        r#"SELECT id, revision, state, retire_mode, mandatory, plugins, source,
+                  body AS "body: Json<TemplateBody>", created_by, updated_by, updated_at
+           FROM dynwork_routine_templates
+           WHERE id = $1"#,
+        template.as_str()
+    )
+    .fetch_optional(pool)
+    .await?;
+    row.map(TemplateRecord::try_from).transpose()
+}
+
+// Why: only a published template closes; `None` otherwise. Its linked
+// routines keep following it.
+pub async fn close_template(
+    pool: &PgPool,
+    template: &TemplateId,
+    author: &UserId,
+    now: DateTime<Utc>,
+) -> Result<Option<TemplateRecord>, StoreError> {
+    let row = sqlx::query_as!(
+        TemplateRow,
+        r#"UPDATE dynwork_routine_templates
+           SET state = 'closed', updated_by = $2, updated_at = $3
+           WHERE id = $1 AND state = 'published'
+           RETURNING id, revision, state, retire_mode, mandatory, plugins, source,
+                     body AS "body: Json<TemplateBody>", created_by, updated_by, updated_at"#,
+        template.as_str(),
+        author.as_str(),
+        now
+    )
+    .fetch_optional(pool)
+    .await?;
+    row.map(TemplateRecord::try_from).transpose()
 }
 
 pub async fn list_templates(pool: &PgPool) -> Result<Vec<TemplateRecord>, StoreError> {

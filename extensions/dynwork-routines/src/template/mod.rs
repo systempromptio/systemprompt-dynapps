@@ -7,6 +7,7 @@
 //! Publishing checks the rest ([`check_publishable`]).
 
 mod check;
+mod link;
 mod state;
 
 use serde::{Deserialize, Serialize};
@@ -17,6 +18,7 @@ use serde_json::Value;
 use crate::ids::TemplateId;
 
 pub use check::{Refusal, check_draft, check_publishable};
+pub use link::{BadLink, Link, keeps_locks, link, task_defaults};
 pub use state::{LinkState, RetireMode, TemplateSource, TemplateState, UnknownValue};
 
 /// What an admin saves or publishes: the template's id, whether every person

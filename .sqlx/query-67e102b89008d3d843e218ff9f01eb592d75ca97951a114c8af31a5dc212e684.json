@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_routines r\n                 SET revision = r.revision + 1,\n                     change_seq = (SELECT MAX(m.change_seq) + 1 FROM dynwork_routines m\n                                   WHERE m.user_id = r.user_id),\n                     definition = jsonb_set(r.definition, '{enabled}', 'false'::jsonb),\n                     updated_at = $3\n                 WHERE r.template_id = $1 AND r.deleted_at IS NULL AND r.user_id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "67e102b89008d3d843e218ff9f01eb592d75ca97951a114c8af31a5dc212e684"
+}

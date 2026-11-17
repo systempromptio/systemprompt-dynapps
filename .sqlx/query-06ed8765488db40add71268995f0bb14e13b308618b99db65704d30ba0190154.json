@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE dynwork_routines\n                 SET revision = revision + 1, change_seq = $3,\n                     owner_device = COALESCE($4, owner_device),\n                     owner_name = COALESCE($5, owner_name),\n                     definition = $6, updated_at = $7\n                 WHERE user_id = $1 AND id = $2\n                 RETURNING id, revision, change_seq, owner_device, owner_name, definition,\n                           deleted_at, updated_at",
+  "query": "SELECT id, revision, change_seq, owner_device, owner_name, definition,\n                deleted_at, updated_at, template_id, template_revision\n         FROM dynwork_routines\n         WHERE user_id = $1 AND template_id = $2 AND deleted_at IS NULL AND id <> $3",
   "describe": {
     "columns": [
       {
@@ -90,17 +90,35 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "template_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "template_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_revision"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
         "Text",
         "Text",
-        "Int8",
-        "Text",
-        "Text",
-        "Jsonb",
-        "Timestamptz"
+        "Text"
       ]
     },
     "nullable": [
@@ -111,8 +129,10 @@
       false,
       false,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "3b369e4c785c5f90124d4d52c903ab04ccfd3a2abceb1da23caa53cdf87ac415"
+  "hash": "06ed8765488db40add71268995f0bb14e13b308618b99db65704d30ba0190154"
 }

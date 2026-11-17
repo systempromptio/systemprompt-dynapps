@@ -61,6 +61,16 @@ impl FromStr for TemplateState {
     }
 }
 
+impl RetireMode {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Unlink => "unlink",
+            Self::Pause => "pause",
+            Self::Remove => "remove",
+        }
+    }
+}
+
 impl FromStr for RetireMode {
     type Err = UnknownValue;
 

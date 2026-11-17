@@ -28,8 +28,8 @@ use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults}
 use systemprompt_web_admin_core::ssr::page::Page;
 
 use crate::http::hint;
-use crate::ids::RoutineId;
-use crate::store::{self, StoreError, WriteOutcome};
+use crate::ids::{RoutineId, TemplateId};
+use crate::store::{self, DeleteRoutine, StoreError, TemplateState, WriteOutcome};
 
 pub const PAGE_URL: &str = "/admin/routines";
 const RECENT_RUNS: i64 = 5;
@@ -94,13 +94,39 @@ async fn act(pool: &PgPool, user: &UserId, raw: &str, action: Action) -> Respons
     };
     let outcome = match action {
         Action::Enable(enabled) => store::set_enabled(pool, user, &id, enabled, Utc::now()).await,
-        Action::Delete => store::delete_routine(pool, user, &id, None, Utc::now()).await,
+        Action::Delete => delete_unless_mandatory(pool, user, &id).await,
     };
     let (tone, message) = outcome_flash(outcome, action);
     if tone == FlashTone::Ok {
         hint(pool, user, None).await;
     }
     redirect_with_flash(PAGE_URL, tone, message).into_response()
+}
+
+// Why: the page does not resolve access rules, so every published mandatory
+// template keeps its routines here; DynWork's own delete checks who sees it.
+async fn delete_unless_mandatory(
+    pool: &PgPool,
+    user: &UserId,
+    id: &RoutineId,
+) -> Result<WriteOutcome, StoreError> {
+    let mandatory: Vec<TemplateId> = store::list_templates(pool)
+        .await?
+        .into_iter()
+        .filter(|template| template.state == TemplateState::Published && template.mandatory)
+        .map(|template| template.id)
+        .collect();
+    store::delete_routine(
+        pool,
+        &DeleteRoutine {
+            user,
+            id,
+            expected: None,
+            mandatory: &mandatory,
+            now: Utc::now(),
+        },
+    )
+    .await
 }
 
 fn outcome_flash(
@@ -110,6 +136,10 @@ fn outcome_flash(
     match outcome {
         Ok(WriteOutcome::Written(_)) => (FlashTone::Ok, action.done()),
         Ok(WriteOutcome::Conflict(_)) => (FlashTone::Info, "The routine was already deleted"),
+        Ok(WriteOutcome::Mandatory) => (
+            FlashTone::Err,
+            "This routine comes from a mandatory template: pause it instead",
+        ),
         Ok(_) => (FlashTone::Err, "Routine not found"),
         Err(error) => {
             tracing::error!(%error, "dynwork routines page action failed");

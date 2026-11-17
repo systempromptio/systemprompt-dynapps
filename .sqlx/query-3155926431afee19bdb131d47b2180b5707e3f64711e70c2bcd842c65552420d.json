@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, revision, change_seq, owner_device, owner_name, definition,\n                deleted_at, updated_at\n         FROM dynwork_routines\n         WHERE user_id = $1 AND deleted_at IS NULL\n         ORDER BY lower(definition->>'name'), id",
+  "query": "SELECT id, revision, change_seq, owner_device, owner_name, definition,\n                deleted_at, updated_at, template_id, template_revision\n         FROM dynwork_routines\n         WHERE user_id = $1 AND change_seq > $2\n         ORDER BY change_seq\n         LIMIT $3",
   "describe": {
     "columns": [
       {
@@ -90,11 +90,35 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "template_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "template_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_revision"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Text",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -105,8 +129,10 @@
       false,
       false,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "ed77ddfaebe19f2674cb8a5b3ed7e54b7907408809fdf4dbea6daf5d623311b4"
+  "hash": "3155926431afee19bdb131d47b2180b5707e3f64711e70c2bcd842c65552420d"
 }

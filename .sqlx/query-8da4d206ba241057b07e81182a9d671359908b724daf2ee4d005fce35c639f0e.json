@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, revision, change_seq, owner_device, owner_name, definition,\n                deleted_at, updated_at\n         FROM dynwork_routines\n         WHERE user_id = $1 AND change_seq > $2\n         ORDER BY change_seq\n         LIMIT $3",
+  "query": "INSERT INTO dynwork_routines\n                 (user_id, id, revision, change_seq, owner_device, owner_name, definition,\n                  updated_at, template_id, template_revision)\n             VALUES ($1, $2, 1, $3, $4, $5, $6, $7, $8, $9)\n             RETURNING id, revision, change_seq, owner_device, owner_name, definition,\n                       deleted_at, updated_at, template_id, template_revision",
   "describe": {
     "columns": [
       {
@@ -90,12 +90,40 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "template_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "template_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_routines",
+            "name": "template_revision"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
         "Text",
+        "Text",
         "Int8",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Timestamptz",
+        "Text",
         "Int8"
       ]
     },
@@ -107,8 +135,10 @@
       false,
       false,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "dbd7b89d52d66d7883ed3d51233c3aa29cca59e8665dccf15091ca7209ca8134"
+  "hash": "8da4d206ba241057b07e81182a9d671359908b724daf2ee4d005fce35c639f0e"
 }

@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 
 use crate::support::{Call, router, seed_user};
 use crate::template_support::{
-    activate, body, get, linked, publish, publish_body, rule, seed_admin, template_columns,
+    activate, body, draft, get, linked, publish, publish_draft, rule, seed_admin, template_columns,
 };
 
 async fn edit(router: &axum::Router, revision: i64, definition: Value) -> (StatusCode, Value) {
@@ -106,9 +106,9 @@ async fn a_locked_field_that_differs_from_the_named_revision_is_refused() {
         ),
     ];
     for (what, path, value) in changes {
-        let mut changed = task.clone();
-        set(&mut changed, &path, value);
-        let (status, refused) = edit(&router, 1, changed).await;
+        let mut edited = task.clone();
+        set(&mut edited, &path, value);
+        let (status, refused) = edit(&router, 1, edited).await;
         assert_eq!(status, StatusCode::CONFLICT, "{what}: {refused}");
         assert_eq!(refused["error"], "template_locked", "{what}");
         assert_eq!(refused["current"]["revision"], 1, "{what}: the current row");
@@ -138,13 +138,10 @@ async fn permissions_are_a_ceiling() {
     let mut unattended = body("Unattended review");
     unattended["definition"]["options"]["permissions"] = json!("bypass");
     unattended["personal"]["folder"] = json!("required");
-    publish_body(
+    publish_draft(
         &db.pool,
         &admin,
-        "unattended",
-        &["sales"],
-        false,
-        unattended,
+        draft("unattended", &["sales"], false, unattended),
     )
     .await;
     let router = router(&db.pool);
@@ -204,7 +201,12 @@ async fn the_lock_check_reads_the_revision_the_write_names() {
     );
     let mut second = body("Sales review");
     second["definition"]["instructions"]["text"] = json!("Review this week's Odoo activity");
-    publish_body(&db.pool, &admin, "sales-review", &["sales"], false, second).await;
+    publish_draft(
+        &db.pool,
+        &admin,
+        draft("sales-review", &["sales"], false, second),
+    )
+    .await;
 
     let mut stale = linked("Sales review", "sales-review", 2);
     let (status, refused) = edit(&router, 1, stale.clone()).await;

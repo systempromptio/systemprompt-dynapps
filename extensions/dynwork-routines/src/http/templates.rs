@@ -6,8 +6,10 @@
 //! attributes from the services' subject sources, and the plugin →
 //! marketplace parent chain of the services config. A closed template is
 //! served only to whoever has a live task of it. `links` names every template
-//! the person has a live task of, visible or not. The answer carries
-//! an `ETag` over its bytes, and `If-None-Match` with it answers `304`.
+//! the person has a live task of, visible or not. Before answering, each
+//! published, mandatory template the person sees and has no live task of
+//! makes one, unclaimed. The answer carries an `ETag` over its bytes, and
+//! `If-None-Match` with it answers `304`.
 
 use std::collections::{BTreeSet, HashSet};
 use std::sync::Arc;
@@ -16,6 +18,7 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
+use chrono::Utc;
 use dynwork_relay::auth::AuthError;
 use sha2::{Digest, Sha256};
 use systemprompt::governance::authz::{
@@ -27,8 +30,8 @@ use systemprompt_web_admin_core::repositories::principal::role::find_user_access
 use crate::error::RoutinesError;
 use crate::ids::TemplateId;
 use crate::state::RoutinesState;
-use crate::store::{self, StoreError, TemplateRecord};
-use crate::template::{LinkState, TemplateState, TemplateView};
+use crate::store::{self, StoreError, TemplateRecord, UnclaimedRoutine};
+use crate::template::{self, LinkState, TemplateState, TemplateView};
 use crate::view::{LinkView, TemplatesPage};
 
 pub async fn list(
@@ -54,6 +57,16 @@ pub async fn list(
             .iter()
             .any(|plugin| allowed.contains(plugin))
     };
+    let owed: Vec<&TemplateRecord> = templates
+        .iter()
+        .filter(|template| {
+            template.state == TemplateState::Published
+                && template.mandatory
+                && visible(template)
+                && !linked.contains(&template.id)
+        })
+        .collect();
+    let linked = make_owed(&state, &desktop.user, &owed, linked).await?;
     let links = templates
         .iter()
         .filter(|template| linked.contains(&template.id))
@@ -121,7 +134,39 @@ pub async fn revision(
     }))
 }
 
-async fn visible_plugins(
+// Why: a published, mandatory template the caller sees and has no live task
+// of makes one, unclaimed, before the answer (contract §4); the links then
+// name it.
+async fn make_owed(
+    state: &RoutinesState,
+    user: &UserId,
+    owed: &[&TemplateRecord],
+    linked: Vec<TemplateId>,
+) -> Result<Vec<TemplateId>, RoutinesError> {
+    if owed.is_empty() {
+        return Ok(linked);
+    }
+    let routines = owed
+        .iter()
+        .map(|template| {
+            Ok(UnclaimedRoutine {
+                template: &template.id,
+                revision: template.revision,
+                definition: template::task_defaults(
+                    &template.id,
+                    template.revision,
+                    &template.body,
+                )?,
+            })
+        })
+        .collect::<Result<Vec<_>, serde_json::Error>>()?;
+    if store::make_unclaimed(&state.pool, user, &routines, Utc::now()).await? > 0 {
+        super::hint(&state.pool, user, None).await;
+    }
+    Ok(store::list_linked_template_ids(&state.pool, user).await?)
+}
+
+pub(super) async fn visible_plugins(
     state: &RoutinesState,
     user: &UserId,
     anchors: &[String],

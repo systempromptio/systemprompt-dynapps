@@ -10,6 +10,7 @@ use systemprompt::governance::authz::AuthzError;
 use systemprompt::models::authz::SubjectSourceError;
 
 use crate::store::StoreError;
+use crate::template::BadLink;
 use crate::view::RoutineView;
 
 #[derive(Debug, thiserror::Error)]
@@ -26,6 +27,14 @@ pub enum RoutinesError {
     NotOwnerDevice,
     #[error("the run id belongs to another routine")]
     RunConflict,
+    #[error("a live routine of this template already exists")]
+    AlreadyActivated(Box<RoutineView>),
+    #[error("a field the template locks differs from the revision the routine names")]
+    TemplateLocked(Option<Box<RoutineView>>),
+    #[error("the routine follows a template that is mandatory for you; pause it instead")]
+    TemplateMandatory,
+    #[error(transparent)]
+    BadLink(#[from] BadLink),
     #[error("routines store failure")]
     Store(#[from] StoreError),
     #[error("access rules could not be resolved")]
@@ -40,9 +49,13 @@ impl RoutinesError {
     const fn status(&self) -> StatusCode {
         match self {
             Self::Auth(error) => error.status(),
-            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::BadRequest(_) | Self::BadLink(_) => StatusCode::BAD_REQUEST,
             Self::NotFound => StatusCode::NOT_FOUND,
-            Self::Conflict(_) | Self::RunConflict => StatusCode::CONFLICT,
+            Self::Conflict(_)
+            | Self::RunConflict
+            | Self::AlreadyActivated(_)
+            | Self::TemplateLocked(_)
+            | Self::TemplateMandatory => StatusCode::CONFLICT,
             Self::NotOwnerDevice => StatusCode::FORBIDDEN,
             Self::Store(_) | Self::Access(_) | Self::Subjects(_) | Self::Encode(_) => {
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -53,11 +66,14 @@ impl RoutinesError {
     const fn key(&self) -> &'static str {
         match self {
             Self::Auth(error) => error.key(),
-            Self::BadRequest(_) => "bad_request",
+            Self::BadRequest(_) | Self::BadLink(_) => "bad_request",
             Self::NotFound => "not_found",
             Self::Conflict(_) => "revision_conflict",
             Self::NotOwnerDevice => "not_owner_device",
             Self::RunConflict => "run_conflict",
+            Self::AlreadyActivated(_) => "already_activated",
+            Self::TemplateLocked(_) => "template_locked",
+            Self::TemplateMandatory => "template_mandatory",
             Self::Store(_) | Self::Access(_) | Self::Subjects(_) | Self::Encode(_) => "internal",
         }
     }
@@ -78,6 +94,12 @@ impl IntoResponse for RoutinesError {
         let body = match &self {
             Self::Conflict(current) => {
                 json!({ "error": self.key(), "message": message, "current": current })
+            },
+            Self::TemplateLocked(current) => {
+                json!({ "error": self.key(), "message": message, "current": current })
+            },
+            Self::AlreadyActivated(routine) => {
+                json!({ "error": self.key(), "message": message, "routine": routine })
             },
             _ => json!({ "error": self.key(), "message": message }),
         };
