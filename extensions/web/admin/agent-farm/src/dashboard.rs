@@ -1,5 +1,7 @@
 //! Dashboard: one page that summarises the farm, all tenants mixed unless one
-//! is chosen, and links to each view. Tenants, agents, schedules, credentials,
+//! is chosen, and links to each view.
+//!
+//! Tenants, agents, schedules, credentials,
 //! the tasks of the last seven days by state, and what systemprompt recorded
 //! they cost.
 //!
@@ -61,6 +63,7 @@ pub struct DashboardContext {
 
 /// What the dashboard read. A `None` is a block that could not be read (the
 /// reason is on the page's faults).
+#[derive(Debug)]
 pub struct DashboardInput<'a> {
     pub tenant: &'a str,
     pub tenants: &'a [TenantRef],

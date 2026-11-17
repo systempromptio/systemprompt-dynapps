@@ -67,6 +67,7 @@ pub struct CostPageContext {
     pub partial: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct CostInput<'a> {
     pub tenant: &'a str,
     pub tenants: &'a [TenantRef],

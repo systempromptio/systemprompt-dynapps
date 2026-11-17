@@ -1,5 +1,7 @@
 //! Agents: the catalogue farm-api offers a tenant, and one agent's
-//! configuration. Credentials, MCP servers and environment variables appear by
+//! configuration.
+//!
+//! Credentials, MCP servers and environment variables appear by
 //! name only (farm-api sends no values); a personal agent's instructions are
 //! private to its owner and are not shown.
 

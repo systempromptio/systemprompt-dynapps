@@ -1,4 +1,6 @@
-//! Credentials: metadata only. The model (`models::CredentialOut`) has no
+//! Credentials: metadata only.
+//!
+//! The model (`models::CredentialOut`) has no
 //! field for a value, the fingerprint or the free-form metadata, so none of
 //! them can reach a page whatever farm-api sends; the template has no input.
 

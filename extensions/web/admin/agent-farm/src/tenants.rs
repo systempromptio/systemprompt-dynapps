@@ -77,6 +77,7 @@ pub struct TenantsPageContext {
 
 /// What the page read. A `None` is a block that could not be read (the reason
 /// is on the page's faults) and shows a dash.
+#[derive(Debug)]
 pub struct TenantsInput<'a> {
     pub tenants: &'a [TenantRef],
     pub range: &'a DayRange,
@@ -133,7 +134,7 @@ fn tenant_row(
     let slug = t.tenant.as_str();
     let task_count = input
         .tasks
-        .map(|tasks| count_in(&tasks[..], |(_, task)| task.tenant.as_ref(), slug));
+        .map(|tasks| count_in(tasks, |(_, task)| task.tenant.as_ref(), slug));
     let name = t
         .name
         .as_deref()

@@ -1,4 +1,6 @@
-//! The two SSR pages. Both are console-only (the same `is_console` check the
+//! The two SSR pages.
+//!
+//! Both are console-only (the same `is_console` check the
 //! other admin domains make in their handlers) and read-only. Anything farm-api
 //! or systemprompt does not deliver is recorded on the page's [`Faults`], so
 //! the shell shows it in its "could not be loaded" notice and the page still
@@ -89,9 +91,12 @@ pub fn tenant_list(who: &WhoAmI) -> Vec<TenantRef> {
 }
 
 /// What every list page needs before it reads its own data: the faults so
-/// far, the tenant filter and the tenants offered. `tenant` is the slug asked
+/// far, the tenant filter and the tenants offered.
+///
+/// `tenant` is the slug asked
 /// for or [`ALL_TENANTS`], which is the default. `ready` is false when
 /// farm-api could not say who the credential is (the reason is on `faults`).
+#[derive(Debug)]
 pub struct Scope {
     pub faults: Faults,
     pub tenant: String,

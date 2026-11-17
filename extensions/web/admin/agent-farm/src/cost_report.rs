@@ -8,7 +8,7 @@ use crate::usage::{count_label, format_usd, gateway_session_id};
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Bucket {
     tasks: u64,
     unlinked: u64,
