@@ -85,6 +85,18 @@ async fn publishing_refuses_what_the_contract_rules_out() {
             draft("no-anchor", &[], false, body("Nobody sees it")),
             Refusal::NoPlugins,
         ),
+        (
+            draft("blank", &["sales"], false, body("  ")),
+            Refusal::Blank,
+        ),
+        (
+            draft("too-long", &["sales"], false, {
+                let mut body = body("Runs too long");
+                body["definition"]["options"]["timeLimit"] = json!(90);
+                body
+            }),
+            Refusal::TimeLimitOverMax,
+        ),
     ];
     for (draft, expected) in &cases {
         assert_eq!(
@@ -206,6 +218,54 @@ async fn a_draft_waits_and_every_publish_keeps_the_revision_before_it() {
     assert!(
         matches!(late, Err(LibraryError::NotDraft)),
         "a published template changes only by publishing: {late:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_closed_template_stays_closed_and_a_retired_one_takes_no_revision() {
+    let db = db_or_skip!();
+    let admin = seed_admin(&db.pool, "admin").await;
+    for id in ["closed-one", "retired-one"] {
+        library::publish(
+            &db.pool,
+            &draft(id, &["sales"], false, body(id)),
+            &admin,
+            Utc::now(),
+        )
+        .await
+        .expect("publish");
+    }
+    sqlx::query(
+        "UPDATE dynwork_routine_templates
+         SET state = CASE id WHEN 'closed-one' THEN 'closed' ELSE 'retired' END,
+             retire_mode = CASE id WHEN 'closed-one' THEN NULL ELSE 'unlink' END",
+    )
+    .execute(&*db.pool)
+    .await
+    .expect("close one template and retire the other");
+
+    let closed = library::publish(
+        &db.pool,
+        &draft("closed-one", &["sales"], false, body("Closed, v2")),
+        &admin,
+        Utc::now(),
+    )
+    .await
+    .expect("a closed template takes a revision");
+    assert_eq!((closed.revision, closed.state), (2, TemplateState::Closed));
+    let retired = library::publish(
+        &db.pool,
+        &draft("retired-one", &["sales"], false, body("Retired, v2")),
+        &admin,
+        Utc::now(),
+    )
+    .await;
+    assert!(matches!(retired, Err(LibraryError::Retired)), "{retired:?}");
+    assert!(
+        store::find_template_revision(&db.pool, &template_id("retired-one"), 2)
+            .await
+            .expect("read")
+            .is_none()
     );
 }
 
