@@ -31,6 +31,7 @@ Conventions (strict — hold every entry to them):
 ### Fixed
 
 - `ammonia` 4.2.4 → 4.2.5 in `Cargo.lock` and `tests/Cargo.lock` (RUSTSEC-2026-0533).
+- `deny.toml` ignores RUSTSEC-2026-0543 and RUSTSEC-2026-0555 (chrono and chrono-tz unmaintained, published 2026-11-17): not a vulnerability, and both come in through core, which has to move off chrono first.
 
 ## 0.82.0 — 2026-11-16
 
