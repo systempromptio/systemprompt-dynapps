@@ -18,6 +18,7 @@ systemprompt-web-admin-core = { workspace = true }
 # The DynWork relay, linked like the server binary links it, so a fresh
 # install carries its tables.
 dynwork-relay = { workspace = true }
+dynwork-routines = { workspace = true }
 
 sqlx = { workspace = true }
 tokio = { workspace = true }

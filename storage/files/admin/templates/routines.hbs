@@ -1,0 +1,45 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle="The routines you created in DynWork. Each one runs on the computer where it was created; create and edit them in DynWork."}}
+    {{/components/page-header}}
+
+    <section class="sp-section" aria-label="My routines">
+    {{#if has_rows}}
+    {{#> components/table caption=count_label}}
+      <thead><tr>
+        <th scope="col">Name</th>
+        <th scope="col">Schedule</th>
+        <th scope="col">Computer</th>
+        <th scope="col">Status</th>
+        <th scope="col">Last run</th>
+        <th scope="col">Recent runs</th>
+        <th scope="col">Actions</th>
+      </tr></thead>
+      <tbody>
+        {{#each rows}}
+        <tr>
+          <td class="sp-table__cell--primary">{{name}}</td>
+          <td class="sp-u-mono">{{schedule}}</td>
+          <td>{{computer}}</td>
+          <td><span class="sp-badge sp-badge--{{status_tone}}">{{status_label}}</span></td>
+          <td>{{#if last_run}}<span class="sp-badge sp-badge--{{last_run.tone}}">{{last_run.label}}</span> <span class="sp-u-text-tertiary">{{last_run.when}}</span>{{else}}<span class="sp-u-text-tertiary">Never</span>{{/if}}</td>
+          <td>{{#if has_runs}}{{#each runs}}<span class="sp-badge sp-badge--sm sp-badge--{{tone}}" title="{{when}}{{#if reason}}: {{reason}}{{/if}}">{{label}}</span> {{/each}}{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
+          <td>
+            {{#if enabled}}
+            <form method="post" action="{{pause_url}}" class="sp-inventory-inline"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit">Pause</button></form>
+            {{else}}
+            <form method="post" action="{{resume_url}}" class="sp-inventory-inline"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit">Resume</button></form>
+            {{/if}}
+            <form method="post" action="{{delete_url}}" class="sp-inventory-inline"><button class="sp-btn sp-btn--xs sp-btn--danger" type="submit">Delete</button></form>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state heading="No routines yet" message="Create a routine in DynWork's Agents view; it appears here on every computer you sign in to."}}
+    {{/if}}
+    </section>
+    {{/inline}}
+{{/layout}}
