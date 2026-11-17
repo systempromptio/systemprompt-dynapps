@@ -53,7 +53,8 @@ fn the_repository_file_names_no_farm_and_holds_no_token() -> TestResult {
 #[tokio::test]
 async fn a_missing_secret_is_not_configured_and_a_present_one_is_sent() -> TestResult {
     let farm = fake_farm(Mode::Normal).await?;
-    let store = crate::boot_fixture::secret_store();
+    let store =
+        crate::boot_fixture::secret_store_with(&[("farm_api_token", "not-the-fake-farm-token")]);
 
     let missing = FarmConfig {
         api_url: farm.base.clone(),
@@ -66,11 +67,11 @@ async fn a_missing_secret_is_not_configured_and_a_present_one_is_sent() -> TestR
         Err(FarmApiError::NotConfigured)
     ));
 
-    // A key the fixture store holds: its value is read and sent, and the fake
-    // farm-api, which expects another token, answers 401.
+    // The default key, present in the store: its value is read and sent, and
+    // the fake farm-api, which expects another token, answers 401.
     let present = FarmConfig {
         api_url: farm.base.clone(),
-        token_secret: "oauth_at_rest_pepper".to_owned(),
+        ..FarmConfig::default()
     };
     let api = FarmApi::from_config(&present, store);
     match api.whoami().await {
