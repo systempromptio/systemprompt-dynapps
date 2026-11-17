@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dynwork_chat_messages WHERE thread_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b17d64dd93a22d186a7a6a3d0d21a108a2ef99fd3a1ffb25c80f72f135e8fa03"
+}

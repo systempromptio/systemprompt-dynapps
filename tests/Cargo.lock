@@ -2358,6 +2358,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "dynwork-chats"
+version = "0.81.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "rand 0.9.5",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
+name = "dynwork-chats-integration-tests"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "dynapps-test-common",
+ "dynwork-chats",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "tokio",
+]
+
+[[package]]
+name = "dynwork-chats-unit-tests"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "dynwork-chats",
+ "serde_json",
+ "systemprompt",
+ "tokio",
+]
+
+[[package]]
 name = "dynwork-relay"
 version = "0.84.0"
 dependencies = [

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_chat_threads SET last_event_seq = last_event_seq + $3\n             WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL\n             RETURNING last_event_seq",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last_event_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "last_event_seq"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b26f32e14a43a6dc8b733d4048a13846ae5f7d90f862d7d16f775065f7420892"
+}

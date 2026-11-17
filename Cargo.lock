@@ -1666,6 +1666,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
+name = "dynwork-chats"
+version = "0.81.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "rand 0.9.5",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension",
+ "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
 name = "dynwork-relay"
 version = "0.84.0"
 dependencies = [
@@ -7172,6 +7189,7 @@ name = "systemprompt-dynapps"
 version = "0.84.0"
 dependencies = [
  "anyhow",
+ "dynwork-chats",
  "dynwork-relay",
  "systemprompt",
  "systemprompt-web-extension",
