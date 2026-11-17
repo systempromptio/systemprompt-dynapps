@@ -5,7 +5,7 @@ use systemprompt::extension::Extension;
 
 #[test]
 fn the_extension_declares_its_schema_and_depends_on_users() {
-    let extension = ChatsExtension;
+    let extension = ChatsExtension::default();
     let metadata = extension.metadata();
     assert_eq!(metadata.id, "dynwork-chats");
     assert_eq!(metadata.name, "DynWork Chats");

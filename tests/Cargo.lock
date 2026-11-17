@@ -2362,8 +2362,10 @@ name = "dynwork-chats"
 version = "0.81.0"
 dependencies = [
  "async-trait",
+ "axum",
  "base64 0.22.1",
  "chrono",
+ "dynwork-relay",
  "rand 0.9.5",
  "serde",
  "serde_json",
@@ -2378,21 +2380,29 @@ dependencies = [
 name = "dynwork-chats-integration-tests"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
+ "axum",
  "chrono",
  "dynapps-test-common",
  "dynwork-chats",
+ "dynwork-relay",
+ "http-body-util",
  "serde_json",
  "sqlx",
  "systemprompt",
+ "systemprompt-security 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
+ "tower",
 ]
 
 [[package]]
 name = "dynwork-chats-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "axum",
  "chrono",
  "dynwork-chats",
+ "dynwork-relay",
  "serde_json",
  "systemprompt",
  "tokio",

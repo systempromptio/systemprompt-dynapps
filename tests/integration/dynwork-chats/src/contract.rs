@@ -904,7 +904,9 @@ macro_rules! suite {
                 #[tokio::test]
                 async fn $name() {
                     let db = dynapps_test_common::db_or_skip!();
-                    super::$name(&crate::fixture::postgres(db).await).await;
+                    let fixture = crate::fixture::postgres(db).await;
+                    super::$name(&fixture).await;
+                    fixture.finish().await;
                 }
             )*
         }

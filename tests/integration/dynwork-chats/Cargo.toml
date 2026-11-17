@@ -9,9 +9,17 @@ workspace = true
 
 [dependencies]
 dynwork-chats = { workspace = true }
+# The relay's mobile JWT minting and device table, as the chats auth uses them.
+dynwork-relay = { workspace = true }
 # The throwaway database for the Postgres store suite (db_or_skip!).
 dynapps-test-common = { workspace = true }
 systemprompt = { workspace = true }
+systemprompt-security = { workspace = true }
+# The chats router driven in process, as core mounts it.
+axum = { workspace = true }
+tower = { workspace = true }
+http-body-util = { workspace = true }
+async-trait = { workspace = true }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

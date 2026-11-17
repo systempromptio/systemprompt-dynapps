@@ -1670,8 +1670,10 @@ name = "dynwork-chats"
 version = "0.81.0"
 dependencies = [
  "async-trait",
+ "axum",
  "base64 0.22.1",
  "chrono",
+ "dynwork-relay",
  "rand 0.9.5",
  "serde",
  "serde_json",

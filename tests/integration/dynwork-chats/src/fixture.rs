@@ -15,8 +15,18 @@ pub(crate) struct Fixture {
     pub(crate) store: Arc<dyn ChatStore>,
     pub(crate) alice: UserId,
     pub(crate) bob: UserId,
-    // Keeps the throwaway database alive for the test.
-    _db: Option<TempDb>,
+    // Keeps the throwaway database alive for the test; `finish` drops it.
+    db: Option<TempDb>,
+}
+
+impl Fixture {
+    // The throwaway databases share one Postgres with little disk, so each
+    // test drops its own instead of leaving it for the next run.
+    pub(crate) async fn finish(self) {
+        if let Some(db) = self.db {
+            db.cleanup().await;
+        }
+    }
 }
 
 pub(crate) fn user(name: &str) -> UserId {
@@ -36,11 +46,11 @@ pub(crate) fn memory() -> Fixture {
         store: Arc::new(MemoryChatStore::new()),
         alice: user("alice"),
         bob: user("bob"),
-        _db: None,
+        db: None,
     }
 }
 
-pub(crate) async fn postgres(db: TempDb) -> Fixture {
+pub(crate) async fn seed_users(db: &TempDb) {
     for name in ["alice", "bob"] {
         sqlx::query("INSERT INTO users (id, name, email) VALUES ($1, $1, $2)")
             .bind(name)
@@ -49,10 +59,14 @@ pub(crate) async fn postgres(db: TempDb) -> Fixture {
             .await
             .expect("seed a user");
     }
+}
+
+pub(crate) async fn postgres(db: TempDb) -> Fixture {
+    seed_users(&db).await;
     Fixture {
         store: Arc::new(PgChatStore::new(Arc::clone(&db.pool))),
         alice: user("alice"),
         bob: user("bob"),
-        _db: Some(db),
+        db: Some(db),
     }
 }

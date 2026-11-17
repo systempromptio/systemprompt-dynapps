@@ -10,15 +10,88 @@ describes what exists today.
 
 ## What exists
 
-The store only. Nothing is mounted on HTTP yet: no routes, no auth, no replies, no SSE. Those come in the next
-phases (threads and the changes feed, replies and the `/log` stream, models and the inactivity job, the relay hint).
+The store and the first half of the HTTP API: threads, the changes feed and the message history. Replies (`prompt`,
+`interrupt`, the `/log` stream), `models` and the relay change hint come in the next phases.
 
-- `ChatsExtension` (`dynwork-chats`, "DynWork Chats"), depends on `users`; registers the schema and migrations.
+- `ChatsExtension` (`dynwork-chats`, "DynWork Chats"), depends on `users`; registers the schema and migrations and
+  mounts `chats_router` at `EXTENSION_BASE_PATH` (`/api/dynwork/chats/v1`) as a public router: it does its own auth.
+  The state (`ChatsState`: store, token authority, device check, clock) is built on core's first `router` call and
+  kept in the extension value.
 - `store::ChatStore`, an async trait with two implementations: `store::postgres::PgChatStore` (production) and
-  `store::memory::MemoryChatStore` (the seam later suites use to run the HTTP layer without a database). Both pass
+  `store::memory::MemoryChatStore` (the seam the suites use to run the HTTP layer without a database). Both pass
   the same contract suite in `tests/integration/dynwork-chats`.
 - `ids`: `ThreadId` (`ses_` and a ULID), `MessageId` (`msg_` and a ULID), and `Cursor`, the opaque cursor of the
   changes feed (base64url of a `change_seq`, never parsed by clients).
+
+## Routes
+
+All under `/api/dynwork/chats/v1`, under `/api/` for the relay's reason: core's session middleware treats every other
+path as a tracked site page. The base path is the chats API itself because core nests each extension at its own base
+path and the relay already holds `/api/dynwork`.
+
+| Method and path | Headers | Body | Answer |
+| --- | --- | --- | --- |
+| `GET /changes?since=<cursor>&limit=<n>` | | | `200 {threads: [thread], cursor, more}` |
+| `PUT /threads/{id}` | `If-Match: <revision>` (absent = create) | `{title?, model?, archived?}` | `200 thread`, `ETag: "<revision>"` |
+| `DELETE /threads/{id}` | `If-Match: <revision>` (required) | | `200 thread` (the tombstone) |
+| `GET /threads/{id}/messages?before=<message id>&limit=<n>` | | | `200 {messages: [message], more, before}` |
+
+Every answer carries `Cache-Control: no-store`. Bodies are capped at 64 KiB (`router::MAX_BODY_BYTES`).
+
+- **Thread.** `{id, title, model, revision, time: {created, updated, archived?}, deleted, created_at, updated_at,
+  archived_at, deleted_at}`. `time.*` are epoch milliseconds, the subset of OpenCode's session info the phone reducer
+  reads; the `*_at` fields are the same instants in RFC 3339, as the routines feed writes them (the desktop's Chats
+  view reads those). `model` is OpenCode's `{providerID, id}` or `null`. A tombstone has `deleted: true`, an empty
+  title, and `deleted_at`.
+- **Feed.** `since` is the `cursor` of the previous answer; without it the answer is the full list of live threads.
+  With it, every thread changed after the cursor, oldest change first, tombstones included. `limit` defaults to 200,
+  at most 500; `more: true` means another page is ready now. A page with no changes hands back the same cursor.
+  Same shape as `dynwork-routines`' feed (`threads` in place of `routines`).
+- **Writes.** A `PUT` without `If-Match` creates the thread at revision 1 (a title defaults to empty; a new thread
+  cannot be archived). An id that already exists answers `409` with the caller's row in `current`, or `id_taken` with
+  no row when it is another user's. With `If-Match` it renames (`title`), archives or unarchives (`archived`) or changes
+  the model (`model`); fields left out stay, an empty body changes nothing. Each change adds one to `revision`.
+  `If-Match` takes the bare number or an entity tag (`"3"`, `W/"3"`). A stale revision, or any write to a tombstone,
+  answers `409` with `current`. `DELETE` without `If-Match` is `428`.
+- **Messages.** Newest first. Each message is the stored OpenCode message document (`info`), with its `id` and `type`
+  (`user`/`assistant`) taken from the row. `limit` defaults to 50, at most 200; `more: true` means older ones remain
+  and `before` is the id to ask with for them (`null` otherwise). A `before` id the thread does not have answers an
+  empty page.
+- **Isolation.** Every row read or written belongs to the token's user. Another user's thread is `404`, never `403`,
+  and its row is never shown.
+
+### Credentials
+
+`Authorization: Bearer <token>`, checked before a path, a query or a body is read. The routes accept two tokens and
+nothing else, verified by the relay's own functions against the instance's token authority (the crate depends on
+`dynwork-relay` for them and copies nothing):
+
+- the DynWork desktop JWT: `dynwork_relay::auth::verify_desktop` (audience `bridge` or `api`, user type `user` or
+  `admin`, no `act`, no `plugin_id`, no `purpose`, not expired);
+- the phone's mobile JWT: `dynwork_relay::mobile_auth::jwt::verify` (audience and purpose `dynwork-mobile`, one hour).
+  Its device (the session id) must also be a live phone row of the user in `dynwork_relay_devices`
+  (`auth::RelayDevices`, through the relay's `PgRelayStore::list_devices`), so revoking a phone closes its chats at once
+  rather than when the JWT expires. That costs one indexed query per phone request.
+
+Both map to the token's subject, so a person's desktop and phone see the same threads.
+
+### Errors
+
+JSON `{"error": {"key": <key>, "message": <text>}}`; a server error answers the fixed message `internal error` and is
+logged. The status mapping follows the relay's.
+
+| Status | `key` | When |
+| --- | --- | --- |
+| 400 | `bad_request` | a malformed body (not JSON, wrong types, a title over 512 characters, a model part empty or over 128 bytes, a create with `archived: true`), `If-Match`, `limit` or query string |
+| 400 | `invalid_id` | a thread id or a `before` message id that is not `ses_`/`msg_` and 8 to 40 letters or digits |
+| 400 | `invalid_cursor` | a `since` this server did not issue |
+| 401 | `unauthorized` | a missing, malformed, forged, expired or wrong-audience token; a token that is not a signed-in person's; a revoked or unknown phone; a deleted account |
+| 404 | `not_found` | a thread that is not the caller's or does not exist; an unknown route |
+| 409 | `revision_conflict` | a stale `If-Match`, a write to a tombstone, a create of an existing id; the body carries `current` |
+| 409 | `id_taken` | a create of an id another user holds |
+| 413 | `too_large` | a body over 64 KiB |
+| 428 | `precondition_required` | a `DELETE` without `If-Match` |
+| 500 | `internal` | the store or the device check failed |
 
 ## Tables
 
@@ -70,6 +143,10 @@ against the real schema.
 
 ## Tests
 
-- `tests/unit/dynwork-chats`: ids, the cursor, error keys, the extension's registration, the memory store.
-- `tests/integration/dynwork-chats`: the store contract, stamped once onto the memory store and once onto Postgres
-  (`db_or_skip!`-style throwaway database; with `CI=1` a missing database is a failure, not a skip).
+- `tests/unit/dynwork-chats`: ids, the cursor, error keys and statuses, the extension's registration, the memory
+  store, `If-Match` and page sizes, the thread body, the wire shapes.
+- `tests/integration/dynwork-chats`: the store contract, and the HTTP suites (auth, threads, the feed, history) driven
+  in process through the router as core mounts it, beside a stand-in for the relay's `/api/dynwork` mount, with real
+  RS256 desktop and mobile tokens. Each is stamped once onto the memory store and once onto Postgres (`db_or_skip!`
+  throwaway database, dropped at the end of each test; with `CI=1` a missing database is a failure, not a skip). On
+  Postgres the phone check runs against the relay's real device table.

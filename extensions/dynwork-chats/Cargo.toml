@@ -23,6 +23,11 @@ systemprompt = { workspace = true }
 # Direct dep so the `extension_migrations!()` expansion resolves.
 systemprompt-extension = { workspace = true }
 
+# The desktop and mobile JWT checks and the phone's device row, used as the
+# relay defines them rather than copied.
+dynwork-relay = { workspace = true }
+
+axum = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
