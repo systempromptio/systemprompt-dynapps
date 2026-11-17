@@ -16,6 +16,13 @@ ignore = [
     # or HMAC and every verifier pins RS256/HS256. Same reasoning as core's
     # deny.toml. Drop when jsonwebtoken moves to elliptic-curve 0.14.
     "RUSTSEC-2026-0387",
+    # chrono and chrono-tz declared unmaintained (2026-11-17); no vulnerability,
+    # the advice is to move to jiff or time. chrono is a direct dependency
+    # across the workspace and core, and chrono-tz arrives through ironcalc
+    # (systemprompt-files). Ignored so CI is not blocked while the migration is
+    # decided; review by 2027-02-17.
+    "RUSTSEC-2026-0543",
+    "RUSTSEC-2026-0555",
 ]
 
 [licenses]
