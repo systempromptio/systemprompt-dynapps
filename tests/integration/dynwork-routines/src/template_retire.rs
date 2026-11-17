@@ -2,7 +2,7 @@
 //! close and retire·unlink change the template only; retire·pause writes
 //! `enabled = false` and retire·remove tombstones every live linked task, each
 //! a change in its person's feed. A closed template keeps taking revisions,
-//! which reach its holders only.
+//! which reach its holders only, and an admin reopens it to new activations.
 
 use axum::Router;
 use axum::http::{Method, StatusCode};
@@ -254,4 +254,64 @@ async fn only_an_admin_closes_or_retires_and_a_retired_template_stays_retired() 
     assert!(matches!(closed, Err(LibraryError::Missing)), "{closed:?}");
     let unknown = library::close(&db.pool, &template_id("nowhere"), &admin, Utc::now()).await;
     assert!(matches!(unknown, Err(LibraryError::Missing)), "{unknown:?}");
+}
+
+#[tokio::test]
+async fn a_closed_template_reopens_for_new_activations_and_only_an_admin_reopens_it() {
+    let db = db_or_skip!();
+    let router = router(&db.pool);
+    let (admin, _) = two_holders(&db.pool, &router).await;
+    let carol = seed_user(&db.pool, "carol").await;
+    let id = template_id("sales-review");
+    library::close(&db.pool, &id, &admin, Utc::now())
+        .await
+        .expect("close");
+    let (status, refused) = activate(
+        &router,
+        "carol",
+        "task-1",
+        linked("Sales review", "sales-review", 1),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "closed: {refused}");
+
+    let not_admin = library::reopen(&db.pool, &id, &carol, Utc::now()).await;
+    assert!(
+        matches!(not_admin, Err(LibraryError::NotAdmin)),
+        "{not_admin:?}"
+    );
+    let reopened = library::reopen(&db.pool, &id, &admin, Utc::now())
+        .await
+        .expect("reopen");
+    assert_eq!(
+        (reopened.state, reopened.revision),
+        (TemplateState::Published, 1),
+        "reopening takes no revision"
+    );
+    assert_eq!(
+        links(&router, "alice").await,
+        json!([{ "id": "sales-review", "state": "published", "retire": null }])
+    );
+    let (status, activated) = activate(
+        &router,
+        "carol",
+        "task-1",
+        linked("Sales review", "sales-review", 1),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "open again: {activated}");
+
+    let published = library::reopen(&db.pool, &id, &admin, Utc::now()).await;
+    assert!(
+        matches!(published, Err(LibraryError::Missing)),
+        "only a closed template reopens: {published:?}"
+    );
+    library::retire(&db.pool, &id, RetireMode::Unlink, &admin, Utc::now())
+        .await
+        .expect("retire");
+    let retired = library::reopen(&db.pool, &id, &admin, Utc::now()).await;
+    assert!(
+        matches!(retired, Err(LibraryError::Missing)),
+        "a retired template stays retired: {retired:?}"
+    );
 }

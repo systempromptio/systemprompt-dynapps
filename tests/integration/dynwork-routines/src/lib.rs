@@ -12,8 +12,11 @@
 //! - the template library: publish validation, revisions and admin-only writes,
 //!   and `GET /templates` filtered by the anchor plugins' access rules
 //! - a task's link to a template: one live task per template, locked fields,
-//!   mandatory templates made unclaimed and never deleted, and closing and the
-//!   three retire modes
+//!   mandatory templates made unclaimed and never deleted, and closing,
+//!   reopening and the three retire modes
+//! - the admin pages of the template library: admin only, the definition form,
+//!   close, reopen and retire, and the activations with each run's recorded
+//!   conversation; and "My routines" with templates
 
 #[cfg(test)]
 mod support;
@@ -27,9 +30,15 @@ mod hint;
 #[cfg(test)]
 mod isolation;
 #[cfg(test)]
+mod page_support;
+#[cfg(test)]
 mod page_writes;
 #[cfg(test)]
+mod routines_page;
+#[cfg(test)]
 mod runs;
+#[cfg(test)]
+mod template_activations;
 #[cfg(test)]
 mod template_feed;
 #[cfg(test)]
@@ -40,6 +49,8 @@ mod template_library;
 mod template_links;
 #[cfg(test)]
 mod template_mandatory;
+#[cfg(test)]
+mod template_pages;
 #[cfg(test)]
 mod template_retire;
 #[cfg(test)]

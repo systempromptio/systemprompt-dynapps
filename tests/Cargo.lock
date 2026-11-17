@@ -2449,9 +2449,12 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-security 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-shared",
  "tokio",
  "tokio-util",
  "tower",
+ "url",
 ]
 
 [[package]]
