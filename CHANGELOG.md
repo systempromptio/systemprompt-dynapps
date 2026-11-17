@@ -20,6 +20,18 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.83.0 — 2026-11-17
+
+### Added
+
+- **DynWork routines sync through Governance.** The new `extensions/dynwork-routines` extension makes Governance the source of truth for each person's DynWork routines, so they follow the person across computers. `/api/dynwork/routines/v1` checks the same desktop credential as the relay: `GET /changes?since=<cursor>` returns the routines and tombstones changed after a cursor (each write locks the user's row and numbers its change, so a page never skips one); `PUT /routines/{id}` with `If-Match: <revision>` creates or updates and answers `409` with the current row on a stale revision; `DELETE /routines/{id}` with `If-Match` leaves a tombstone; `PUT /runs/{id}` records a run summary from the routine's owner device only. The schema is `extensions/dynwork-routines/schema/01_dynwork_routines.sql`, installed at boot.
+- **My routines page.** `/admin/routines` lists the signed-in person's routines (schedule, owner computer, on/off, last run) and recent runs, with pause, resume and delete. Creating and editing stay in DynWork.
+- **Relay change hint.** `dynwork-relay` gains `Hub::notify_user_desktops`, which sends a `{"t":"<kind>.changed"}` control frame to a user's other desktops. Extensions publish it with `dynwork_relay::hint::publish` (a Postgres `NOTIFY` the relay listens to), because core gives one extension no handle on another; routines send `routines.changed`. Behind a transaction-mode pooler the notification is lost and desktops fall back to polling.
+
+### Fixed
+
+- `ammonia` 4.2.4 → 4.2.5 in `Cargo.lock` and `tests/Cargo.lock` (RUSTSEC-2026-0533).
+
 ## 0.82.0 — 2026-11-16
 
 ### Added
