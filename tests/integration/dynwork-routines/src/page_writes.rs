@@ -40,7 +40,7 @@ async fn pause_resume_and_delete_write_new_revisions_into_the_feed() {
         .expect("resume");
     assert!(matches!(resumed, WriteOutcome::Written(ref r) if r.definition["enabled"] == true));
 
-    let deleted = store::delete_routine(&db.pool, &alice, &id("daily"), None, Utc::now())
+    let deleted = store::delete_routine(&db.pool, &alice, &id("daily"), None, &[], Utc::now())
         .await
         .expect("delete");
     assert!(matches!(deleted, WriteOutcome::Written(ref r) if r.deleted_at.is_some()));

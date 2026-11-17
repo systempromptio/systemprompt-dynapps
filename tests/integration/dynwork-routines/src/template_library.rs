@@ -222,7 +222,7 @@ async fn a_draft_waits_and_every_publish_keeps_the_revision_before_it() {
 }
 
 #[tokio::test]
-async fn a_closed_template_stays_closed_and_a_retired_one_takes_no_revision() {
+async fn publishing_reopens_a_closed_template_and_a_retired_one_takes_no_revision() {
     let db = db_or_skip!();
     let admin = seed_admin(&db.pool, "admin").await;
     for id in ["closed-one", "retired-one"] {
@@ -252,7 +252,11 @@ async fn a_closed_template_stays_closed_and_a_retired_one_takes_no_revision() {
     )
     .await
     .expect("a closed template takes a revision");
-    assert_eq!((closed.revision, closed.state), (2, TemplateState::Closed));
+    assert_eq!(
+        (closed.revision, closed.state),
+        (2, TemplateState::Published),
+        "publishing reopens it"
+    );
     let retired = library::publish(
         &db.pool,
         &draft("retired-one", &["sales"], false, body("Retired, v2")),

@@ -299,10 +299,10 @@ test-unit:
 # round (the 0.54.0 pin-flip took five rounds for twenty). Every tier runs to
 # completion and the job lists every failure at once.
 #
-# Unit tests select their three crates explicitly. Database tiers use
+# Unit tests select their four crates explicitly. Database tiers use
 # --workspace to unify their broader feature set and reuse it across tiers.
 _test-unit-uncoordinated:
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p bridge-unit-tests
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p bridge-unit-tests -p dynwork-relay-unit-tests
     node --experimental-vm-modules --test tests/bridge/*.test.mjs
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
@@ -329,7 +329,7 @@ _test-integration-uncoordinated:
         echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
         exit 1
     fi
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-integration-tests) | package(web-integration-tests) | package(admin-db-core-tests) | package(admin-db-config-tests) | package(gateway-integration-tests) | package(harness-integration-tests) | package(schema-upgrade-tests)'
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-integration-tests) | package(web-integration-tests) | package(admin-db-core-tests) | package(admin-db-config-tests) | package(gateway-integration-tests) | package(harness-integration-tests) | package(schema-upgrade-tests) | package(dynwork-routines-integration-tests)'
 
 # Opt-in live smoke for the cross-harness matrix: one parallel-tool-call round
 # trip per provider through a running gateway (GATEWAY_URL, GATEWAY_PAT). Spends

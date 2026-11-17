@@ -11,6 +11,9 @@
 //! - the page's writes: pause, resume and delete without `If-Match`
 //! - the template library: publish validation, revisions and admin-only writes,
 //!   and `GET /templates` filtered by the anchor plugins' access rules
+//! - a task's link to a template: one live task per template, locked fields,
+//!   mandatory templates made unclaimed and never deleted, and closing and the
+//!   three retire modes
 
 #[cfg(test)]
 mod support;
@@ -33,5 +36,11 @@ mod template_feed;
 mod template_hint;
 #[cfg(test)]
 mod template_library;
+#[cfg(test)]
+mod template_links;
+#[cfg(test)]
+mod template_mandatory;
+#[cfg(test)]
+mod template_retire;
 #[cfg(test)]
 mod template_support;

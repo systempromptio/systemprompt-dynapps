@@ -4,7 +4,7 @@
 
 use axum::Router;
 use axum::body::Body;
-use axum::http::{Request, StatusCode};
+use axum::http::{Method, Request, StatusCode};
 use chrono::Utc;
 use dynwork_routines::library;
 use dynwork_routines::store::TemplateRecord;
@@ -15,7 +15,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use tower::ServiceExt;
 
-use crate::support::{desktop_token, seed_user};
+use crate::support::{Call, desktop_token, seed_user};
 
 pub(crate) async fn seed_admin(pool: &PgPool, name: &str) -> UserId {
     let admin = seed_user(pool, name).await;
@@ -75,6 +75,75 @@ pub(crate) async fn publish(
     .expect("publish the template")
 }
 
+pub(crate) async fn publish_body(
+    pool: &PgPool,
+    author: &UserId,
+    id: &str,
+    plugins: &[&str],
+    mandatory: bool,
+    body: Value,
+) -> TemplateRecord {
+    library::publish(
+        pool,
+        &draft(id, plugins, mandatory, body),
+        author,
+        Utc::now(),
+    )
+    .await
+    .expect("publish the template")
+}
+
+// A task activated from revision `revision` of a template with `body`'s
+// defaults, in the person's time zone, as DynWork's `activate` makes it.
+pub(crate) fn linked(name: &str, template: &str, revision: i64) -> Value {
+    json!({
+        "name": name,
+        "enabled": true,
+        "instructions": { "kind": "prompt", "text": "Review yesterday's Odoo activity" },
+        "agent": "build",
+        "schedule": { "cron": "0 8 * * 1-5", "timezone": "Europe/Madrid" },
+        "options": {
+            "permissions": "ask",
+            "connectors": ["dynapps-odoo"],
+            "timeLimit": 30,
+            "recover": "recent",
+            "catchUp": 6,
+            "notify": "failures",
+        },
+        "template": { "id": template, "revision": revision },
+    })
+}
+
+// Creates routine `id` of `who` on `mac-1` with `definition`.
+pub(crate) async fn activate(
+    router: &Router,
+    who: &str,
+    id: &str,
+    definition: Value,
+) -> (StatusCode, Value) {
+    Call::new(Method::PUT, format!("/routines/{id}"), who)
+        .body(json!({ "owner_device": "mac-1", "owner_name": "Laptop", "definition": definition }))
+        .send(router)
+        .await
+}
+
+// The template link columns of a routine, tombstone or not.
+pub(crate) async fn template_columns(
+    pool: &PgPool,
+    who: &str,
+    id: &str,
+) -> (Option<String>, Option<i64>) {
+    sqlx::query_as(
+        "SELECT template_id, template_revision FROM dynwork_routines
+         WHERE user_id = $1 AND id = $2",
+    )
+    .bind(who)
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .expect("read the routine's template columns")
+}
+
 // An anchor plugin as a catalogue entity closed by default, with one rule.
 pub(crate) async fn rule(pool: &PgPool, plugin: &str, rule_type: &str, value: &str, access: &str) {
     sqlx::query(
@@ -106,8 +175,8 @@ pub(crate) async fn drop_rules(pool: &PgPool, plugin: &str) {
         .expect("drop the plugin's rules");
 }
 
-// Why: phase 04 derives the two columns from `definition.template` on every
-// write; until then a test links a task by setting them.
+// Links a task by setting the two columns directly, without the checks a
+// `PUT` with `definition.template` goes through.
 pub(crate) async fn link(pool: &PgPool, who: &str, routine: &str, template: &str, revision: i64) {
     sqlx::query(
         "UPDATE dynwork_routines SET template_id = $3, template_revision = $4
