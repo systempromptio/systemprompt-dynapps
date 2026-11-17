@@ -20,6 +20,11 @@ use serde_json::Value;
 
 pub const CONFIG_PREFIX: &str = "dynwork-chats";
 
+/// The key core adds when it mounts an extension's router: it calls `validate_config` a second time with the profile's
+/// paths as `{"paths": ...}` instead of the config file's block. It is never one of our keys, so it is set aside before
+/// the strict check (without that the server refuses to start: "the chats config is not a valid block").
+const MOUNT_KEY: &str = "paths";
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ChatsConfig {
@@ -55,7 +60,11 @@ impl ChatsConfig {
         if block.is_null() {
             return Ok(Self::default());
         }
-        serde_json::from_value::<Self>(block.clone())?.checked()
+        let mut own = block.clone();
+        if let Value::Object(keys) = &mut own {
+            keys.remove(MOUNT_KEY);
+        }
+        serde_json::from_value::<Self>(own)?.checked()
     }
 
     pub async fn load(services_root: &Path) -> Result<Self, ConfigError> {

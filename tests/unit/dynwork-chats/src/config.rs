@@ -76,6 +76,28 @@ fn core_hands_the_block_as_json() {
     ));
 }
 
+#[test]
+fn the_block_core_hands_at_mount_time_is_accepted_and_its_typos_still_refused() {
+    // Core validates an extension twice: with the config file's block at startup, and with `{"paths": ...}` when it
+    // mounts the router. The second one made the server refuse to boot (found by the phase 11 run on a real instance).
+    let mount = json!({ "paths": { "system": "/app", "services": "/app/services" } });
+    assert_eq!(
+        ChatsConfig::from_json(&mount).expect("the mount-time block"),
+        ChatsConfig::default()
+    );
+    let with_setting = json!({ "paths": {}, "inactive_days": 15 });
+    assert_eq!(
+        ChatsConfig::from_json(&with_setting)
+            .expect("a block with a setting")
+            .inactive_days,
+        Some(15)
+    );
+    assert!(matches!(
+        ChatsConfig::from_json(&json!({ "paths": {}, "surprise": true })),
+        Err(ConfigError::Json(_))
+    ));
+}
+
 #[tokio::test]
 async fn load_reads_the_file_and_a_missing_file_is_the_default() {
     let root = services_root();
