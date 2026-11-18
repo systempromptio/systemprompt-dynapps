@@ -4,10 +4,13 @@
 //! All three are read from the secrets store on every use, so a change applies
 //! without a restart and never lands in `services/`. The tenant segment is
 //! `organizations` for the shared multi-tenant app or one tenant id for a
-//! customer's own app; `common` and `consumers` are refused because they admit
-//! personal Microsoft accounts. In shared mode the allow-list is mandatory; in
-//! dedicated mode it defaults to that one tenant. Every value is validated
-//! before it reaches a URL, so a secret cannot add a path, a query or a host.
+//! customer's own app. Personal Microsoft accounts are never admitted:
+//! `common`, `consumers` and the consumer tenant's own id ([`PERSONAL_TENANT`],
+//! shaped like any tenant id) are refused as the tenant, in the allow-list and
+//! as the `tid` of an ID token, all through [`admits_personal_accounts`]. In
+//! shared mode the allow-list is mandatory; in dedicated mode it defaults to
+//! that one tenant. Every value is validated before it reaches a URL, so a
+//! secret cannot add a path, a query or a host.
 
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use systemprompt::traits::SecretStore;
@@ -19,6 +22,12 @@ pub const ALLOWED_TENANTS_SECRET: &str = "microsoft_365_allowed_tenants";
 pub const AUTHORITY_SECRET: &str = "microsoft_365_authority";
 pub const PUBLIC_AUTHORITY: &str = "https://login.microsoftonline.com";
 pub const SHARED_TENANT: &str = "organizations";
+
+// Why: Entra signs personal Microsoft accounts into this tenant; shaped like
+// any tenant id, as a tenant segment it behaves like `consumers`.
+pub const PERSONAL_TENANT: &str = "9188040d-6c67-4c5b-b112-36a304b66dad";
+
+const PERSONAL_SEGMENTS: [&str; 3] = ["common", "consumers", PERSONAL_TENANT];
 
 /// The Entra authority, tenant segment and admitted tenants of one instance.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,6 +90,17 @@ impl EntraTenancy {
 }
 
 pub fn tenant_id(value: &str) -> Option<String> {
+    guid(value).filter(|id| !admits_personal_accounts(id))
+}
+
+pub fn admits_personal_accounts(value: &str) -> bool {
+    let value = value.trim();
+    PERSONAL_SEGMENTS
+        .iter()
+        .any(|segment| value.eq_ignore_ascii_case(segment))
+}
+
+pub(super) fn guid(value: &str) -> Option<String> {
     let id = value.trim().to_ascii_lowercase();
     let shaped = id.split('-').map(str::len).eq([8, 4, 4, 4, 12])
         && id
@@ -104,6 +124,9 @@ fn tenant_segment(value: &str) -> AdminResult<String> {
     if value.eq_ignore_ascii_case(SHARED_TENANT) {
         return Ok(SHARED_TENANT.to_owned());
     }
+    if admits_personal_accounts(value) {
+        return Err(personal_accounts_refused(TENANT_SECRET));
+    }
     tenant_id(value).ok_or_else(|| {
         AdminError::Unavailable(format!(
             "{TENANT_SECRET} must be `{SHARED_TENANT}` or a tenant id"
@@ -116,6 +139,9 @@ fn allow_list(value: &str) -> AdminResult<Vec<String>> {
         .split(|c: char| c == ',' || c.is_whitespace())
         .filter(|entry| !entry.is_empty())
         .map(|entry| {
+            if admits_personal_accounts(entry) {
+                return Err(personal_accounts_refused(ALLOWED_TENANTS_SECRET));
+            }
             tenant_id(entry).ok_or_else(|| {
                 AdminError::Unavailable(format!(
                     "{ALLOWED_TENANTS_SECRET} holds a value that is not a tenant id"
@@ -123,6 +149,13 @@ fn allow_list(value: &str) -> AdminResult<Vec<String>> {
             })
         })
         .collect()
+}
+
+fn personal_accounts_refused(secret: &str) -> AdminError {
+    AdminError::Unavailable(format!(
+        "{secret} names a tenant that admits personal Microsoft accounts, which are not \
+         supported; use an organization's tenant id"
+    ))
 }
 
 fn authority(value: &str) -> AdminResult<Url> {

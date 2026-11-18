@@ -7,17 +7,21 @@
 //! identity, whose tenant `entra::reconcile` re-checks against the allow-list
 //! every time the grant is opened. The issuer must be the authority of the
 //! token endpoint for exactly that tenant, and the audience the instance's
-//! client id, so an ID token for another tenant or another app is refused. A
-//! refused token wipes the access and refresh tokens from the grant before the
-//! failure is returned, so nothing of it can be stored.
+//! client id, so an ID token for another tenant or another app is refused, and
+//! so is one of a personal Microsoft account. A refused token wipes the access
+//! and refresh tokens from the grant before the failure is returned, so nothing
+//! of it can be stored, and the refusal is logged with the tenant id the token
+//! claimed: tenant ids are not secrets, while tokens and usernames never reach
+//! the log.
 
 use super::Grant;
-use super::entra_tenancy::{SHARED_TENANT, tenant_id};
+use super::entra_tenancy::{SHARED_TENANT, admits_personal_accounts, guid, tenant_id};
 use super::failure::{FailureKind, FlowFailure, FlowResult};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Utc;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use std::time::Instant;
 use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
@@ -41,6 +45,11 @@ struct Claims {
     email: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct ClaimedTenant {
+    tid: String,
+}
+
 /// The Microsoft 365 account an ID token vouches for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EntraIdentity {
@@ -60,6 +69,7 @@ pub enum EntraRefusal {
     Subject,
     Changed,
     NotAllowed,
+    Personal,
 }
 
 impl EntraRefusal {
@@ -73,12 +83,14 @@ impl EntraRefusal {
             Self::Subject => "subject_missing",
             Self::Changed => "identity_changed",
             Self::NotAllowed => "tenant_not_allowed",
+            Self::Personal => "personal_account",
         }
     }
 
     const fn message(self) -> &'static str {
         match self {
             Self::NotAllowed => "this Microsoft 365 tenant is not allowed on this instance",
+            Self::Personal => "personal Microsoft accounts are not supported on this instance",
             Self::Changed => "the refreshed token names another tenant or user",
             _ => "Microsoft 365 returned an ID token that does not match this connector",
         }
@@ -95,10 +107,13 @@ pub fn identity(
     client: &str,
     now: i64,
 ) -> Result<EntraIdentity, EntraRefusal> {
-    let claims = decode(id_token).ok_or(EntraRefusal::Undecodable)?;
+    let claims = decode::<Claims>(id_token).ok_or(EntraRefusal::Undecodable)?;
     let endpoint = Url::parse(token_endpoint)
         .ok()
         .ok_or(EntraRefusal::Issuer)?;
+    if admits_personal_accounts(&claims.tid) {
+        return Err(EntraRefusal::Personal);
+    }
     let tenant = tenant_id(&claims.tid).ok_or(EntraRefusal::Tenant)?;
     let segment = endpoint
         .path_segments()
@@ -134,7 +149,7 @@ pub fn identity(
     })
 }
 
-fn decode(id_token: &str) -> Option<Claims> {
+fn decode<T: DeserializeOwned>(id_token: &str) -> Option<T> {
     let mut parts = id_token.split('.');
     let payload = parts.nth(1)?;
     if parts.count() != 1 {
@@ -150,15 +165,19 @@ pub(super) fn admit(grant: &mut Grant, id_token: Option<&str>, refreshing: bool)
         return if refreshing && recorded {
             Ok(())
         } else {
-            Err(refuse(grant, refreshing, EntraRefusal::Undecodable))
+            Err(refuse(grant, refreshing, EntraRefusal::Undecodable, None))
         };
     };
     let now = Utc::now().timestamp();
     let checked = identity(id_token, &grant.token_endpoint, &grant.client, now);
-    let identity = checked.map_err(|refusal| refuse(grant, refreshing, refusal))?;
+    let identity = checked.map_err(|refusal| {
+        let claimed = claimed_tenant(id_token);
+        refuse(grant, refreshing, refusal, claimed.as_deref())
+    })?;
     let changed = identity.tenant != grant.resource_id || identity.account != grant.account_id;
     if refreshing && changed {
-        return Err(refuse(grant, refreshing, EntraRefusal::Changed));
+        let claimed = Some(identity.tenant.as_str());
+        return Err(refuse(grant, refreshing, EntraRefusal::Changed, claimed));
     }
     grant.resource_id = identity.tenant;
     grant.account_id = identity.account;
@@ -167,9 +186,18 @@ pub(super) fn admit(grant: &mut Grant, id_token: Option<&str>, refreshing: bool)
     Ok(())
 }
 
-pub(super) fn refuse(grant: &mut Grant, refreshing: bool, refusal: EntraRefusal) -> FlowFailure {
+fn claimed_tenant(id_token: &str) -> Option<String> {
+    decode::<ClaimedTenant>(id_token).and_then(|claimed| guid(&claimed.tid))
+}
+
+pub(super) fn refuse(
+    grant: &mut Grant,
+    refreshing: bool,
+    refusal: EntraRefusal,
+    tenant: Option<&str>,
+) -> FlowFailure {
     tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
-        stage = "token", reason = refusal.code(), refreshing, "Entra ID token refused");
+        stage = "token", reason = refusal.code(), tenant, refreshing, "Entra ID token refused");
     wipe(grant);
     FlowFailure {
         kind: if refreshing {

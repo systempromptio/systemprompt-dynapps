@@ -108,6 +108,26 @@ pub fn seal(secrets: &dyn SecretStore, grant: &Grant) -> AdminResult<EncryptedGr
     })
 }
 
+/// A sealed grant that did not open. `withdrawn` marks one that can never open
+/// again under the current configuration, a Microsoft 365 grant whose tenant
+/// left the allow-list, so the broker deletes it instead of keeping its sealed
+/// refresh token.
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct Unopened {
+    pub error: AdminError,
+    pub withdrawn: bool,
+}
+
+impl From<AdminError> for Unopened {
+    fn from(error: AdminError) -> Self {
+        Self {
+            error,
+            withdrawn: false,
+        }
+    }
+}
+
 pub fn open(
     services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
     secrets: &dyn SecretStore,
@@ -115,6 +135,29 @@ pub fn open(
     user: &UserId,
     provider: &Provider,
 ) -> AdminResult<Grant> {
+    open_sealed(services, secrets, row, user, provider).map_err(|unopened| unopened.error)
+}
+
+#[doc(hidden)]
+pub fn open_sealed(
+    services: &systemprompt_web_admin_core::extension_services::ExtensionServices,
+    secrets: &dyn SecretStore,
+    row: &EncryptedGrant,
+    user: &UserId,
+    provider: &Provider,
+) -> Result<Grant, Unopened> {
+    let mut grant = unseal(secrets, row)?;
+    if !grant_bound_to(&grant, user, provider) {
+        return Err(AdminError::Forbidden("Connector credential owner mismatch".into()).into());
+    }
+    generic::validate_grant(services, &grant)?;
+    if entra::is_entra(&services.config(), &grant.provider) {
+        entra::reconcile(secrets, &mut grant)?;
+    }
+    Ok(grant)
+}
+
+fn unseal(secrets: &dyn SecretStore, row: &EncryptedGrant) -> AdminResult<Grant> {
     let key = secret_crypto::load_master_key(secrets)?;
     let nonce = row
         .nonce
@@ -122,17 +165,7 @@ pub fn open(
         .try_into()
         .map_err(AdminError::internal)?;
     let bytes = secret_crypto::decrypt(&key, &nonce, &row.ciphertext)?;
-    let mut grant: Grant = serde_json::from_slice(&bytes).map_err(AdminError::internal)?;
-    if !grant_bound_to(&grant, user, provider) {
-        return Err(AdminError::Forbidden(
-            "Connector credential owner mismatch".into(),
-        ));
-    }
-    generic::validate_grant(services, &grant)?;
-    if entra::is_entra(&services.config(), &grant.provider) {
-        entra::reconcile(secrets, &mut grant)?;
-    }
-    Ok(grant)
+    serde_json::from_slice(&bytes).map_err(AdminError::internal)
 }
 
 fn grant_bound_to(grant: &Grant, user: &UserId, provider: &Provider) -> bool {

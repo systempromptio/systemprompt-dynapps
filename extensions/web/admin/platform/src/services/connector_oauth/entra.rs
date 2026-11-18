@@ -11,12 +11,15 @@
 //! the PKCE verifier. The v2.0 token endpoint rejects `resource`, so the form
 //! carries `scope` instead. The tenant of every token is checked twice: its ID
 //! token on exchange and refresh ([`super::entra_claims`]), and the recorded
-//! tenant against the current allow-list each time the grant is opened.
+//! tenant against the current allow-list each time a grant holding an access
+//! or a refresh token is opened. A grant whose tenant is off the list is
+//! withdrawn: the broker deletes it, so its sealed refresh token does not
+//! outlive the decision.
 
 use super::entra_claims::{EntraRefusal, refuse, wipe};
 use super::entra_tenancy::{EntraTenancy, is_tenant_segment};
 use super::failure::{FailureKind, FlowFailure, FlowResult};
-use super::{ConnectorAccess, Consent, Grant, Provider, config};
+use super::{ConnectorAccess, Consent, Grant, Provider, Unopened, config};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use sha2::{Digest, Sha256};
@@ -222,22 +225,34 @@ fn client_id(secrets: &dyn SecretStore) -> AdminResult<String> {
     config::secret(secrets, CLIENT_ID_SECRET).map(|id| id.trim().to_ascii_lowercase())
 }
 
-pub(super) fn reconcile(secrets: &dyn SecretStore, grant: &mut Grant) -> AdminResult<()> {
+pub(super) fn reconcile(secrets: &dyn SecretStore, grant: &mut Grant) -> Result<(), Unopened> {
     let tenancy = EntraTenancy::load(secrets)?;
     let client = client_id(secrets)?;
     if grant.token_endpoint != tenancy.token_url().as_str() || grant.client != client {
         return Err(AdminError::Unauthorized(
             "Connector configuration changed; reconnect required".into(),
-        ));
+        )
+        .into());
     }
-    let holds_tokens = !grant.access_token.is_empty();
+    let holds_tokens = !grant.access_token.is_empty() || grant.refresh_token.is_some();
     if holds_tokens && !tenancy.admits(&grant.resource_id) {
-        return Err(AdminError::Unauthorized(
-            "Microsoft 365 tenant is not allowed on this instance; reconnect required".into(),
-        ));
+        return Err(withdraw(grant));
     }
     grant.client_secret = config::secret(secrets, CLIENT_SECRET_SECRET)?;
     Ok(())
+}
+
+fn withdraw(grant: &mut Grant) -> Unopened {
+    tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
+        stage = "open", reason = EntraRefusal::NotAllowed.code(), tenant = grant.resource_id.as_str(),
+        "Microsoft 365 grant withdrawn: its tenant is off the allow-list");
+    wipe(grant);
+    Unopened {
+        error: AdminError::Unauthorized(
+            "Microsoft 365 tenant is not allowed on this instance; reconnect required".into(),
+        ),
+        withdrawn: true,
+    }
 }
 
 pub(super) fn allow_list_unavailable() -> FlowFailure {
@@ -252,7 +267,15 @@ pub(super) fn allow_list_unavailable() -> FlowFailure {
 pub(super) fn admit_tenant(secrets: &dyn SecretStore, grant: &mut Grant) -> FlowResult<()> {
     match EntraTenancy::load(secrets) {
         Ok(tenancy) if tenancy.admits(&grant.resource_id) => Ok(()),
-        Ok(_) => Err(refuse(grant, false, EntraRefusal::NotAllowed)),
+        Ok(_) => {
+            let tenant = grant.resource_id.clone();
+            Err(refuse(
+                grant,
+                false,
+                EntraRefusal::NotAllowed,
+                Some(&tenant),
+            ))
+        },
         Err(error) => {
             wipe(grant);
             Err(FlowFailure {

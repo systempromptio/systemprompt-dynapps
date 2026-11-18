@@ -130,21 +130,25 @@ Everything per instance lives in the secrets store, never in `services/`:
 | --- | --- | --- |
 | `microsoft_365_client_id` | yes | Application (client) id of the Entra app |
 | `microsoft_365_client_secret` | yes | Its client secret value |
-| `microsoft_365_tenant` | no | `organizations` (default: the shared multi-tenant app) or one tenant id (a customer's own app). `common` and `consumers` are refused: they admit personal accounts |
-| `microsoft_365_allowed_tenants` | shared mode | Tenant ids admitted on this instance, separated by commas or spaces. Defaults to `microsoft_365_tenant` when that names a tenant, and must include it |
+| `microsoft_365_tenant` | no | `organizations` (default: the shared multi-tenant app) or one tenant id (a customer's own app). `common`, `consumers` and the personal-accounts tenant id `9188040d-6c67-4c5b-b112-36a304b66dad` are refused: they admit personal accounts |
+| `microsoft_365_allowed_tenants` | shared mode | Tenant ids admitted on this instance, separated by commas or spaces. Defaults to `microsoft_365_tenant` when that names a tenant, and must include it. The personal-accounts tenant id is refused |
 | `microsoft_365_authority` | no | Authority origin, default `https://login.microsoftonline.com`; set it for a simulated Entra or a cloud whose ID tokens are issued by that same host (`https://login.microsoftonline.us`). HTTPS origin only. Azure China, whose issuer host differs from its authority, is not supported |
 
 The tenant is checked on the ID token Entra returns beside every access
 token, read without its signature because it comes straight from the pinned
 token endpoint over TLS (OpenID Connect Core §3.1.3.7). Its issuer must be
-`{authority}/{tid}/v2.0`, its audience the client id, and on the exchange its
-`tid` must be on the allow-list; a refusal wipes the tokens, so nothing is
-stored. A refresh that returns an ID token must name the same tenant and
+`{authority}/{tid}/v2.0`, its audience the client id, its `tid` never the
+personal-accounts tenant, and on the exchange its `tid` must be on the
+allow-list; a refusal wipes the tokens, so nothing is stored, and is logged
+with the `tid` the token claimed and the reason (never a token or username). A refresh that returns an ID token must name the same tenant and
 user, or the grant is dropped; one that returns none keeps the recorded
 tenant and user. Every time a saved grant is opened, its token endpoint and client id
 must match the current secrets and its tenant must still be on the
-allow-list; otherwise the account flips to *Reconnect required*. Removing a
-tenant from the list therefore cuts its users off at their next MCP call.
+allow-list; otherwise the account flips to *Reconnect required*. A grant
+whose tenant left the list, whether it holds an access token or only a refresh
+token, is also deleted in that commit, so its sealed refresh token does not
+stay. Removing a tenant from the list therefore cuts its users off at their
+next MCP call.
 Rotating `microsoft_365_client_secret` needs no reconnection: the current
 value is used on every refresh. The token endpoint's host is pinned to the
 configured authority when the grant is opened; the generic `exchange` entry

@@ -2,8 +2,9 @@
 //! (`tests/fixtures/oauth/entra.py`, loopback TLS): the exchange records the
 //! tenant and user from the ID token and the token request never carries
 //! `resource`; a refresh keeps the same tenant and user; a foreign tenant, a
-//! forged issuer, a missing ID token or a refresh that switches tenant is
-//! refused with its tokens wiped; and the generic exchange, which has no
+//! forged issuer, a missing ID token, a personal Microsoft account or a
+//! refresh that switches tenant is refused with its tokens wiped, and the
+//! refused tenant id is logged; and the generic exchange, which has no
 //! allow-list, refuses an Entra grant outright.
 
 use std::io::{BufRead, BufReader};
@@ -17,7 +18,8 @@ use systemprompt_web_admin_platform::connector_oauth::{
 };
 
 use crate::connector_entra::{
-    CALLBACK, Secrets, TENANT_A, TENANT_B, authorize, provider, services, tenant_secrets,
+    CALLBACK, Capture, PERSONAL, Secrets, TENANT_A, TENANT_B, authorize, provider, services,
+    tenant_secrets,
 };
 
 struct Entra {
@@ -135,6 +137,43 @@ async fn entra_exchange_refuses_a_tenant_outside_the_allow_list() {
     let error = outcome.unwrap_err().to_string();
     assert!(error.contains("not allowed on this instance"), "{error}");
     assert!(wiped(&grant), "nothing of a refused tenant can be stored");
+}
+
+#[tokio::test]
+async fn entra_exchange_refusal_logs_the_refused_tenant_id() {
+    let entra = simulated_entra();
+    let services = services();
+    let secrets = tenant_secrets(Some(&entra.origin), TENANT_A);
+    let capture = Capture::default();
+    let scope = tracing::subscriber::set_default(capture.clone());
+    let (grant, outcome) = exchanged(&entra, &services, &secrets, "code-other-tenant").await;
+    drop(scope);
+    assert!(outcome.is_err() && wiped(&grant));
+    assert_eq!(
+        capture.refused_tenant("tenant_not_allowed").as_deref(),
+        Some(TENANT_B),
+        "operators can tell which tenant tried"
+    );
+    capture.assert_never_logged(&["graph-access", "refresh-b", "ana@contoso.example"]);
+}
+
+#[tokio::test]
+async fn entra_exchange_refuses_a_personal_microsoft_account() {
+    let entra = simulated_entra();
+    let services = services();
+    let secrets = tenant_secrets(Some(&entra.origin), TENANT_A);
+    let capture = Capture::default();
+    let scope = tracing::subscriber::set_default(capture.clone());
+    let (grant, outcome) = exchanged(&entra, &services, &secrets, "code-personal").await;
+    drop(scope);
+    let error = outcome.unwrap_err().to_string();
+    assert!(error.contains("personal Microsoft accounts"), "{error}");
+    assert!(wiped(&grant) && grant.resource_id.is_empty());
+    assert_eq!(
+        capture.refused_tenant("personal_account").as_deref(),
+        Some(PERSONAL)
+    );
+    capture.assert_never_logged(&["graph-access", "refresh-personal", "ana@contoso.example"]);
 }
 
 #[tokio::test]

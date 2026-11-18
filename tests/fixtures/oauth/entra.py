@@ -36,6 +36,8 @@ SECRET = "entra-secret"
 TENANT_A = "11111111-1111-4111-8111-111111111111"
 TENANT_B = "22222222-2222-4222-8222-222222222222"
 OID = "0000aaaa-0000-4000-8000-00000000aaaa"
+# The tenant Entra signs personal Microsoft accounts into.
+PERSONAL = "9188040d-6c67-4c5b-b112-36a304b66dad"
 TOKEN_PATH = re.compile(r"^/(organizations|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/oauth2/v2\.0/token$")
 
 # code or refresh token -> (tid claim, tenant named in iss, next refresh token)
@@ -45,6 +47,7 @@ CODES = {
     "code-forged-issuer": (TENANT_A, TENANT_B, "refresh-forged"),
     "code-no-id-token": (None, None, "refresh-none"),
     "code-no-token-type": (TENANT_A, TENANT_A, "refresh-untyped"),
+    "code-personal": (PERSONAL, PERSONAL, "refresh-personal"),
 }
 REFRESHES = {
     "refresh-a": (TENANT_A, TENANT_A, "refresh-a2"),

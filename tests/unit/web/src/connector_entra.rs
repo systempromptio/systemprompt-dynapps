@@ -3,11 +3,14 @@
 //! tenant endpoint, PKCE S256 and the Graph scopes, its tenant secrets cannot
 //! steer a URL, an ID token is admitted only for its own issuer, tenant and
 //! client, and a sealed grant stops opening once its tenant leaves the
-//! allow-list. The token round trips against a simulated Entra live in
-//! `connector_entra_flow`.
+//! allow-list, whether it holds an access token or only a refresh token, and
+//! is then marked for deletion. The tenant of personal Microsoft accounts is
+//! refused by name and by id, wherever it appears, and a refused tenant is
+//! logged by its id with no token or email beside it. The token round trips
+//! against a simulated Entra live in `connector_entra_flow`.
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use base64::Engine;
@@ -17,15 +20,22 @@ use systemprompt::identifiers::UserId;
 use systemprompt::traits::{
     ExtensionSecret, ReloadOutcome, SECRET_SEED_BYTES, SecretStore, SecretStoreError, SecretsStatus,
 };
+use systemprompt_web_admin_core::error::AdminError;
 use systemprompt_web_admin_core::extension_services::ExtensionServices;
 use systemprompt_web_admin_platform::connector_oauth::entra_claims::{EntraRefusal, identity};
-use systemprompt_web_admin_platform::connector_oauth::entra_tenancy::EntraTenancy;
+use systemprompt_web_admin_platform::connector_oauth::entra_tenancy::{EntraTenancy, tenant_id};
 use systemprompt_web_admin_platform::connector_oauth::{
-    ConnectorAccess, Consent, Grant, Provider, entra, generic, open, seal,
+    ConnectorAccess, Consent, Grant, Provider, entra, generic, open, open_sealed, seal,
 };
+use tracing::field::{Field, Visit};
+use tracing::span::{Attributes, Id, Record};
+use tracing::{Event, Metadata, Subscriber};
 
 pub(crate) const TENANT_A: &str = "11111111-1111-4111-8111-111111111111";
 pub(crate) const TENANT_B: &str = "22222222-2222-4222-8222-222222222222";
+// The tenant Entra signs personal Microsoft accounts into: shaped like any
+// tenant id, it behaves like `consumers`.
+pub(crate) const PERSONAL: &str = "9188040d-6c67-4c5b-b112-36a304b66dad";
 pub(crate) const CLIENT: &str = "entra-client";
 pub(crate) const CLIENT_SECRET: &str = "entra-secret";
 pub(crate) const CALLBACK: &str =
@@ -120,6 +130,84 @@ pub(crate) fn services() -> ExtensionServices {
 
 pub(crate) fn provider() -> Provider {
     Provider::try_from("microsoft-365".to_owned()).unwrap()
+}
+
+// Every event emitted while it is the thread's subscriber, as field name to
+// rendered value, plus the event's `target`.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Capture(Arc<Mutex<Vec<BTreeMap<String, String>>>>);
+
+#[derive(Debug, Default)]
+struct Fields(BTreeMap<String, String>);
+
+impl Visit for Fields {
+    fn record_str(&mut self, field: &Field, value: &str) {
+        self.0.insert(field.name().to_owned(), value.to_owned());
+    }
+    fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
+        self.0.insert(field.name().to_owned(), format!("{value:?}"));
+    }
+}
+
+impl Subscriber for Capture {
+    fn enabled(&self, _: &Metadata<'_>) -> bool {
+        true
+    }
+    fn new_span(&self, _: &Attributes<'_>) -> Id {
+        Id::from_u64(1)
+    }
+    fn record(&self, _: &Id, _: &Record<'_>) {}
+    fn record_follows_from(&self, _: &Id, _: &Id) {}
+    fn event(&self, event: &Event<'_>) {
+        let mut fields = Fields::default();
+        event.record(&mut fields);
+        fields
+            .0
+            .insert("target".to_owned(), event.metadata().target().to_owned());
+        self.0.lock().unwrap().push(fields.0);
+    }
+    fn enter(&self, _: &Id) {}
+    fn exit(&self, _: &Id) {}
+}
+
+impl Capture {
+    // The `tenant` logged beside the first `connector_oauth` refusal with
+    // this reason code.
+    pub(crate) fn refused_tenant(&self, reason: &str) -> Option<String> {
+        let events = self.0.lock().unwrap().clone();
+        events
+            .into_iter()
+            .filter(|event| event.get("target").map(String::as_str) == Some("connector_oauth"))
+            .find(|event| event.get("reason").map(String::as_str) == Some(reason))
+            .and_then(|mut event| event.remove("tenant"))
+    }
+
+    // Panics if any captured field carries one of these values.
+    pub(crate) fn assert_never_logged(&self, values: &[&str]) {
+        let events = self.0.lock().unwrap().clone();
+        for event in &events {
+            for value in values {
+                assert!(
+                    event.values().all(|field| !field.contains(value)),
+                    "{value} was logged: {event:?}"
+                );
+            }
+        }
+    }
+}
+
+fn connected_grant(services: &ExtensionServices, secrets: &Secrets) -> Grant {
+    let (_, mut grant) = authorize(services, secrets, "test-state");
+    grant.access_token = "graph-access".into();
+    grant.refresh_token = Some("sealed-refresh".into());
+    grant.resource_id = TENANT_A.into();
+    grant.account_id = "user-object-id".into();
+    grant.account_name = "ana@contoso.example".into();
+    grant
+}
+
+fn load_error(store: &Secrets) -> String {
+    EntraTenancy::load(store).unwrap_err().to_string()
 }
 
 pub(crate) fn authorize(
@@ -416,7 +504,7 @@ fn entra_grant_stops_opening_when_its_tenant_leaves_the_allow_list() {
     let removed = tenant_secrets(None, TENANT_B);
     assert!(matches!(
         open(&services, &removed, &sealed, &user, &provider()),
-        Err(systemprompt_web_admin_core::error::AdminError::Unauthorized(_))
+        Err(AdminError::Unauthorized(_))
     ));
     let other_app = secrets(&[
         ("microsoft_365_client_id", "another-app"),
@@ -424,6 +512,138 @@ fn entra_grant_stops_opening_when_its_tenant_leaves_the_allow_list() {
         ("microsoft_365_allowed_tenants", TENANT_A),
     ]);
     assert!(open(&services, &other_app, &sealed, &user, &provider()).is_err());
+}
+
+#[test]
+fn entra_personal_account_tenant_is_refused_as_tenant_and_in_the_allow_list() {
+    let upper = PERSONAL.to_ascii_uppercase();
+    for personal in [PERSONAL, upper.as_str()] {
+        let configured = secrets(&[
+            ("microsoft_365_tenant", personal),
+            ("microsoft_365_allowed_tenants", personal),
+        ]);
+        let error = load_error(&configured);
+        assert!(error.contains("personal Microsoft accounts"), "{error}");
+        let alone = secrets(&[("microsoft_365_tenant", personal)]);
+        let error = load_error(&alone);
+        assert!(error.contains("personal Microsoft accounts"), "{error}");
+        let listed = format!("{TENANT_A}, {personal}");
+        let error = load_error(&secrets(&[(
+            "microsoft_365_allowed_tenants",
+            listed.as_str(),
+        )]));
+        assert!(error.contains("personal Microsoft accounts"), "{error}");
+        assert_eq!(tenant_id(personal), None, "{personal} is no tenant id");
+    }
+    for name in ["common", "consumers", "Consumers"] {
+        let error = load_error(&secrets(&[
+            ("microsoft_365_tenant", name),
+            ("microsoft_365_allowed_tenants", TENANT_A),
+        ]));
+        assert!(error.contains("personal Microsoft accounts"), "{error}");
+    }
+    assert_eq!(tenant_id(TENANT_A).as_deref(), Some(TENANT_A));
+}
+
+#[test]
+fn entra_id_token_of_a_personal_account_is_refused() {
+    let now = chrono::Utc::now().timestamp();
+    let upper = PERSONAL.to_ascii_uppercase();
+    let dedicated = format!("https://login.microsoftonline.com/{PERSONAL}/oauth2/v2.0/token");
+    for tid in [PERSONAL, upper.as_str()] {
+        for endpoint in [PUBLIC_TOKEN, dedicated.as_str()] {
+            let refused = identity(&jwt(&claims(tid, tid)), endpoint, CLIENT, now);
+            assert_eq!(
+                refused.map_err(EntraRefusal::code),
+                Err("personal_account"),
+                "{tid} at {endpoint}"
+            );
+        }
+    }
+}
+
+#[test]
+fn entra_grant_holding_only_a_refresh_token_stops_opening_when_its_tenant_leaves() {
+    let services = services();
+    let admitted = tenant_secrets(None, TENANT_A);
+    let user = UserId::new("entra-user");
+    let mut grant = connected_grant(&services, &admitted);
+    grant.access_token.clear();
+    let sealed = seal(&admitted, &grant).unwrap();
+    assert!(open(&services, &admitted, &sealed, &user, &provider()).is_ok());
+    let removed = tenant_secrets(None, TENANT_B);
+    assert!(
+        matches!(
+            open(&services, &removed, &sealed, &user, &provider()),
+            Err(AdminError::Unauthorized(_))
+        ),
+        "a refresh token alone is a live grant"
+    );
+}
+
+#[test]
+fn entra_tenant_removed_from_the_allow_list_marks_the_grant_for_deletion() {
+    let services = services();
+    let admitted = tenant_secrets(None, TENANT_A);
+    let user = UserId::new("entra-user");
+    let sealed = seal(&admitted, &connected_grant(&services, &admitted)).unwrap();
+    let removed = tenant_secrets(None, TENANT_B);
+    let withdrawn = open_sealed(&services, &removed, &sealed, &user, &provider()).unwrap_err();
+    assert!(
+        withdrawn.withdrawn,
+        "the sealed refresh token must not stay"
+    );
+    assert!(matches!(withdrawn.error, AdminError::Unauthorized(_)));
+    let other_app = secrets(&[
+        ("microsoft_365_client_id", "another-app"),
+        ("microsoft_365_client_secret", CLIENT_SECRET),
+        ("microsoft_365_allowed_tenants", TENANT_A),
+    ]);
+    let changed = open_sealed(&services, &other_app, &sealed, &user, &provider()).unwrap_err();
+    assert!(
+        !changed.withdrawn && matches!(changed.error, AdminError::Unauthorized(_)),
+        "a configuration change keeps the grant for the reconnect"
+    );
+    let unlisted = secrets(&[
+        ("microsoft_365_client_id", CLIENT),
+        ("microsoft_365_client_secret", CLIENT_SECRET),
+    ]);
+    assert!(
+        !open_sealed(&services, &unlisted, &sealed, &user, &provider())
+            .unwrap_err()
+            .withdrawn,
+        "a missing allow-list is a configuration fault, not a withdrawal"
+    );
+    let (_, pending) = authorize(&services, &admitted, "test-state");
+    let pending = seal(&admitted, &pending).unwrap();
+    assert!(
+        open_sealed(&services, &removed, &pending, &user, &provider()).is_ok(),
+        "a pending consent holds no token to withdraw"
+    );
+}
+
+#[test]
+fn entra_withdrawn_tenant_is_logged_by_id_without_tokens_or_email() {
+    let services = services();
+    let admitted = tenant_secrets(None, TENANT_A);
+    let user = UserId::new("entra-user");
+    let sealed = seal(&admitted, &connected_grant(&services, &admitted)).unwrap();
+    let removed = tenant_secrets(None, TENANT_B);
+    let capture = Capture::default();
+    let opened = tracing::subscriber::with_default(capture.clone(), || {
+        open(&services, &removed, &sealed, &user, &provider())
+    });
+    assert!(opened.is_err());
+    assert_eq!(
+        capture.refused_tenant("tenant_not_allowed").as_deref(),
+        Some(TENANT_A)
+    );
+    capture.assert_never_logged(&[
+        "graph-access",
+        "sealed-refresh",
+        "ana@contoso.example",
+        CLIENT_SECRET,
+    ]);
 }
 
 #[test]
