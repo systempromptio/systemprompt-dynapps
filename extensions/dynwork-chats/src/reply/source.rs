@@ -20,10 +20,10 @@ use crate::store::ModelRef;
 /// Which model answers a request, and which models a chat can pick.
 ///
 /// Core hands each request the instance's AI service (wrapped as a
-/// [`GatewayModel`] by the handler, `None` when the instance has none);
-/// production answers with it, a suite with its fake. `list` is `None` when
-/// there is no AI service to list from. `#[async_trait]` because the chats
-/// state holds it as `Arc<dyn ModelSource>`.
+/// [`GatewayModel`](crate::reply::model::GatewayModel) by the handler, `None`
+/// when the instance has none); production answers with it, a suite with its
+/// fake. `list` is `None` when there is no AI service to list from.
+/// `#[async_trait]` because the chats state holds it as `Arc<dyn ModelSource>`.
 #[async_trait]
 pub trait ModelSource: Send + Sync + fmt::Debug {
     fn pick(&self, gateway: Option<Arc<dyn ReplyModel>>) -> Option<Arc<dyn ReplyModel>>;
