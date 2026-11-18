@@ -19,6 +19,8 @@ pub enum ChatsError {
     Auth(#[from] AuthError),
     #[error("the device credential could not be checked")]
     Devices(#[from] dynwork_relay::store::StoreError),
+    #[error("the user's roles could not be read")]
+    Users(#[from] systemprompt::traits::auth::AuthProviderError),
     #[error("bad request: {0}")]
     BadRequest(&'static str),
     #[error("the body is not valid JSON of the expected shape")]
@@ -35,6 +37,8 @@ pub enum ChatsError {
     IdTaken,
     #[error("a reply is already running in this thread")]
     Busy,
+    #[error("the instance's rules do not allow this user that model")]
+    ModelNotAllowed,
     #[error("no model service is available on this instance")]
     AiUnavailable,
 }
@@ -53,7 +57,8 @@ impl ChatsError {
             Self::IdTaken => "id_taken",
             Self::Busy => "busy",
             Self::AiUnavailable => "ai_unavailable",
-            Self::Store(_) | Self::Devices(_) => "internal",
+            Self::ModelNotAllowed => "model_not_allowed",
+            Self::Store(_) | Self::Devices(_) | Self::Users(_) => "internal",
         }
     }
 
@@ -66,7 +71,8 @@ impl ChatsError {
             Self::PreconditionRequired => StatusCode::PRECONDITION_REQUIRED,
             Self::Conflict(_) | Self::IdTaken | Self::Busy => StatusCode::CONFLICT,
             Self::AiUnavailable => StatusCode::SERVICE_UNAVAILABLE,
-            Self::Store(_) | Self::Devices(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::ModelNotAllowed => StatusCode::FORBIDDEN,
+            Self::Store(_) | Self::Devices(_) | Self::Users(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

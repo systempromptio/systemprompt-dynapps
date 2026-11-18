@@ -15,5 +15,6 @@ pub mod model;
 pub mod recover;
 pub mod registry;
 pub mod runner;
+pub mod source;
 pub mod start;
 pub mod tokens;

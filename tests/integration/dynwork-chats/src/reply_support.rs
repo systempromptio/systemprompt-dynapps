@@ -1,7 +1,7 @@
 //! A scripted model in place of the instance's AI service, the prompt and
 //! log calls, and a reader of the `/log` event stream.
 
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
@@ -9,18 +9,24 @@ use std::time::Duration;
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::{Method, StatusCode, header};
-use dynwork_chats::catalog::ModelInfo;
+use dynwork_chats::admission::{Admission, LazyHook};
+use dynwork_chats::auth::Caller;
+use dynwork_chats::catalog::Listing;
+use dynwork_chats::error::ChatsError;
 use dynwork_chats::ids::ThreadId;
 use dynwork_chats::reply::model::{
-    ChunkStream, ModelChunk, ModelSource, ReplyError, ReplyModel, ReplyRequest, Usage,
+    ChunkStream, ModelChunk, ReplyError, ReplyModel, ReplyRequest, Usage,
 };
+use dynwork_chats::reply::source::ModelSource;
 use dynwork_chats::store::ModelRef;
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use systemprompt::ai::AiService;
+use systemprompt::manifest::services::catalog::ResolvedCatalog;
 use tokio::sync::mpsc;
 
 use crate::http_support::{Answer, App, desktop_token};
+use crate::models_support::{self, FakeRoles};
 
 pub(crate) const WAIT: Duration = Duration::from_secs(5);
 
@@ -72,42 +78,43 @@ impl ReplyModel for FakeModel {
 pub(crate) struct FakeSource {
     model: Arc<FakeModel>,
     available: AtomicBool,
+    roles: Arc<FakeRoles>,
+    admission: Admission,
+    catalog: ResolvedCatalog,
 }
 
 impl FakeSource {
     pub(crate) fn new(model: Arc<FakeModel>) -> Self {
+        let roles = Arc::new(FakeRoles::default());
+        let held: BTreeSet<String> = ["anthropic", "deepseek"]
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect();
+        let admission = Admission::new(
+            Arc::new(move || held.clone()),
+            LazyHook::new(models_support::role_hook),
+            Arc::<FakeRoles>::clone(&roles),
+        );
         Self {
             model,
             available: AtomicBool::new(true),
+            roles,
+            admission,
+            catalog: models_support::catalog(),
         }
     }
 
     pub(crate) fn switch_off(&self) {
         self.available.store(false, Ordering::SeqCst);
     }
+
+    // The roles the instance's user table gives `user`; a user never set has none.
+    pub(crate) fn set_roles(&self, user: &str, roles: &[&str]) {
+        self.roles.set(user, roles);
+    }
 }
 
-pub(crate) fn listed_models() -> Vec<ModelInfo> {
-    vec![
-        ModelInfo {
-            id: "claude-sonnet".to_owned(),
-            name: "Claude Sonnet".to_owned(),
-            provider_id: "anthropic".to_owned(),
-            provider_name: "Anthropic".to_owned(),
-            reasoning: true,
-            tools: true,
-        },
-        ModelInfo {
-            id: "deepseek-chat".to_owned(),
-            name: "deepseek-chat".to_owned(),
-            provider_id: "deepseek".to_owned(),
-            provider_name: "deepseek".to_owned(),
-            reasoning: false,
-            tools: false,
-        },
-    ]
-}
-
+#[async_trait]
 impl ModelSource for FakeSource {
     fn pick(&self, gateway: Option<Arc<dyn ReplyModel>>) -> Option<Arc<dyn ReplyModel>> {
         assert!(gateway.is_none(), "no AI service is mounted in the suites");
@@ -115,9 +122,19 @@ impl ModelSource for FakeSource {
         self.available.load(Ordering::SeqCst).then_some(model)
     }
 
-    fn list(&self, ai: Option<&AiService>) -> Option<Vec<ModelInfo>> {
+    async fn list(
+        &self,
+        caller: &Caller,
+        ai: Option<&AiService>,
+    ) -> Result<Option<Listing>, ChatsError> {
         assert!(ai.is_none(), "no AI service is mounted in the suites");
-        self.available.load(Ordering::SeqCst).then(listed_models)
+        if !self.available.load(Ordering::SeqCst) {
+            return Ok(None);
+        }
+        self.admission
+            .listing(&self.catalog, caller)
+            .await
+            .map(Some)
     }
 }
 

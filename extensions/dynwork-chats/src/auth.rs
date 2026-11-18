@@ -17,13 +17,14 @@ use async_trait::async_trait;
 use axum::extract::FromRequestParts;
 use axum::http::HeaderMap;
 use axum::http::request::Parts;
-use dynwork_relay::auth::{bearer, verify_desktop};
+use dynwork_relay::auth::{DESKTOP_AUDIENCES, bearer, verify_desktop};
 use dynwork_relay::ids::{DeviceId, PeerId, PeerKind};
 use dynwork_relay::mobile_auth::jwt;
 use dynwork_relay::store::postgres::PgRelayStore;
 use dynwork_relay::store::{RelayStore, StoreError};
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{ClientId, SessionId, UserId};
+use systemprompt::models::auth::TokenAuthority;
 
 use crate::error::ChatsError;
 use crate::hint::caller_peer;
@@ -36,14 +37,38 @@ pub enum Client {
     Phone(DeviceId),
 }
 
-/// An authenticated caller: the user every row it reads or writes belongs to,
-/// and the desktop peer it named in `X-Dynwork-Peer`, which its own writes do
-/// not send a change hint to.
+/// An authenticated caller: the user every row it reads or writes belongs to.
+///
+/// It also carries the desktop peer it named in `X-Dynwork-Peer`, which its own
+/// writes do not send a change hint to, and what the instance's access rules
+/// may ask about the credential: the OAuth client the desktop token names and
+/// its session. `admission_session` is the session the rules see: the desktop
+/// token's own, else one derived from the phone's device id (or, for a desktop
+/// token without a session, from the user), so the same caller always presents
+/// the same session.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Caller {
     pub user: UserId,
     pub client: Client,
     pub peer: Option<PeerId>,
+    pub client_id: Option<ClientId>,
+    pub session: Option<SessionId>,
+}
+
+const SESSION_SEED: &str = "dynapps:dynwork-chats:session:";
+
+impl Caller {
+    pub fn admission_session(&self) -> SessionId {
+        if let Some(session) = &self.session {
+            return session.clone();
+        }
+        let seed = match self.client {
+            Client::Phone(device) => format!("{SESSION_SEED}phone:{device}"),
+            Client::Desktop => format!("{SESSION_SEED}desktop:{}", self.user),
+        };
+        let id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID, seed.as_bytes());
+        SessionId::new(format!("sess_{id}"))
+    }
 }
 
 /// Whether a phone's device row is still live.
@@ -92,6 +117,8 @@ pub async fn authenticate(state: &ChatsState, headers: &HeaderMap) -> Result<Cal
                 user: identity.user,
                 client: Client::Desktop,
                 peer,
+                client_id: desktop_client(authority, token),
+                session: identity.session,
             });
         },
         Err(refused) => refused,
@@ -111,7 +138,16 @@ pub async fn authenticate(state: &ChatsState, headers: &HeaderMap) -> Result<Cal
         user: phone.user,
         client: Client::Phone(phone.device),
         peer,
+        client_id: None,
+        session: None,
     })
+}
+
+fn desktop_client(authority: &dyn TokenAuthority, token: &str) -> Option<ClientId> {
+    authority
+        .verify_bearer(token, DESKTOP_AUDIENCES)
+        .ok()
+        .and_then(|claims| claims.custom.client_id)
 }
 
 impl FromRequestParts<ChatsState> for Caller {

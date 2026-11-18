@@ -2405,6 +2405,7 @@ dependencies = [
 name = "dynwork-chats-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "axum",
  "chrono",
  "dynwork-chats",

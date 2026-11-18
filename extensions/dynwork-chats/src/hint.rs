@@ -53,9 +53,6 @@ impl Hints for RelayHints {
     }
 }
 
-/// The desktop peer that made the request, from `X-Dynwork-Peer`: the one
-/// desktop that does not need the hint. A header that is absent or not a peer
-/// id means every desktop gets it.
 pub fn caller_peer(headers: &HeaderMap) -> Option<PeerId> {
     let value = headers.get(PEER_HEADER)?;
     let text = value.to_str().ok()?;

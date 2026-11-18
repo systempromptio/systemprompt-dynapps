@@ -1,11 +1,17 @@
 //! What a request says besides its path: the `If-Match` revision, a page
 //! size and the body of a thread write.
 
+use std::sync::Arc;
+
+use axum::extract::FromRequestParts;
+use axum::http::request::Parts;
 use axum::http::{HeaderMap, header};
 use serde::Deserialize;
+use systemprompt::ai::AiService;
 
 use crate::error::ChatsError;
 use crate::http::wire::WireModel;
+use crate::state::ChatsState;
 use crate::store::{ModelRef, ThreadPatch};
 
 pub const MAX_TITLE_CHARS: usize = 512;
@@ -80,6 +86,33 @@ pub fn if_match(headers: &HeaderMap) -> Result<Option<i64>, ChatsError> {
         .filter(|revision| *revision >= 1)
         .map(Some)
         .ok_or(ChatsError::BadRequest("If-Match must be a revision number"))
+}
+
+/// What a thread write carries besides its path and body: the `If-Match`
+/// revision (`None` creates) and the instance's AI service, which tells which
+/// models the caller may name.
+#[derive(Debug, Clone)]
+pub struct WriteContext {
+    pub revision: Option<i64>,
+    pub ai: Option<Arc<AiService>>,
+}
+
+impl FromRequestParts<ChatsState> for WriteContext {
+    type Rejection = ChatsError;
+
+    fn from_request_parts(
+        parts: &mut Parts,
+        _state: &ChatsState,
+    ) -> impl Future<Output = Result<Self, ChatsError>> + Send {
+        std::future::ready(if_match(&parts.headers).map(|revision| Self {
+            revision,
+            ai: parts
+                .extensions
+                .get::<Option<Arc<AiService>>>()
+                .cloned()
+                .flatten(),
+        }))
+    }
 }
 
 pub fn page_size(requested: Option<u32>, default: u32, max: u32) -> Result<u32, ChatsError> {

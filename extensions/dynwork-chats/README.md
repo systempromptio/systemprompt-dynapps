@@ -24,9 +24,10 @@ The store and the HTTP API: threads, the changes feed, the message history, serv
   changes feed (base64url of a `change_seq`, never parsed by clients). A reply's `MessageId` is derived from its
   prompt (`MessageId::derived_at`: the prompt's time and a hash of the thread and prompt ids in place of the random
   bits).
-- `catalog` and `config`: the models a chat can use, and the extension's settings (see Models and Settings below);
+- `catalog`, `admission`, `roles` and `config`: the models a chat can use (the list, `Admission` and its lazily built hook, and the
+  user's roles) and the extension's settings (see Models and Settings below);
   `retention`: the inactivity job.
-- `reply`: the model behind `ReplyModel`, the runner, the event builders, the message documents, the registry of
+- `reply`: the model behind `ReplyModel`, `ModelSource` and its `Gateway` (`source`), the runner, the event builders, the message documents, the registry of
   running replies and the recovery of a reply an earlier process left unfinished (see Replies below).
 
 ## Routes
@@ -37,7 +38,7 @@ path and the relay already holds `/api/dynwork`.
 
 | Method and path | Headers | Body | Answer |
 | --- | --- | --- | --- |
-| `GET /models` | | | `200 {models: [model]}` |
+| `GET /models` | | | `200 {models: [model], default?}` |
 | `GET /changes?since=<cursor>&limit=<n>` | | | `200 {threads: [thread], cursor, more}` |
 | `PUT /threads/{id}` | `If-Match: <revision>` (absent = create) | `{title?, model?, archived?}` | `200 thread`, `ETag: "<revision>"` |
 | `DELETE /threads/{id}` | `If-Match: <revision>` (required) | | `200 thread` (the tombstone) |
@@ -72,22 +73,47 @@ Every answer carries `Cache-Control: no-store`. Bodies are capped at 64 KiB (`ro
 
 ### Models
 
-`GET /models` answers `{models: [{id, name, providerID, provider: {id, name}, reasoning, tools}]}`, sorted by provider
-and id. The phone reads `providerID`, the desktop's Chats view reads `provider`; `providerID` and `id` are what a
-thread's `model` and a prompt's `model` take. It is `503 ai_unavailable` on an instance with no model service.
+`GET /models` answers `{models: [{id, name, providerID, provider: {id, name}, reasoning, tools, limit?: {context?,
+output?}}], default?}`: the models Dynwork Desktop shows the same user, in the order it shows them. The phone reads
+`providerID`, the desktop's Chats view reads `provider`; `providerID` and `id` are what a thread's `model` and a
+prompt's `model` take. `limit` is OpenCode's model `limit` (a side the catalog does not state is left out) and `default`
+is the instance's suggested model, present only when it is in the list. It is `503 ai_unavailable` on an instance with
+no model service, and `401` for a user the instance no longer has.
 
-The list comes from the instance's own model catalog (the one `AiService::catalog` serves), never from a constant
-(decision D3). A model is listed when the catalog advertises it and one of its enabled deployments has a platform
-credential that is configured: a secret the instance holds (`SecretStore::key_names`) or a workload identity. The
-provider is the first such deployment, which is the one `AiService` picks for `{providerID, id}`.
+It is the desktop's algorithm, run in process on the same core functions instead of over HTTP (decision D3, 2026-11-17).
+The desktop reads the user's bridge profile (`GET /v1/bridge/profile`) and the catalog (`GET /v1/models`) and combines
+them in `gateway()` (`gui/src/accounts/sync.ts`); the server does what core's `profile` handler and that function do:
 
-What core 0.81 offers as "the user's models" is narrower than the wording suggests, and this is the whole of it:
-a gateway policy carries quotas, rate windows and safety scanners but no model list (only an API key can carry a
-model allowlist), and `/v1/models` is itself not per user. What does vary is the credential. A reply runs on the
-in-process `AiService`, which serves platform credentials and leaves member-paid ones (a personal key such as
-Dynapps' `opencode-go`, the caller's own login) to the gateway, so those models are not listed: a reply to one would
-fail. They join the list when replies go through the gateway (stage 2). Two users of one instance therefore see the
-same list today; the code is ready for a per-user filter at the `ModelSource::list` seam when core has one.
+1. `systemprompt::manifest::bridge_profile::build` over the catalog and the instance's secrets gives the models that are
+   advertised and servable, the providers with their `configured` flag, the limits and the default.
+2. `ModelAdmission::retain` (`systemprompt::api::routes::gateway::bridge_admission`) drops the models the instance's
+   authz hook refuses to this caller: the user's roles (core's user store), the OAuth client the desktop token names,
+   and a session id (the token's own; for a phone one derived from its device id). It asks `AuthzDecisionHook::probe`,
+   so no audit row is written.
+3. Each remaining model takes the first provider of the profile that serves it and is configured (a model whose providers
+   are all unconfigured is dropped), its name from the catalog (`display_name`, else the id humanized as `/v1/models`
+   does), its limits from the profile and then the catalog, and `default` is the profile's default without a `[1m]`
+   style suffix, only if listed.
+
+The hook is not one core hands to extensions (`AppContext::authz_hook` is not on `ExtensionContext`), so the extension
+builds one, on the first use and once, with core's own `build_authz_hook` from the same profile, services and secrets
+(`admission`); building it only constructs objects (no task, listener, migration or write). A rule edit shows in `/models`
+within 5 s when made in the console (the rule cache rechecks the committed `config_version` every 5 s and reloads every
+60 s whatever happens; the installation hook's own caches are core's process-wide ones, kept 30 s and dropped at once by a
+console edit or a sync apply on this replica), and within 35 s at the latest when written any other way. Core's change
+epoch, which would reload at once, is not available to an extension.
+
+The same check guards the routes. `POST /threads/{id}/prompt` judges the model the reply will use (the prompt's, else
+the thread's, else the instance's default) and `PUT /threads/{id}` the `model` it sets or changes, by asking whether the
+model is one the caller is listed. A model they are not admitted to is `403 model_not_allowed` and nothing is written,
+started or announced. Everything fails closed: a hook that cannot be built is the deny-all hook (an empty list, every
+model refused), a roles lookup that fails is a `500` and a user the instance no longer has is `401`, never the catalog.
+
+What the desktop shows and a chat can use differ in one case. A reply runs on the in-process `AiService`, which serves
+platform credentials and leaves member-paid ones (a personal key such as Dynapps' `opencode-go`, the caller's own
+login) to the gateway, so a provider billed to a member's own key is skipped and a model served only by one is not
+listed: a reply to it would fail. Because of that the member's stored keys do not change the list and are not read.
+They join when replies go through the gateway (stage 2). `listing` already takes them as an input.
 
 ### Credentials
 
@@ -115,13 +141,14 @@ logged. The status mapping follows the relay's.
 | 400 | `invalid_id` | a thread id or a `before` message id that is not `ses_`/`msg_` and 8 to 40 letters or digits |
 | 400 | `invalid_cursor` | a `since` this server did not issue |
 | 401 | `unauthorized` | a missing, malformed, forged, expired or wrong-audience token; a token that is not a signed-in person's; a revoked or unknown phone; a deleted account |
+| 403 | `model_not_allowed` | a prompt or a thread write naming a model the instance's rules do not allow the caller (or the instance does not have); a prompt that would use the thread's or the instance's default model the caller is no longer allowed |
 | 404 | `not_found` | a thread that is not the caller's or does not exist; an unknown route |
 | 409 | `revision_conflict` | a stale `If-Match`, a write to a tombstone, a create of an existing id; the body carries `current` |
 | 409 | `id_taken` | a create of an id another user holds; a prompt whose `messageID` is already a message of the thread that is not a prompt |
 | 409 | `busy` | a prompt while another reply of the thread runs |
 | 413 | `too_large` | a body over 64 KiB |
 | 428 | `precondition_required` | a `DELETE` without `If-Match` |
-| 503 | `ai_unavailable` | a prompt on an instance with no model service |
+| 503 | `ai_unavailable` | a prompt, or a thread write naming a model, on an instance with no model service |
 | 500 | `internal` | the store or the device check failed |
 
 ## Replies
@@ -279,7 +306,7 @@ against the real schema.
 
 ## Tests
 
-- `tests/unit/dynwork-chats`: the config file and block, the model list over the committed catalog, ids, the cursor, error keys and statuses, the extension's registration, the memory
+- `tests/unit/dynwork-chats`: the config file and block, the model list (over a small catalog with a role-denying hook, and over the committed one), `Admission` (the hook built once and on first use, every failure refusing), ids, the cursor, error keys and statuses, the extension's registration, the memory
   store, `If-Match` and page sizes, the thread body, the wire shapes; the event envelope per type, derived ids, finish
   reasons, usage folding, the history sent to the model, the prompt body, the log query.
 - `tests/integration/dynwork-chats`: the store contract, and the HTTP suites (auth, threads, the feed, history) driven

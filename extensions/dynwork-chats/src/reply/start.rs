@@ -38,7 +38,7 @@ pub struct Prompt {
     pub model: Option<ModelRef>,
 }
 
-async fn live_thread(
+pub async fn live_thread(
     state: &ChatsState,
     user: &UserId,
     thread: &ThreadId,
@@ -49,6 +49,18 @@ async fn live_thread(
         .await?
         .filter(|record| record.deleted_at.is_none())
         .ok_or(ChatsError::NotFound)
+}
+
+pub fn effective_model(
+    prompt: &Prompt,
+    record: &ThreadRecord,
+    engine: &dyn ReplyModel,
+) -> Option<ModelRef> {
+    prompt
+        .model
+        .clone()
+        .or_else(|| record.model.clone())
+        .or_else(|| engine.default_model())
 }
 
 pub async fn start(
@@ -66,12 +78,7 @@ pub async fn start(
         Err(Busy(_)) => return Err(ChatsError::Busy),
     };
     settle_stale(state, user, &claim).await?;
-    let model = prompt
-        .model
-        .clone()
-        .or_else(|| record.model.clone())
-        .or_else(|| engine.default_model())
-        .ok_or(ChatsError::BadRequest(
+    let model = effective_model(&prompt, &record, engine.as_ref()).ok_or(ChatsError::BadRequest(
             "this thread has no model: send one with the prompt",
         ))?;
     let now = state.clock.now();

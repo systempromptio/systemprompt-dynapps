@@ -146,7 +146,7 @@ async fn archiving_and_the_model_are_edits(app: &App) {
     assert!(back.body["time"].get("archived").is_none());
     assert!(back.body["archived_at"].is_null());
 
-    let model = json!({ "providerID": "openai", "id": "gpt-5" });
+    let model = json!({ "providerID": "deepseek", "id": "deepseek-chat" });
     let moved = edit(app, A, "3", &json!({ "model": model })).await;
     assert_eq!(moved.body["model"], model);
     assert_eq!(moved.body["title"], "t");

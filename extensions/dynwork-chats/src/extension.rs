@@ -12,13 +12,15 @@ use systemprompt::database::Database;
 use systemprompt::extension::prelude::*;
 use systemprompt::traits::Job;
 
+use crate::admission::{Admission, LazyHook, names_of};
 use crate::auth::RelayDevices;
 use crate::clock::SystemClock;
 use crate::config::{CONFIG_PREFIX, ChatsConfig};
 use crate::hint::RelayHints;
-use crate::reply::model::Gateway;
+use crate::reply::source::Gateway;
 use crate::reply::registry::Replies;
 use crate::retention::ChatsRetentionJob;
+use crate::roles::UserRoles;
 use crate::router::{EXTENSION_BASE_PATH, chats_router};
 use crate::schema;
 use crate::state::{ChatsState, Shared};
@@ -41,18 +43,36 @@ impl ChatsExtension {
             tracing::error!("Database handle is not Postgres; dynwork chats is not mounted");
             return None;
         };
-        let pool = database.write_pool();
-        let built = ChatsState::new(Shared {
-            store: Arc::new(PgChatStore::new(Arc::clone(&pool))),
-            authority: ctx.token_authority(),
-            devices: Arc::new(RelayDevices::new(Arc::clone(&pool))),
-            clock: Arc::new(SystemClock),
-            models: Arc::new(Gateway::new(ctx.secrets())),
-            hints: Arc::new(RelayHints::new(pool)),
-            replies: Replies::default(),
-        });
-        Some(self.state.get_or_init(|| built).clone())
+        Some(
+            self.state
+                .get_or_init(|| build_state(ctx, database))
+                .clone(),
+        )
     }
+}
+
+fn build_state(ctx: &dyn ExtensionContext, database: &Database) -> ChatsState {
+    let pool = database.write_pool();
+    let hook = LazyHook::instance(
+        ctx.profile(),
+        ctx.services(),
+        ctx.secrets(),
+        Arc::clone(&pool),
+    );
+    let admission = Admission::new(
+        names_of(ctx.secrets()),
+        hook,
+        Arc::new(UserRoles::new(database)),
+    );
+    ChatsState::new(Shared {
+        store: Arc::new(PgChatStore::new(Arc::clone(&pool))),
+        authority: ctx.token_authority(),
+        devices: Arc::new(RelayDevices::new(Arc::clone(&pool))),
+        clock: Arc::new(SystemClock),
+        models: Arc::new(Gateway::new(admission)),
+        hints: Arc::new(RelayHints::new(pool)),
+        replies: Replies::default(),
+    })
 }
 
 impl Extension for ChatsExtension {
@@ -86,12 +106,11 @@ impl Extension for ChatsExtension {
 
     // JSON: core hands an extension its config block as a JSON document.
     fn validate_config(&self, config: &serde_json::Value) -> Result<(), ExtensionConfigError> {
-        ChatsConfig::from_json(config).map(|_| ()).map_err(|error| {
-            ExtensionConfigError::InvalidValue {
-                key: CONFIG_PREFIX.to_owned(),
-                message: error.to_string(),
-            }
-        })
+        ChatsConfig::from_json(config)
+            .map(|_| ())
+            .map_err(|error| ExtensionConfigError::ParseError {
+                source: Box::new(error),
+            })
     }
 
     fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {

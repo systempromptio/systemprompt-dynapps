@@ -12,7 +12,7 @@ use systemprompt::models::auth::TokenAuthority;
 use crate::auth::DeviceCheck;
 use crate::clock::Clock;
 use crate::hint::Hints;
-use crate::reply::model::ModelSource;
+use crate::reply::source::ModelSource;
 use crate::reply::registry::Replies;
 use crate::store::ChatStore;
 

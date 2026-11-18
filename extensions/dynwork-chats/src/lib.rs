@@ -13,6 +13,7 @@
 //! `inactive_days`. Every change to a thread is announced to the person's other
 //! desktops with the relay's change hint (`hint`).
 
+pub mod admission;
 pub mod auth;
 pub mod catalog;
 pub mod clock;
@@ -24,6 +25,7 @@ pub mod http;
 pub mod ids;
 pub mod reply;
 pub mod retention;
+pub mod roles;
 pub mod router;
 pub mod schema;
 pub mod state;

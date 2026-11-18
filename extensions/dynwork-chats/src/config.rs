@@ -20,9 +20,7 @@ use serde_json::Value;
 
 pub const CONFIG_PREFIX: &str = "dynwork-chats";
 
-/// The key core adds when it mounts an extension's router: it calls `validate_config` a second time with the profile's
-/// paths as `{"paths": ...}` instead of the config file's block. It is never one of our keys, so it is set aside before
-/// the strict check (without that the server refuses to start: "the chats config is not a valid block").
+// Why: core calls validate_config again at mount time with {"paths": ...}; that key is set aside before the strict parse.
 const MOUNT_KEY: &str = "paths";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]

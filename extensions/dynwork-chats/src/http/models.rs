@@ -36,11 +36,24 @@ pub struct WireModelInfo {
     pub provider: WireProvider,
     pub reasoning: bool,
     pub tools: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<WireLimit>,
+}
+
+/// The sizes `OpenCode`'s model shape calls `limit`; a side the catalog does not
+/// state is left out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct WireLimit {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct WireModels {
     pub models: Vec<WireModelInfo>,
+    pub default: Option<String>,
 }
 
 impl From<&ModelInfo> for WireModelInfo {
@@ -55,22 +68,28 @@ impl From<&ModelInfo> for WireModelInfo {
             },
             reasoning: model.reasoning,
             tools: model.tools,
+            limit: (model.context.is_some() || model.output.is_some()).then_some(WireLimit {
+                context: model.context,
+                output: model.output,
+            }),
         }
     }
 }
 
 pub async fn list(
-    _caller: Caller,
+    caller: Caller,
     State(state): State<ChatsState>,
     ai: Option<Extension<Option<Arc<AiService>>>>,
 ) -> Result<Response, ChatsError> {
     let ai = ai.and_then(|Extension(ai)| ai);
-    let models = state
+    let listing = state
         .models
-        .list(ai.as_deref())
+        .list(&caller, ai.as_deref())
+        .await?
         .ok_or(ChatsError::AiUnavailable)?;
     let body = WireModels {
-        models: models.iter().map(WireModelInfo::from).collect(),
+        models: listing.models.iter().map(WireModelInfo::from).collect(),
+        default: listing.default,
     };
     Ok(no_store(Json(body).into_response()))
 }

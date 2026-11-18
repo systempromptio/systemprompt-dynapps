@@ -13,6 +13,7 @@ dynwork-chats = { workspace = true }
 dynwork-relay = { workspace = true }
 # HeaderMap and StatusCode for the HTTP helpers.
 axum = { workspace = true }
+async-trait = { workspace = true }
 systemprompt = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }

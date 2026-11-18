@@ -5,7 +5,9 @@
 //! answers `202 { assistantMessageID }` once the reply has started; the reply
 //! itself runs on the server and is read from `/log`. Without a model service
 //! on the instance it is `503 ai_unavailable`; while another reply runs it is
-//! `409 busy`. `interrupt` stops the running reply, waits for its last events
+//! `409 busy`. A model the instance's rules do not allow the caller (the
+//! prompt's, else the thread's, else the instance's default) is
+//! `403 model_not_allowed`, and nothing is written or started. `interrupt` stops the running reply, waits for its last events
 //! and answers `204`, also when nothing was running.
 
 use std::sync::Arc;
@@ -96,11 +98,18 @@ pub async fn prompt(
     let Path(id) = path?;
     let thread: ThreadId = id.parse()?;
     let prompt = PromptInput::parse(&body?)?;
-    let gateway = ai.and_then(|Extension(ai)| ai).map(GatewayModel::shared);
+    let ai = ai.and_then(|Extension(ai)| ai);
+    let gateway = ai.clone().map(GatewayModel::shared);
     let engine = state
         .models
         .pick(gateway)
         .ok_or(ChatsError::AiUnavailable)?;
+    let record = start::live_thread(&state, &caller.user, &thread).await?;
+    if let Some(model) = start::effective_model(&prompt, &record, engine.as_ref())
+        && !state.models.admits(&caller, ai.as_deref(), &model).await?
+    {
+        return Err(ChatsError::ModelNotAllowed);
+    }
     let reply = start::start(&state, &caller, &thread, prompt, engine).await?;
     let body = Accepted {
         assistant_message_id: reply.as_str().to_owned(),

@@ -27,7 +27,11 @@
 //!   history sent to the model, compaction into the messages, a reply an
 //!   earlier process left unfinished
 //! - the models list: the shape the phone and the desktop read, a phone, auth,
-//!   `503` without a model service
+//!   `503` without a model service, a role the access rules deny losing a
+//!   model, and the token's client reaching the rules
+//! - model admission: a prompt or a thread write naming a model the instance's
+//!   rules do not allow the caller is `403 model_not_allowed` and changes
+//!   nothing; the thread's own model is judged when the prompt names none
 //! - the inactivity sweep: past the window or inside it, a message, an edit or
 //!   a streaming reply as activity, batches, every user's threads, tombstones
 //!   in the feed
@@ -46,6 +50,8 @@ mod fixture;
 #[cfg(test)]
 mod hints;
 #[cfg(test)]
+mod http_admission;
+#[cfg(test)]
 mod http_auth;
 #[cfg(test)]
 mod http_changes;
@@ -61,6 +67,8 @@ mod http_replies;
 mod http_support;
 #[cfg(test)]
 mod http_threads;
+#[cfg(test)]
+mod models_support;
 #[cfg(test)]
 mod recorder;
 #[cfg(test)]

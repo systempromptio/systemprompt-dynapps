@@ -4,6 +4,8 @@
 //! - the extension registration, the error keys and their HTTP statuses
 //! - the HTTP helpers: `If-Match`, page sizes, the thread body, the wire shapes
 //!   of a thread and a message
+//! - model admission: the hook built once and on first use, and every failure
+//!   (roles, secrets, hook) refusing instead of listing the catalog
 //! - the change hint: which `X-Dynwork-Peer` values name a desktop
 //! - the memory store's own edges (page limits, the cursor it hands back)
 //! - replies: the event envelope per type, derived ids, finish reasons, the
@@ -12,6 +14,8 @@
 //! The store contract itself runs against both stores in the integration
 //! suite.
 
+#[cfg(test)]
+mod admission;
 #[cfg(test)]
 mod catalog;
 #[cfg(test)]

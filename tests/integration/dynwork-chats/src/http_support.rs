@@ -29,7 +29,7 @@ use dynwork_relay::store::postgres::PgRelayStore;
 use dynwork_relay::store::{Account, RelayStore, RevokeOutcome, StoreError};
 use http_body_util::BodyExt;
 use serde_json::Value;
-use systemprompt::identifiers::{AccessTokenId, SessionId, UserId};
+use systemprompt::identifiers::{AccessTokenId, ClientId, SessionId, UserId};
 use systemprompt::models::auth::{
     AuthenticatedUser, JwtAudience, Permission, TokenAuthority, UserJwtRequest,
 };
@@ -69,6 +69,16 @@ fn mint(
     permissions: Vec<Permission>,
     audience: Vec<JwtAudience>,
 ) -> String {
+    mint_for_client(authority, name, permissions, audience, None)
+}
+
+fn mint_for_client(
+    authority: &dyn TokenAuthority,
+    name: &str,
+    permissions: Vec<Permission>,
+    audience: Vec<JwtAudience>,
+    client_id: Option<ClientId>,
+) -> String {
     authority
         .mint_user_jwt(&UserJwtRequest {
             user: AuthenticatedUser::new(
@@ -82,7 +92,7 @@ fn mint(
             permissions,
             audience,
             ttl: chrono::Duration::minutes(30),
-            client_id: None,
+            client_id,
             purpose: None,
             plugin_id: None,
             interaction: None,
@@ -98,6 +108,17 @@ pub(crate) fn desktop_token(name: &str) -> String {
         name,
         vec![Permission::User],
         vec![JwtAudience::Bridge, JwtAudience::Mcp],
+    )
+}
+
+// A desktop JWT that names an OAuth client.
+pub(crate) fn desktop_token_for_client(name: &str, client: &str) -> String {
+    mint_for_client(
+        AUTHORITY.as_ref(),
+        name,
+        vec![Permission::User],
+        vec![JwtAudience::Bridge, JwtAudience::Mcp],
+        Some(ClientId::new(client)),
     )
 }
 

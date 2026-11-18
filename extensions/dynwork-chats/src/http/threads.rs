@@ -8,7 +8,9 @@
 //! or a write to a tombstone, answers `409` with the current row; a thread
 //! that is not the caller's is `404`, never `403`. Each write that changed the
 //! thread tells the caller's other desktops, once it has committed, except the
-//! desktop named by `X-Dynwork-Peer`; a refused or empty write tells nobody.
+//! desktop named by `X-Dynwork-Peer`; a refused or empty write tells nobody. A
+//! `model` the instance's rules do not allow the caller is `403
+//! model_not_allowed` and nothing is written.
 
 use axum::body::Bytes;
 use axum::extract::rejection::{BytesRejection, PathRejection};
@@ -19,23 +21,28 @@ use dynwork_relay::auth::AuthError;
 
 use crate::auth::Caller;
 use crate::error::ChatsError;
-use crate::http::params::{ThreadInput, if_match};
+use crate::http::params::{ThreadInput, WriteContext, if_match};
 use crate::http::response;
 use crate::ids::ThreadId;
 use crate::state::ChatsState;
-use crate::store::{CreateOutcome, NewThread, ThreadEdit, WriteOutcome};
+use crate::store::{CreateOutcome, ModelRef, NewThread, ThreadEdit, WriteOutcome};
 
 pub async fn put(
     caller: Caller,
     State(state): State<ChatsState>,
+    write: WriteContext,
     path: Result<Path<String>, PathRejection>,
-    headers: HeaderMap,
     body: Result<Bytes, BytesRejection>,
 ) -> Result<Response, ChatsError> {
     let Path(id) = path?;
     let id: ThreadId = id.parse()?;
-    let revision = if_match(&headers)?;
+    let WriteContext { revision, ai } = write;
     let input = ThreadInput::parse(&body?)?;
+    if let Some(model) = input.model.clone().map(ModelRef::from)
+        && !state.models.admits(&caller, ai.as_deref(), &model).await?
+    {
+        return Err(ChatsError::ModelNotAllowed);
+    }
     match revision {
         None => create(&state, &caller, id, input).await,
         Some(expected_revision) => {
