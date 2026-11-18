@@ -11,12 +11,15 @@
 //! crossings are asserted on the same run: a tenant the installation does not
 //! admit is never linked, one person cannot complete another's consent, a
 //! token of tenant A never reads tenant B's mail, and none of Ana's file
-//! references (upload, blob, document) resolves for Bruno. Every step prints
-//! its case and result; `just m365-sim` runs it with output shown.
+//! references (upload, blob, document) resolves for Bruno. Last, Bruno's
+//! tenant is taken off the allow-list: the broker refuses his token and
+//! deletes his grant. Every step prints its case and result; `just m365-sim`
+//! runs it with output shown.
 
 mod cases;
 mod connect;
 mod stack;
+mod withdraw;
 
 use serde_json::Value;
 
@@ -53,7 +56,7 @@ async fn m365_sim_two_companies_end_to_end() {
     let stack = stack::start(&db.pool, &db.url(), sim).await;
     let ana = stack::seed_person(&db.pool, "Ana (empresa A)", "ana@empresa-a.example").await;
     let bruno = stack::seed_person(&db.pool, "Bruno (empresa B)", "bruno@empresa-b.example").await;
-    let mut run = cases::Run::new(&stack, &db.pool, ana, bruno).await;
+    let mut run = cases::Run::new(&stack, &db.pool, ana.clone(), bruno.clone()).await;
     let mut number = 0;
     run.connect_both(&mut number).await;
     run.read_mail(&mut number).await;
@@ -61,6 +64,7 @@ async fn m365_sim_two_companies_end_to_end() {
     run.download_to_document(&mut number).await;
     run.references_stay_with_their_owner(&mut number).await;
     run.audit(&mut number).await;
+    withdraw::tenant_off_the_list(&stack, &db.pool, &ana, &bruno, &mut number).await;
     println!("m365-sim: {number} casos en verde");
     drop(run);
     drop(stack);

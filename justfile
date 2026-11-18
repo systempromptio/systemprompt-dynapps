@@ -413,7 +413,8 @@ _docs-smoke-uncoordinated:
 # their own processes. Each person connects their own tenant, reads their
 # mail, uploads through documents_upload, attaches, sends, saves a download as
 # a document; the crossings (a tenant not admitted, another person's consent,
-# another tenant's message, another person's file references) are refused.
+# another tenant's message, another person's file references) are refused,
+# and a tenant taken off the allow-list loses its grant at the next token.
 # Every case prints as it passes. Needs python3 and openssl; no real accounts.
 m365-sim:
     @scripts/build-coordinator.sh run m365-sim "" -- {{just_executable()}} _m365-sim-uncoordinated
