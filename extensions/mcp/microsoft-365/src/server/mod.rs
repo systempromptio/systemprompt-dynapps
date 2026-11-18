@@ -31,10 +31,11 @@ use crate::graph::{
 };
 use crate::tools::{self, ToolCall};
 
-/// What every call needs to reach Graph, held for the server's lifetime:
-/// the shared HTTP client, the broker, the secrets the endpoint is read
-/// from, the bounds, and the upload sessions opened so far (shared by every
-/// call and every clone).
+/// What every call needs to reach Graph, held for the server's lifetime.
+///
+/// It carries the shared HTTP client, the broker, the secrets the endpoint is
+/// read from, the bounds, and the upload sessions opened so far (shared by
+/// every call and every clone).
 #[derive(Clone, Debug)]
 pub struct GraphHost {
     pub http: reqwest::Client,

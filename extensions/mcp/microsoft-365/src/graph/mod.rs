@@ -13,6 +13,7 @@ pub mod error;
 pub mod ids;
 pub mod paging;
 pub mod query;
+pub mod retry;
 pub mod sanitize;
 mod send;
 pub mod token;

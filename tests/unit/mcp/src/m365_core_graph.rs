@@ -1,16 +1,18 @@
-//! The Graph client against a simulated Graph: 429 retried after
-//! `Retry-After` within bounds, 401 answered with one renewed token,
+//! The Graph client against a simulated Graph: 429 and 503 (and 504 on an
+//! idempotent method) retried after `Retry-After` within bounds, read as
+//! seconds or as an HTTP-date, 401 answered with one renewed token,
 //! redirects followed without the bearer leaving Graph, and the response
 //! size limit.
 
-
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use axum::http::Method;
+use chrono::{TimeDelta, Utc};
 use serde_json::json;
 use systemprompt_mcp_microsoft_365::graph::{GraphError, GraphLimits, GraphQuery, GraphRequest};
 
-use crate::m365_support::{FakeTokens, Reply, Sim, client, fast_limits};
+use crate::m365_support::{FakeTokens, Reply, Seen, Sim, client, fast_limits};
 
 fn ok_body() -> Reply {
     Reply::json(200, &json!({"id": "me"}))
@@ -208,4 +210,168 @@ async fn m365_core_graph_errors_carry_status_and_message() {
         "no URL in the message: {}",
         mcp.message
     );
+}
+
+const IMF_FIXDATE: &str = "%a, %d %b %Y %H:%M:%S GMT";
+const RFC_850_DATE: &str = "%A, %d-%b-%y %H:%M:%S GMT";
+const ASCTIME_DATE: &str = "%a %b %e %H:%M:%S %Y";
+
+fn http_date_in(seconds: i64, format: &str) -> String {
+    (Utc::now() + TimeDelta::seconds(seconds))
+        .format(format)
+        .to_string()
+}
+
+fn throttled_until(date: String) -> impl Fn(&Seen, usize) -> Reply + Send + Sync + 'static {
+    move |_, i| {
+        if i == 0 {
+            Reply::json(429, &json!({})).with_header("retry-after", date.clone())
+        } else {
+            ok_body()
+        }
+    }
+}
+
+fn graph_error(status: u16) -> Reply {
+    Reply::json(
+        status,
+        &json!({"error": {"code": "serviceNotAvailable", "message": "try again later"}}),
+    )
+}
+
+#[tokio::test]
+async fn m365_core_retry_after_as_an_http_date_is_waited_for() {
+    let sim = Sim::start(throttled_until(http_date_in(3, IMF_FIXDATE))).await;
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+    let started = Instant::now();
+    let body = graph.get_json("/me", &GraphQuery::new()).await.unwrap();
+    assert_eq!(body["id"], "me");
+    assert_eq!(sim.calls().len(), 2);
+    assert!(
+        started.elapsed() >= Duration::from_millis(1500),
+        "the date, not the 10 ms default backoff, set the wait: {:?}",
+        started.elapsed()
+    );
+}
+
+#[tokio::test]
+async fn m365_core_retry_after_dates_beyond_the_wait_bound_are_returned_not_slept() {
+    for format in [IMF_FIXDATE, RFC_850_DATE, ASCTIME_DATE] {
+        let date = http_date_in(120, format);
+        let sim = Sim::start(throttled_until(date.clone())).await;
+        let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+        let error = graph.get_json("/me", &GraphQuery::new()).await.unwrap_err();
+        assert!(
+            matches!(error, GraphError::Throttled { retry_after_secs } if (100..=120).contains(&retry_after_secs)),
+            "Retry-After: {date} -> {error:?}"
+        );
+        assert_eq!(sim.calls().len(), 1, "Retry-After: {date}");
+    }
+}
+
+#[tokio::test]
+async fn m365_core_retry_after_a_date_already_past_retries_at_once() {
+    let sim = Sim::start(throttled_until(http_date_in(-60, IMF_FIXDATE))).await;
+    let limits = GraphLimits {
+        default_backoff: Duration::from_secs(60),
+        ..fast_limits()
+    };
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), limits);
+    let body = graph.get_json("/me", &GraphQuery::new()).await.unwrap();
+    assert_eq!(body["id"], "me", "a past date is no wait, not the backoff");
+    assert_eq!(sim.calls().len(), 2);
+}
+
+#[tokio::test]
+async fn m365_core_service_unavailable_and_gateway_timeout_are_retried() {
+    for status in [503, 504] {
+        let sim = Sim::start(move |_, i| {
+            if i == 0 {
+                graph_error(status)
+            } else {
+                ok_body()
+            }
+        })
+        .await;
+        let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+        let body = graph.get_json("/me", &GraphQuery::new()).await;
+        assert_eq!(body.unwrap()["id"], "me", "status {status}");
+        assert_eq!(sim.calls().len(), 2, "status {status}");
+    }
+}
+
+#[tokio::test]
+async fn m365_core_persistent_service_unavailable_ends_in_its_error() {
+    let sim = Sim::start(|_, _| graph_error(503).with_header("retry-after", "0")).await;
+    let limits = fast_limits();
+    let budget = limits.max_throttle_retries as usize;
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), limits);
+    let error = graph.get_json("/me", &GraphQuery::new()).await.unwrap_err();
+    assert!(
+        matches!(error, GraphError::Api { status: 503, .. }),
+        "{error:?}"
+    );
+    assert_eq!(sim.calls().len(), budget + 1, "the 429 retry budget");
+
+    let sim = Sim::start(|_, _| graph_error(503).with_header("retry-after", "120")).await;
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+    let error = graph.get_json("/me", &GraphQuery::new()).await.unwrap_err();
+    assert!(
+        matches!(error, GraphError::Api { status: 503, .. }),
+        "{error:?}"
+    );
+    assert_eq!(sim.calls().len(), 1, "a wait beyond the bound is not slept");
+}
+
+#[tokio::test]
+async fn m365_core_gateway_timeout_on_a_post_is_not_retried_but_unavailable_is() {
+    let sim = Sim::start(|_, _| graph_error(504)).await;
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+    let error = graph
+        .send(&GraphRequest::new(Method::POST, "/me/sendMail"))
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(error, GraphError::Api { status: 504, .. }),
+        "{error:?}"
+    );
+    assert_eq!(
+        sim.calls().len(),
+        1,
+        "the mail may have gone before the gateway timed out"
+    );
+
+    let sim = Sim::start(|_, i| {
+        if i == 0 {
+            graph_error(503)
+        } else {
+            Reply::bytes(202, b"")
+        }
+    })
+    .await;
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+    let response = graph
+        .send(&GraphRequest::new(Method::POST, "/me/sendMail"))
+        .await
+        .unwrap();
+    assert_eq!(response.status, 202);
+    assert_eq!(
+        sim.calls().len(),
+        2,
+        "a 503 says the request was not handled"
+    );
+}
+
+#[tokio::test]
+async fn m365_core_other_server_errors_are_not_retried() {
+    for status in [500, 502] {
+        let sim = Sim::start(move |_, _| graph_error(status)).await;
+        let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+        let error = graph.get_json("/me", &GraphQuery::new()).await.unwrap_err();
+        assert!(
+            matches!(error, GraphError::Api { status: s, .. } if s == status),
+            "{error:?}"
+        );
+        assert_eq!(sim.calls().len(), 1, "status {status}");
+    }
 }

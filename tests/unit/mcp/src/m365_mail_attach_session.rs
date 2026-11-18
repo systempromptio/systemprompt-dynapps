@@ -400,11 +400,9 @@ async fn m365_mail_attach_session_every_call_of_the_server_shares_one_registry()
         limits,
         upload_sessions: UploadSessions::default(),
     };
+    let cloned = host.clone();
     let first_call = host.client_for("alice-jwt".to_owned(), None).unwrap();
-    let other_session = host
-        .clone()
-        .client_for("alice-jwt".to_owned(), None)
-        .unwrap();
+    let other_session = cloned.client_for("alice-jwt".to_owned(), None).unwrap();
     let (alice, now) = (UserId::new(ALICE), Utc::now());
     first_call
         .upload_sessions()
@@ -417,4 +415,5 @@ async fn m365_mail_attach_session_every_call_of_the_server_shares_one_registry()
             .is_ok()
     );
     assert_eq!(host.upload_sessions.len(), 1);
+    assert_eq!(cloned.upload_sessions.len(), 1);
 }

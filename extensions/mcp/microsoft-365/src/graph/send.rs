@@ -1,7 +1,8 @@
 //! The one place a Graph request leaves the process: every URL passes core's
-//! SSRF guard here, the caller's bearer is attached, a 429 is retried after
-//! its `Retry-After` within bounds, a 401 gets one renewed token, and the
-//! body is read up to the response limit.
+//! SSRF guard here, the caller's bearer is attached, a 429 or 503 (and a 504
+//! on an idempotent method, see [`super::retry`]) is retried after its
+//! `Retry-After` within bounds, a 401 gets one renewed token, and the body is
+//! read up to the response limit.
 //!
 //! Nothing here logs a URL, a path or a body: Graph paths name mailboxes
 //! and people.
@@ -9,12 +10,13 @@
 use std::fmt;
 use std::time::Duration;
 
-use reqwest::header::{CONTENT_TYPE, RETRY_AFTER};
+use reqwest::header::CONTENT_TYPE;
 use reqwest::{Method, StatusCode};
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 use url::Url;
 
 use super::error::api_error;
+use super::retry::{is_retryable, retry_after};
 use super::{GraphClient, GraphError, GraphLimits, GraphQuery};
 
 const ERROR_BODY_LIMIT: usize = 64 * 1024;
@@ -125,7 +127,7 @@ pub(super) async fn execute(
     let limits = client.limits();
     let mut token = client.current_token().await?;
     let mut renewed = false;
-    let mut throttled = 0u32;
+    let mut retried = 0u32;
     loop {
         let response = attempt(client, request, &url, &token).await?;
         let status = response.status();
@@ -141,24 +143,36 @@ pub(super) async fn execute(
                 .ok_or(GraphError::Unauthorized)?;
             continue;
         }
-        if status == StatusCode::TOO_MANY_REQUESTS {
+        if is_retryable(status, &request.method) {
             let wait = retry_after(&response, limits);
-            if throttled >= limits.max_throttle_retries || wait > limits.max_retry_wait {
-                return Err(GraphError::Throttled {
-                    retry_after_secs: wait.as_secs().max(1),
-                });
+            if retried >= limits.max_throttle_retries || wait > limits.max_retry_wait {
+                return give_up(response, wait, limits).await;
             }
-            throttled += 1;
+            retried += 1;
             tracing::warn!(
-                attempt = throttled,
+                attempt = retried,
+                status = status.as_u16(),
                 wait_ms = wait.as_millis() as u64,
-                "Graph throttled the request; retrying after Retry-After"
+                "Graph asked to retry the request; retrying after Retry-After"
             );
             tokio::time::sleep(wait).await;
             continue;
         }
         return finish(response, limits.max_response_bytes).await;
     }
+}
+
+async fn give_up(
+    response: reqwest::Response,
+    wait: Duration,
+    limits: &GraphLimits,
+) -> Result<GraphResponse, GraphError> {
+    if response.status() == StatusCode::TOO_MANY_REQUESTS {
+        return Err(GraphError::Throttled {
+            retry_after_secs: wait.as_secs().max(1),
+        });
+    }
+    finish(response, limits.max_response_bytes).await
 }
 
 fn target_url(client: &GraphClient, request: &GraphRequest) -> Result<Url, GraphError> {
@@ -202,15 +216,6 @@ async fn attempt(
         None => builder,
     };
     Ok(builder.send().await?)
-}
-
-fn retry_after(response: &reqwest::Response, limits: &GraphLimits) -> Duration {
-    response
-        .headers()
-        .get(RETRY_AFTER)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.trim().parse::<u64>().ok())
-        .map_or(limits.default_backoff, Duration::from_secs)
 }
 
 pub(super) async fn finish(
