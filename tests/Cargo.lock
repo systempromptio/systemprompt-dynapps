@@ -2359,7 +2359,7 @@ dependencies = [
 
 [[package]]
 name = "dynwork-chats"
-version = "0.81.0"
+version = "0.84.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -2373,7 +2373,7 @@ dependencies = [
  "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "systemprompt-extension 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -2396,7 +2396,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "systemprompt",
- "systemprompt-security 0.81.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tower",
 ]
@@ -11342,6 +11342,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
