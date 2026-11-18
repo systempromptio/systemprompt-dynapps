@@ -114,7 +114,14 @@ shared file layer (`docs/integrations/mcp-files.md`):
   A reference resolves only for the person who owns it.
 - **Out of Graph** (attachments, file and transcript downloads): saved as a
   `file` document of the caller. The tool returns the reference and a signed
-  download link valid for 10 minutes.
+  download link valid for 10 minutes. The exception is `d365_get_file_content`
+  on a text file of up to 256 KB: the text comes back inline for the model to
+  read, and the download is audited like a saved one (`inline`).
+  A mail attachment is read raw from `/attachments/{id}/$value`, after its
+  metadata is read without the base64. That way one of up to 25 MB fits
+  the response limit. As base64 inside JSON, the limit was about 18.7 MB.
+  Item and reference attachments have no file to download, so the tool
+  returns Graph's description of them.
 
 The API signs those links only for a server that declares the `documents`
 toolset, so `microsoft-365.yaml` and `documents.yaml` both declare it. The

@@ -20,7 +20,7 @@ use super::refs::{FileRef, FileSource, StoredRef};
 use super::store::{FileRecord, FileState, byte_stream};
 use super::{FileCall, McpFiles};
 
-const INLINE_LABEL: &str = "inline";
+pub(super) const INLINE_LABEL: &str = "inline";
 const INVALID_LABEL: &str = "invalid";
 const INLINE_NAME: &str = "attachment";
 const UNNAMED_FILE: &str = "file";

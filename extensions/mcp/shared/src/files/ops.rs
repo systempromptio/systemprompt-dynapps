@@ -1,5 +1,5 @@
-//! `request_upload` and `store_download`, and the audit row every operation
-//! of [`McpFiles`] ends with, whether it succeeded or was refused.
+//! `request_upload`, and the audit row every operation of [`McpFiles`] ends
+//! with, whether it succeeded or was refused.
 
 use chrono::{DateTime, Utc};
 use systemprompt::files::uploads::NewUpload;
@@ -10,16 +10,13 @@ use systemprompt::runtime::documents::upload_links::UPLOAD_TOKEN_HEADER;
 
 use super::audit::{FileAction, FileAuditEvent};
 use super::error::FilesError;
-use super::outputs::{DownloadedFile, FileOut, UploadRequest, UploadTicket};
-use super::policy::{check_name, download_name, numbered_name, tagged_name};
+use super::outputs::{UploadRequest, UploadTicket};
+use super::policy::check_name;
 use super::refs::FileRef;
-use super::store::{NewStoredFile, SignedDownload, StoredFile, UploadSlot};
+use super::store::UploadSlot;
 use super::{FileCall, McpFiles};
 
-const NUMBERED_NAME_ATTEMPTS: u32 = 4;
-const UNIQUE_TAG_CHARS: usize = 8;
 const UPLOAD_LABEL: &str = "upload";
-const DOWNLOAD_LABEL: &str = "download";
 
 pub(super) struct Audit {
     pub action: FileAction,
@@ -29,14 +26,6 @@ pub(super) struct Audit {
 
 pub(super) fn caller(ctx: &RequestContext) -> Result<&AuthenticatedUser, FilesError> {
     ctx.user.as_ref().ok_or(FilesError::Anonymous)
-}
-
-fn unique_tag() -> String {
-    DocumentUploadId::generate()
-        .as_str()
-        .chars()
-        .take(UNIQUE_TAG_CHARS)
-        .collect()
 }
 
 pub(super) fn ensure_owner(caller: &UserId, owner: &UserId, what: &str) -> Result<(), FilesError> {
@@ -65,25 +54,6 @@ impl McpFiles {
             action: FileAction::UploadOpened,
             file: label,
             size_bytes: declared,
-        };
-        self.audited(call, audit, outcome).await
-    }
-
-    pub async fn store_download(
-        &self,
-        call: FileCall<'_>,
-        file: DownloadedFile,
-    ) -> Result<FileOut, FilesError> {
-        let size = file.bytes.len() as u64;
-        let outcome = self.keep(call, file).await;
-        let label = outcome.as_ref().map_or_else(
-            |_refused| DOWNLOAD_LABEL.to_owned(),
-            |out| format!("document:{}", out.file_ref.document_id),
-        );
-        let audit = Audit {
-            action: FileAction::Stored,
-            file: label,
-            size_bytes: Some(size),
         };
         self.audited(call, audit, outcome).await
     }
@@ -199,67 +169,5 @@ impl McpFiles {
             expires = expires_at.to_rfc3339(),
             tool = self.policy.upload_tool,
         )
-    }
-
-    async fn keep(&self, call: FileCall<'_>, file: DownloadedFile) -> Result<FileOut, FilesError> {
-        caller(call.ctx)?;
-        self.policy.check_size(file.bytes.len() as u64)?;
-        let base = download_name(&file.name);
-        let mut new_file = NewStoredFile {
-            name: base.clone(),
-            mime: self.policy.download_mime(&file.mime)?,
-            bytes: file.bytes,
-            exec_id: call.exec_id.clone(),
-        };
-        let stored = self.store_unique(call, &mut new_file, &base).await?;
-        let link = self.link(call, &stored).await;
-        Ok(FileOut {
-            file_ref: FileRef::document(&stored.document_id, &stored.revision_id),
-            name: stored.name,
-            mime: stored.mime,
-            size_bytes: stored.size_bytes,
-            download_url: link.as_ref().map(|signed| signed.url.clone()),
-            expires_at: link.map(|signed| signed.expires_at),
-        })
-    }
-
-    async fn store_unique(
-        &self,
-        call: FileCall<'_>,
-        file: &mut NewStoredFile,
-        base: &str,
-    ) -> Result<StoredFile, FilesError> {
-        let mut attempt = 1;
-        loop {
-            match self.store.store(call.ctx, file).await {
-                Err(FilesError::NameTaken { .. }) if attempt <= NUMBERED_NAME_ATTEMPTS => {
-                    attempt += 1;
-                    file.name = if attempt <= NUMBERED_NAME_ATTEMPTS {
-                        numbered_name(base, attempt)
-                    } else {
-                        tagged_name(base, &unique_tag())
-                    };
-                },
-                outcome => return outcome,
-            }
-        }
-    }
-
-    async fn link(&self, call: FileCall<'_>, stored: &StoredFile) -> Option<SignedDownload> {
-        match self
-            .store
-            .sign_download(call.hop, &stored.document_id, &stored.revision_id)
-            .await
-        {
-            Ok(link) => Some(link),
-            Err(error) => {
-                tracing::warn!(
-                    error = %error,
-                    document_id = %stored.document_id,
-                    "download link not issued; the stored document is still referenced"
-                );
-                None
-            },
-        }
     }
 }

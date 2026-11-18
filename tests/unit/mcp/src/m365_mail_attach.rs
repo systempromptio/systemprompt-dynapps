@@ -1,7 +1,9 @@
 //! Mail attachments through the shared file layer against a simulated Graph
-//! and an in-memory store: a download is kept as the caller's document and
-//! never returned as base64, an attachment comes in by reference or as
-//! small inline base64, a large one goes through an upload session this
+//! and an in-memory store: a download is read raw from `/$value` (so one
+//! whose base64 would pass the response limit still fits), kept as the
+//! caller's document and never returned as base64, an item attachment is
+//! passed through as Graph describes it, an attachment comes in by reference or
+//! as small inline base64, a large one goes through an upload session this
 //! server fills without the user's bearer, and an upload URL this server
 //! did not open for the caller or a file of another user never gets a byte
 //! (the session binding itself is in `m365_mail_attach_session`).
@@ -11,6 +13,7 @@ use base64::engine::general_purpose::STANDARD;
 use serde_json::{Value, json};
 use systemprompt::identifiers::McpExecutionId;
 use systemprompt::models::execution::context::RequestContext;
+use systemprompt_mcp_microsoft_365::graph::GraphLimits;
 use systemprompt_mcp_microsoft_365::graph::upload::UPLOAD_CHUNK_BYTES;
 use systemprompt_mcp_microsoft_365::tools::mail_attach::{
     add_mail_attachment, delete_mail_attachment, get_mail_attachment,
@@ -60,15 +63,28 @@ fn last_range(seen: &Seen) -> bool {
     end + 1 == total.parse::<u64>().unwrap()
 }
 
+// Graph for one attachment: `metadata` at its path and `raw` at `/$value`.
+async fn attachment_with(metadata: Value, raw: Vec<u8>) -> Sim {
+    Sim::start(move |seen, _| {
+        if seen.path.ends_with("/$value") {
+            Reply::bytes(200, &raw)
+        } else {
+            Reply::json(200, &metadata)
+        }
+    })
+    .await
+}
+
 #[tokio::test]
-async fn m365_mail_get_mail_attachment_keeps_the_bytes_as_a_document_not_base64() {
-    let pdf = b"%PDF-1.7 tiny";
-    let attachment = json!({
+async fn m365_mail_get_mail_attachment_reads_the_raw_value_into_a_document_not_base64() {
+    let pdf = b"%PDF-1.7 tiny".to_vec();
+    // A Graph that ignored `$select` and sent the base64 along with the metadata.
+    let metadata = json!({
         "@odata.type": "#microsoft.graph.fileAttachment",
         "id": "att1", "name": "report.pdf", "contentType": "application/pdf",
-        "size": pdf.len(), "contentBytes": STANDARD.encode(pdf)
+        "size": pdf.len(), "contentBytes": STANDARD.encode(&pdf)
     });
-    let sim = Sim::start(move |_, _| Reply::json(200, &attachment)).await;
+    let sim = attachment_with(metadata, pdf.clone()).await;
     let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
     let h = harness();
     let (ctx, exec) = (signed_in(ALICE), exec_id());
@@ -77,7 +93,18 @@ async fn m365_mail_get_mail_attachment_keeps_the_bytes_as_a_document_not_base64(
         .await
         .unwrap();
 
-    assert_eq!(sim.calls()[0].path, "/v1.0/me/messages/m1/attachments/att1");
+    let calls = sim.calls();
+    assert_eq!(calls.len(), 2, "{calls:#?}");
+    assert_eq!(calls[0].path, "/v1.0/me/messages/m1/attachments/att1");
+    let select = calls[0].query.get("$select").cloned().unwrap_or_default();
+    assert!(
+        select.contains("name") && !select.contains("contentBytes"),
+        "the metadata is read without the base64: {select:?}"
+    );
+    assert_eq!(
+        (calls[1].method.as_str(), calls[1].path.as_str()),
+        ("GET", "/v1.0/me/messages/m1/attachments/att1/$value")
+    );
     let data = serde_json::to_value(&reply).unwrap()["data"].clone();
     assert!(data.get("contentBytes").is_none(), "{data}");
     assert_eq!(data["name"], "report.pdf");
@@ -102,10 +129,68 @@ async fn m365_mail_get_mail_attachment_keeps_the_bytes_as_a_document_not_base64(
             .find(|(record, _)| record.name == "report.pdf")
             .map(|(record, bytes)| (record.owner.to_string(), bytes.clone()))
     });
-    assert_eq!(stored, Some((ALICE.to_owned(), pdf.to_vec())));
+    assert_eq!(stored, Some((ALICE.to_owned(), pdf)));
     let events = h.audit.events();
     assert_eq!(events.len(), 1);
     assert!(matches!(events[0].action, FileAction::Stored));
+}
+
+#[tokio::test]
+async fn m365_mail_get_mail_attachment_keeps_one_whose_base64_would_pass_the_response_limit() {
+    let size = 20 * 1024 * 1024;
+    let zip: Vec<u8> = (0..size).map(|i| (i % 251) as u8).collect();
+    assert!(
+        STANDARD.encode(&zip).len() > GraphLimits::default().max_response_bytes,
+        "as base64 in JSON this attachment cannot be read"
+    );
+    let metadata = json!({
+        "@odata.type": "#microsoft.graph.fileAttachment",
+        "id": "big", "name": "plans.zip", "contentType": "application/zip", "size": size
+    });
+    let sim = attachment_with(metadata, zip.clone()).await;
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+    let h = harness();
+    let (ctx, exec) = (signed_in(ALICE), exec_id());
+    let input = parse(json!({"message_id": "m1", "attachment_id": "big"}));
+    let reply = get_mail_attachment(&graph, &h.files, as_caller(&ctx, &exec), input)
+        .await
+        .unwrap();
+
+    let data = serde_json::to_value(&reply).unwrap()["data"].clone();
+    assert_eq!(data["file"]["size_bytes"], size, "{data}");
+    assert_eq!(data["file"]["mime"], "application/zip");
+    let stored = h.store.with(|state| {
+        state
+            .records
+            .values()
+            .find(|(record, _)| record.name == "plans.zip")
+            .map(|(_, bytes)| bytes == &zip)
+    });
+    assert_eq!(stored, Some(true));
+}
+
+#[tokio::test]
+async fn m365_mail_get_mail_attachment_with_base64_but_no_type_is_still_read_raw() {
+    let csv = b"a,b\n1,2\n".to_vec();
+    let metadata = json!({
+        "id": "att3", "name": "data.csv", "contentType": "text/csv",
+        "contentBytes": STANDARD.encode(&csv)
+    });
+    let sim = attachment_with(metadata, csv.clone()).await;
+    let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+    let h = harness();
+    let (ctx, exec) = (signed_in(ALICE), exec_id());
+    let input = parse(json!({"message_id": "m1", "attachment_id": "att3"}));
+    let reply = get_mail_attachment(&graph, &h.files, as_caller(&ctx, &exec), input)
+        .await
+        .unwrap();
+
+    let calls = sim.calls();
+    assert_eq!(calls.len(), 2, "{calls:#?}");
+    assert!(calls[1].path.ends_with("/attachments/att3/$value"));
+    let data = serde_json::to_value(&reply).unwrap()["data"].clone();
+    assert!(data.get("contentBytes").is_none(), "{data}");
+    assert_eq!(data["file"]["size_bytes"], csv.len());
 }
 
 #[tokio::test]
@@ -123,6 +208,7 @@ async fn m365_mail_get_mail_attachment_passes_an_item_attachment_through() {
         .unwrap();
 
     assert_eq!(serde_json::to_value(&reply).unwrap()["data"], item);
+    assert_eq!(sim.calls().len(), 1, "an item attachment is not downloaded");
     assert!(h.store.with(|state| state.stored.is_empty()));
 }
 

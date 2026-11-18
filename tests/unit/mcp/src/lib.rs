@@ -46,6 +46,8 @@ mod access_policy;
 #[cfg(test)]
 mod audit_metadata;
 #[cfg(test)]
+mod files_inline_and_blobs;
+#[cfg(test)]
 mod files_refs;
 #[cfg(test)]
 mod files_service;

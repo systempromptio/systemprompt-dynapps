@@ -10,6 +10,11 @@
 //! The API signs a link only for a server whose deployment hosts the
 //! `documents` toolset, so a server using this store declares it in its
 //! `services/mcp/` file.
+//!
+//! A blob is described as ready with no date, so `ref_ttl` never applies to a
+//! `blob_ref`: core's upload service answers who owns a blob and its type
+//! (`BlobOrigin`), not when the upload that made it finished. A `blob_ref`
+//! lasts as long as core keeps the blob.
 
 use std::fmt;
 use std::sync::Arc;

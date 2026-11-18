@@ -1,8 +1,11 @@
 //! Mail attachments through the shared file layer.
 //!
-//! A downloaded attachment is kept as one of the caller's documents and comes
-//! back as a `FileOut` (the Belgian server returned its base64 to the model);
-//! an attachment to add comes in as a `FileRef`, or as base64 only up to the
+//! A file attachment is downloaded raw from `/$value`, after its metadata is
+//! read without the base64, kept as one of the caller's documents and comes
+//! back as a `FileOut` (the Belgian server returned its base64 to the model,
+//! so an attachment of over ~18.7 MB could not fit Graph's response limit);
+//! an item or reference attachment comes back as Graph describes it. An
+//! attachment to add comes in as a `FileRef`, or as base64 only up to the
 //! inline limit. Graph takes an attachment of under 3 MB in one POST and a
 //! larger one only through an upload session, which this server fills in
 //! chunks itself so the bytes never pass through the model. The public
@@ -10,6 +13,7 @@
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
+use reqwest::Method;
 use rmcp::ErrorData as McpError;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -19,12 +23,14 @@ use systemprompt_mcp_shared::files::{DownloadedFile, FileCall, FileRef, McpFiles
 
 use super::reply::GraphItem;
 use crate::graph::sanitize::validate_id;
-use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery};
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery, GraphRequest};
 
 // Why: Graph's limit for a file attachment POSTed whole; larger ones need an
 // upload session.
 pub const SINGLE_POST_MAX_BYTES: usize = 3 * 1024 * 1024;
 const DEFAULT_MIME: &str = "application/octet-stream";
+const FILE_ATTACHMENT: &str = "#microsoft.graph.fileAttachment";
+const ATTACHMENT_FIELDS: &str = "id,name,contentType,size,isInline,lastModifiedDateTime";
 
 pub const GET_MAIL_ATTACHMENT_DESCRIPTION: &str = "Get an email attachment as a file: it is \
     saved to the user's documents and returned as a reference with a download link (the \
@@ -99,24 +105,21 @@ pub async fn get_mail_attachment(
     input: AttachmentIdInput,
 ) -> Result<GraphItem, McpError> {
     let path = attachment_path(&input.message_id, &input.attachment_id)?;
-    let mut attachment = graph.get_json(&path, &GraphQuery::new()).await?;
-    let Some(encoded) = text_of(&attachment, "contentBytes") else {
+    let select = GraphQuery::new().with("$select", ATTACHMENT_FIELDS);
+    let mut attachment = graph.get_json(&path, &select).await?;
+    let carried_bytes = attachment
+        .as_object_mut()
+        .and_then(|fields| fields.remove("contentBytes"))
+        .is_some();
+    let typed_file = text_of(&attachment, "@odata.type").as_deref() == Some(FILE_ATTACHMENT);
+    if !carried_bytes && !typed_file {
         return Ok(GraphItem::new(attachment));
-    };
-    if let Some(fields) = attachment.as_object_mut() {
-        fields.remove("contentBytes");
     }
-    let bytes = match STANDARD.decode(encoded) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            let message = format!("Graph attachment bytes are not base64: {error}");
-            return Err(GraphError::api(502, None, &message).into());
-        },
-    };
+    let raw = GraphRequest::new(Method::GET, format!("{path}/$value"));
     let download = DownloadedFile {
         name: text_of(&attachment, "name").unwrap_or_else(|| "attachment".to_owned()),
         mime: text_of(&attachment, "contentType").unwrap_or_else(default_mime),
-        bytes,
+        bytes: graph.send(&raw).await?.body,
     };
     let file = files.store_download(call, download).await?;
     attachment["file"] = serde_json::to_value(&file).map_err(GraphError::Decode)?;

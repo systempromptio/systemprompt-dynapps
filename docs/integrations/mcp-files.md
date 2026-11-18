@@ -1,7 +1,9 @@
 # Files in MCP tools: the shared file layer
 
 Any MCP server in this repo can take files from and hand files to the model
-without the bytes passing through the model's context.
+without the bytes passing through the model's context. The one exception is
+text a server chooses to return inline because it is small enough for the
+model to read; the layer audits it like any other download.
 `systemprompt-mcp-shared::files` (`extensions/mcp/shared/src/files/`) does it
 on top of core's document store. A file goes into a tool as a
 **`FileRef`** and comes out as a **`FileOut`**. The bytes travel out of band,
@@ -20,6 +22,7 @@ in the arguments is only accepted for small files.
 | `McpFiles::request_upload(call, &UploadRequest)` | Opens a resumable upload owned by the caller (`name`, `mime`, `size`, `sha256`) and returns an `UploadTicket`: the `parts_url` / `complete_url` / `status_url` links, the `upload_token` with the header to send it in, `part_size` / `part_count`, `expires_at`, plain-text `instructions` and the `file_ref` (`{"upload_id": …}`) that names the file once the upload is complete. Called again with only `upload_id`, it renews the token of an unfinished upload. |
 | `McpFiles::resolve_ref(call, &FileRef)` | Turns a reference into a `ResolvedFile` (name, MIME type, size, byte stream). The stream is capped at the size limit: `into_stream()` and `read_all()` both stop with an error at the first byte past it. A file whose size the store does not report is read under the limit before `resolve_ref` returns, so a refusal for size is audited like any other. |
 | `McpFiles::store_download(call, DownloadedFile)` | Keeps bytes the server fetched from its upstream as a `file` document of the caller. It returns a `FileOut` with the document reference and, when the API signs one, a download link valid for 10 minutes. |
+| `McpFiles::return_inline(call, size_bytes)` | Audits bytes the server fetched and returns to the model itself instead of keeping them (small text). It writes the same `imported` row as `store_download`, labelled `inline`. A call with no signed-in user is refused, and the server then returns nothing. |
 | `McpFiles::decode_inline(&str)` | Decodes base64 of up to `inline_max_bytes` (64 KB by default). Anything larger is refused with an error that names the server's upload tool. |
 
 A `FileRef` names exactly one source:
@@ -50,8 +53,16 @@ takes `attachments: Vec<FileRef>` stays declarable to every provider (no
   aborted or refused upload, or a completed one older than `ref_ttl`
   (24 h by default, core's grace period for unimported blobs), answers
   *no longer available* and points to the upload tool. `ref_ttl` applies to
-  upload ids. A `blob_ref` stays valid for as long as core keeps the blob,
-  because core records no completion time for it.
+  every reference the store dates, and `DocumentsFileStore` dates only
+  upload ids. A `blob_ref` stays valid for as long as core keeps the blob.
+  Core records when the upload behind it finished, but its upload service
+  answers a blob's owner and type only (`BlobOrigin`), not that time.
+  Aligning it with the `upload_id` needs that time from core. In practice
+  core's blob garbage collector removes an unimported blob
+  `blob_gc_grace_hours` (24 h by default) after it was stored. A blob that
+  lives longer is also held by a document (a revision, an edit session or
+  an embedded image). Either way, only the user
+  who uploaded it can resolve it.
 - **Limits.** Inline base64 is capped at 64 KB, and each file at
   `max_file_bytes` (25 MiB by default). Core's own `maxUploadBytes` (64 MiB
   by default) and daily quota still apply.
@@ -68,8 +79,8 @@ takes `attachments: Vec<FileRef>` stays declarable to every provider (no
   bytes against its declared type.
 - **Audit.** Every operation writes one `user_activity` row in the `mcp_access`
   category, with `entity_type = file`, including refusals. The row's action
-  is `created` for an upload, `used` for a read, `imported` for a stored
-  download and `rejected` for a refusal. It names the file by reference only
+  is `created` for an upload, `used` for a read, `imported` for a download
+  (stored, or returned inline) and `rejected` for a refusal. It names the file by reference only
   (`upload:<id>`, `blob:<hash>`, `document:<id>`, `inline`), and a refusal by
   its error code, never by file name or address. A refusal of a call with no
   signed-in user is attributed to the anonymous principal, as

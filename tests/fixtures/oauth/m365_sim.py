@@ -45,7 +45,8 @@ INVOICE_A = b"%PDF-1.4 factura de la empresa A\n"
 MAILBOXES = {
     TENANT_A: {"msg-a-1": {"id": "msg-a-1", "subject": "Pedido de la empresa A", "isRead": False,
                            "from": {"emailAddress": {"address": "cliente@empresa-a.example"}},
-                           "attachments": {"att-a-1": {"id": "att-a-1", "name": "factura-a.pdf",
+                           "attachments": {"att-a-1": {"@odata.type": "#microsoft.graph.fileAttachment",
+                                                       "id": "att-a-1", "name": "factura-a.pdf",
                                                        "contentType": "application/pdf",
                                                        "contentBytes": base64.b64encode(INVOICE_A).decode()}}}},
     TENANT_B: {"msg-b-1": {"id": "msg-b-1", "subject": "Pedido de la empresa B", "isRead": False,
@@ -172,7 +173,14 @@ def graph_error(code, status):
     return status, {"error": {"code": code, "message": code}}
 
 
-def mail_route(method, parts, mailbox, payload):
+def selected(resource, select):
+    if not select:
+        return resource
+    fields = set(select.split(",")) | {"@odata.type"}
+    return {k: v for k, v in resource.items() if k in fields}
+
+
+def mail_route(method, parts, mailbox, payload, select=None):
     if parts == ["messages"] and method == "POST":
         message_id = nonce("draft")
         mailbox[message_id] = {"id": message_id, "subject": payload.get("subject", ""), "isRead": True,
@@ -202,7 +210,12 @@ def mail_route(method, parts, mailbox, payload):
                                for a in message["attachments"].values()]}
     if len(rest) == 2 and rest[0] == "attachments" and method == "GET":
         attachment = message["attachments"].get(rest[1])
-        return (200, attachment) if attachment else graph_error("ErrorItemNotFound", 404)
+        return (200, selected(attachment, select)) if attachment else graph_error("ErrorItemNotFound", 404)
+    if len(rest) == 3 and rest[0] == "attachments" and rest[2] == "$value" and method == "GET":
+        attachment = message["attachments"].get(rest[1])
+        if attachment is None or "contentBytes" not in attachment:
+            return graph_error("ErrorItemNotFound", 404)
+        return 200, base64.b64decode(attachment["contentBytes"]), attachment.get("contentType") or "application/octet-stream"
     return graph_error("BadRequest", 400)
 
 
@@ -237,8 +250,8 @@ class Graph(Base):
             parts = parts[2:]
         if parts and parts[0] == "messages":
             payload = json.loads(raw or b"{}")
-            status, body = mail_route(method, parts, MAILBOXES[tenant], payload)
-            return self.reply(status, body)
+            select = dict(urllib.parse.parse_qsl(url.query)).get("$select")
+            return self.reply(*mail_route(method, parts, MAILBOXES[tenant], payload, select))
         return self.reply(*graph_error("ResourceNotFound", 404))
 
     def do_GET(self):

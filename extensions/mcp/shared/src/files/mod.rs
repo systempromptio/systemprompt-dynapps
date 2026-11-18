@@ -1,5 +1,7 @@
-//! The file layer every MCP server in this repo shares, so file bytes never
-//! travel through the model's context.
+//! The file layer every MCP server in this repo shares.
+//!
+//! File bytes travel through the model's context only when a server returns
+//! small text inline.
 //!
 //! A tool takes a file as a [`FileRef`](crate::files::FileRef) and hands one
 //! back as a [`FileOut`](crate::files::FileOut).
@@ -9,8 +11,9 @@
 //! [`FileRef`](crate::files::FileRef) (an upload, a blob, one of the caller's
 //! documents, or base64 up to the inline limit) into a byte stream;
 //! `store_download` keeps bytes a server fetched as a document of the caller
-//! and answers a signed download link. Every operation, refusals included,
-//! writes one audit row.
+//! and answers a signed download link; `return_inline` audits the bytes a
+//! server returns to the model itself instead (small text). Every operation,
+//! refusals included, writes one audit row.
 //!
 //! The decisions (ownership, expiry, size, MIME, inline limit, audit) are
 //! taken here, once, for every server; the store behind them is the
@@ -21,6 +24,7 @@
 mod audit;
 mod documents_store;
 mod documents_support;
+mod downloads;
 mod error;
 mod ops;
 mod outputs;

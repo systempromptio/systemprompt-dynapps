@@ -2,18 +2,19 @@
 //! whose `/content` answers 302 to a separate download host (as Graph
 //! does): the redirect is followed without the bearer (the Belgian
 //! `d365_get_file_content` returned `null` here), small text comes back
-//! inline, anything else is kept as the caller's document and returned as a
-//! `FileOut` with no base64 and no pre-signed URL.
+//! inline with an audit row like a kept download's (and not at all to a call
+//! with no user), anything else is kept as the caller's document and
+//! returned as a `FileOut` with no base64 and no pre-signed URL.
 
 use serde_json::{Value, json};
-use systemprompt::identifiers::McpExecutionId;
+use systemprompt::identifiers::{McpExecutionId, UserId};
 use systemprompt::models::execution::context::RequestContext;
 use systemprompt_mcp_microsoft_365::tools::drive_content::{
     INLINE_TEXT_MAX_BYTES, download_file, get_file_content,
 };
 use systemprompt_mcp_shared::files::{FileAction, FileCall};
 
-use crate::files_support::{ALICE, Harness, exec_id, harness, signed_in};
+use crate::files_support::{ALICE, Harness, anonymous, exec_id, harness, signed_in};
 use crate::m365_pim_support::{args, graph};
 use crate::m365_support::{Reply, Sim};
 
@@ -57,7 +58,7 @@ fn data_of(reply: &impl serde::Serialize) -> Value {
 }
 
 #[tokio::test]
-async fn m365_files_get_file_content_follows_the_redirect_and_inlines_small_text() {
+async fn m365_files_get_file_content_follows_the_redirect_and_inlines_small_text_audited() {
     let metadata = json!({
         "id": "T1", "name": "notes.txt", "size": 11,
         "file": {"mimeType": "text/plain"}, "webUrl": "https://contoso/notes.txt"
@@ -89,7 +90,51 @@ async fn m365_files_get_file_content_follows_the_redirect_and_inlines_small_text
         json!({"content": "hello world", "mimeType": "text/plain"})
     );
     assert!(stored(&h).is_empty(), "inline text is not kept");
-    assert!(h.audit.events().is_empty());
+    let events = h.audit.events();
+    assert_eq!(events.len(), 1, "inline text is audited: {events:?}");
+    assert_eq!(events[0].user_id, Some(UserId::new(ALICE)));
+    assert_eq!(events[0].tool, "d365_files_test");
+    assert_eq!(events[0].file, "inline");
+    assert_eq!(events[0].size_bytes, Some(11));
+    assert_eq!(events[0].reason, None);
+    assert_eq!(events[0].action, FileAction::Returned);
+    assert_eq!(
+        events[0].action.activity(),
+        FileAction::Stored.activity(),
+        "the same action as a kept download"
+    );
+    assert!(
+        events[0]
+            .description()
+            .starts_with("Returned file inline (11 bytes)"),
+        "{}",
+        events[0].description()
+    );
+}
+
+#[tokio::test]
+async fn m365_files_get_file_content_gives_no_inline_text_to_a_call_with_no_user() {
+    let metadata = json!({
+        "id": "T2", "name": "notes.txt", "size": 5, "file": {"mimeType": "text/plain"}
+    });
+    let (sim, _download) = drive_with(metadata, b"hello".to_vec()).await;
+    let h = harness();
+    let (ctx, exec) = (anonymous(), exec_id());
+    let result = get_file_content(
+        &graph(&sim),
+        &h.files,
+        as_caller(&ctx, &exec),
+        args(json!({"item_id": "T2"})),
+    )
+    .await;
+
+    assert!(result.is_err(), "no signed-in user, no content");
+    let events = h.audit.events();
+    assert_eq!(events.len(), 1, "{events:?}");
+    assert_eq!(events[0].action, FileAction::Refused);
+    assert_eq!(events[0].file, "inline");
+    assert_eq!(events[0].user_id, None);
+    assert_eq!(events[0].reason.as_deref(), Some("anonymous"));
 }
 
 #[tokio::test]

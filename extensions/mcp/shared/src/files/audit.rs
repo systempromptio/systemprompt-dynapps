@@ -28,6 +28,7 @@ pub enum FileAction {
     UploadOpened,
     Read,
     Stored,
+    Returned,
     Refused,
 }
 
@@ -37,7 +38,7 @@ impl FileAction {
         match self {
             Self::UploadOpened => "created",
             Self::Read => "used",
-            Self::Stored => "imported",
+            Self::Stored | Self::Returned => "imported",
             Self::Refused => "rejected",
         }
     }
@@ -47,6 +48,7 @@ impl FileAction {
             Self::UploadOpened => "Opened an upload of",
             Self::Read => "Read",
             Self::Stored => "Stored",
+            Self::Returned => "Returned",
             Self::Refused => "Refused",
         }
     }
