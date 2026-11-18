@@ -10,7 +10,12 @@ use crate::models_support::DENIED_ROLE;
 fn ids(body: &Value) -> Vec<&str> {
     body["models"]
         .as_array()
-        .map(|models| models.iter().filter_map(|model| model["id"].as_str()).collect())
+        .map(|models| {
+            models
+                .iter()
+                .filter_map(|model| model["id"].as_str())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -101,7 +106,10 @@ async fn a_role_the_access_rules_deny_loses_a_model(app: &App) {
         .send()
         .await;
     assert_eq!(bob.status, StatusCode::OK, "{:?}", bob.body);
-    assert_eq!(ids(&alice.body), ["claude-opus", "claude-sonnet", "deepseek-chat"]);
+    assert_eq!(
+        ids(&alice.body),
+        ["claude-opus", "claude-sonnet", "deepseek-chat"]
+    );
     assert_eq!(ids(&bob.body), ["claude-sonnet", "deepseek-chat"]);
     let (_, phone) = app.phone("bob").await;
     let on_phone = app.call(Method::GET, "/models").bearer(&phone).send().await;
@@ -111,7 +119,11 @@ async fn a_role_the_access_rules_deny_loses_a_model(app: &App) {
 async fn the_clients_of_the_token_reaches_the_access_rules(app: &App) {
     app.source.set_roles("carol", &[DENIED_ROLE]);
     let client = desktop_token_for_client("carol", "sp_nodeepseek");
-    let answer = app.call(Method::GET, "/models").bearer(&client).send().await;
+    let answer = app
+        .call(Method::GET, "/models")
+        .bearer(&client)
+        .send()
+        .await;
     assert_eq!(ids(&answer.body), ["claude-sonnet"]);
     assert_eq!(answer.body["default"], "claude-sonnet");
 }

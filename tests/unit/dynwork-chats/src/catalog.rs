@@ -201,8 +201,22 @@ fn allow_all() -> SharedAuthzHook {
 async fn a_role_the_hook_denies_loses_the_model() {
     let catalog = fixture();
     let hook: SharedAuthzHook = RoleHook::denying("m-secret", "intern");
-    let staff = listed(&catalog, &["alpha"], &[], &hook, &principal("u1", &["staff"])).await;
-    let intern = listed(&catalog, &["alpha"], &[], &hook, &principal("u2", &["intern"])).await;
+    let staff = listed(
+        &catalog,
+        &["alpha"],
+        &[],
+        &hook,
+        &principal("u1", &["staff"]),
+    )
+    .await;
+    let intern = listed(
+        &catalog,
+        &["alpha"],
+        &[],
+        &hook,
+        &principal("u2", &["intern"]),
+    )
+    .await;
     assert!(ids(&staff.models).contains(&"m-secret"));
     assert!(!ids(&intern.models).contains(&"m-secret"));
     assert!(ids(&intern.models).contains(&"m-big"));
@@ -212,8 +226,22 @@ async fn a_role_the_hook_denies_loses_the_model() {
 async fn two_users_with_different_roles_get_different_lists() {
     let catalog = fixture();
     let hook: SharedAuthzHook = RoleHook::denying("m-big", "intern");
-    let staff = listed(&catalog, &["alpha"], &[], &hook, &principal("u1", &["staff"])).await;
-    let intern = listed(&catalog, &["alpha"], &[], &hook, &principal("u2", &["intern"])).await;
+    let staff = listed(
+        &catalog,
+        &["alpha"],
+        &[],
+        &hook,
+        &principal("u1", &["staff"]),
+    )
+    .await;
+    let intern = listed(
+        &catalog,
+        &["alpha"],
+        &[],
+        &hook,
+        &principal("u2", &["intern"]),
+    )
+    .await;
     assert_ne!(ids(&staff.models), ids(&intern.models));
     assert_eq!(staff.models.len(), intern.models.len() + 1);
 }
@@ -290,7 +318,14 @@ async fn the_default_is_the_catalogs_without_its_context_suffix_and_only_when_li
 #[tokio::test]
 async fn a_model_not_advertised_stays_out_whatever_the_hook_says() {
     let catalog = fixture();
-    let models = listed(&catalog, &["alpha"], &[], &allow_all(), &principal("u1", &[])).await;
+    let models = listed(
+        &catalog,
+        &["alpha"],
+        &[],
+        &allow_all(),
+        &principal("u1", &[]),
+    )
+    .await;
     assert!(!ids(&models.models).contains(&"m-hidden"));
 }
 
@@ -310,7 +345,9 @@ async fn a_model_with_two_platform_providers_names_the_first_configured_one_in_t
     let catalog = fixture();
     let hook = allow_all();
     let who = principal("u1", &[]);
-    let both = listed(&catalog, &["alpha", "beta"], &[], &hook, &who).await.models;
+    let both = listed(&catalog, &["alpha", "beta"], &[], &hook, &who)
+        .await
+        .models;
     assert_eq!(find(&both, "m-failover").provider_id, "alpha");
     let only_beta = listed(&catalog, &["beta"], &[], &hook, &who).await.models;
     assert_eq!(find(&only_beta, "m-failover").provider_id, "beta");
@@ -342,9 +379,22 @@ async fn the_committed_catalog_follows_the_secrets_the_instance_holds() {
     let claude = listed(&catalog, &["anthropic"], &[], &hook, &who).await;
     let deepseek = listed(&catalog, &["deepseek"], &[], &hook, &who).await;
     assert!(!claude.models.is_empty() && !deepseek.models.is_empty());
-    assert!(claude.models.iter().all(|model| model.provider_id == "anthropic"));
-    assert!(deepseek.models.iter().all(|model| model.provider_id == "deepseek"));
-    assert_eq!(both.models.len(), claude.models.len() + deepseek.models.len());
+    assert!(
+        claude
+            .models
+            .iter()
+            .all(|model| model.provider_id == "anthropic")
+    );
+    assert!(
+        deepseek
+            .models
+            .iter()
+            .all(|model| model.provider_id == "deepseek")
+    );
+    assert_eq!(
+        both.models.len(),
+        claude.models.len() + deepseek.models.len()
+    );
     let nothing = listed(&catalog, &[], &[], &hook, &who).await;
     assert!(nothing.models.is_empty());
 }
@@ -361,7 +411,10 @@ async fn the_committed_catalogs_member_paid_models_are_not_listed_even_with_a_ke
         })
         .map(|model| model.id.as_str())
         .collect();
-    assert!(!personal.is_empty(), "the catalog advertises member-paid models");
+    assert!(
+        !personal.is_empty(),
+        "the catalog advertises member-paid models"
+    );
     let keys: Vec<&str> = catalog
         .credentials()
         .filter(|credential| credential.is_personal())
@@ -400,7 +453,10 @@ async fn a_listed_model_names_a_provider_that_serves_it() {
         assert!(served, "{}", model.id);
         assert!(!model.name.is_empty());
         assert!(!model.provider_name.is_empty());
-        assert!(model.tools, "the catalog marks these models as tool-capable");
+        assert!(
+            model.tools,
+            "the catalog marks these models as tool-capable"
+        );
         assert!(model.context.is_some() && model.output.is_some());
     }
 }
@@ -419,7 +475,10 @@ fn caller(client: Client, session: Option<SessionId>) -> Caller {
 fn a_phone_presents_one_stable_session_of_its_own() {
     let device = DeviceId::generate();
     let first = caller(Client::Phone(device), None).admission_session();
-    assert_eq!(first, caller(Client::Phone(device), None).admission_session());
+    assert_eq!(
+        first,
+        caller(Client::Phone(device), None).admission_session()
+    );
     assert_ne!(
         first,
         caller(Client::Phone(DeviceId::generate()), None).admission_session()
@@ -436,5 +495,8 @@ fn a_desktop_presents_its_tokens_session_else_one_derived_from_the_user() {
     );
     let derived = caller(Client::Desktop, None).admission_session();
     assert_eq!(derived, caller(Client::Desktop, None).admission_session());
-    assert_ne!(derived, caller(Client::Phone(DeviceId::generate()), None).admission_session());
+    assert_ne!(
+        derived,
+        caller(Client::Phone(DeviceId::generate()), None).admission_session()
+    );
 }

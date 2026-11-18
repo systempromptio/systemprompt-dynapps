@@ -5,12 +5,12 @@
 //! a model, from one place so they can never disagree.
 //!
 //! The instance's authz hook is the decision (see [`catalog::listing`]). Core
-//! builds one at boot (`AppContext::authz_hook`) but gives it to its own routes,
-//! not to an extension's: `ExtensionContext` carries the profile, the services
-//! and the secrets it is built from. So [`LazyHook`] builds one, on the first
-//! use and once, with core's own `build_authz_hook` from those same inputs, the
-//! way core's boot does (`authz_stage`). Building it only constructs objects: no
-//! task, listener, migration or write.
+//! builds one at boot (`AppContext::authz_hook`) but gives it to its own
+//! routes, not to an extension's: `ExtensionContext` carries the profile, the
+//! services and the secrets it is built from. So [`LazyHook`] builds one, on
+//! the first use and once, with core's own `build_authz_hook` from those same
+//! inputs, the way core's boot does (`authz_stage`). Building it only
+//! constructs objects: no task, listener, migration or write.
 //!
 //! Its rule cache rechecks `config_version` every 5 s (a committed rule or
 //! entity edit shows within that) and reloads every 60 s whatever happens
@@ -82,9 +82,7 @@ impl LazyHook {
         secrets: Arc<dyn SecretStore>,
         pool: Arc<PgPool>,
     ) -> Self {
-        Self::new(move || {
-            instance_hook(&profile, &services, &secrets, &pool)
-        })
+        Self::new(move || instance_hook(&profile, &services, &secrets, &pool))
     }
 }
 

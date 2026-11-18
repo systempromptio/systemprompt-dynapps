@@ -7,8 +7,9 @@
 //! on the instance it is `503 ai_unavailable`; while another reply runs it is
 //! `409 busy`. A model the instance's rules do not allow the caller (the
 //! prompt's, else the thread's, else the instance's default) is
-//! `403 model_not_allowed`, and nothing is written or started. `interrupt` stops the running reply, waits for its last events
-//! and answers `204`, also when nothing was running.
+//! `403 model_not_allowed`, and nothing is written or started. `interrupt`
+//! stops the running reply, waits for its last events and answers `204`, also
+//! when nothing was running.
 
 use std::sync::Arc;
 

@@ -104,13 +104,15 @@ impl FromRequestParts<ChatsState> for WriteContext {
         parts: &mut Parts,
         _state: &ChatsState,
     ) -> impl Future<Output = Result<Self, ChatsError>> + Send {
-        std::future::ready(if_match(&parts.headers).map(|revision| Self {
-            revision,
-            ai: parts
-                .extensions
-                .get::<Option<Arc<AiService>>>()
-                .cloned()
-                .flatten(),
+        std::future::ready(if_match(&parts.headers).map(|revision| {
+            Self {
+                revision,
+                ai: parts
+                    .extensions
+                    .get::<Option<Arc<AiService>>>()
+                    .cloned()
+                    .flatten(),
+            }
         }))
     }
 }

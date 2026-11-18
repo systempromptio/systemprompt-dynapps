@@ -33,7 +33,13 @@ async fn prompt_with(app: &App, user: &str, message: &str, model: Option<Value>)
         .await
 }
 
-async fn put_thread(app: &App, user: &str, id: &str, revision: Option<&str>, body: Value) -> Answer {
+async fn put_thread(
+    app: &App,
+    user: &str,
+    id: &str,
+    revision: Option<&str>,
+    body: Value,
+) -> Answer {
     let mut call = app
         .call(Method::PUT, &format!("/threads/{id}"))
         .bearer(&desktop_token(user))
@@ -99,22 +105,53 @@ async fn the_threads_own_model_is_judged_when_the_prompt_names_none(app: &App) {
     assert!(app.model.requests().is_empty());
     app.scripted(&["fine"]);
     let overridden = prompt_with(app, "alice", ASK_AGAIN, Some(sonnet())).await;
-    assert_eq!(overridden.status, StatusCode::ACCEPTED, "{:?}", overridden.body);
+    assert_eq!(
+        overridden.status,
+        StatusCode::ACCEPTED,
+        "{:?}",
+        overridden.body
+    );
 }
 
 async fn a_thread_write_naming_a_hidden_model_is_403_and_changes_nothing(app: &App) {
     app.source.set_roles("bob", &[DENIED_ROLE]);
-    let refused = put_thread(app, "bob", THREAD, None, json!({ "title": "t", "model": opus() })).await;
+    let refused = put_thread(
+        app,
+        "bob",
+        THREAD,
+        None,
+        json!({ "title": "t", "model": opus() }),
+    )
+    .await;
     assert_eq!(refused.status, StatusCode::FORBIDDEN, "{:?}", refused.body);
     assert_eq!(refused.key(), "model_not_allowed");
     let created = put_thread(app, "bob", THREAD, None, json!({ "title": "t" })).await;
-    assert_eq!(created.status, StatusCode::OK, "no row was left behind: {:?}", created.body);
+    assert_eq!(
+        created.status,
+        StatusCode::OK,
+        "no row was left behind: {:?}",
+        created.body
+    );
     let revision = created.body["revision"].as_i64().expect("a revision");
     app.hints.clear();
-    let edit = put_thread(app, "bob", THREAD, Some(&revision.to_string()), json!({ "model": opus() })).await;
+    let edit = put_thread(
+        app,
+        "bob",
+        THREAD,
+        Some(&revision.to_string()),
+        json!({ "model": opus() }),
+    )
+    .await;
     assert_eq!(edit.status, StatusCode::FORBIDDEN, "{:?}", edit.body);
     assert!(app.hints.sent().is_empty());
-    let moved = put_thread(app, "bob", THREAD, Some(&revision.to_string()), json!({ "model": sonnet() })).await;
+    let moved = put_thread(
+        app,
+        "bob",
+        THREAD,
+        Some(&revision.to_string()),
+        json!({ "model": sonnet() }),
+    )
+    .await;
     assert_eq!(moved.status, StatusCode::OK, "{:?}", moved.body);
     assert_eq!(moved.body["revision"].as_i64(), Some(revision + 1));
     assert_eq!(moved.body["model"], sonnet());
@@ -131,7 +168,12 @@ async fn without_a_model_service_a_model_is_never_admitted(app: &App) {
     app.create_thread("alice", THREAD).await;
     app.source.switch_off();
     let refused = put_thread(app, "alice", OTHER, None, json!({ "model": sonnet() })).await;
-    assert_eq!(refused.status, StatusCode::SERVICE_UNAVAILABLE, "{:?}", refused.body);
+    assert_eq!(
+        refused.status,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "{:?}",
+        refused.body
+    );
     assert_eq!(refused.key(), "ai_unavailable");
 }
 

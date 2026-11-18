@@ -7,10 +7,10 @@ use std::sync::{Arc, Mutex, PoisonError};
 use async_trait::async_trait;
 use dynwork_chats::error::ChatsError;
 use dynwork_chats::roles::Roles;
-use systemprompt::identifiers::UserId;
 use systemprompt::governance::authz::{
     AuthzDecision, AuthzDecisionHook, AuthzRequest, DenyReason, EntityRef, SharedAuthzHook,
 };
+use systemprompt::identifiers::UserId;
 use systemprompt::manifest::services::catalog::{CatalogDocument, CatalogInput, ResolvedCatalog};
 use systemprompt::manifest::services::{CatalogContext, GatewayConfigSpec};
 
@@ -137,16 +137,20 @@ pub(crate) fn role_hook() -> SharedAuthzHook {
     Arc::new(RoleHook)
 }
 
-// The roles of the instance's users, set by the tests; a user never set has none.
+// The roles of the instance's users, set by the tests; a user never set has
+// none.
 #[derive(Debug, Default)]
 pub(crate) struct FakeRoles(Mutex<HashMap<String, Vec<String>>>);
 
 impl FakeRoles {
     pub(crate) fn set(&self, user: &str, roles: &[&str]) {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner).insert(
-            user.to_owned(),
-            roles.iter().map(|role| (*role).to_owned()).collect(),
-        );
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(
+                user.to_owned(),
+                roles.iter().map(|role| (*role).to_owned()).collect(),
+            );
     }
 }
 

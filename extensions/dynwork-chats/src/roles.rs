@@ -2,8 +2,8 @@
 //!
 //! Core's own bridge profile takes them from the user the credential names,
 //! read from the users table, so the access rules that admit a model see what
-//! they see on `/v1/messages`. [`Roles`] is the seam: [`UserRoles`] reads core's
-//! user store, a suite sets them by hand.
+//! they see on `/v1/messages`. [`Roles`] is the seam: [`UserRoles`] reads
+//! core's user store, a suite sets them by hand.
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -51,6 +51,8 @@ impl UserRoles {
 impl Roles for UserRoles {
     async fn of(&self, user: &UserId) -> Result<Option<Vec<String>>, ChatsError> {
         let found = UserProvider::find_by_id(&self.users, user).await?;
-        Ok(found.filter(|found| found.is_active).map(|found| found.roles))
+        Ok(found
+            .filter(|found| found.is_active)
+            .map(|found| found.roles))
     }
 }

@@ -101,23 +101,38 @@ async fn the_hook_is_built_when_first_asked_and_only_once() {
     );
     assert_eq!(built.load(Ordering::SeqCst), 0, "not at construction");
     let catalog = fixture();
-    admission.listing(&catalog, &caller()).await.expect("a list");
-    admission.listing(&catalog, &caller()).await.expect("a list");
-    admits(&admission, "alpha", "m-big").await.expect("an answer");
+    admission
+        .listing(&catalog, &caller())
+        .await
+        .expect("a list");
+    admission
+        .listing(&catalog, &caller())
+        .await
+        .expect("a list");
+    admits(&admission, "alpha", "m-big")
+        .await
+        .expect("an answer");
     assert_eq!(built.load(Ordering::SeqCst), 1);
 }
 
 #[tokio::test]
 async fn a_model_is_admitted_when_it_is_listed_under_that_provider() {
     let admission = admission(&["alpha"], allow_all, staff());
-    assert!(admits(&admission, "alpha", "m-big").await.expect("an answer"));
+    assert!(
+        admits(&admission, "alpha", "m-big")
+            .await
+            .expect("an answer")
+    );
     for (provider, id, why) in [
         ("beta", "m-big", "another provider"),
         ("alpha", "m-hidden", "not advertised"),
         ("alpha", "m-beta", "its provider has no secret"),
         ("alpha", "no-such-model", "unknown"),
     ] {
-        assert!(!admits(&admission, provider, id).await.expect("an answer"), "{why}");
+        assert!(
+            !admits(&admission, provider, id).await.expect("an answer"),
+            "{why}"
+        );
     }
 }
 
@@ -125,10 +140,17 @@ async fn a_model_is_admitted_when_it_is_listed_under_that_provider() {
 async fn a_hook_that_cannot_be_built_refuses_every_model() {
     let catalog = fixture();
     let admission = admission(&["alpha"], || Arc::new(DenyAllHook::null()), staff());
-    let listing = admission.listing(&catalog, &caller()).await.expect("a list");
+    let listing = admission
+        .listing(&catalog, &caller())
+        .await
+        .expect("a list");
     assert!(listing.models.is_empty());
     assert_eq!(listing.default, None);
-    assert!(!admits(&admission, "alpha", "m-big").await.expect("an answer"));
+    assert!(
+        !admits(&admission, "alpha", "m-big")
+            .await
+            .expect("an answer")
+    );
 }
 
 #[tokio::test]
@@ -138,7 +160,10 @@ async fn a_failed_roles_lookup_is_an_error_never_the_catalog() {
     let listing = admission.listing(&catalog, &caller()).await;
     assert!(matches!(listing, Err(ChatsError::Users(_))), "{listing:?}");
     let admitted = admits(&admission, "alpha", "m-big").await;
-    assert!(matches!(admitted, Err(ChatsError::Users(_))), "{admitted:?}");
+    assert!(
+        matches!(admitted, Err(ChatsError::Users(_))),
+        "{admitted:?}"
+    );
 }
 
 #[tokio::test]
@@ -155,6 +180,9 @@ async fn a_user_the_instance_does_not_have_is_unauthorized() {
 async fn secrets_that_cannot_be_listed_serve_no_model() {
     let catalog = fixture();
     let admission = admission(&[], allow_all, staff());
-    let listing = admission.listing(&catalog, &caller()).await.expect("a list");
+    let listing = admission
+        .listing(&catalog, &caller())
+        .await
+        .expect("a list");
     assert!(listing.models.is_empty());
 }

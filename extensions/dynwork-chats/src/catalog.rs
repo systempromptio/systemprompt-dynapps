@@ -6,9 +6,9 @@
 //! its account sync); [`listing`] does what core's `profile` handler and that
 //! function do, in process:
 //!
-//! 1. `bridge_profile::build` gives the models that are advertised and
-//!    servable for the instance's secrets, the providers with their
-//!    `configured` flag, the limits and the default.
+//! 1. `bridge_profile::build` gives the models that are advertised and servable
+//!    for the instance's secrets, the providers with their `configured` flag,
+//!    the limits and the default.
 //! 2. `ModelAdmission::retain` drops the models the instance's authz hook
 //!    refuses to this caller, asking it the way `/v1/messages` would.
 //! 3. Each model takes the first provider of the profile that serves it and is
@@ -91,9 +91,7 @@ pub async fn listing(
         hook,
         principal,
     };
-    profile.models = admission
-        .retain(std::mem::take(&mut profile.models))
-        .await;
+    profile.models = admission.retain(std::mem::take(&mut profile.models)).await;
     profile
         .model_limits
         .retain(|model, _| profile.models.contains(model));

@@ -40,8 +40,8 @@ pub struct WireModelInfo {
     pub limit: Option<WireLimit>,
 }
 
-/// The sizes `OpenCode`'s model shape calls `limit`; a side the catalog does not
-/// state is left out.
+/// The sizes `OpenCode`'s model shape calls `limit`; a side the catalog does
+/// not state is left out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct WireLimit {
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -20,7 +20,8 @@ use serde_json::Value;
 
 pub const CONFIG_PREFIX: &str = "dynwork-chats";
 
-// Why: core calls validate_config again at mount time with {"paths": ...}; that key is set aside before the strict parse.
+// Why: core calls validate_config again at mount time with {"paths": ...}; that
+// key is set aside before the strict parse.
 const MOUNT_KEY: &str = "paths";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]

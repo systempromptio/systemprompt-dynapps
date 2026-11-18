@@ -78,9 +78,9 @@ pub async fn start(
         Err(Busy(_)) => return Err(ChatsError::Busy),
     };
     settle_stale(state, user, &claim).await?;
-    let model = effective_model(&prompt, &record, engine.as_ref()).ok_or(ChatsError::BadRequest(
-            "this thread has no model: send one with the prompt",
-        ))?;
+    let model = effective_model(&prompt, &record, engine.as_ref()).ok_or(
+        ChatsError::BadRequest("this thread has no model: send one with the prompt"),
+    )?;
     let now = state.clock.now();
     let created = now.timestamp_millis();
     let reply = MessageId::derived_at(now, &format!("{thread}/{}", prompt.message));

@@ -17,8 +17,8 @@ use crate::auth::RelayDevices;
 use crate::clock::SystemClock;
 use crate::config::{CONFIG_PREFIX, ChatsConfig};
 use crate::hint::RelayHints;
-use crate::reply::source::Gateway;
 use crate::reply::registry::Replies;
+use crate::reply::source::Gateway;
 use crate::retention::ChatsRetentionJob;
 use crate::roles::UserRoles;
 use crate::router::{EXTENSION_BASE_PATH, chats_router};
@@ -106,11 +106,11 @@ impl Extension for ChatsExtension {
 
     // JSON: core hands an extension its config block as a JSON document.
     fn validate_config(&self, config: &serde_json::Value) -> Result<(), ExtensionConfigError> {
-        ChatsConfig::from_json(config)
-            .map(|_| ())
-            .map_err(|error| ExtensionConfigError::ParseError {
+        ChatsConfig::from_json(config).map(|_| ()).map_err(|error| {
+            ExtensionConfigError::ParseError {
                 source: Box::new(error),
-            })
+            }
+        })
     }
 
     fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
