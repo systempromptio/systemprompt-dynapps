@@ -5004,7 +5004,11 @@ dependencies = [
 name = "mcp-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "axum",
+ "base64 0.23.1",
+ "chrono",
+ "futures-util",
  "rmcp",
  "serde",
  "serde_json",
@@ -5012,6 +5016,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-mcp-agent",
  "systemprompt-mcp-documents",
+ "systemprompt-mcp-microsoft-365",
  "systemprompt-mcp-shared",
  "tempfile",
  "tokio",
@@ -10317,16 +10322,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-mcp-microsoft-365"
+version = "0.84.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "reqwest",
+ "rmcp",
+ "rustls",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "urlencoding",
+]
+
+[[package]]
 name = "systemprompt-mcp-shared"
 version = "0.84.0"
 dependencies = [
+ "async-trait",
  "axum",
+ "base64 0.22.1",
+ "chrono",
+ "futures-util",
  "jsonschema 0.60.0",
  "rmcp",
+ "schemars 1.2.3",
  "serde",
  "serde_json",
  "sqlx",
  "systemprompt",
+ "thiserror 2.0.21",
  "tracing",
 ]
 
@@ -11284,6 +11324,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
@@ -12688,6 +12729,7 @@ dependencies = [
  "tokio",
  "toml 1.2.1+spec-1.1.0",
  "tower",
+ "tracing",
  "zip",
 ]
 

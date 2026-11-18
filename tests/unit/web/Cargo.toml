@@ -42,3 +42,6 @@ async-trait = { workspace = true }
 
 [dev-dependencies]
 toml = "1.1"
+# Captures the connector's log events, to prove a refused tenant is logged by
+# its id and no token or email is.
+tracing = "0.1"

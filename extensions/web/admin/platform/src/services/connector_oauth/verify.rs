@@ -101,6 +101,9 @@ pub async fn verify_reporting(
     http: &reqwest::Client,
     report: &mut VerificationReport,
 ) -> AdminResult<()> {
+    if super::entra::is_entra(&services.config(), &grant.provider) {
+        return super::entra_claims::verify_reporting(grant, report);
+    }
     let mut probe_session = None;
     let result = handshake(services, grant, http, &mut probe_session, report).await;
     if let Some(session) = probe_session {

@@ -52,7 +52,11 @@ async fn complete(
     } = session;
     let mut report = VerificationReport::for_provider(grant.provider.slug());
     let started = Instant::now();
-    let exchange = oauth::exchange_classified(services, boot.config(), &mut grant, code).await;
+    let access = oauth::ConnectorAccess {
+        services,
+        secrets: boot.secrets().as_ref(),
+    };
+    let exchange = oauth::exchange_classified(access, boot.config(), &mut grant, code).await;
     let outcome = match exchange {
         Ok(()) => {
             report.record("token", started, &Ok("Authorization exchanged".into()));

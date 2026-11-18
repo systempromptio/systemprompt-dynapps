@@ -4,7 +4,8 @@
 //! land together.
 //!
 //! A grant that fails to open commits its reconnect flag before the error
-//! propagates; a missing grant rolls back.
+//! propagates, and a withdrawn one (a Microsoft 365 tenant off the allow-list)
+//! is deleted in that same commit; a missing grant rolls back.
 
 use super::failure::{FailureKind, FlowFailure, FlowResult};
 use chrono::Utc;
@@ -18,7 +19,7 @@ use super::account_state::{
     token_state,
 };
 use super::token_plan::{AccessMode, TokenPlan};
-use super::{Grant, Provider, seal, verify};
+use super::{Grant, Provider, Unopened, seal, verify};
 use crate::repositories::connectors::connector_accounts::{self as accounts, ProviderConnection};
 use crate::repositories::connectors::connector_credentials::{self as repo, EncryptedGrant};
 use systemprompt_web_admin_core::connections::report::VerificationReport;
@@ -122,10 +123,14 @@ impl Resolution<'_> {
         row: &EncryptedGrant,
         account: &mut ProviderConnection,
     ) -> AdminResult<Grant> {
-        match super::open(self.services, self.secrets, row, self.user, self.provider) {
+        match super::open_sealed(self.services, self.secrets, row, self.user, self.provider) {
             Ok(grant) => Ok(grant),
-            Err(error) => {
-                if matches!(error, AdminError::Unauthorized(_)) {
+            Err(Unopened { error, withdrawn }) => {
+                if withdrawn {
+                    repo::delete(tx, self.user, self.provider.slug()).await?;
+                    account.generation += 1;
+                }
+                if withdrawn || matches!(error, AdminError::Unauthorized(_)) {
                     account.status = "reconnect_required".into();
                     account.error_code = Some("configuration_changed".into());
                     accounts::update_account(tx, self.user, account).await?;

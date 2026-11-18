@@ -2,6 +2,11 @@
 # document store authorizes each call against the caller's own access. The
 # store is enabled per installation with `files.documents.enabled` in
 # services/config/files.yaml and this flag.
+#
+# `toolsets: documents`: core's API signs upload and download links only for a
+# server whose deployment declares the toolset that asks for them; without it
+# `documents_upload` cannot open a resumable upload (403 on the link request)
+# and only the inline base64 path works.
 mcp_servers:
   documents:
     server_type: internal
@@ -19,3 +24,5 @@ mcp_servers:
       - user
       audience: mcp
       client_id: null
+    toolsets:
+    - id: documents

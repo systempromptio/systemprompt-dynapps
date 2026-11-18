@@ -36,11 +36,12 @@ export function groupOf(account) {
 }
 export function glyph(provider) {
     if (provider === 'google_workspace') return 'google';
+    if (provider === 'microsoft-365') return 'microsoft';
     if (provider === 'systemprompt') return 'systemprompt';
     return 'generic';
 }
-export function monogram(family, name) { return { google: 'G', systemprompt: 'Sp' }[family] || name.slice(0, 2); }
-export function kind(family) { return { google: 'Google Workspace', systemprompt: 'Control plane' }[family] || 'MCP server'; }
+export function monogram(family, name) { return { google: 'G', microsoft: 'M', systemprompt: 'Sp' }[family] || name.slice(0, 2); }
+export function kind(family) { return { google: 'Google Workspace', microsoft: 'Microsoft 365', systemprompt: 'Control plane' }[family] || 'MCP server'; }
 export function note(account) {
     if (!account.entitled) return account.session_attested ? 'Not open to your account' : 'An active account is required to connect providers';
     return notes[account.error_code] || '';
