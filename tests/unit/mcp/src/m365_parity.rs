@@ -3,7 +3,8 @@
 //! none missing, none extra — with their titles, hints and parameters (name,
 //! JSON type, required). The three `apps/` entry points are pinned too and
 //! must not be served. Every parameter that differs on purpose is listed in
-//! `DEVIATIONS` with its reason, and a stale entry fails like a new drift.
+//! `DEVIATIONS` with its reason, every hint in `HINT_DEVIATIONS`, and a stale
+//! entry fails like a new drift.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -74,6 +75,35 @@ const DEVIATIONS: &[(&str, &str, &str)] = &[
         INLINE_OR_REF,
     ),
 ];
+
+// Tools served with `destructiveHint: true` where Belgium marks a plain
+// write, and why: a client that auto-approves non-destructive tools must still
+// ask before them (David's review of PR #40, point 4). Every other hint is
+// Belgium's.
+pub(crate) const HINT_DEVIATIONS: &[(&str, &str)] = &[
+    (
+        "d365_batch",
+        "its requests may carry any write, delete or send",
+    ),
+    (
+        "d365_share_file",
+        "it opens the file to people outside the user",
+    ),
+    (
+        "d365_create_mail_rule",
+        "a rule can forward, redirect or delete incoming mail",
+    ),
+    (
+        "d365_upload_file",
+        "it replaces an existing file of the same name",
+    ),
+];
+
+// The `destructiveHint` this server serves for a tool Belgium pins with
+// `pinned`.
+pub(crate) fn served_destructive(tool: &str, pinned: bool) -> bool {
+    pinned || HINT_DEVIATIONS.iter().any(|(name, _)| *name == tool)
+}
 
 fn fixture() -> Fixture {
     serde_json::from_str(include_str!("../fixtures/m365_tools.json")).unwrap()
@@ -200,11 +230,28 @@ fn m365_parity_every_tool_keeps_its_belgian_title_and_hints() {
         let expected = (
             want.title.clone(),
             Some(want.read_only_hint),
-            Some(want.destructive_hint),
+            Some(served_destructive(&want.name, want.destructive_hint)),
             Some(want.idempotent_hint),
             Some(want.open_world_hint),
         );
         assert_eq!(got, expected, "{}", tool.name);
+    }
+}
+
+#[test]
+fn m365_parity_every_hint_deviation_turns_a_belgian_write_destructive() {
+    let fixture = fixture();
+    let pinned: BTreeMap<&str, &Pinned> =
+        fixture.tools.iter().map(|t| (t.name.as_str(), t)).collect();
+    let listed: BTreeSet<&str> = HINT_DEVIATIONS.iter().map(|(name, _)| *name).collect();
+    assert_eq!(listed.len(), HINT_DEVIATIONS.len(), "no tool listed twice");
+    for (name, why) in HINT_DEVIATIONS {
+        assert!(!why.is_empty(), "{name} needs a reason");
+        let want = pinned
+            .get(name)
+            .unwrap_or_else(|| panic!("{name} is not a Belgian tool"));
+        let belgian = (want.read_only_hint, want.destructive_hint);
+        assert_eq!(belgian, (false, false), "{name}: stale, Belgium agrees");
     }
 }
 

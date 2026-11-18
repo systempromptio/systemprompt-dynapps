@@ -1,8 +1,12 @@
 //! The tool surface of the `microsoft-365` server.
 //!
 //! Each tool's name, title and behaviour hints follow the Belgian server's
-//! `tools/_annotations.py`, so clients see the same `d365_*` contract; the
-//! dispatch goes from a tool name to its handler.
+//! `tools/_annotations.py`, so clients see the same `d365_*` contract, except
+//! four tools Belgium marks a plain write that can destroy, overwrite or open
+//! data (`d365_batch`, `d365_share_file`, `d365_create_mail_rule`,
+//! `d365_upload_file`): they are `Destructive` here, so a client that
+//! auto-approves non-destructive tools still asks. The dispatch goes from a
+//! tool name to its handler.
 
 pub mod calendar;
 pub mod calendar_event;
@@ -62,8 +66,8 @@ pub const INSTRUCTIONS: &str = "Microsoft 365 through Microsoft Graph, acting as
 ///
 /// `Read` for list, get, search and downloads; `Write` for creates (twice
 /// creates twice); `IdempotentWrite` for updates and responses; `Destructive`
-/// for deletes and sends. Every tool is open-world (it reaches Microsoft's
-/// service).
+/// for deletes, sends and what can overwrite or open data. Every tool is
+/// open-world (it reaches Microsoft's service).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolKind {
     Read,
@@ -183,7 +187,11 @@ const BASE_SPECS: &[ToolSpec] = &[
         "Delete mail folder",
         ToolKind::Destructive,
     ),
-    ToolSpec::new("d365_create_mail_rule", "Create mail rule", ToolKind::Write),
+    ToolSpec::new(
+        "d365_create_mail_rule",
+        "Create mail rule",
+        ToolKind::Destructive,
+    ),
     ToolSpec::new(
         "d365_create_outlook_category",
         "Create Outlook category",

@@ -5,7 +5,9 @@ The internal `microsoft-365` server (`extensions/mcp/microsoft-365`, binary
 as themselves: mail, calendar, contacts, To Do, OneDrive, SharePoint, Teams,
 chats, presence, meetings, Planner, OneNote, groups, users and search. It
 has 147 tools with the names and annotations of the Belgian `dynapps-365`
-server (`d365_*`, pinned by `tests/unit/mcp/fixtures/m365_tools.json`).
+server (`d365_*`, pinned by `tests/unit/mcp/fixtures/m365_tools.json`),
+except four annotations that are stricter on purpose (see
+[Governance](#governance)).
 
 Each person connects their own Microsoft 365 account on `/admin/connectors`.
 Every tool call asks the connector broker for that person's Graph token, so
@@ -149,19 +151,53 @@ new session.
 
 ## Governance
 
-`services/governance/config.yaml` gates every tool that sends, replies,
-forwards or deletes, plus `d365_batch` (whose requests may include
-`DELETE`). It also gates the two tools that move data out without sending:
-`d365_create_mail_rule` (a forward or redirect rule) and `d365_share_file`
-(a sharing link). These tools pass only for admin or the `knowledge_worker`
-role, and the same role is exempt from the delete blocklist on this prefix.
-Only the gateway name (`mcp__microsoft-365__`) is listed. If the server is
-ever added to a plugin, its `mcp__plugin_<plugin>_microsoft-365__` form needs
-the same rules. Read
-tools pass for everyone entitled to the server
+`services/governance/config.yaml` gates these tools (`role_gated`,
+`contains:` on `mcp__microsoft-365__`):
+
+- every tool that sends, replies, forwards or deletes;
+- `d365_batch`, whose requests may include any write, `DELETE` or send;
+- the tools that move data out without sending: `d365_create_mail_rule`
+  (a forward or redirect rule), `d365_share_file` (a sharing link) and
+  `d365_upload_attachment_chunk` (it puts a file into an upload session);
+- the event tools that make Exchange email someone: `d365_create_event` and
+  `d365_update_event` invite the attendees, body included, and
+  `d365_accept_event`, `d365_decline_event` and
+  `d365_tentatively_accept_event` answer the organizer;
+- `d365_move_mail` (a move to `deleteditems` is a soft delete) and
+  `d365_add_planner_roster_member` (it grants access to a plan).
+
+`contains:` matches a substring of the whole tool name, so an entry that
+would also catch a read tool is written as the full name: `event` alone would
+catch `d365_list_events` and `d365_get_event`, `roster_member` would catch
+`d365_list_planner_roster_members`.
+`tests/unit/web/src/governance_microsoft_365_gate.rs` checks the gated list
+and that every read tool of the pinned surface still passes.
+
+These tools pass only for admin or the `knowledge_worker` role, and the same
+role is exempt from the delete blocklist on this prefix. Only the gateway
+name (`mcp__microsoft-365__`) is listed. If the server is ever added to a
+plugin, its `mcp__plugin_<plugin>_microsoft-365__` form needs the same
+rules. Read tools pass for everyone entitled to the server
 (`mcp_server/microsoft-365` in `services/access-control/rules.yaml`). The
 tool plane runs in warn mode, so today a gated call is recorded, not
 refused. `tool_policy: prompt` makes the client ask before each call.
+
+### Annotations that differ from the Belgian server
+
+Four tools that the Belgian `_annotations.py` marks as a plain write are
+served with `destructiveHint: true`. A client that auto-approves
+non-destructive tools still asks before any of them:
+
+| Tool | Why it is destructive here |
+|------|----------------------------|
+| `d365_batch` | its requests may carry any write, delete or send |
+| `d365_share_file` | it opens the file to people outside the user |
+| `d365_create_mail_rule` | a rule can forward, redirect or delete incoming mail |
+| `d365_upload_file` | it replaces an existing file of the same name |
+
+The parity test (`tests/unit/mcp/src/m365_parity.rs`, `HINT_DEVIATIONS`)
+records them with these reasons. Every other title and hint still has to
+match Belgium.
 
 ## Local simulation
 

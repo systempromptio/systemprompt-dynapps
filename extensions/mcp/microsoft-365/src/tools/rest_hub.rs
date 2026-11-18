@@ -1,6 +1,8 @@
 //! The rest of the surface — `OneNote`, groups, users, Microsoft Search and
 //! `d365_batch`: each tool's title and behaviour class from the Belgian
-//! `_annotations.py`, and one definition list and dispatch over them. The
+//! `_annotations.py` (save `d365_batch`, destructive here since its requests
+//! may carry any write, delete or send), and one definition list and dispatch
+//! over them. The
 //! three `d365_app_*` entry points of the Belgian `apps/` (interactive HTML
 //! views) are not served here; the tools they wrap are.
 
@@ -60,7 +62,7 @@ pub(super) const REST_SPECS: &[ToolSpec] = &[
     ),
     ToolSpec::new("d365_search", "Search Microsoft 365", ToolKind::Read),
     ToolSpec::new("d365_search_messages", "Search messages", ToolKind::Read),
-    ToolSpec::new("d365_batch", "Execute batch request", ToolKind::Write),
+    ToolSpec::new("d365_batch", "Execute batch request", ToolKind::Destructive),
 ];
 
 pub(super) fn definitions(server: &McpServerId) -> Vec<Tool> {

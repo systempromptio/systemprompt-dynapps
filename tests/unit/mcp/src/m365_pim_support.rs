@@ -11,6 +11,7 @@ use systemprompt::models::execution::context::RequestContext;
 use systemprompt_mcp_microsoft_365::graph::{GraphClient, GraphError};
 use systemprompt_mcp_microsoft_365::tools::list_tools;
 
+use crate::m365_parity::served_destructive;
 use crate::m365_support::{FakeTokens, Reply, Sim, client, fast_limits};
 
 pub(crate) fn graph(sim: &Sim) -> GraphClient {
@@ -68,7 +69,8 @@ struct Fixture {
 type Hints = (String, bool, bool, bool);
 
 // Every Belgian tool of `domain` must be registered, with its pinned title
-// and hints, and the description a model reads must not be empty.
+// and hints (save the hint deviations `m365_parity` records), and the
+// description a model reads must not be empty.
 pub(crate) fn assert_domain_registered(domain: &str, expected: usize) {
     let fixture: Fixture =
         serde_json::from_str(include_str!("../fixtures/m365_tools.json")).unwrap();
@@ -77,12 +79,8 @@ pub(crate) fn assert_domain_registered(domain: &str, expected: usize) {
         .into_iter()
         .filter(|tool| tool.domain == domain)
         .map(|t| {
-            let hints = (
-                t.title,
-                t.read_only_hint,
-                t.destructive_hint,
-                t.idempotent_hint,
-            );
+            let destructive = served_destructive(&t.name, t.destructive_hint);
+            let hints = (t.title, t.read_only_hint, destructive, t.idempotent_hint);
             (t.name, hints)
         })
         .collect();

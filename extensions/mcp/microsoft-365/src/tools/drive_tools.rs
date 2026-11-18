@@ -1,7 +1,9 @@
 //! The `OneDrive` domain's tool table: each `d365_*` drive tool bound to its
 //! function, input, reply and description, and its title and behaviour
-//! class from the Belgian `_annotations.py`. File content, downloads and
-//! uploads go through the file layer.
+//! class from the Belgian `_annotations.py`, save `d365_upload_file` (it
+//! replaces a file of the same name) and `d365_share_file` (it opens the file
+//! to others), destructive here. File content, downloads and uploads go
+//! through the file layer.
 
 use super::drive::{
     self, DriveItemInput, ListDrivesInput, ListFilesInput, ListPermissionsInput, SearchFilesInput,
@@ -29,9 +31,9 @@ pub(super) const DRIVE_SPECS: &[ToolSpec] = &[
         ToolKind::Read,
     ),
     ToolSpec::new("d365_download_file", "Download file", ToolKind::Read),
-    ToolSpec::new("d365_upload_file", "Upload file", ToolKind::Write),
+    ToolSpec::new("d365_upload_file", "Upload file", ToolKind::Destructive),
     ToolSpec::new("d365_create_folder", "Create folder", ToolKind::Write),
-    ToolSpec::new("d365_share_file", "Share file", ToolKind::Write),
+    ToolSpec::new("d365_share_file", "Share file", ToolKind::Destructive),
     ToolSpec::new("d365_move_file", "Move file", ToolKind::Write),
     ToolSpec::new("d365_delete_file", "Delete file", ToolKind::Destructive),
 ];

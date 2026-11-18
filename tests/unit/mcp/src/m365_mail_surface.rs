@@ -1,5 +1,6 @@
 //! The mail tools on the server's tool list: every mail tool of the pinned
-//! Belgian fixture is registered with its title and hints, each input schema
+//! Belgian fixture is registered with its title and hints (save the recorded
+//! hint deviations of `m365_parity`), each input schema
 //! is declarable to Gemini, and the file inputs are inline objects.
 
 use std::collections::BTreeSet;
@@ -7,6 +8,8 @@ use std::collections::BTreeSet;
 use serde_json::Value;
 use systemprompt::wire::schema::gemini_declaration_violations;
 use systemprompt_mcp_microsoft_365::tools::list_tools;
+
+use crate::m365_parity::served_destructive;
 
 fn pinned_mail_tools() -> Vec<Value> {
     let fixture: Value = serde_json::from_str(include_str!("../fixtures/m365_tools.json")).unwrap();
@@ -37,9 +40,10 @@ fn m365_mail_every_pinned_mail_tool_is_registered_with_its_annotations() {
             expected["readOnlyHint"].as_bool(),
             "{name}"
         );
+        let pinned_destructive = expected["destructiveHint"].as_bool().unwrap();
         assert_eq!(
             hints.destructive_hint,
-            expected["destructiveHint"].as_bool(),
+            Some(served_destructive(name, pinned_destructive)),
             "{name}"
         );
         assert_eq!(

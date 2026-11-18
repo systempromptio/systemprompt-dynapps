@@ -1,6 +1,7 @@
 //! The `microsoft-365` tool surface against the fixture pinned from the
 //! Belgian server (`fixtures/m365_tools.json`, from `_annotations.py` and
-//! the `apps/` tools), and the broker the Graph token comes from.
+//! the `apps/` tools), the four tools served as destructive where Belgium
+//! marks a plain write, and the broker the Graph token comes from.
 
 use std::collections::HashSet;
 
@@ -8,8 +9,9 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use systemprompt::wire::schema::gemini_declaration_violations;
 use systemprompt_mcp_microsoft_365::graph::{BROKER_PATH, Broker, GraphError, GraphTokens};
-use systemprompt_mcp_microsoft_365::tools::{TOOLS, list_tools};
+use systemprompt_mcp_microsoft_365::tools::{TOOLS, ToolKind, list_tools, spec};
 
+use crate::m365_parity::served_destructive;
 use crate::m365_support::{Reply, Secrets, Sim};
 
 #[derive(Debug, Deserialize)]
@@ -81,7 +83,7 @@ fn m365_core_every_registered_tool_matches_its_pinned_name_and_annotations() {
         );
         assert_eq!(
             a.destructive_hint,
-            Some(pinned.destructive_hint),
+            Some(served_destructive(&pinned.name, pinned.destructive_hint)),
             "{}",
             tool.name
         );
@@ -99,6 +101,23 @@ fn m365_core_every_registered_tool_matches_its_pinned_name_and_annotations() {
         );
     }
     assert!(tools.iter().any(|t| t.name == "d365_list_mail"));
+}
+
+#[test]
+fn m365_core_tools_that_can_destroy_or_overwrite_announce_destructive_hint() {
+    let tools = list_tools();
+    for name in [
+        "d365_batch",
+        "d365_share_file",
+        "d365_create_mail_rule",
+        "d365_upload_file",
+    ] {
+        let tool = tools.iter().find(|t| t.name == name).unwrap();
+        let a = tool.annotations.as_ref().unwrap();
+        let hints = (a.read_only_hint, a.destructive_hint, a.idempotent_hint);
+        assert_eq!(hints, (Some(false), Some(true), Some(false)), "{name}");
+        assert_eq!(spec(name).map(|s| s.kind), Some(ToolKind::Destructive));
+    }
 }
 
 #[test]

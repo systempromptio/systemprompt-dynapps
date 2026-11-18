@@ -49,7 +49,9 @@ fn as_caller<'a>(ctx: &'a RequestContext, exec: &'a McpExecutionId) -> FileCall<
 
 // A Graph whose createUploadSession opens a session on its own origin,
 // expiring at `expires` when given, and whose chunk PUT answers 200.
-fn session_graph(expires: Option<String>) -> impl Fn(&Seen, usize) -> Reply + Send + Sync + 'static {
+fn session_graph(
+    expires: Option<String>,
+) -> impl Fn(&Seen, usize) -> Reply + Send + Sync + 'static {
     move |seen, _| {
         if seen.method != "POST" {
             return Reply::json(200, &json!({"nextExpectedRanges": ["more"]}));
@@ -98,7 +100,10 @@ async fn send_chunk(
 }
 
 fn puts(sim: &Sim) -> usize {
-    sim.calls().iter().filter(|seen| seen.method == "PUT").count()
+    sim.calls()
+        .iter()
+        .filter(|seen| seen.method == "PUT")
+        .count()
 }
 
 #[tokio::test]
@@ -154,7 +159,10 @@ async fn m365_mail_attach_session_refuses_a_session_of_another_tenant_before_rea
         0,
         "the file was not read"
     );
-    assert!(h.audit.events().is_empty(), "the file layer was not reached");
+    assert!(
+        h.audit.events().is_empty(),
+        "the file layer was not reached"
+    );
 }
 
 #[tokio::test]
@@ -297,7 +305,8 @@ async fn m365_mail_attach_session_an_issued_url_off_microsoft_hosts_is_still_ref
             "upload_url": url, "chunk_base64": STANDARD.encode(b"abcd"),
             "byte_range_start": 0, "total_size": 4
         }));
-        let result = upload_attachment_chunk(&graph, &h.files, as_caller(&alice, &exec), input).await;
+        let result =
+            upload_attachment_chunk(&graph, &h.files, as_caller(&alice, &exec), input).await;
         assert!(result.is_err(), "{url}");
     }
     assert_eq!(puts(&sim), 0);
@@ -344,11 +353,7 @@ fn m365_mail_attach_session_expiry_is_graphs_capped_at_the_servers_own() {
             .admit(spelled_otherwise, &alice, now + cap - second)
             .is_ok()
     );
-    assert!(
-        sessions
-            .admit(undated, &alice, now + cap + second)
-            .is_err()
-    );
+    assert!(sessions.admit(undated, &alice, now + cap + second).is_err());
 }
 
 #[test]
@@ -356,7 +361,8 @@ fn m365_mail_attach_session_the_registry_is_bounded_per_user_and_overall() {
     let sessions = UploadSessions::default();
     let alice = UserId::new(ALICE);
     let now = Utc::now();
-    let url = |owner: &str, n: usize| format!("https://outlook.office.com/api/{owner}/sessions/{n}");
+    let url =
+        |owner: &str, n: usize| format!("https://outlook.office.com/api/{owner}/sessions/{n}");
     for n in 0..=MAX_UPLOAD_SESSIONS_PER_USER {
         let expires = (now + TimeDelta::minutes(n as i64 + 1)).to_rfc3339();
         sessions.issue(&url("alice", n), &alice, Some(&expires), now);

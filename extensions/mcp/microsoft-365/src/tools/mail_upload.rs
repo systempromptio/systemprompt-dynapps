@@ -68,9 +68,10 @@ pub struct UploadChunkInput {
 }
 
 fn session_owner(ctx: &RequestContext) -> Result<&UserId, GraphError> {
-    ctx.user.as_ref().map(|user| &user.id).ok_or_else(|| {
-        GraphError::Invalid("an upload session needs a signed-in caller".to_owned())
-    })
+    ctx.user
+        .as_ref()
+        .map(|user| &user.id)
+        .ok_or_else(|| GraphError::Invalid("an upload session needs a signed-in caller".to_owned()))
 }
 
 fn decoded_len(base64: &str) -> u64 {

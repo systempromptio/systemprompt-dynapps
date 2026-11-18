@@ -149,8 +149,14 @@ governance:
     - prefix: mcp__plugin_dynapps-portal_dynapps-odoo__
       contains: [write, create, unlink, execute, post, send]
       roles: [odoo_writer]
+    # `contains` matches a substring of the whole tool name, so an entry that
+    # would also catch a read tool (`event`, `roster_member`) is spelled out.
+    # Event writes email attendees or the organizer; move_mail can soft-delete;
+    # add_planner_roster_member grants access.
     - prefix: mcp__microsoft-365__
-      contains: [send, reply, forward, delete, batch, create_mail_rule, share_file]
+      contains: [send, reply, forward, delete, batch, create_mail_rule, share_file,
+        create_event, update_event, accept_event, decline_event,
+        upload_attachment_chunk, move_mail, add_planner_roster_member]
       roles: [knowledge_worker]
   - id: tool_blocklist
     enabled: true
