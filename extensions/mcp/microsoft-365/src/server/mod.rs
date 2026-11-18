@@ -26,18 +26,22 @@ use systemprompt_mcp_shared::auth::{
 use systemprompt_mcp_shared::files::McpFiles;
 use systemprompt_mcp_shared::record_mcp_access;
 
-use crate::graph::{Broker, GraphClient, GraphClientParts, GraphEndpoint, GraphError, GraphLimits};
+use crate::graph::{
+    Broker, GraphClient, GraphClientParts, GraphEndpoint, GraphError, GraphLimits, UploadSessions,
+};
 use crate::tools::{self, ToolCall};
 
 /// What every call needs to reach Graph, held for the server's lifetime:
 /// the shared HTTP client, the broker, the secrets the endpoint is read
-/// from, and the bounds.
+/// from, the bounds, and the upload sessions opened so far (shared by every
+/// call and every clone).
 #[derive(Clone, Debug)]
 pub struct GraphHost {
     pub http: reqwest::Client,
     pub broker: Broker,
     pub secrets: Arc<dyn SecretLookup>,
     pub limits: GraphLimits,
+    pub upload_sessions: UploadSessions,
 }
 
 /// The backends a tool reaches beyond core: Microsoft Graph and the shared
@@ -59,6 +63,7 @@ impl GraphHost {
             http: self.http.clone(),
             tokens: Arc::new(self.broker.for_caller(bearer, purpose)),
             limits: self.limits,
+            upload_sessions: self.upload_sessions.clone(),
         }))
     }
 }

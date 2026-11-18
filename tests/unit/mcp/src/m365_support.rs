@@ -15,7 +15,8 @@ use axum::response::{IntoResponse, Response};
 use serde_json::Value;
 use systemprompt::traits::{ExtensionSecret, SecretLookup};
 use systemprompt_mcp_microsoft_365::graph::{
-    GraphClient, GraphClientParts, GraphEndpoint, GraphError, GraphLimits, GraphTokens, http_client,
+    GraphClient, GraphClientParts, GraphEndpoint, GraphError, GraphLimits, GraphTokens,
+    UploadSessions, http_client,
 };
 
 #[derive(Debug, Clone)]
@@ -224,6 +225,7 @@ pub(crate) fn client(base: &str, tokens: Arc<dyn GraphTokens>, limits: GraphLimi
         http: http_client(&limits).unwrap(),
         tokens,
         limits,
+        upload_sessions: UploadSessions::default(),
     })
 }
 

@@ -23,6 +23,7 @@ pub mod mail_folders;
 pub mod mail_read;
 pub mod mail_send;
 mod mail_tools;
+pub mod mail_upload;
 pub mod meetings;
 pub mod meetings_media;
 pub mod onenote;

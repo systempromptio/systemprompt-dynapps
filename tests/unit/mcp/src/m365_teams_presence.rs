@@ -7,7 +7,7 @@ use serde_json::json;
 use systemprompt::traits::SecretLookup;
 use systemprompt_mcp_microsoft_365::graph::config::APP_ID_SECRET;
 use systemprompt_mcp_microsoft_365::graph::{
-    GraphClient, GraphClientParts, GraphEndpoint, GraphError, http_client,
+    GraphClient, GraphClientParts, GraphEndpoint, GraphError, UploadSessions, http_client,
 };
 use systemprompt_mcp_microsoft_365::tools::presence::{
     get_my_presence, get_user_presence, set_my_presence,
@@ -25,6 +25,7 @@ fn graph_as_app(sim: &Sim, app_id: &str) -> GraphClient {
         http: http_client(&limits).unwrap(),
         tokens: FakeTokens::new(&["graph-token"]),
         limits,
+        upload_sessions: UploadSessions::default(),
     })
 }
 

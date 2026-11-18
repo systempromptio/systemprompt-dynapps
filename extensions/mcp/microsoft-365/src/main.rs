@@ -8,7 +8,7 @@ use systemprompt::config::GrantedSecrets;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::system::HostContext;
 use systemprompt::traits::SecretLookup;
-use systemprompt_mcp_microsoft_365::graph::{Broker, GraphLimits, http_client};
+use systemprompt_mcp_microsoft_365::graph::{Broker, GraphLimits, UploadSessions, http_client};
 use systemprompt_mcp_microsoft_365::{GraphHost, Microsoft365Server, ToolBackends, UPLOAD_TOOL};
 use systemprompt_mcp_shared::files::{FilePolicy, McpFiles};
 // Why: core discovers the governance authz hook, the connection snapshot
@@ -116,6 +116,7 @@ async fn main() -> Result<()> {
         broker: Broker::for_instance(ctx.config(), Arc::clone(&secrets), service_id.as_str()),
         secrets,
         limits,
+        upload_sessions: UploadSessions::default(),
     };
     let files = McpFiles::from_host(&ctx, service_id.clone(), FilePolicy::new(UPLOAD_TOOL))
         .context("Failed to build the file layer")?;

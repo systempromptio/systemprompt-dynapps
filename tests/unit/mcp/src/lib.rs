@@ -22,8 +22,9 @@
 //!   tool surface against the pinned Belgian fixture
 //! - the `microsoft-365` mail tools (`m365_mail_*`): the Graph request each
 //!   sends and its Belgian reply, attachments through the file layer (kept as
-//!   documents, upload sessions without the bearer, other users' files refused)
-//!   and the mail surface against the pinned fixture
+//!   documents, upload sessions without the bearer, other users' files refused),
+//!   upload chunks only to sessions this server opened for the same user and
+//!   of at most 4 MiB, and the mail surface against the pinned fixture
 //! - the `microsoft-365` calendar, contacts and To Do tools (`m365_calendar_*`,
 //!   `m365_contacts`, `m365_todo`): the Graph request each builds and the
 //!   Belgian reply, against a simulated Graph
@@ -84,6 +85,8 @@ mod m365_files_upload;
 mod m365_files_write;
 #[cfg(test)]
 mod m365_mail_attach;
+#[cfg(test)]
+mod m365_mail_attach_session;
 #[cfg(test)]
 mod m365_mail_folders;
 #[cfg(test)]

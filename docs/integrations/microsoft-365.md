@@ -62,9 +62,23 @@ file. The simulation adds that grant to its own copy.
 - **Dedicated** (`microsoft_365_tenant` = a tenant id): the customer's own
   app. The allow-list defaults to that tenant.
 
+Personal Microsoft accounts are never admitted. `common`, `consumers` and the
+tenant id of personal accounts, `9188040d-6c67-4c5b-b112-36a304b66dad`
+(well-formed, but it behaves like `consumers`), are refused as
+`microsoft_365_tenant` and in `microsoft_365_allowed_tenants`: either one is a
+configuration error, and Microsoft 365 sign-ins and tokens fail until it is
+corrected. An ID token whose `tid` is that tenant is refused with "personal
+Microsoft accounts are not supported on this instance".
+
 The tenant is admitted **per installation, not per person**. Every person on
 an installation may connect an account from any tenant on its list. Removing
-a tenant from the list cuts its users off at their next call.
+a tenant from the list cuts its users off at their next call: their saved
+grant is deleted, refresh token included, and the account shows *Reconnect
+required*.
+
+Every refusal is logged (target `connector_oauth`) with the tenant id involved
+and a reason: `tenant_not_allowed`, `personal_account`, or the ID token check
+that failed. Tenant ids are not secrets; tokens and usernames are never logged.
 
 What the code does enforce between companies on one installation:
 
@@ -106,6 +120,32 @@ server has no upload tool of its own: `documents_upload` covers that (the
 documents server is always on in this installation), and its resumable
 upload is the path for files over 64 KB. Every use and every refusal of a file is
 written to `user_activity` (`mcp_access`, `entity_type = file`).
+
+### Large mail attachments
+
+`d365_add_mail_attachment` with a `file` does the whole upload on the
+server, upload session included. The Belgian pair
+`d365_create_mail_attachment_upload_session` and
+`d365_upload_attachment_chunk` is kept for parity, with two limits:
+
+- **Only sessions this server opened for the same person.** Every tenant
+  shares Microsoft's upload hosts, so a host check alone would let a
+  session opened in another tenant receive the person's file. When the
+  server opens a session it records the `uploadUrl` against the person who
+  asked. The chunk tool accepts a URL only if it was recorded for the same
+  person and has not expired. A session expires at Graph's
+  `expirationDateTime`, or one hour after it was opened if that comes first.
+  Any other URL is refused before the file is opened or Graph is called, and
+  the model is told to open a new session. The host check (Microsoft's
+  upload hosts, without the bearer) still applies behind it.
+- **At most 4 MiB per chunk**, which is Graph's limit. A larger chunk, as a
+  `file` or as base64, is refused with that message before it is sent.
+
+The sessions live in the memory of the server process: at most 16 per
+person and 1,024 in total, and expired ones are dropped. A restart forgets
+them, and so does a second replica of the server, which never sees sessions
+the first one opened. Either way the chunk is refused and the model opens a
+new session.
 
 ## Governance
 

@@ -2,8 +2,9 @@
 //! and an in-memory store: a download is kept as the caller's document and
 //! never returned as base64, an attachment comes in by reference or as
 //! small inline base64, a large one goes through an upload session this
-//! server fills without the user's bearer, and an upload URL off
-//! Microsoft's hosts or a file of another user never gets a byte.
+//! server fills without the user's bearer, and an upload URL this server
+//! did not open for the caller or a file of another user never gets a byte
+//! (the session binding itself is in `m365_mail_attach_session`).
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
@@ -12,8 +13,10 @@ use systemprompt::identifiers::McpExecutionId;
 use systemprompt::models::execution::context::RequestContext;
 use systemprompt_mcp_microsoft_365::graph::upload::UPLOAD_CHUNK_BYTES;
 use systemprompt_mcp_microsoft_365::tools::mail_attach::{
-    add_mail_attachment, create_upload_session, delete_mail_attachment, get_mail_attachment,
-    upload_attachment_chunk,
+    add_mail_attachment, delete_mail_attachment, get_mail_attachment,
+};
+use systemprompt_mcp_microsoft_365::tools::mail_upload::{
+    create_upload_session, upload_attachment_chunk,
 };
 use systemprompt_mcp_shared::files::{FileAction, FileCall};
 
@@ -243,14 +246,20 @@ async fn m365_mail_add_mail_attachment_refuses_bad_sources_before_graph() {
 async fn m365_mail_create_mail_attachment_upload_session_names_the_attachment() {
     let sim = Sim::start(attachment_graph).await;
     let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
+    let h = harness();
+    let (ctx, exec) = (signed_in(ALICE), exec_id());
     let reply = create_upload_session(
         &graph,
+        &h.files,
+        as_caller(&ctx, &exec),
         parse(json!({"message_id": "d1", "filename": "big.mov", "size_bytes": 9_000_000})),
     )
     .await
     .unwrap();
     let error = create_upload_session(
         &graph,
+        &h.files,
+        as_caller(&ctx, &exec),
         parse(json!({"message_id": "d1", "filename": "x", "size_bytes": 0})),
     )
     .await;
@@ -264,6 +273,11 @@ async fn m365_mail_create_mail_attachment_upload_session_names_the_attachment() 
     let data = serde_json::to_value(&reply).unwrap()["data"].clone();
     assert!(data["uploadUrl"].as_str().unwrap().contains("/upload/s1"));
     assert!(error.is_err());
+    assert_eq!(
+        graph.upload_sessions().len(),
+        1,
+        "only the session Graph opened is kept"
+    );
 }
 
 #[tokio::test]
@@ -272,7 +286,18 @@ async fn m365_mail_upload_attachment_chunk_puts_to_admitted_session_urls_only() 
     let graph = client(&sim.graph_url(), FakeTokens::new(&["t1"]), fast_limits());
     let h = harness();
     let (ctx, exec) = (signed_in(ALICE), exec_id());
-    let own = format!("{}/upload/s1?authtoken=sas", sim.base);
+    let session = create_upload_session(
+        &graph,
+        &h.files,
+        as_caller(&ctx, &exec),
+        parse(json!({"message_id": "d1", "filename": "big.bin", "size_bytes": 10})),
+    )
+    .await
+    .unwrap();
+    let own = serde_json::to_value(&session).unwrap()["data"]["uploadUrl"]
+        .as_str()
+        .unwrap()
+        .to_owned();
     let input = parse(json!({
         "upload_url": own, "chunk_base64": STANDARD.encode(b"abcd"),
         "byte_range_start": 4, "total_size": 10
@@ -282,11 +307,11 @@ async fn m365_mail_upload_attachment_chunk_puts_to_admitted_session_urls_only() 
         .unwrap();
 
     let calls = sim.calls();
-    assert_eq!(calls.len(), 1);
-    assert_eq!(calls[0].method, "PUT");
-    assert_eq!(calls[0].header("content-range"), Some("bytes 4-7/10"));
-    assert_eq!(calls[0].header("authorization"), None);
-    assert_eq!(calls[0].body, b"abcd");
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[1].method, "PUT");
+    assert_eq!(calls[1].header("content-range"), Some("bytes 4-7/10"));
+    assert_eq!(calls[1].header("authorization"), None);
+    assert_eq!(calls[1].body, b"abcd");
     assert_eq!(
         serde_json::to_value(&reply).unwrap()["data"],
         json!({"status_code": 200, "response": {"nextExpectedRanges": ["more"]}})
@@ -308,7 +333,7 @@ async fn m365_mail_upload_attachment_chunk_puts_to_admitted_session_urls_only() 
         let result = upload_attachment_chunk(&graph, &h.files, as_caller(&ctx, &exec), input).await;
         assert!(result.is_err(), "{url} {start}/{total}");
     }
-    assert_eq!(sim.calls().len(), 1);
+    assert_eq!(sim.calls().len(), 2);
 }
 
 #[tokio::test]

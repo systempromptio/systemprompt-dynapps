@@ -6,7 +6,7 @@
 //! Only a URL on Microsoft's upload hosts, or on the configured Graph
 //! endpoint's own origin (a national cloud or a simulation), is admitted; it
 //! passes core's outbound guard on every chunk. The Belgian server PUT to
-//! whatever URL the model handed it.
+//! whatever URL the model handed it. A chunk is at most [`MAX_CHUNK_BYTES`].
 
 use reqwest::header::CONTENT_RANGE;
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
@@ -23,6 +23,7 @@ pub const UPLOAD_HOSTS: [&str; 3] = [
 pub const UPLOAD_HOST_SUFFIX: &str = ".sharepoint.com";
 // Why: Graph takes upload-session ranges of at most 4 MiB, in multiples of
 // 320 KiB for drive items; ten of those serves mail and drive alike.
+pub const MAX_CHUNK_BYTES: usize = 4 * 1024 * 1024;
 pub const UPLOAD_CHUNK_BYTES: usize = 10 * 320 * 1024;
 
 /// What one chunk PUT answered: its status and its JSON body (`Null` when
@@ -32,6 +33,16 @@ pub struct ChunkReply {
     pub status: u16,
     // JSON: the upload session's state or the created Graph resource.
     pub body: serde_json::Value,
+}
+
+pub fn check_chunk_size(len: u64) -> Result<(), GraphError> {
+    if len <= MAX_CHUNK_BYTES as u64 {
+        return Ok(());
+    }
+    Err(GraphError::Invalid(format!(
+        "an upload chunk can be at most 4 MiB ({MAX_CHUNK_BYTES} bytes) and this one is \
+         {len} bytes: send the file in byte ranges of at most 4 MiB"
+    )))
 }
 
 fn on_upload_host(url: &Url) -> bool {
@@ -80,6 +91,7 @@ impl GraphClient {
                 "an upload chunk cannot be empty".to_owned(),
             ));
         }
+        check_chunk_size(chunk.len() as u64)?;
         let end = start + chunk.len() as u64 - 1;
         if end >= total {
             return Err(GraphError::Invalid(format!(

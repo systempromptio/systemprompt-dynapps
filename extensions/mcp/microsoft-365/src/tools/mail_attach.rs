@@ -5,7 +5,8 @@
 //! an attachment to add comes in as a `FileRef`, or as base64 only up to the
 //! inline limit. Graph takes an attachment of under 3 MB in one POST and a
 //! larger one only through an upload session, which this server fills in
-//! chunks itself so the bytes never pass through the model.
+//! chunks itself so the bytes never pass through the model. The public
+//! upload-session pair is in `mail_upload`.
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
@@ -31,15 +32,9 @@ pub const GET_MAIL_ATTACHMENT_DESCRIPTION: &str = "Get an email attachment as a 
 pub const ADD_MAIL_ATTACHMENT_DESCRIPTION: &str = "Attach a file to a draft message. Pass the \
     file as `file` (an upload, blob or document reference) or, for files of up to 64 KB, as \
     `content_base64`. Files of 3 MB or more are sent through an upload session automatically.";
-pub const CREATE_UPLOAD_SESSION_DESCRIPTION: &str = "Create an upload session for a large mail \
-    attachment (over 3 MB, up to about 150 MB) and return its uploadUrl. \
-    d365_add_mail_attachment with `file` does the whole upload in one call.";
-pub const UPLOAD_CHUNK_DESCRIPTION: &str = "Upload one byte range of a file to an upload \
-    session's uploadUrl (from d365_create_mail_attachment_upload_session). The chunk is \
-    `chunk_base64` (up to 64 KB) or `file`; the last chunk returns the attachment.";
 pub const DELETE_MAIL_ATTACHMENT_DESCRIPTION: &str = "Remove an attachment from a draft message.";
 
-fn default_mime() -> String {
+pub(super) fn default_mime() -> String {
     DEFAULT_MIME.to_owned()
 }
 
@@ -70,35 +65,6 @@ pub struct AddAttachmentInput {
     #[schemars(
         description = "The file to attach, by reference (upload_id, blob_ref or document_id)."
     )]
-    #[serde(default)]
-    pub file: FileRef,
-}
-
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
-pub struct UploadSessionInput {
-    #[schemars(description = "The draft message ID to attach to.")]
-    pub message_id: GraphId,
-    #[schemars(description = "Display name of the attachment.")]
-    pub filename: String,
-    #[schemars(description = "Total file size in bytes.")]
-    pub size_bytes: i64,
-    #[schemars(description = "MIME type.")]
-    #[serde(default = "default_mime")]
-    pub content_type: String,
-}
-
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
-pub struct UploadChunkInput {
-    #[schemars(description = "The uploadUrl from d365_create_mail_attachment_upload_session.")]
-    pub upload_url: String,
-    #[schemars(description = "This chunk's bytes as base64 (up to 64 KB); otherwise use `file`.")]
-    #[serde(default)]
-    pub chunk_base64: String,
-    #[schemars(description = "First byte offset of this chunk in the full file.")]
-    pub byte_range_start: i64,
-    #[schemars(description = "Total size of the full file in bytes.")]
-    pub total_size: i64,
-    #[schemars(description = "This chunk's bytes as a file reference, instead of chunk_base64.")]
     #[serde(default)]
     pub file: FileRef,
 }
@@ -157,7 +123,7 @@ pub async fn get_mail_attachment(
     Ok(GraphItem::new(attachment))
 }
 
-async fn open_session(
+pub(super) async fn open_session(
     graph: &GraphClient,
     message: &str,
     name: &str,
@@ -213,53 +179,6 @@ pub async fn add_mail_attachment(
         "upload_session": true,
         "attachment": created,
     })))
-}
-
-pub async fn create_upload_session(
-    graph: &GraphClient,
-    input: UploadSessionInput,
-) -> Result<GraphItem, GraphError> {
-    let size = match u64::try_from(input.size_bytes) {
-        Ok(size) if size > 0 => size,
-        _ => {
-            return Err(GraphError::Invalid(
-                "size_bytes must be positive".to_owned(),
-            ));
-        },
-    };
-    open_session(
-        graph,
-        &input.message_id,
-        &input.filename,
-        size,
-        &input.content_type,
-    )
-    .await
-    .map(GraphItem::new)
-}
-
-pub async fn upload_attachment_chunk(
-    graph: &GraphClient,
-    files: &McpFiles,
-    call: FileCall<'_>,
-    input: UploadChunkInput,
-) -> Result<GraphItem, McpError> {
-    let url = graph.admit_upload_url(&input.upload_url)?;
-    let (Ok(start), Ok(total)) = (
-        u64::try_from(input.byte_range_start),
-        u64::try_from(input.total_size),
-    ) else {
-        return Err(GraphError::Invalid(
-            "byte_range_start and total_size must not be negative".to_owned(),
-        )
-        .into());
-    };
-    let source = one_source(&input.chunk_base64, &input.file, "chunk_base64")?;
-    let chunk = files.resolve_ref(call, &source).await?.read_all().await?;
-    let reply = graph.put_chunk(&url, &chunk, start, total).await?;
-    Ok(GraphItem::new(
-        json!({"status_code": reply.status, "response": reply.body}),
-    ))
 }
 
 pub async fn delete_mail_attachment(

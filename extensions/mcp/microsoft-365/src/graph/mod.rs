@@ -4,7 +4,9 @@
 //! user's token source, fetches the token lazily, and renews it once when
 //! Graph answers 401. Requests only ever reach the configured
 //! [`GraphEndpoint`]; `@odata.nextLink` cursors are followed only on the same
-//! origin, so the user's bearer never leaves Graph.
+//! origin, so the user's bearer never leaves Graph. The upload sessions
+//! opened for the user are recorded in [`UploadSessions`], which every
+//! client of the server shares.
 
 pub mod config;
 pub mod error;
@@ -15,6 +17,7 @@ pub mod sanitize;
 mod send;
 pub mod token;
 pub mod upload;
+pub mod upload_sessions;
 mod write;
 
 use std::fmt;
@@ -30,6 +33,7 @@ pub use paging::{Page, Window};
 pub use query::GraphQuery;
 pub use send::{GraphBody, GraphRequest, GraphResponse};
 pub use token::{BROKER_PATH, Broker, BrokerTokens, GraphTokens, bearer_credential};
+pub use upload_sessions::UploadSessions;
 
 /// What a [`GraphClient`] is built from.
 pub struct GraphClientParts {
@@ -37,6 +41,7 @@ pub struct GraphClientParts {
     pub http: reqwest::Client,
     pub tokens: Arc<dyn GraphTokens>,
     pub limits: GraphLimits,
+    pub upload_sessions: UploadSessions,
 }
 
 impl fmt::Debug for GraphClientParts {
@@ -53,6 +58,7 @@ pub struct GraphClient {
     http: reqwest::Client,
     tokens: Arc<dyn GraphTokens>,
     limits: GraphLimits,
+    upload_sessions: UploadSessions,
     token: Mutex<Option<String>>,
 }
 
@@ -72,12 +78,14 @@ impl GraphClient {
             http,
             tokens,
             limits,
+            upload_sessions,
         } = parts;
         Self {
             endpoint,
             http,
             tokens,
             limits,
+            upload_sessions,
             token: Mutex::new(None),
         }
     }
@@ -88,6 +96,10 @@ impl GraphClient {
 
     pub const fn limits(&self) -> &GraphLimits {
         &self.limits
+    }
+
+    pub const fn upload_sessions(&self) -> &UploadSessions {
+        &self.upload_sessions
     }
 
     // JSON: Graph resources are open-world; tools pass them through as Graph

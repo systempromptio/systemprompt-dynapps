@@ -1,12 +1,11 @@
 //! The mail domain's tool table: every `d365_*` mail tool beside
 //! `d365_list_mail`, each bound to its function, input, reply and
-//! description. Attachment downloads and uploads go through the file layer.
+//! description. Attachment downloads and uploads go through the file layer,
+//! and so does opening an upload session, which is bound to the caller.
 
 use super::file_tool::file_tools;
 use super::graph_tool::graph_tools;
-use super::mail_attach::{
-    self, AddAttachmentInput, AttachmentIdInput, UploadChunkInput, UploadSessionInput,
-};
+use super::mail_attach::{self, AddAttachmentInput, AttachmentIdInput};
 use super::mail_folders::{
     self, CreateCategoryInput, CreateMailFolderInput, CreateMailRuleInput, FolderIdInput,
 };
@@ -17,6 +16,7 @@ use super::mail_send::{
     self, CreateDraftInput, ForwardMailInput, MoveMailInput, ReplyMailInput, SendMailInput,
     UpdateMailInput,
 };
+use super::mail_upload::{self, UploadChunkInput, UploadSessionInput};
 use super::reply::{GraphItem, GraphList};
 
 graph_tools! {
@@ -34,7 +34,6 @@ graph_tools! {
     "d365_update_mail" => mail_send::update_mail, UpdateMailInput, GraphItem, mail_send::UPDATE_MAIL_DESCRIPTION;
     "d365_delete_mail" => mail_send::delete_mail, MessageIdInput, GraphItem, mail_send::DELETE_MAIL_DESCRIPTION;
     "d365_move_mail" => mail_send::move_mail, MoveMailInput, GraphItem, mail_send::MOVE_MAIL_DESCRIPTION;
-    "d365_create_mail_attachment_upload_session" => mail_attach::create_upload_session, UploadSessionInput, GraphItem, mail_attach::CREATE_UPLOAD_SESSION_DESCRIPTION;
     "d365_delete_mail_attachment" => mail_attach::delete_mail_attachment, AttachmentIdInput, GraphItem, mail_attach::DELETE_MAIL_ATTACHMENT_DESCRIPTION;
     "d365_create_mail_folder" => mail_folders::create_mail_folder, CreateMailFolderInput, GraphItem, mail_folders::CREATE_MAIL_FOLDER_DESCRIPTION;
     "d365_delete_mail_folder" => mail_folders::delete_mail_folder, FolderIdInput, GraphItem, mail_folders::DELETE_MAIL_FOLDER_DESCRIPTION;
@@ -45,5 +44,6 @@ graph_tools! {
 file_tools! {
     "d365_get_mail_attachment" => mail_attach::get_mail_attachment, AttachmentIdInput, GraphItem, mail_attach::GET_MAIL_ATTACHMENT_DESCRIPTION;
     "d365_add_mail_attachment" => mail_attach::add_mail_attachment, AddAttachmentInput, GraphItem, mail_attach::ADD_MAIL_ATTACHMENT_DESCRIPTION;
-    "d365_upload_attachment_chunk" => mail_attach::upload_attachment_chunk, UploadChunkInput, GraphItem, mail_attach::UPLOAD_CHUNK_DESCRIPTION;
+    "d365_create_mail_attachment_upload_session" => mail_upload::create_upload_session, UploadSessionInput, GraphItem, mail_upload::CREATE_UPLOAD_SESSION_DESCRIPTION;
+    "d365_upload_attachment_chunk" => mail_upload::upload_attachment_chunk, UploadChunkInput, GraphItem, mail_upload::UPLOAD_CHUNK_DESCRIPTION;
 }
