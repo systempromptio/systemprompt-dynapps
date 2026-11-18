@@ -20,6 +20,11 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **Cloud chats for DynWork.** The new `dynwork-chats` extension keeps a person's DynWork chats on the instance, so a chat started on the phone runs without a desktop and shows on the desktop's Chats view, and the other way round. It serves `/api/dynwork/chats/v1` to the desktop and the mobile tokens: `models` (the models this person may use, computed as Dynwork Desktop computes them), `changes?since=` (the change feed), `PUT`/`DELETE threads/{id}` with `If-Match`, `messages`, `prompt`, `interrupt` and `log` (SSE, replay from a seq and follow). Replies run through the instance's AI gateway as the caller, so they are audited and governed like any other request; a model the caller may not use is refused with 403 `model_not_allowed`. Every committed change publishes a `chats` hint through the DynWork relay. New tables `dynwork_chat_threads`, `dynwork_chat_messages`, `dynwork_chat_events` and the sequence `dynwork_chat_change_seq` come with the migration.
+- **Chats retention job.** `dynwork_chats_retention` in `services/scheduler/config.yaml` deletes threads idle for `inactive_days`, read from the optional `services/config/dynwork-chats.yaml` (keys `inactive_days`, at least 1, and `web_search_per_thread`, read but not used yet). Without that file or key nothing is deleted. A deployment whose `services/` replaces the product's tree has to add the scheduler entry itself.
+
 ## 0.84.0 — 2026-11-17
 
 ### Added
