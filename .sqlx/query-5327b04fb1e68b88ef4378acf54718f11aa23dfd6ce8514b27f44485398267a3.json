@@ -1,0 +1,151 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, user_id AS owner, title, model AS \"model?: Json<ModelRef>\", revision, archived_at,\n                    deleted_at, created_at, updated_at, change_seq, last_event_seq\n               FROM dynwork_chat_threads\n               WHERE user_id = $1 AND change_seq > $2 AND ($3 OR deleted_at IS NULL)\n               ORDER BY change_seq\n               LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "owner",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "model?: Json<ModelRef>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "archived_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "archived_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "deleted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "change_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "change_seq"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "last_event_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "last_event_seq"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Bool",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5327b04fb1e68b88ef4378acf54718f11aa23dfd6ce8514b27f44485398267a3"
+}

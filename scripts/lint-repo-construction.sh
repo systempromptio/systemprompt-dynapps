@@ -42,6 +42,10 @@ ALLOWED_FILES=(
   extensions/web/content/src/services/link_analytics.rs
   extensions/web/content/src/services/link_generation.rs
   extensions/web/content/src/services/search.rs
+  # dynwork-chats builds its state once (extension.rs build_state, its composition
+  # root); UserRoles constructs core's user repository there, since core hands an
+  # extension a Database, not a UserService.
+  extensions/dynwork-chats/src/roles.rs
   # pre-gate ad-hoc handler construction; shrink by injecting the repository
   # through the router state, then delete the entry.
   extensions/web/content/src/api/handlers/links.rs

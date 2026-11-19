@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dynwork_chat_events\n             WHERE (message_id IS NULL AND created_at < $1) OR compacted_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e44c98a1f9b540b8cf2bbd0ed15fb7339abfa0b7da2b703c88347edc225ce5bb"
+}
