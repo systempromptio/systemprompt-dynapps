@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Changed
+
+- **An attended agent may share a document it created.** The `dynapps-document-classes` agent policy (`extensions/web/admin/platform/src/document_class/policy.rs`) now allows core's `share` capability when the agent is attended (its token's `interaction` is `interactive`), calls directly rather than through the Drive sync or a live checkpoint, targets a document rather than a folder, created that document itself, and may edit it under its class. Until now `documents_share` refused every agent, so DynWork could not share a page it had just made for the person in the session. Core records the creator from the same signed claims on its MCP tools and on its REST create and import routes, so a page DynWork uploads counts as its agent's own. The policy cannot see the grantee or the level; core still refuses a level above the person's own. Core checks the same capability to revoke one grant, decide access requests and delete another person's comment, so those open on that document too. Transferring ownership, revoking every grant (`administer`) and sharing by mention (`mention_grant`) stay denied. `ClassChain` gains a `document` field (false for a folder).
+
 ## 0.84.0 — 2026-11-17
 
 ### Added

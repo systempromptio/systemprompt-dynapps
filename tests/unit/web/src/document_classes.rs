@@ -26,6 +26,7 @@ fn chain(own: Option<&str>, ancestors: &[Option<&str>], by_agent: bool) -> Class
             .map(|(i, c)| (format!("folder-{i}"), c.map(str::to_owned)))
             .collect(),
         created_by_agent: by_agent.then(|| "test-agent".to_owned()),
+        document: true,
     }
 }
 
@@ -185,10 +186,11 @@ fn hard_rules_stay_denied_outside_the_agents_own_drafts() {
     let allows = |c: &ClassChain, cap, who: &AgentActor| allows_in(&DECLARED, c, cap, who);
     assert!(allows(&draft, AgentCapability::Trash, &me));
     assert!(!allows(&draft, AgentCapability::RestoreRevision, &me));
-    assert!(!allows(&draft, AgentCapability::Share, &me));
     assert!(!allows(&draft, AgentCapability::ReplaceContent, &me));
     assert!(!allows(&draft, AgentCapability::CopyOut, &me));
     assert!(!allows(&draft, AgentCapability::ReviewProposal, &me));
+    assert!(!allows(&draft, AgentCapability::Administer, &me));
+    assert!(!allows(&draft, AgentCapability::MentionGrant, &me));
     assert!(!allows(
         &draft,
         AgentCapability::Trash,
@@ -331,4 +333,34 @@ fn only_an_attended_agent_rewrites_broadly_and_only_where_it_may_edit() {
     assert!(!broad("internal", &agent(false)));
     assert!(!broad("confidential", &agent(true)));
     assert!(!broad("restricted", &agent(true)));
+}
+
+#[test]
+fn an_attended_agent_shares_only_its_own_document_where_it_may_edit() {
+    let share =
+        |c: &ClassChain, who: &AgentActor| allows_in(&DECLARED, c, AgentCapability::Share, who);
+    let me = agent(true);
+    let draft = chain(None, &[], true);
+    let internal_draft = chain(Some("internal"), &[], true);
+    assert!(share(&draft, &me));
+    assert!(share(&internal_draft, &me));
+    assert!(!share(&draft, &agent(false)));
+    for channel in [AgentChannel::DriveSync, AgentChannel::LiveCheckpoint] {
+        let mine_elsewhere = AgentActor {
+            channel,
+            ..agent(true)
+        };
+        assert!(!share(&draft, &mine_elsewhere));
+    }
+    let folder = ClassChain {
+        document: false,
+        ..draft.clone()
+    };
+    assert!(!share(&folder, &me));
+    assert!(!share(&draft, &named("other-agent", true)));
+    assert!(!share(&chain(Some("internal"), &[], false), &me));
+    assert!(!share(&chain(Some("confidential"), &[], true), &me));
+    assert!(!share(&chain(Some("restricted"), &[], true), &me));
+    assert!(!share(&chain(None, &[Some("confidential")], true), &me));
+    assert!(!share(&chain(Some("retired-class"), &[], true), &me));
 }

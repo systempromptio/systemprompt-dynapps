@@ -3,10 +3,9 @@
 //!
 //! The class is resolved through the folder chain core hands over (nearest
 //! first), against the class rows in `document_classes`. The hard-rule
-//! capabilities stay denied everywhere except `agent-workspace`, where an
-//! agent may trash, and restore from trash, the drafts it created itself. A
-//! lookup that fails answers `none` and denies: an unreadable class never
-//! widens a cap.
+//! capabilities stay denied everywhere except where the rules below allow
+//! them. A lookup that fails answers `none` and denies: an unreadable class
+//! never widens a cap.
 //!
 //! Core hands the folder chain nearest first; for a folder target the first
 //! folder is the target itself, so its class is the target's own.
@@ -19,8 +18,22 @@
 //! only on core's Drive-sync and live-checkpoint channels, whose whole-file
 //! saves and checkpoints core files under it, and only where the class lets
 //! that agent edit: a checkpoint persists edits already authorized one by one.
-//! Under `suggest` core writes the save as a proposal instead. Direct agent
-//! calls stay denied, as does every other hard-rule capability.
+//! Under `suggest` core writes the save as a proposal instead.
+//!
+//! Share is allowed to an attended agent calling directly (not the Drive sync
+//! or a live checkpoint), on a document (never a folder) that same agent
+//! created, where the class lets it edit: a person in the session can hand
+//! out what the agent made for them. Core records the creator from the same
+//! signed claims (`purpose`, else `client_id`) on its MCP tools and on its
+//! REST create and import routes, so a document a desktop client uploads
+//! counts as its agent's own. The policy sees neither the grantee nor the
+//! level, so it restricts neither; core still refuses a level above the
+//! user's own and never grants `own`. Core checks the same capability to
+//! revoke one grant, decide access requests and delete another person's
+//! comment, so those open on that document too. Transferring ownership and
+//! revoking every grant are `Administer`, and sharing by mention is
+//! `MentionGrant`; both stay denied, as do direct agent calls for
+//! `ReplaceContent` and every other hard-rule capability.
 
 use std::sync::Arc;
 
@@ -96,6 +109,7 @@ pub fn chain_from(
             .created_by_agent
             .as_ref()
             .map(|agent| agent.as_str().to_owned()),
+        document: doc.document_id.is_some(),
     }
 }
 
@@ -114,15 +128,15 @@ pub fn allows_in(
     capability: AgentCapability,
     agent: &AgentActor,
 ) -> bool {
+    let own = chain.created_by_agent.as_deref() == Some(agent.name.as_str());
     match capability {
         AgentCapability::Trash => {
             let in_workspace = resolve(catalog, chain).is_some_and(|r| {
                 r.class.id == AGENT_WORKSPACE && !matches!(r.source, ClassSource::Unknown(_))
             });
-            let own_draft = chain.created_by_agent.as_deref() == Some(agent.name.as_str());
             let device_delete = agent.channel == AgentChannel::DriveSync
                 && cap_in(catalog, chain, agent) == AgentCap::Edit;
-            (in_workspace && own_draft) || device_delete
+            (in_workspace && own) || device_delete
         },
         AgentCapability::ReplaceContent => {
             matches!(
@@ -132,6 +146,13 @@ pub fn allows_in(
         },
         AgentCapability::BroadRewrite => {
             agent.attended && cap_in(catalog, chain, agent) == AgentCap::Edit
+        },
+        AgentCapability::Share => {
+            agent.attended
+                && agent.channel == AgentChannel::Direct
+                && chain.document
+                && own
+                && cap_in(catalog, chain, agent) == AgentCap::Edit
         },
         _ => false,
     }
@@ -170,6 +191,7 @@ impl AgentAccessPolicy for DocumentClassPolicy {
             AgentCapability::Trash
                 | AgentCapability::ReplaceContent
                 | AgentCapability::BroadRewrite
+                | AgentCapability::Share
         ) {
             return false;
         }
