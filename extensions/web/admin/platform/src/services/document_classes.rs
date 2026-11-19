@@ -31,12 +31,17 @@ pub(crate) fn ancestors_nearest_first(
         .collect()
 }
 
-async fn chain_of(pool: &PgPool, lineage: Lineage) -> Result<ClassChain, sqlx::Error> {
+async fn chain_of(
+    pool: &PgPool,
+    lineage: Lineage,
+    document: bool,
+) -> Result<ClassChain, sqlx::Error> {
     let classed = list_classes(pool, KIND_FOLDER, &lineage.folder_ids).await?;
     Ok(ClassChain {
         own: lineage.own,
         ancestors: ancestors_nearest_first(&lineage.folder_ids, &classed),
         created_by_agent: lineage.created_by_agent,
+        document,
     })
 }
 
@@ -51,7 +56,7 @@ pub(crate) async fn find_chain(
         _ => None,
     };
     match lineage {
-        Some(lineage) => Ok(Some(chain_of(pool, lineage).await?)),
+        Some(lineage) => Ok(Some(chain_of(pool, lineage, kind == KIND_DOCUMENT).await?)),
         None => Ok(None),
     }
 }

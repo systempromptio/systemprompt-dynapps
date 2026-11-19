@@ -15,10 +15,11 @@ workspace = true
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-extension = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
-# The DynWork relay, linked like the server binary links it, so a fresh
-# install carries its tables.
+# The DynWork extensions, linked like the server binary links them, so a
+# fresh install carries their tables.
 dynwork-relay = { workspace = true }
 dynwork-routines = { workspace = true }
+dynwork-chats = { workspace = true }
 
 sqlx = { workspace = true }
 tokio = { workspace = true }
