@@ -1,6 +1,7 @@
 //! The identity accessor signs only for the gateway broker, only for a server
 //! that opted in, and only for a caller the access rules admit; the token it
-//! returns verifies against the instance authority key with the agreed claims.
+//! returns verifies against the instance authority key with the agreed claims,
+//! including the ids of the groups the caller belongs to.
 
 use axum::http::StatusCode;
 use base64::Engine;
@@ -10,7 +11,7 @@ use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_platform::identity_token::{IdentityClaims, TOKEN_TTL_SECS};
 
 use crate::app::{App, Call};
-use crate::principal::Principal;
+use crate::principal::{CONTRACT_GROUP, Principal};
 use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
@@ -41,6 +42,38 @@ async fn live_session(pool: &PgPool, token: &str, user: &UserId) {
         .execute(pool)
         .await
         .expect("insert live session");
+}
+
+async fn signed_token(app: &App, caller_token: &str) -> String {
+    let (status, body) = app
+        .call_with_headers(
+            Call::get(ROUTE, Principal::Anonymous),
+            &[BROKER, ("authorization", &bearer(caller_token))],
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    serde_json::from_str::<serde_json::Value>(&body).expect("json body")["access_token"]
+        .as_str()
+        .expect("access_token")
+        .to_owned()
+}
+
+fn verified_claims(token: &str) -> IdentityClaims {
+    let header = jsonwebtoken::decode_header(token).expect("jwt header");
+    assert_eq!(header.alg, Algorithm::RS256);
+    assert_eq!(
+        header.kid.as_deref(),
+        Some(globals::signing_keys().active_kid())
+    );
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_audience(&[AUDIENCE]);
+    validation.set_issuer(&[globals::boot().config().jwt_issuer.as_str()]);
+    let key = globals::signing_keys()
+        .decoding_key_for_kid(header.kid.as_deref().expect("jwt kid"))
+        .expect("kid is in the authority keyring");
+    decode::<IdentityClaims>(token, key, &validation)
+        .expect("token verifies against the authority key")
+        .claims
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -90,37 +123,15 @@ async fn identity_token_is_signed_for_an_entitled_caller() {
     .await;
     let app = App::new(&db.pool, credentials);
 
-    let (status, body) = app
-        .call_with_headers(
-            Call::get(ROUTE, Principal::Anonymous),
-            &[BROKER, ("authorization", &bearer(&admin))],
-        )
-        .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let token =
-        serde_json::from_str::<serde_json::Value>(&body).expect("json body")["access_token"]
-            .as_str()
-            .expect("access_token")
-            .to_owned();
-
-    let header = jsonwebtoken::decode_header(&token).expect("jwt header");
-    assert_eq!(header.alg, Algorithm::RS256);
-    assert_eq!(
-        header.kid.as_deref(),
-        Some(globals::signing_keys().active_kid())
-    );
-    let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_audience(&[AUDIENCE]);
-    validation.set_issuer(&[globals::boot().config().jwt_issuer.as_str()]);
-    let key = globals::signing_keys()
-        .decoding_key_for_kid(header.kid.as_deref().expect("jwt kid"))
-        .expect("kid is in the authority keyring");
-    let claims = decode::<IdentityClaims>(&token, key, &validation)
-        .expect("token verifies against the authority key")
-        .claims;
+    let claims = verified_claims(&signed_token(&app, &admin).await);
     assert_eq!(claims.sub, admin_id.as_str());
     assert!(!claims.email.is_empty(), "email claim is populated");
     assert!(!claims.name.is_empty(), "name claim is populated");
+    assert_eq!(
+        claims.groups,
+        vec!["unassigned".to_owned()],
+        "a caller in no group carries the derived unassigned group"
+    );
     assert_eq!(claims.exp - claims.iat, TOKEN_TTL_SECS);
 
     let (status, body) = app
@@ -131,6 +142,35 @@ async fn identity_token_is_signed_for_an_entitled_caller() {
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN, "non-entitled caller: {body}");
     assert!(!body.contains("access_token"));
+    db.cleanup().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn identity_token_carries_the_callers_groups() {
+    if !globals::init() {
+        return;
+    }
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let credentials = principal::provision(&db.pool).await;
+    let member = credentials.non_admin.clone();
+    let member_id = credentials.non_admin_user_id.clone();
+    live_session(&db.pool, &member, &member_id).await;
+    seed::insert_acl_rule(
+        &db.pool,
+        "mcp_server",
+        "sfcore_dev",
+        "group",
+        CONTRACT_GROUP,
+        "allow",
+    )
+    .await;
+    let app = App::new(&db.pool, credentials);
+
+    let claims = verified_claims(&signed_token(&app, &member).await);
+    assert_eq!(claims.sub, member_id.as_str());
+    assert_eq!(claims.groups, vec![CONTRACT_GROUP.to_owned()]);
     db.cleanup().await;
 }
 

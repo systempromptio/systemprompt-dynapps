@@ -22,6 +22,7 @@ pub struct IdentityClaims {
     pub sub: String,
     pub email: String,
     pub name: String,
+    pub groups: Vec<String>,
     pub iat: i64,
     pub exp: i64,
     pub jti: String,
@@ -45,21 +46,27 @@ pub fn audience_for(services: &ServicesConfig, server: &str) -> Option<String> {
     deployment.endpoint.clone()
 }
 
+/// The person a token speaks for: stable id, contact and the ids of the
+/// groups they currently belong to (`user_groups`, so a person in no group
+/// carries the derived `unassigned`).
+#[derive(Debug, Clone, Copy)]
+pub struct Caller<'a> {
+    pub user: &'a UserId,
+    pub email: &'a str,
+    pub name: &'a str,
+    pub groups: &'a [String],
+}
+
 #[must_use]
-pub fn claims(
-    issuer: &str,
-    audience: &str,
-    user: &UserId,
-    email: &str,
-    name: &str,
-) -> IdentityClaims {
+pub fn claims(issuer: &str, audience: &str, caller: Caller<'_>) -> IdentityClaims {
     let iat = chrono::Utc::now().timestamp();
     IdentityClaims {
         iss: issuer.to_owned(),
         aud: audience.to_owned(),
-        sub: user.as_str().to_owned(),
-        email: email.to_owned(),
-        name: name.to_owned(),
+        sub: caller.user.as_str().to_owned(),
+        email: caller.email.to_owned(),
+        name: caller.name.to_owned(),
+        groups: caller.groups.to_vec(),
         iat,
         exp: iat + TOKEN_TTL_SECS,
         jti: uuid::Uuid::new_v4().to_string(),
