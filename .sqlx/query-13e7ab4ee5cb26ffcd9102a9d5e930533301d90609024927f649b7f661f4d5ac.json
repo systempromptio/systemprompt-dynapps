@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_chat_events SET compacted_at = $3\n             WHERE thread_id = $1 AND message_id = $2 AND compacted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "13e7ab4ee5cb26ffcd9102a9d5e930533301d90609024927f649b7f661f4d5ac"
+}

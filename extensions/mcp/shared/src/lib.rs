@@ -136,5 +136,7 @@ fn log_no_anonymous_principal(server: &str, tool: &str) {
 
 pub mod access_policy;
 pub mod auth;
+/// Files in and out of MCP tools by reference, over core's document store.
+pub mod files;
 pub mod reply;
 pub mod tool_schema;

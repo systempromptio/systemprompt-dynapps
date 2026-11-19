@@ -13,11 +13,11 @@ use systemprompt::models::auth::{McpHopIdentity, TokenAuthority};
 const PROTOCOL_VERSION: &str = "2025-06-18";
 const MCP_SESSION: &str = "mcp-session-id";
 
-pub(super) struct McpCaller {
-    pub(super) bearer: String,
-    pub(super) tokens: Arc<dyn TokenAuthority>,
-    pub(super) server: McpServerId,
-    pub(super) identity: McpHopIdentity,
+pub(crate) struct McpCaller {
+    pub(crate) bearer: String,
+    pub(crate) tokens: Arc<dyn TokenAuthority>,
+    pub(crate) server: McpServerId,
+    pub(crate) identity: McpHopIdentity,
 }
 
 impl McpCaller {
@@ -30,7 +30,7 @@ impl McpCaller {
     }
 }
 
-pub(super) struct McpClient {
+pub(crate) struct McpClient {
     http: reqwest::Client,
     url: String,
     caller: McpCaller,
@@ -39,10 +39,10 @@ pub(super) struct McpClient {
     next_id: u64,
 }
 
-pub(super) struct ToolResult {
-    pub(super) raw: Value,
-    pub(super) is_error: bool,
-    pub(super) payload: Value,
+pub(crate) struct ToolResult {
+    pub(crate) raw: Value,
+    pub(crate) is_error: bool,
+    pub(crate) payload: Value,
 }
 
 impl ToolResult {
@@ -89,7 +89,7 @@ fn payload(result: &Value) -> Value {
 }
 
 impl McpClient {
-    pub(super) async fn connect(url: &str, caller: McpCaller) -> Self {
+    pub(crate) async fn connect(url: &str, caller: McpCaller) -> Self {
         let mut client = Self {
             http: reqwest::Client::new(),
             url: url.to_owned(),
@@ -154,6 +154,14 @@ impl McpClient {
     }
 
     async fn request(&mut self, method: &str, params: Value) -> Value {
+        let reply = self.exchange(method, params).await;
+        assert!(reply.get("error").is_none(), "{method} failed: {reply}");
+        reply["result"].clone()
+    }
+
+    // The whole JSON-RPC reply, a protocol error included, for a caller that
+    // asserts a refusal.
+    async fn exchange(&mut self, method: &str, params: Value) -> Value {
         self.next_id += 1;
         let id = self.next_id;
         let response = self
@@ -168,13 +176,35 @@ impl McpClient {
             .to_owned();
         let body = response.text().await.expect("read the MCP response");
         assert!(status.is_success(), "{method} answered {status}: {body}");
-        let reply = read_body(&content_type, &body);
-        assert!(reply.get("error").is_none(), "{method} failed: {reply}");
-        reply["result"].clone()
+        read_body(&content_type, &body)
     }
 
     pub(super) async fn list_tools(&mut self) -> Value {
         self.request("tools/list", json!({})).await
+    }
+
+    // A tool call that may be refused: `Err` carries the JSON-RPC error or
+    // the error result, whichever shape the server gave the refusal.
+    pub(crate) async fn outcome(
+        &mut self,
+        tool: &str,
+        arguments: Value,
+    ) -> Result<ToolResult, Value> {
+        let reply = self
+            .exchange("tools/call", json!({"name": tool, "arguments": arguments}))
+            .await;
+        if let Some(error) = reply.get("error") {
+            return Err(error.clone());
+        }
+        let raw = reply["result"].clone();
+        if raw["isError"].as_bool().unwrap_or(false) {
+            return Err(raw);
+        }
+        Ok(ToolResult {
+            is_error: false,
+            payload: payload(&raw),
+            raw,
+        })
     }
 
     pub(super) async fn call(&mut self, tool: &str, arguments: Value) -> ToolResult {
@@ -188,7 +218,7 @@ impl McpClient {
         }
     }
 
-    pub(super) async fn ok(&mut self, tool: &str, arguments: Value) -> ToolResult {
+    pub(crate) async fn ok(&mut self, tool: &str, arguments: Value) -> ToolResult {
         let result = self.call(tool, arguments).await;
         assert!(!result.is_error, "{tool} refused: {}", result.raw);
         result

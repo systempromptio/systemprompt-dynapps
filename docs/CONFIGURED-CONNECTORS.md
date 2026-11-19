@@ -99,6 +99,66 @@ authorization and token endpoints, and the RFC 9207 `iss` check on the
 callback. A metadata document URL on any other origin is read as an issuer,
 as in strict mode.
 
+## Microsoft 365 (Entra)
+
+The internal `microsoft-365` MCP server is a connector without a `connector`
+block: core refuses that block on internal servers, so the platform crate
+synthesizes it (`adapter: entra`, `connector_oauth/entra.rs`) whenever an
+internal server with that id is enabled. Each person connects their own
+Microsoft 365 account on `/admin/connectors`; the grant is sealed, refreshed
+under the account lock and handed out by the same broker as every other
+connector, `/api/public/connectors/microsoft-365/token`.
+
+Entra publishes no protected-resource metadata and no PKCE method list, so
+there is no discovery. The endpoints are fixed under one authority:
+`{authority}/{tenant}/oauth2/v2.0/authorize` (code flow, PKCE S256, `state`)
+and `{authority}/{tenant}/oauth2/v2.0/token` (client secret in the form, no
+`resource`, which v2.0 rejects). The scopes are the delegated Graph
+permissions of the Belgian `dynapps-365` server plus `offline_access`,
+`openid`, `profile` and `email`.
+
+Register a **Web** app in Entra with this redirect URI, and grant (or have
+each customer's admin consent to) those Graph permissions:
+
+```
+https://YOUR-SERVER/api/public/connectors/microsoft-365/callback
+```
+
+Everything per instance lives in the secrets store, never in `services/`:
+
+| Secret | Required | Value |
+| --- | --- | --- |
+| `microsoft_365_client_id` | yes | Application (client) id of the Entra app |
+| `microsoft_365_client_secret` | yes | Its client secret value |
+| `microsoft_365_tenant` | no | `organizations` (default: the shared multi-tenant app) or one tenant id (a customer's own app). `common`, `consumers` and the personal-accounts tenant id `9188040d-6c67-4c5b-b112-36a304b66dad` are refused: they admit personal accounts |
+| `microsoft_365_allowed_tenants` | shared mode | Tenant ids admitted on this instance, separated by commas or spaces. Defaults to `microsoft_365_tenant` when that names a tenant, and must include it. The personal-accounts tenant id is refused |
+| `microsoft_365_authority` | no | Authority origin, default `https://login.microsoftonline.com`; set it for a simulated Entra or a cloud whose ID tokens are issued by that same host (`https://login.microsoftonline.us`). HTTPS origin only. Azure China, whose issuer host differs from its authority, is not supported |
+
+The tenant is checked on the ID token Entra returns beside every access
+token, read without its signature because it comes straight from the pinned
+token endpoint over TLS (OpenID Connect Core §3.1.3.7). Its issuer must be
+`{authority}/{tid}/v2.0`, its audience the client id, its `tid` never the
+personal-accounts tenant, and on the exchange its `tid` must be on the
+allow-list; a refusal wipes the tokens, so nothing is stored, and is logged
+with the `tid` the token claimed and the reason (never a token or username). A refresh that returns an ID token must name the same tenant and
+user, or the grant is dropped; one that returns none keeps the recorded
+tenant and user. Every time a saved grant is opened, its token endpoint and client id
+must match the current secrets and its tenant must still be on the
+allow-list; otherwise the account flips to *Reconnect required*. A grant
+whose tenant left the list, whether it holds an access token or only a refresh
+token, is also deleted in that commit, so its sealed refresh token does not
+stay. Removing a tenant from the list therefore cuts its users off at their
+next MCP call.
+Rotating `microsoft_365_client_secret` needs no reconnection: the current
+value is used on every refresh. The token endpoint's host is pinned to the
+configured authority when the grant is opened; the generic `exchange` entry
+points, which carry no secrets store, refuse a Microsoft 365 grant before
+redeeming its code.
+
+Verification records the account (`preferred_username`) and tenant from the
+ID token; there is no MCP handshake, because the server it would talk to is
+this instance.
+
 ## Migration and failures
 
 Migration 051 replaces the three-provider database restrictions with server-ID

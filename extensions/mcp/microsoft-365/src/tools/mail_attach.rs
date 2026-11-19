@@ -1,0 +1,198 @@
+//! Mail attachments through the shared file layer.
+//!
+//! A file attachment is downloaded raw from `/$value`, after its metadata is
+//! read without the base64, kept as one of the caller's documents and comes
+//! back as a `FileOut` (the Belgian server returned its base64 to the model,
+//! so an attachment of over ~18.7 MB could not fit Graph's response limit);
+//! an item or reference attachment comes back as Graph describes it. An
+//! attachment to add comes in as a `FileRef`, or as base64 only up to the
+//! inline limit. Graph takes an attachment of under 3 MB in one POST and a
+//! larger one only through an upload session, which this server fills in
+//! chunks itself so the bytes never pass through the model. The public
+//! upload-session pair is in `mail_upload`.
+
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
+use reqwest::Method;
+use rmcp::ErrorData as McpError;
+use schemars::JsonSchema;
+use serde::Deserialize;
+// JSON: attachments are Graph resources passed through as Graph returns them.
+use serde_json::{Value, json};
+use systemprompt_mcp_shared::files::{DownloadedFile, FileCall, FileRef, McpFiles};
+
+use super::reply::GraphItem;
+use crate::graph::sanitize::validate_id;
+use crate::graph::{GraphClient, GraphError, GraphId, GraphQuery, GraphRequest};
+
+// Why: Graph's limit for a file attachment POSTed whole; larger ones need an
+// upload session.
+pub const SINGLE_POST_MAX_BYTES: usize = 3 * 1024 * 1024;
+const DEFAULT_MIME: &str = "application/octet-stream";
+const FILE_ATTACHMENT: &str = "#microsoft.graph.fileAttachment";
+const ATTACHMENT_FIELDS: &str = "id,name,contentType,size,isInline,lastModifiedDateTime";
+
+pub const GET_MAIL_ATTACHMENT_DESCRIPTION: &str = "Get an email attachment as a file: it is \
+    saved to the user's documents and returned as a reference with a download link (the \
+    content is not inlined).";
+pub const ADD_MAIL_ATTACHMENT_DESCRIPTION: &str = "Attach a file to a draft message. Pass the \
+    file as `file` (an upload, blob or document reference) or, for files of up to 64 KB, as \
+    `content_base64`. Files of 3 MB or more are sent through an upload session automatically.";
+pub const DELETE_MAIL_ATTACHMENT_DESCRIPTION: &str = "Remove an attachment from a draft message.";
+
+pub(super) fn default_mime() -> String {
+    DEFAULT_MIME.to_owned()
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct AttachmentIdInput {
+    #[schemars(description = "The unique ID of the message.")]
+    pub message_id: GraphId,
+    #[schemars(description = "The unique ID of the attachment.")]
+    pub attachment_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct AddAttachmentInput {
+    #[schemars(description = "The draft message ID to attach to.")]
+    pub message_id: GraphId,
+    #[schemars(description = "Display name of the attachment.")]
+    pub filename: String,
+    #[schemars(
+        description = "File bytes as base64, only for files of up to 64 KB; otherwise use `file`."
+    )]
+    #[serde(default)]
+    pub content_base64: String,
+    #[schemars(
+        description = "MIME type (e.g. \"application/pdf\"); the default keeps the file's own."
+    )]
+    #[serde(default = "default_mime")]
+    pub content_type: String,
+    #[schemars(
+        description = "The file to attach, by reference (upload_id, blob_ref or document_id)."
+    )]
+    #[serde(default)]
+    pub file: FileRef,
+}
+
+fn attachment_path(message: &str, attachment: &str) -> Result<String, GraphError> {
+    let message = validate_id(message, "message_id")?;
+    let attachment = validate_id(attachment, "attachment_id")?;
+    Ok(format!("/me/messages/{message}/attachments/{attachment}"))
+}
+
+pub(super) fn one_source(base64: &str, file: &FileRef, field: &str) -> Result<FileRef, GraphError> {
+    match (base64.is_empty(), *file == FileRef::default()) {
+        (false, true) => Ok(FileRef {
+            content_base64: base64.to_owned(),
+            ..FileRef::default()
+        }),
+        (true, false) => Ok(file.clone()),
+        _ => Err(GraphError::Invalid(format!(
+            "pass exactly one of {field} or file"
+        ))),
+    }
+}
+
+pub(super) fn text_of(value: &Value, key: &str) -> Option<String> {
+    value.get(key).and_then(Value::as_str).map(str::to_owned)
+}
+
+pub async fn get_mail_attachment(
+    graph: &GraphClient,
+    files: &McpFiles,
+    call: FileCall<'_>,
+    input: AttachmentIdInput,
+) -> Result<GraphItem, McpError> {
+    let path = attachment_path(&input.message_id, &input.attachment_id)?;
+    let select = GraphQuery::new().with("$select", ATTACHMENT_FIELDS);
+    let mut attachment = graph.get_json(&path, &select).await?;
+    let carried_bytes = attachment
+        .as_object_mut()
+        .and_then(|fields| fields.remove("contentBytes"))
+        .is_some();
+    let typed_file = text_of(&attachment, "@odata.type").as_deref() == Some(FILE_ATTACHMENT);
+    if !carried_bytes && !typed_file {
+        return Ok(GraphItem::new(attachment));
+    }
+    let raw = GraphRequest::new(Method::GET, format!("{path}/$value"));
+    let download = DownloadedFile {
+        name: text_of(&attachment, "name").unwrap_or_else(|| "attachment".to_owned()),
+        mime: text_of(&attachment, "contentType").unwrap_or_else(default_mime),
+        bytes: graph.send(&raw).await?.body,
+    };
+    let file = files.store_download(call, download).await?;
+    attachment["file"] = serde_json::to_value(&file).map_err(GraphError::Decode)?;
+    Ok(GraphItem::new(attachment))
+}
+
+pub(super) async fn open_session(
+    graph: &GraphClient,
+    message: &str,
+    name: &str,
+    size: u64,
+    mime: &str,
+) -> Result<Value, GraphError> {
+    let message = validate_id(message, "message_id")?;
+    let item = json!({"AttachmentItem": {
+        "attachmentType": "file", "name": name, "size": size, "contentType": mime,
+    }});
+    graph
+        .post_json(
+            &format!("/me/messages/{message}/attachments/createUploadSession"),
+            item,
+        )
+        .await
+}
+
+pub async fn add_mail_attachment(
+    graph: &GraphClient,
+    files: &McpFiles,
+    call: FileCall<'_>,
+    input: AddAttachmentInput,
+) -> Result<GraphItem, McpError> {
+    let message = validate_id(&input.message_id, "message_id")?;
+    let source = one_source(&input.content_base64, &input.file, "content_base64")?;
+    let resolved = files.resolve_ref(call, &source).await?;
+    let mime = if input.content_type == DEFAULT_MIME {
+        resolved.mime.clone()
+    } else {
+        input.content_type.clone()
+    };
+    let bytes = resolved.read_all().await?;
+    if bytes.len() < SINGLE_POST_MAX_BYTES {
+        let body = json!({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            "name": input.filename,
+            "contentType": mime,
+            "contentBytes": STANDARD.encode(&bytes),
+        });
+        let path = format!("/me/messages/{message}/attachments");
+        return Ok(GraphItem::new(graph.post_json(&path, body).await?));
+    }
+    let session = open_session(graph, message, &input.filename, bytes.len() as u64, &mime).await?;
+    let upload_url = text_of(&session, "uploadUrl")
+        .ok_or_else(|| GraphError::api(502, None, "Graph opened no upload session"))?;
+    let created = graph.upload_in_chunks(&upload_url, &bytes).await?;
+    Ok(GraphItem::new(json!({
+        "attached": true,
+        "message_id": message,
+        "name": input.filename,
+        "size": bytes.len(),
+        "upload_session": true,
+        "attachment": created,
+    })))
+}
+
+pub async fn delete_mail_attachment(
+    graph: &GraphClient,
+    input: AttachmentIdInput,
+) -> Result<GraphItem, GraphError> {
+    let path = attachment_path(&input.message_id, &input.attachment_id)?;
+    graph.delete(&path).await?;
+    Ok(GraphItem::new(json!({
+        "deleted": true,
+        "message_id": input.message_id,
+        "attachment_id": input.attachment_id,
+    })))
+}

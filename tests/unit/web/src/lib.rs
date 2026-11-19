@@ -356,6 +356,10 @@ mod bridge_release_parity;
 #[cfg(test)]
 mod connector_cards;
 #[cfg(test)]
+mod connector_entra;
+#[cfg(test)]
+mod connector_entra_flow;
+#[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
 mod connector_oauth_classify;
@@ -400,6 +404,8 @@ mod data_console;
 
 #[cfg(test)]
 mod governance_dynapps_odoo_gate;
+#[cfg(test)]
+mod governance_microsoft_365_gate;
 
 #[cfg(test)]
 mod catalogue_integrity;

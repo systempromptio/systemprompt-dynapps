@@ -17,10 +17,10 @@
 mod access;
 mod flow;
 mod lifecycle;
-mod mcp;
+pub(crate) mod mcp;
 mod rest;
 mod review;
-mod stack;
+pub(crate) mod stack;
 
 use serde_json::Value;
 use systemprompt::identifiers::UserId;

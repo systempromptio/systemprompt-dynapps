@@ -14,12 +14,14 @@ members = [
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
     "extensions/mcp/documents",
+    "extensions/mcp/microsoft-365",
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",
     "extensions/secrets/onepassword",
     "extensions/dynwork-relay",
     "extensions/dynwork-routines",
+    "extensions/dynwork-chats",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
 # when these extension crates are consumed as dependencies. Run it explicitly:
@@ -40,7 +42,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.84.0"
+version = "0.85.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -74,6 +76,7 @@ systemprompt-mcp-shared = { path = "extensions/mcp/shared" }
 systemprompt-secrets-onepassword = { path = "extensions/secrets/onepassword" }
 dynwork-relay = { path = "extensions/dynwork-relay" }
 dynwork-routines = { path = "extensions/dynwork-routines" }
+dynwork-chats = { path = "extensions/dynwork-chats" }
 serde_jcs = "0.1"
 
 # Core runtime dependencies
@@ -269,6 +272,8 @@ systemprompt = { workspace = true, features = ["full", "slack", "teams"] }
 systemprompt-web-extension = { workspace = true }
 # The DynWork relay; linked for its `register_extension!` entry.
 dynwork-relay = { workspace = true }
+# DynWork cloud chats; linked for its `register_extension!` entry.
+dynwork-chats = { workspace = true }
 
 # Runtime
 tokio = { workspace = true }

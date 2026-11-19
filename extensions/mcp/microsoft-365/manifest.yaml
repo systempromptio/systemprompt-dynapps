@@ -1,0 +1,8 @@
+extension:
+  type: mcp
+  name: microsoft-365
+  binary: systemprompt-mcp-microsoft-365
+  description: Microsoft 365 through Microsoft Graph — mail, calendar, contacts, To Do, OneDrive, SharePoint, Teams, chats, meetings, Planner, OneNote, groups, users, presence and search, as the signed-in user
+  port: 5013
+  build_type: workspace
+  enabled: true

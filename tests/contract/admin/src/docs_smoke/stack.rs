@@ -40,7 +40,7 @@ pub(super) struct Stack {
     _binary: Child,
 }
 
-fn declared_mcp_ports() -> Vec<u16> {
+pub(crate) fn declared_mcp_ports() -> Vec<u16> {
     let dir = globals::repo_root().join("services/mcp");
     std::fs::read_dir(&dir)
         .expect("read services/mcp")
@@ -130,7 +130,7 @@ fn write_profile(database_url: &str, mcp_port: u16) -> PathBuf {
     profile
 }
 
-async fn boot(profile: &Path) -> Arc<AppContext> {
+pub(crate) async fn boot(profile: &Path) -> Arc<AppContext> {
     let loaded =
         systemprompt::config::LoadedProfile::from_path(profile).expect("load the run's profile");
     let secrets = systemprompt::config::SecretsService::load(Arc::clone(&loaded))
@@ -222,7 +222,7 @@ async fn start_binary(ctx: &AppContext, profile: &Path, port: u16) -> Child {
 
 // Why: the runtime refuses to boot until the profile's `system_admin`
 // account exists.
-pub(super) async fn seed_system_admin(pool: &sqlx::PgPool) {
+pub(crate) async fn seed_system_admin(pool: &sqlx::PgPool) {
     sqlx::query(
         "INSERT INTO users (id, name, email, roles, email_verified)
          VALUES ($1, 'admin', 'admin@contract.test', ARRAY['admin', 'user'], true)",
@@ -236,7 +236,7 @@ pub(super) async fn seed_system_admin(pool: &sqlx::PgPool) {
 // The `mcp_server/documents` band as services/access-control/rules.yaml
 // declares it, which `config apply` writes on an installation: closed, and
 // open to every signed-in user.
-pub(super) async fn seed_documents_access(pool: &sqlx::PgPool) {
+pub(crate) async fn seed_documents_access(pool: &sqlx::PgPool) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
          VALUES ('mcp_server', 'documents', false, 'console:docs-smoke')",
@@ -381,7 +381,7 @@ impl Stack {
     }
 }
 
-async fn seed_session(pool: &sqlx::PgPool, user: &UserId) -> SessionId {
+pub(crate) async fn seed_session(pool: &sqlx::PgPool, user: &UserId) -> SessionId {
     let session = SessionId::new(uuid::Uuid::new_v4().to_string());
     sqlx::query("INSERT INTO user_sessions (session_id, user_id) VALUES ($1, $2)")
         .bind(session.as_str())

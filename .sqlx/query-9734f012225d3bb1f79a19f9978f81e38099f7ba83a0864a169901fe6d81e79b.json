@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_chat_threads SET last_message_seq = last_message_seq + 1\n             WHERE id = $1 RETURNING last_message_seq",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last_message_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_threads",
+            "name": "last_message_seq"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9734f012225d3bb1f79a19f9978f81e38099f7ba83a0864a169901fe6d81e79b"
+}

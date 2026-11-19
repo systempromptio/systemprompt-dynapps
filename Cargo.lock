@@ -1666,8 +1666,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
+name = "dynwork-chats"
+version = "0.85.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "dynwork-relay",
+ "futures-util",
+ "rand 0.9.5",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "dynwork-relay"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -1692,7 +1716,7 @@ dependencies = [
 
 [[package]]
 name = "dynwork-routines"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "chrono",
@@ -7154,7 +7178,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dev-login"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -7169,9 +7193,10 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dynapps"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
+ "dynwork-chats",
  "dynwork-relay",
  "systemprompt",
  "systemprompt-web-extension",
@@ -7409,7 +7434,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-kit-export"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -7588,7 +7613,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -7613,7 +7638,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-documents"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -7631,16 +7656,51 @@ dependencies = [
 ]
 
 [[package]]
-name = "systemprompt-mcp-shared"
-version = "0.84.0"
+name = "systemprompt-mcp-microsoft-365"
+version = "0.85.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
  "axum",
+ "base64 0.22.1",
+ "chrono",
+ "reqwest",
+ "rmcp",
+ "rustls",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "urlencoding",
+]
+
+[[package]]
+name = "systemprompt-mcp-shared"
+version = "0.85.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "futures-util",
  "jsonschema 0.60.0",
  "rmcp",
+ "schemars 1.2.3",
  "serde",
  "serde_json",
  "sqlx",
  "systemprompt",
+ "thiserror 2.0.21",
  "tracing",
 ]
 
@@ -7901,7 +7961,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-secrets-onepassword"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "reqwest",
@@ -8105,7 +8165,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-agent-farm"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8125,7 +8185,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-analytics"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8150,7 +8210,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-catalog"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8172,7 +8232,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-core"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8204,7 +8264,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-governance"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8230,7 +8290,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-identity"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8259,7 +8319,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-platform"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8291,7 +8351,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-content"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "chrono",
@@ -8310,7 +8370,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-extension"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "dynwork-routines",
@@ -8339,7 +8399,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-jobs"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -8368,7 +8428,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-shared"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "chrono",
@@ -8387,7 +8447,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-site"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",

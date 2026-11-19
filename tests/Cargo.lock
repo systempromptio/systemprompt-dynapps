@@ -2338,6 +2338,7 @@ dependencies = [
  "axum",
  "base64 0.23.1",
  "chrono",
+ "dynwork-chats",
  "dynwork-relay",
  "dynwork-routines",
  "jsonwebtoken",
@@ -2358,8 +2359,66 @@ dependencies = [
 ]
 
 [[package]]
+name = "dynwork-chats"
+version = "0.85.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "dynwork-relay",
+ "futures-util",
+ "rand 0.9.5",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "dynwork-chats-integration-tests"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "dynapps-test-common",
+ "dynwork-chats",
+ "dynwork-relay",
+ "futures-util",
+ "http-body-util",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-security 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+ "tower",
+]
+
+[[package]]
+name = "dynwork-chats-unit-tests"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "dynwork-chats",
+ "dynwork-relay",
+ "serde_json",
+ "systemprompt",
+ "tokio",
+]
+
+[[package]]
 name = "dynwork-relay"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -2419,7 +2478,7 @@ dependencies = [
 
 [[package]]
 name = "dynwork-routines"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "chrono",
@@ -5004,7 +5063,11 @@ dependencies = [
 name = "mcp-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "axum",
+ "base64 0.23.1",
+ "chrono",
+ "futures-util",
  "rmcp",
  "serde",
  "serde_json",
@@ -5012,6 +5075,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-mcp-agent",
  "systemprompt-mcp-documents",
+ "systemprompt-mcp-microsoft-365",
  "systemprompt-mcp-shared",
  "tempfile",
  "tokio",
@@ -9939,7 +10003,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-kit-export"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -10274,7 +10338,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -10299,7 +10363,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-documents"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -10317,16 +10381,51 @@ dependencies = [
 ]
 
 [[package]]
-name = "systemprompt-mcp-shared"
-version = "0.84.0"
+name = "systemprompt-mcp-microsoft-365"
+version = "0.85.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
  "axum",
+ "base64 0.22.1",
+ "chrono",
+ "reqwest",
+ "rmcp",
+ "rustls",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "urlencoding",
+]
+
+[[package]]
+name = "systemprompt-mcp-shared"
+version = "0.85.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "futures-util",
  "jsonschema 0.60.0",
  "rmcp",
+ "schemars 1.2.3",
  "serde",
  "serde_json",
  "sqlx",
  "systemprompt",
+ "thiserror 2.0.21",
  "tracing",
 ]
 
@@ -10799,7 +10898,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-secrets-onepassword"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "reqwest",
@@ -11069,7 +11168,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-agent-farm"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11089,7 +11188,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-analytics"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11114,7 +11213,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-catalog"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11136,7 +11235,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-core"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11168,7 +11267,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-governance"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11194,7 +11293,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-identity"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11223,7 +11322,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-platform"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -11255,7 +11354,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-content"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "chrono",
@@ -11274,7 +11373,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-extension"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "dynwork-routines",
@@ -11284,6 +11383,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension 0.82.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
@@ -11302,7 +11402,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-jobs"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -11331,7 +11431,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-shared"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "chrono",
@@ -11350,7 +11450,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-site"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -12688,6 +12788,7 @@ dependencies = [
  "tokio",
  "toml 1.2.1+spec-1.1.0",
  "tower",
+ "tracing",
  "zip",
 ]
 

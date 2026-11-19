@@ -1,0 +1,113 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, thread_id, role, info, parts, seq, created_at, completed_at\n         FROM dynwork_chat_messages WHERE thread_id = $1 AND id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "thread_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "thread_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "role",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "info",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "info"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "parts",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "parts"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "seq"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "completed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "completed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "1b9c44fceb668f4c6f2e8009c86498cb6111fb36a1bb4d2e892e1b26bf1da0f0"
+}

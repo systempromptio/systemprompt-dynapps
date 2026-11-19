@@ -80,6 +80,8 @@ mod judge_all_scope_contract;
 #[cfg(test)]
 mod login_contract;
 #[cfg(test)]
+mod m365_sim;
+#[cfg(test)]
 mod mcp_detail_contract;
 #[cfg(test)]
 mod pat_export_contract;

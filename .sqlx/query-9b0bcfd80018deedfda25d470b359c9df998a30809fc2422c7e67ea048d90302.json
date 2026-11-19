@@ -1,0 +1,116 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_chat_messages SET info = $3, parts = $4, completed_at = $5\n             WHERE thread_id = $1 AND id = $2\n             RETURNING id, thread_id, role, info, parts, seq, created_at, completed_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "thread_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "thread_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "role",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "info",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "info"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "parts",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "parts"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "seq"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "completed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynwork_chat_messages",
+            "name": "completed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Jsonb",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "9b0bcfd80018deedfda25d470b359c9df998a30809fc2422c7e67ea048d90302"
+}

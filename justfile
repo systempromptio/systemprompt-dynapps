@@ -371,9 +371,9 @@ _test-contract-uncoordinated *ARGS:
     # carries the governance privilege-escalation check. This turns that skip
     # into a failure, so a missing database can never be read as a pass.
     export SYSTEMPROMPT_REQUIRE_DB=1
-    # Why: docs-smoke drives the running documents MCP binary and is its own
-    # recipe and Gates job; this tier stays a router-level contract.
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests) and not test(docs_smoke)' "$@"
+    # Why: docs-smoke and m365-sim drive running MCP binaries and are their
+    # own recipes; this tier stays a router-level contract.
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests) and not test(docs_smoke) and not test(m365_sim)' "$@"
 
 # The shared document store end to end on a throwaway database, against the
 # installation running: the runtime and API booted on a profile over that
@@ -404,6 +404,44 @@ _docs-smoke-uncoordinated:
     export SYSTEMPROMPT_REQUIRE_DB=1
     SQLX_OFFLINE=true cargo build -p systemprompt-mcp-documents
     cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p admin-contract-tests -E 'test(docs_smoke)'
+
+# Two companies on one installation through the microsoft-365 MCP binary, on
+# a throwaway database: Entra and Graph simulated per tenant on loopback
+# (tests/fixtures/oauth/m365_sim.py, a throwaway CA trusted through
+# SSL_CERT_FILE for this run only), the runtime and API booted on a profile
+# over that database, and the documents and microsoft-365 binaries started as
+# their own processes. Each person connects their own tenant, reads their
+# mail, uploads through documents_upload, attaches, sends, saves a download as
+# a document; the crossings (a tenant not admitted, another person's consent,
+# another tenant's message, another person's file references) are refused,
+# and a tenant taken off the allow-list loses its grant at the next token.
+# Every case prints as it passes. Needs python3 and openssl; no real accounts.
+m365-sim:
+    @scripts/build-coordinator.sh run m365-sim "" -- {{just_executable()}} _m365-sim-uncoordinated
+
+_m365-sim-uncoordinated:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ] && [ -f .systemprompt/profiles/local/secrets.json ]; then
+        SYSTEMPROMPT_TEST_DATABASE_URL=$(python3 -c "
+    import json, urllib.parse as up
+    u = up.urlsplit(json.load(open('.systemprompt/profiles/local/secrets.json'))['database_url'])
+    print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
+        export SYSTEMPROMPT_TEST_DATABASE_URL
+    fi
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ]; then
+        echo "No test database. Set SYSTEMPROMPT_TEST_DATABASE_URL, or run \`just setup-local\`." >&2
+        exit 1
+    fi
+    export SYSTEMPROMPT_REQUIRE_DB=1
+    SQLX_OFFLINE=true cargo build -p systemprompt-mcp-documents -p systemprompt-mcp-microsoft-365
+    tls="$PWD/tests/target/m365-sim-tls"
+    rm -rf "$tls"
+    python3 tests/fixtures/oauth/m365_sim.py --certs "$tls"
+    # Why: rustls' platform verifier reads SSL_CERT_FILE on Linux; macOS uses
+    # the keychain, so there the throwaway CA has to be trusted by hand.
+    export SSL_CERT_FILE="$tls/ca.pem" M365_SIM_TLS_DIR="$tls"
+    cargo nextest run --no-fail-fast --no-capture --manifest-path tests/Cargo.toml -p admin-contract-tests -E 'test(m365_sim)'
 
 # All tests
 # Every tier runs even after one fails. As `just` dependencies they stopped

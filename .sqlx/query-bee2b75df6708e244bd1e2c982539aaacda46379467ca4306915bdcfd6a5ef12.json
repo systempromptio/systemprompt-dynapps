@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynwork_chat_threads\n         SET updated_at = $2, change_seq = nextval('dynwork_chat_change_seq')\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bee2b75df6708e244bd1e2c982539aaacda46379467ca4306915bdcfd6a5ef12"
+}

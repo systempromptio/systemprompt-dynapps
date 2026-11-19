@@ -1,0 +1,20 @@
+[package]
+name = "dynwork-chats-unit-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+dynwork-chats = { workspace = true }
+# AuthError, whose key and status the chats errors reuse.
+dynwork-relay = { workspace = true }
+# HeaderMap and StatusCode for the HTTP helpers.
+axum = { workspace = true }
+async-trait = { workspace = true }
+systemprompt = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
