@@ -322,6 +322,29 @@ fn a_synced_folder_trashes_only_where_the_device_may_edit() {
 }
 
 #[test]
+fn the_sync_channels_get_no_capability_beyond_their_saves() {
+    let internal = chain(Some("internal"), &[], false);
+    let denied = [
+        AgentCapability::Share,
+        AgentCapability::MentionGrant,
+        AgentCapability::Administer,
+        AgentCapability::RestoreRevision,
+        AgentCapability::ReviewProposal,
+        AgentCapability::CopyOut,
+        AgentCapability::EditTemplate,
+    ];
+    for channel in [AgentChannel::DriveSync, AgentChannel::LiveCheckpoint] {
+        let who = on_channel(true, channel);
+        for capability in denied {
+            assert!(
+                !allows_in(&DECLARED, &internal, capability, &who),
+                "{capability} on {channel:?}"
+            );
+        }
+    }
+}
+
+#[test]
 fn only_an_attended_agent_rewrites_broadly_and_only_where_it_may_edit() {
     let broad = |class: &str, who: &AgentActor| {
         let doc = chain(Some(class), &[], false);

@@ -84,7 +84,6 @@ mod devices_page;
 #[cfg(test)]
 mod doc_links;
 #[cfg(test)]
-mod document_agent_policy;
 #[cfg(test)]
 mod downstream_credential_configs;
 #[cfg(test)]

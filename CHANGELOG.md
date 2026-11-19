@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Removed
+
+- **The dead `dynapps-drive-sync-saves` agent policy.** `extensions/web/admin/governance/src/document_agent_policy.rs` (`DriveSyncSavesPolicy`, `allows`) and its unit test are gone, together with the `pub mod document_agent_policy;` line in `systemprompt-web-admin-governance`. Since `dynapps-document-classes` registered, core applied only the first policy by name and ignored this one, so it logged "More than one agent access policy is registered; only the first by name applies" at every startup and never decided anything; that warning is gone. There is no behaviour change: `dynapps-document-classes` already allows `replace_content` and `trash` on the Drive sync channel wherever the document class lets the agent edit, which is the intended rule. Its tests cover both, and now also check that the sync channels get no other capability.
+
 ## 0.85.0 — 2026-11-19
 
 ### Added
