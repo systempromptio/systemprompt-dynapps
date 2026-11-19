@@ -10,13 +10,16 @@
 //! emits, and at the end `session.text.ended` with the whole text and one of:
 //! `session.step.ended` + `session.usage.updated` +
 //! `session.execution.succeeded`; `session.execution.interrupted` (an
-//! `interrupt`); `session.execution.failed` (a model error). The last events
+//! `interrupt`); `session.execution.failed` (a model error, or a model that
+//! sends nothing for [`REPLY_IDLE`]: error type `provider.timeout`, so a hung
+//! provider never keeps the thread busy). The last events
 //! are written, the reply is compacted into its message, and only then are
 //! they published, so a client that reloads the history on the terminal
 //! event finds the finished message. Then the person's desktops get the change
 //! hint, whichever way the reply ended.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures_util::StreamExt;
 use systemprompt::identifiers::UserId;
@@ -25,12 +28,13 @@ use tokio_util::sync::CancellationToken;
 use crate::ids::{MessageId, ThreadId};
 use crate::reply::document::{Ending, Fold, ReplyDoc, text_parts};
 use crate::reply::events::{self, Tokens};
-use crate::reply::model::{ModelChunk, ReplyModel, ReplyRequest};
+use crate::reply::model::{ModelChunk, ReplyError, ReplyModel, ReplyRequest};
 use crate::reply::registry::Claim;
 use crate::state::ChatsState;
 use crate::store::{CompletedReply, EventRecord, NewEvent};
 
 pub const TASK_NAME: &str = "dynwork_chats_reply";
+pub const REPLY_IDLE: Duration = Duration::from_secs(120);
 
 /// The reply could not be written on: the store failed (logged) or the
 /// thread is gone.
@@ -199,6 +203,7 @@ async fn generate(
     let thread = writer.thread();
     let reply = writer.reply();
     let doc = writer.doc;
+    let idle = writer.state.limits.reply_idle;
     writer
         .emit(&[
             events::execution_started(thread, reply),
@@ -208,17 +213,21 @@ async fn generate(
     let opened = tokio::select! {
         biased;
         () = cancel.cancelled() => return Ok(Ending::Interrupted),
-        opened = engine.stream(request) => opened,
+        opened = tokio::time::timeout(idle, engine.stream(request)) => opened,
     };
     let mut stream = match opened {
-        Ok(stream) => stream,
-        Err(error) => return Ok(Ending::Failed(error)),
+        Ok(Ok(stream)) => stream,
+        Ok(Err(error)) => return Ok(Ending::Failed(error)),
+        Err(_elapsed) => return Ok(Ending::Failed(stalled(thread, idle))),
     };
     loop {
-        let chunk = tokio::select! {
+        let waited = tokio::select! {
             biased;
             () = cancel.cancelled() => return Ok(Ending::Interrupted),
-            chunk = stream.next() => chunk,
+            waited = tokio::time::timeout(idle, stream.next()) => waited,
+        };
+        let Ok(chunk) = waited else {
+            return Ok(Ending::Failed(stalled(thread, idle)));
         };
         match chunk {
             None => return Ok(Ending::Succeeded),
@@ -237,4 +246,9 @@ async fn generate(
             Some(ModelChunk::Error(error)) => return Ok(Ending::Failed(error)),
         }
     }
+}
+
+fn stalled(thread: &ThreadId, idle: Duration) -> ReplyError {
+    tracing::warn!(%thread, idle_secs = idle.as_secs(), "dynwork chats reply: the model went quiet");
+    ReplyError::new("provider.timeout", "the model stopped answering")
 }

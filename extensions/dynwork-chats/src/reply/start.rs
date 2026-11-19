@@ -2,11 +2,15 @@
 //!
 //! A prompt is idempotent by its client-chosen `messageID`: the same id while
 //! its reply runs, or after, answers with the same reply and starts nothing.
-//! Another prompt while a reply runs is refused (`409 busy`). The reply's id
-//! is derived from the prompt's time and ids, its model is the prompt's, else
-//! the thread's, else the instance's default. Once the reply is running the
-//! caller's other desktops get the change hint (not the one that prompted,
-//! which follows the `/log`); a prompt that starts nothing sends none.
+//! Another prompt while a reply runs is refused (`409 busy`), and so is a
+//! prompt of a person who already has as many replies running as
+//! [`Limits::max_running_replies`](crate::state::Limits::max_running_replies)
+//! allows (`429 too_many_replies`): neither claims or writes anything. The
+//! reply's id is derived from the prompt's time and ids, its model is the
+//! prompt's, else the thread's, else the instance's default. Once the reply is
+//! running the caller's other desktops get the change hint (not the one that
+//! prompted, which follows the `/log`); a prompt that starts nothing sends
+//! none.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,7 +26,7 @@ use crate::reply::document::{self, ReplyDoc};
 use crate::reply::events;
 use crate::reply::model::{ReplyModel, ReplyRequest};
 use crate::reply::recover::settle_stale;
-use crate::reply::registry::{Busy, Claim, Running};
+use crate::reply::registry::{Busy, Claim, Refused, Running};
 use crate::reply::runner::{self, Job};
 use crate::state::ChatsState;
 use crate::store::{AppendOutcome, ModelRef, NewMessage, Role, ThreadRecord};
@@ -72,10 +76,14 @@ pub async fn start(
 ) -> Result<MessageId, ChatsError> {
     let user = &caller.user;
     let record = live_thread(state, user, thread).await?;
-    let mut claim = match state.replies.claim(thread) {
+    let most = state.limits.max_running_replies;
+    let mut claim = match state.replies.claim_reply(thread, user, most) {
         Ok(claim) => claim,
-        Err(Busy(Some(running))) if running.prompt == prompt.message => return Ok(running.reply),
-        Err(Busy(_)) => return Err(ChatsError::Busy),
+        Err(Refused::Busy(Busy(Some(running)))) if running.prompt == prompt.message => {
+            return Ok(running.reply);
+        },
+        Err(Refused::Busy(_)) => return Err(ChatsError::Busy),
+        Err(Refused::Full) => return Err(ChatsError::TooManyReplies),
     };
     settle_stale(state, user, &claim).await?;
     let model = effective_model(&prompt, &record, engine.as_ref()).ok_or(

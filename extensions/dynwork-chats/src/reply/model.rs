@@ -6,7 +6,9 @@
 //! and adds chunk kinds here; nothing else in the crate names the AI service.
 //! A provider's finish reason maps to `OpenCode`'s `finish`; as `rawFinish`
 //! the known ones are kept and anything else becomes `other`, so no provider
-//! text reaches the log.
+//! text reaches the log. A model error likewise reaches the client as its kind
+//! and a fixed message ([`failure`]); the provider's own text, which can echo
+//! the request, goes to the server log only.
 
 use std::fmt;
 use std::pin::Pin;
@@ -91,8 +93,12 @@ pub trait ReplyModel: Send + Sync + fmt::Debug {
     async fn stream(&self, request: ReplyRequest) -> Result<ChunkStream, ReplyError>;
 }
 
-/// [`ReplyModel`] over core's `AiService`, under the caller's identity so the
-/// instance's quotas, policies and audit apply to every reply.
+/// [`ReplyModel`] over core's `AiService`, under the caller's identity.
+///
+/// Every reply is audited in `ai_requests` as the caller, and the route admits
+/// its model first (`model_not_allowed`). It does not pass the gateway's
+/// quota and rate windows, guards or safety scanners: those sit on the
+/// gateway's HTTP routes, not on `AiService` (stage 2).
 pub struct GatewayModel {
     ai: Arc<AiService>,
 }
@@ -192,12 +198,20 @@ fn count(tokens: Option<u32>) -> u64 {
     tokens.map_or(0, u64::from)
 }
 
-fn failure(error: &AiError) -> ReplyError {
+pub fn failure(error: &AiError) -> ReplyError {
     tracing::warn!(error = %error, "dynwork chats reply failed in the model");
     match error {
-        AiError::Provider(_) => ReplyError::new("provider.error", error.to_string()),
-        AiError::Routing(_) => ReplyError::new("provider.unavailable", error.to_string()),
-        AiError::Request(_) => ReplyError::new("provider.invalid-request", error.to_string()),
+        AiError::Provider(_) => {
+            ReplyError::new("provider.error", "the model provider returned an error")
+        },
+        AiError::Routing(_) => ReplyError::new(
+            "provider.unavailable",
+            "no model provider can serve this model now",
+        ),
+        AiError::Request(_) => ReplyError::new(
+            "provider.invalid-request",
+            "the model provider cannot take this request",
+        ),
         _ => ReplyError::new("internal", "the reply failed on the server"),
     }
 }

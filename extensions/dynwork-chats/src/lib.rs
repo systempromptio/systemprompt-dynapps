@@ -33,6 +33,6 @@ pub mod store;
 
 pub use extension::ChatsExtension;
 pub use router::{EXTENSION_BASE_PATH, chats_router};
-pub use state::{ChatsState, Shared};
+pub use state::{ChatsState, Limits, Shared};
 
 systemprompt::extension::register_extension!(ChatsExtension);

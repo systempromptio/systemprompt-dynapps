@@ -468,6 +468,7 @@ fn caller(client: Client, session: Option<SessionId>) -> Caller {
         peer: None,
         client_id: None,
         session,
+        expires_at: chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     }
 }
 

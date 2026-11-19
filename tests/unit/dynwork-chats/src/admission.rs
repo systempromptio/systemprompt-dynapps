@@ -47,6 +47,7 @@ fn caller() -> Caller {
         peer: None,
         client_id: None,
         session: None,
+        expires_at: chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     }
 }
 

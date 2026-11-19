@@ -8,7 +8,10 @@
 //!
 //! A mobile JWT names the phone's device row in the relay. That row must still
 //! be live: revoking a phone (signing it out, or removing it from the device
-//! list) closes its chats at once instead of when its JWT expires.
+//! list) refuses its next request at once instead of when its JWT expires, and
+//! ends a `/log` stream it is following at the next heartbeat, where the row is
+//! checked again. Whatever the token, a `/log` stream ends when it expires
+//! ([`Caller::expires_at`]).
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -17,6 +20,7 @@ use async_trait::async_trait;
 use axum::extract::FromRequestParts;
 use axum::http::HeaderMap;
 use axum::http::request::Parts;
+use chrono::{DateTime, Utc};
 use dynwork_relay::auth::{DESKTOP_AUDIENCES, bearer, verify_desktop};
 use dynwork_relay::ids::{DeviceId, PeerId, PeerKind};
 use dynwork_relay::mobile_auth::jwt;
@@ -45,7 +49,7 @@ pub enum Client {
 /// its session. `admission_session` is the session the rules see: the desktop
 /// token's own, else one derived from the phone's device id (or, for a desktop
 /// token without a session, from the user), so the same caller always presents
-/// the same session.
+/// the same session. `expires_at` is when the token stops being valid.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Caller {
     pub user: UserId,
@@ -53,6 +57,7 @@ pub struct Caller {
     pub peer: Option<PeerId>,
     pub client_id: Option<ClientId>,
     pub session: Option<SessionId>,
+    pub expires_at: DateTime<Utc>,
 }
 
 const SESSION_SEED: &str = "dynapps:dynwork-chats:session:";
@@ -119,6 +124,7 @@ pub async fn authenticate(state: &ChatsState, headers: &HeaderMap) -> Result<Cal
                 peer,
                 client_id: desktop_client(authority, token),
                 session: identity.session,
+                expires_at: identity.expires_at,
             });
         },
         Err(refused) => refused,
@@ -140,6 +146,7 @@ pub async fn authenticate(state: &ChatsState, headers: &HeaderMap) -> Result<Cal
         peer,
         client_id: None,
         session: None,
+        expires_at: phone.expires_at,
     })
 }
 

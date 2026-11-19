@@ -3,11 +3,19 @@
 //! with no gap and no duplicate, and a follower going away never stops the
 //! reply.
 
+use std::time::Duration;
+
 use axum::http::StatusCode;
 use serde_json::{Value, json};
+use tokio::time::Instant;
 
-use crate::http_support::{App, http_suite};
+use crate::http_support::{
+    App, HEARTBEAT, desktop_token_expiring, http_suite, mobile_token_expiring,
+};
 use crate::reply_support::{LogEvent, WAIT, deltas, kinds};
+
+// What a test allows the server beyond the exact moment, for a busy machine.
+const SLACK: Duration = Duration::from_secs(1);
 
 const THREAD: &str = "ses_01LOGSTREAM00000000000001";
 const ASK: &str = "msg_01LOGPROMPT00000000000001";
@@ -242,7 +250,58 @@ async fn malformed_log_queries_are_400(app: &App) {
     assert_eq!(header.status, StatusCode::BAD_REQUEST);
 }
 
+async fn a_revoked_phone_loses_its_live_log_within_a_heartbeat(app: &App) {
+    app.create_thread("alice", THREAD).await;
+    let (device, token) = app.phone("alice").await;
+    let mut log = app.log_as(&token, THREAD, "?follow=1").await;
+    assert_eq!(log.status, StatusCode::OK);
+    assert!(log.next(HEARTBEAT * 3).await.is_none());
+    assert!(
+        !log.closed(),
+        "a live phone keeps its log across heartbeats"
+    );
+    app.revoke("alice", device).await;
+    let revoked = Instant::now();
+    let events = log.until_closed().await;
+    assert!(events.is_empty(), "{events:?}");
+    assert!(
+        revoked.elapsed() < HEARTBEAT + SLACK,
+        "closed {:?} after the revocation",
+        revoked.elapsed()
+    );
+}
+
+async fn the_log_ends_when_the_token_expires(app: &App) {
+    app.create_thread("alice", THREAD).await;
+    let ttl = chrono::Duration::seconds(2);
+    let (device, _) = app.phone("alice").await;
+    let mut desktop = app
+        .log_as(&desktop_token_expiring("alice", ttl), THREAD, "?follow=1")
+        .await;
+    let mut phone = app
+        .log_as(
+            &mobile_token_expiring("alice", device, ttl),
+            THREAD,
+            "?follow=1",
+        )
+        .await;
+    assert_eq!(desktop.status, StatusCode::OK);
+    assert_eq!(phone.status, StatusCode::OK);
+    let opened = Instant::now();
+    assert!(desktop.until_closed().await.is_empty());
+    assert!(phone.until_closed().await.is_empty());
+    let limit = Duration::from_secs(2) + SLACK;
+    let lasted = opened.elapsed();
+    assert!(lasted < limit, "closed {lasted:?} after opening");
+    assert!(
+        lasted > Duration::from_millis(500),
+        "closed {lasted:?} after opening, before the token expired"
+    );
+}
+
 http_suite!(
+    a_revoked_phone_loses_its_live_log_within_a_heartbeat,
+    the_log_ends_when_the_token_expires,
     the_log_replays_then_follows,
     a_reader_joining_mid_reply_gets_the_earlier_deltas_then_the_live_ones,
     after_and_last_event_id_resume_without_gap_or_duplicate,

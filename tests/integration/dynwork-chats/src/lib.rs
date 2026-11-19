@@ -26,6 +26,9 @@
 //!   model service, a model error, `interrupt` keeping the partial text, the
 //!   history sent to the model, compaction into the messages, a reply an
 //!   earlier process left unfinished
+//! - reply limits: a fourth running reply of one person is `429
+//!   too_many_replies` and claims nothing, and a model that stalls fails its
+//!   reply and frees the thread
 //! - the models list: the shape the phone and the desktop read, a phone, auth,
 //!   `503` without a model service, a role the access rules deny losing a
 //!   model, and the token's client reaching the rules
@@ -39,7 +42,9 @@
 //!   and the inactivity sweep send one `chats` hint to the right user, a
 //!   refused write sends none, and the relay's `NOTIFY` carries it
 //! - the `/log` stream: replay then follow, a reader joining mid-reply, `after`
-//!   and `Last-Event-ID`, `follow=0`, a follower going away
+//!   and `Last-Event-ID`, `follow=0`, a follower going away, a revoked phone
+//!   losing its stream within a heartbeat, and the stream ending when the token
+//!   expires
 //! - the recorder: a cloud reply's events written to
 //!   `fixtures/cloud-reply.jsonl` for the phone's shape check
 
@@ -63,6 +68,8 @@ mod http_messages;
 mod http_models;
 #[cfg(test)]
 mod http_replies;
+#[cfg(test)]
+mod http_reply_limits;
 #[cfg(test)]
 mod http_support;
 #[cfg(test)]

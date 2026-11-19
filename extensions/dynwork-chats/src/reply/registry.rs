@@ -3,7 +3,10 @@
 //! One [`Claim`] per thread at a time: a prompt holds it while it starts a
 //! reply and its task holds it until the reply has ended, so a second prompt
 //! is refused and a reply left unfinished by an earlier process can be told
-//! apart from one running here (nothing here claims it). Each thread with a
+//! apart from one running here (nothing here claims it). A prompt's claim
+//! names the person, and one person holds at most a given number of them
+//! ([`MAX_RUNNING_REPLIES`] in production), so a fourth reply waits for one
+//! of the first three to end instead of tying up the model. Each thread with a
 //! claim or a follower has a broadcast the reply publishes its events to;
 //! followers read the store for anything they missed. Everything lives in
 //! this process: one replica, as the relay.
@@ -12,6 +15,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
+use systemprompt::identifiers::UserId;
 use systemprompt::traits::BackgroundTasks;
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
@@ -20,6 +24,7 @@ use crate::ids::{MessageId, ThreadId};
 use crate::store::EventRecord;
 
 pub const FEED_CAPACITY: usize = 1024;
+pub const MAX_RUNNING_REPLIES: usize = 3;
 
 /// A reply running in this process: the prompt that started it, its
 /// assistant message, the token `interrupt` cancels and the one its task
@@ -36,6 +41,7 @@ pub struct Running {
 struct Slot {
     feed: broadcast::Sender<EventRecord>,
     claimed: bool,
+    owner: Option<UserId>,
     running: Option<Running>,
 }
 
@@ -44,6 +50,7 @@ impl Slot {
         Self {
             feed: broadcast::channel(FEED_CAPACITY).0,
             claimed: false,
+            owner: None,
             running: None,
         }
     }
@@ -67,6 +74,14 @@ pub struct Replies(Arc<Inner>);
 #[derive(Debug, Clone)]
 pub struct Busy(pub Option<Running>);
 
+/// Why a prompt could not claim its thread: the thread is busy, or the person
+/// already holds as many claims as they may.
+#[derive(Debug, Clone)]
+pub enum Refused {
+    Busy(Busy),
+    Full,
+}
+
 impl Replies {
     pub fn tasks(&self) -> &BackgroundTasks {
         &self.0.tasks
@@ -83,14 +98,43 @@ impl Replies {
             if slot.claimed {
                 return Err(Busy(slot.running.clone()));
             }
-            slot.claimed = true;
-            Ok(Claim {
-                replies: self.clone(),
-                thread: thread.clone(),
-                feed: slot.feed.clone(),
-                done: None,
-            })
+            Ok(self.take(slot, thread, None))
         })
+    }
+
+    pub fn claim_reply(
+        &self,
+        thread: &ThreadId,
+        user: &UserId,
+        most: usize,
+    ) -> Result<Claim, Refused> {
+        self.with(|slots| {
+            if let Some(slot) = slots.get(thread)
+                && slot.claimed
+            {
+                return Err(Refused::Busy(Busy(slot.running.clone())));
+            }
+            let held = slots
+                .values()
+                .filter(|slot| slot.claimed && slot.owner.as_ref() == Some(user))
+                .count();
+            if held >= most {
+                return Err(Refused::Full);
+            }
+            let slot = slots.entry(thread.clone()).or_insert_with(Slot::new);
+            Ok(self.take(slot, thread, Some(user.clone())))
+        })
+    }
+
+    fn take(&self, slot: &mut Slot, thread: &ThreadId, owner: Option<UserId>) -> Claim {
+        slot.claimed = true;
+        slot.owner = owner;
+        Claim {
+            replies: self.clone(),
+            thread: thread.clone(),
+            feed: slot.feed.clone(),
+            done: None,
+        }
     }
 
     pub fn running(&self, thread: &ThreadId) -> Option<Running> {
@@ -171,6 +215,7 @@ impl Drop for Claim {
         self.replies.with(|slots| {
             if let Some(slot) = slots.get_mut(&self.thread) {
                 slot.claimed = false;
+                slot.owner = None;
                 slot.running = None;
                 if slot.unused() {
                     slots.remove(&self.thread);

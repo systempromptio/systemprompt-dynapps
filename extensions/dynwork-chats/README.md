@@ -16,7 +16,7 @@ The store and the HTTP API: threads, the changes feed, the message history, serv
 - `ChatsExtension` (`dynwork-chats`, "DynWork Chats"), depends on `users`; registers the schema and migrations and
   mounts `chats_router` at `EXTENSION_BASE_PATH` (`/api/dynwork/chats/v1`) as a public router: it does its own auth.
   The state (`ChatsState`: store, token authority, device check, clock, model source, change hints, the registry of
-  running replies) is built on core's first `router` call and kept in the extension value.
+  running replies and its `Limits`) is built on core's first `router` call and kept in the extension value.
 - `store::ChatStore`, an async trait with two implementations: `store::postgres::PgChatStore` (production) and
   `store::memory::MemoryChatStore` (the seam the suites use to run the HTTP layer without a database). Both pass
   the same contract suite in `tests/integration/dynwork-chats`.
@@ -125,8 +125,12 @@ nothing else, verified by the relay's own functions against the instance's token
   `admin`, no `act`, no `plugin_id`, no `purpose`, not expired);
 - the phone's mobile JWT: `dynwork_relay::mobile_auth::jwt::verify` (audience and purpose `dynwork-mobile`, one hour).
   Its device (the session id) must also be a live phone row of the user in `dynwork_relay_devices`
-  (`auth::RelayDevices`, through the relay's `PgRelayStore::list_devices`), so revoking a phone closes its chats at once
-  rather than when the JWT expires. That costs one indexed query per phone request.
+  (`auth::RelayDevices`, through the relay's `PgRelayStore::list_devices`), so revoking a phone refuses its next request
+  at once rather than when the JWT expires. That costs one indexed query per phone request. A `/log` stream the phone
+  is following checks the row again on every heartbeat (15 s) and ends when it is no longer live.
+
+Both carry their expiry (`Caller::expires_at`): a `/log` stream ends when the token that opened it expires, and the
+client reconnects with a fresh one.
 
 Both map to the token's subject, so a person's desktop and phone see the same threads.
 
@@ -147,6 +151,7 @@ logged. The status mapping follows the relay's.
 | 409 | `id_taken` | a create of an id another user holds; a prompt whose `messageID` is already a message of the thread that is not a prompt |
 | 409 | `busy` | a prompt while another reply of the thread runs |
 | 413 | `too_large` | a body over 64 KiB |
+| 429 | `too_many_replies` | a prompt while the caller already has 3 replies running (on any threads); nothing is written or claimed |
 | 428 | `precondition_required` | a `DELETE` without `If-Match` |
 | 503 | `ai_unavailable` | a prompt, or a thread write naming a model, on an instance with no model service |
 | 500 | `internal` | the store or the device check failed |
@@ -154,25 +159,33 @@ logged. The status mapping follows the relay's.
 ## Replies
 
 A prompt starts a reply that runs on the server, in-process, with the `AiService` core attaches to the request
-(`Extension<Option<Arc<AiService>>>`), as the user (`Actor::user`), so the instance's quotas, policies and audit
-(`ai_requests`) apply. Stage 1 streams through `AiService::generate_stream`, which yields text and usage only: no
-reasoning, no tools. The call sits behind `reply::model::ReplyModel` (`GatewayModel`), so stage 2 swaps it for
-`generate_events_stream` (decision D1) without touching the runner or the wire.
+(`Extension<Option<Arc<AiService>>>`), as the user (`Actor::user`). Every reply is audited in `ai_requests` as the
+user, and its model passes the admission check above (`model_not_allowed`). It does not go through the gateway's
+quota and rate windows, guards or safety scanners yet: those sit on the gateway's HTTP routes, not on `AiService`,
+and replies join them when they go through the gateway (stage 2). Until then the extension caps each person at 3
+replies running at once (`registry::MAX_RUNNING_REPLIES`). Stage 1 streams through `AiService::generate_stream`,
+which yields text and usage only: no reasoning, no tools. The call sits behind `reply::model::ReplyModel`
+(`GatewayModel`), so stage 2 swaps it for `generate_events_stream` (decision D1) without touching the runner or the
+wire.
 
 - **Starting.** The thread must be the caller's and live. The model is the prompt's, else the thread's, else the
   instance's default. The prompt is stored as the user message (`{id, type: "user", text, time, metadata:
   {assistantMessageID}}`), the history (the thread's last 200 messages, text only, oldest first, roles alternating)
   goes to the model, and an empty assistant message is stored before the answer `202 {assistantMessageID}`. The same
   `messageID` again, while its reply runs or after, answers the same reply and starts nothing; another prompt while a
-  reply runs is `409 busy`.
+  reply runs is `409 busy`, and a prompt while the caller already has 3 replies running is `429 too_many_replies`.
+  Neither writes anything or holds the thread.
 - **Running.** One task per reply on the registry's `BackgroundTasks`, holding the thread's claim until it ends.
   Every event is written to `dynwork_chat_events` first and then published to the thread's in-memory broadcast.
-  A follower going away never stops it.
+  A follower going away never stops it. A model that sends nothing for 120 s (`runner::REPLY_IDLE`, also while the
+  stream opens) ends the reply as failed with error type `provider.timeout`, and the thread is free again.
 - **Events.** OpenCode v2 envelopes: `session.created` (the thread's first event, before its first reply);
   `session.execution.started`, `session.step.started`, `session.text.started`, one `session.text.delta` per chunk the
   model emits, `session.text.ended` with the whole text; then `session.step.ended` (`finish`, `rawFinish`, `tokens`,
   `cost`), `session.usage.updated` (the thread's running token total) and `session.execution.succeeded`; or
-  `session.execution.interrupted` (`reason: "user"`); or `session.execution.failed` (`error: {type, message}`).
+  `session.execution.interrupted` (`reason: "user"`); or `session.execution.failed` (`error: {type, message}`). A
+  model error's `type` is `provider.error`, `provider.unavailable`, `provider.invalid-request`, `provider.timeout` or
+  `internal`, and its `message` is a fixed text per type: the provider's own text goes to the server log only.
   Each event carries exactly the fields the desktop fixtures carry for its type: `location` is `{directory: ""}` and
   `subpath` `""` (a cloud thread has no directory); `durable: {aggregateID, seq, version: 1}` on every type except
   `session.text.delta` and `session.usage.updated`, which the desktop sends without it. `id` is derived from the row
@@ -193,11 +206,13 @@ reasoning, no tools. The call sits behind `reply::model::ReplyModel` (`GatewayMo
 
 `text/event-stream`, one `data:` line of JSON (the envelope) per event, `id:` its `seq`, and a comment heartbeat
 every 15 s. It replays the stored events after `after` or `Last-Event-ID` (the later of the two), then, with
-`follow=1`, the live ones until the client goes away; `follow=0` (the default) closes after the replay. The live feed
+`follow=1`, the live ones until the client goes away; `follow=0` (the default) closes after the replay. The server
+also ends the stream when the token that opened it expires, and, for a phone, at the first heartbeat that finds its
+device revoked; the client resumes by `Last-Event-ID` with a fresh token. The live feed
 is subscribed before the store is read, and an event at or below the last `seq` sent is dropped, so a resume has no
-gap and no duplicate; a reader that falls behind the feed (or sees a `seq` jump) reads the store again. Events of
-finished replies are pruned 24 h after their compaction, so a resume older than that starts from what remains (the
-history route has the messages).
+gap and no duplicate; a reader that falls behind the feed (or sees a `seq` jump) reads the store again. The nightly
+job prunes the events of replies compacted more than 24 h before it runs, so a resume older than that starts from
+what remains (the history route has the messages).
 
 ### One replica
 
@@ -288,8 +303,12 @@ the job reads it on every run, so a change applies from the next run without a r
   it yet.
 
 The job is `dynwork_chats_retention` (cron `0 30 3 * * *`), registered with `submit_job!` and listed in
-`services/scheduler/config.yaml`. Activity is the thread's `updated_at` (a message, the end of a reply, an edit by a
-person) or any event of a reply written since, so a reply still streaming keeps its thread. An idle thread, archived
+`services/scheduler/config.yaml`. Every run, with or without `inactive_days`, first prunes the event log
+(`prune_events` at the run's time minus 24 h, `retention::EVENT_RETENTION`): the events of replies compacted more than a
+day ago and events of no reply older than a day. A reply still running is not compacted, so its events stay. Then,
+when `inactive_days` is set, it tombstones idle threads. Activity is the thread's `updated_at` (a message, the end
+of a reply, an edit by a person) or any event of a reply written since, so a reply still streaming keeps its thread.
+An idle thread, archived
 or not, is tombstoned through `ChatStore::delete_thread` at the revision the job read: the same tombstone a person's
 `DELETE` writes, with the messages and events dropped, so clients drop it on their next `changes` call. A thread
 edited between the read and the delete is left alone. The job never removes a row for good (a later purge is out of
@@ -314,8 +333,10 @@ against the real schema.
   RS256 desktop and mobile tokens. Each is stamped once onto the memory store and once onto Postgres (`db_or_skip!`
   throwaway database, dropped at the end of each test; with `CI=1` a missing database is a failure, not a skip). On
   Postgres the phone check runs against the relay's real device table. The reply suites (`http_replies`, `http_log`)
-  run the same way with a scripted `ReplyModel` in place of the AI service, as do `http_models` and the store-level
-  `retention` suite.
+  run the same way with a scripted `ReplyModel` in place of the AI service, as do `http_models`, `http_reply_limits`
+  (the per-person cap and a model that stalls) and the store-level `retention` suite. The suites shorten the `/log`
+  heartbeat and the model idle limit through the state's `Limits`, so a revoked phone and a stalled model show within
+  a test's wait.
 - `tests/integration/dynwork-chats/fixtures/cloud-reply.jsonl`: written by the recorder test on every run (memory
   store, fixed thread, prompt and clock, so the file only changes when the events do), in the line format of the
   `@dynwork/mobile-model` fixtures: one `meta` line and one `{"kind": "event", "event"}` line per `/log` event. The

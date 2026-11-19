@@ -1,12 +1,13 @@
 //! The inactivity sweep, on both stores: which threads it tombstones, which it
-//! keeps, and what a client sees afterwards.
+//! keeps, and what a client sees afterwards; and the pruning of old reply
+//! events every run does, with or without a window.
 
 use chrono::Duration;
 use dynwork_chats::ids::{Cursor, MessageId, ThreadId};
 use dynwork_chats::retention::{Run, sweep};
 use dynwork_chats::store::{
-    AppendOutcome, CreateOutcome, NewEvent, NewMessage, NewThread, Role, ThreadEdit, ThreadPatch,
-    ThreadRecord, WriteOutcome,
+    AppendOutcome, CompletedReply, CreateOutcome, NewEvent, NewMessage, NewThread, Role,
+    ThreadEdit, ThreadPatch, ThreadRecord, WriteOutcome,
 };
 use serde_json::json;
 use systemprompt::identifiers::UserId;
@@ -374,7 +375,100 @@ async fn a_sweep_that_removes_nothing_hints_nobody(f: &Fixture) {
     assert!(hints.sent().is_empty(), "{:?}", hints.sent());
 }
 
+// An assistant message of `thread` at `secs` with one event of its reply.
+async fn reply(f: &Fixture, thread: &ThreadId, secs: i64) -> MessageId {
+    let id = MessageId::generate();
+    let message = NewMessage {
+        info: json!({ "id": id.as_str(), "role": "assistant" }),
+        parts: json!([]),
+        completed_at: None,
+        role: Role::Assistant,
+        id: id.clone(),
+    };
+    let outcome = f
+        .store
+        .append_message(&f.alice, thread, &message, at(secs))
+        .await
+        .expect("append");
+    assert!(matches!(outcome, AppendOutcome::Appended(_)), "{outcome:?}");
+    let written = f
+        .store
+        .append_events(
+            &f.alice,
+            thread,
+            &[NewEvent {
+                message: Some(id.clone()),
+                kind: "session.text.delta".to_owned(),
+                data: json!({ "delta": "..." }),
+            }],
+            at(secs),
+        )
+        .await
+        .expect("append events");
+    assert!(written.is_some());
+    id
+}
+
+async fn compact(f: &Fixture, thread: &ThreadId, reply: &MessageId, secs: i64) {
+    let done = f
+        .store
+        .compact_reply(
+            &f.alice,
+            thread,
+            &CompletedReply {
+                message: reply.clone(),
+                info: json!({ "id": reply.as_str(), "role": "assistant", "finish": "stop" }),
+                parts: json!([]),
+            },
+            at(secs),
+        )
+        .await
+        .expect("compact");
+    assert!(done.is_some());
+}
+
+async fn without_a_window_the_sweep_still_prunes_events_older_than_a_day(f: &Fixture) {
+    let now = 3 * DAY;
+    let thread = create(f, &f.alice, "kept", 0).await;
+    let finished = reply(f, &thread.id, 10).await;
+    compact(f, &thread.id, &finished, 12).await;
+    event(f, &f.alice, &thread.id, 13).await;
+    let running = reply(f, &thread.id, 20).await;
+    let recent = reply(f, &thread.id, now - 3_600).await;
+    compact(f, &thread.id, &recent, now - 3_000).await;
+    let fresh_loose = now - 60;
+    event(f, &f.alice, &thread.id, fresh_loose).await;
+
+    let done = sweep(
+        f.store.as_ref(),
+        &RecordingHints::default(),
+        Run {
+            window: None,
+            now: at(now),
+            batch: BATCH,
+            max_batches: BATCHES,
+        },
+    )
+    .await
+    .expect("sweep");
+    assert_eq!(done.tombstoned, 0);
+    let left = f
+        .store
+        .events_after(&f.alice, &thread.id, 0, 100)
+        .await
+        .expect("events")
+        .expect("the thread is kept");
+    let owners: Vec<Option<MessageId>> = left.iter().map(|e| e.message.clone()).collect();
+    assert_eq!(
+        owners,
+        vec![Some(running), Some(recent), None],
+        "the running reply, the reply compacted within the day and the fresh loose event stay"
+    );
+    assert_eq!(left[2].created_at, at(fresh_loose));
+}
+
 suite!(
+    without_a_window_the_sweep_still_prunes_events_older_than_a_day,
     without_a_window_nothing_is_deleted,
     a_thread_just_past_the_window_is_tombstoned_and_shows_in_changes,
     a_thread_just_inside_the_window_is_kept,

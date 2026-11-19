@@ -23,7 +23,7 @@ use crate::retention::ChatsRetentionJob;
 use crate::roles::UserRoles;
 use crate::router::{EXTENSION_BASE_PATH, chats_router};
 use crate::schema;
-use crate::state::{ChatsState, Shared};
+use crate::state::{ChatsState, Limits, Shared};
 use crate::store::postgres::PgChatStore;
 
 #[derive(Debug, Default)]
@@ -72,6 +72,7 @@ fn build_state(ctx: &dyn ExtensionContext, database: &Database) -> ChatsState {
         models: Arc::new(Gateway::new(admission)),
         hints: Arc::new(RelayHints::new(pool)),
         replies: Replies::default(),
+        limits: Limits::default(),
     })
 }
 

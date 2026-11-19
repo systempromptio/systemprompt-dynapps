@@ -37,6 +37,8 @@ pub enum ChatsError {
     IdTaken,
     #[error("a reply is already running in this thread")]
     Busy,
+    #[error("this user already has as many replies running as allowed")]
+    TooManyReplies,
     #[error("the instance's rules do not allow this user that model")]
     ModelNotAllowed,
     #[error("no model service is available on this instance")]
@@ -56,6 +58,7 @@ impl ChatsError {
             Self::Conflict(_) => "revision_conflict",
             Self::IdTaken => "id_taken",
             Self::Busy => "busy",
+            Self::TooManyReplies => "too_many_replies",
             Self::AiUnavailable => "ai_unavailable",
             Self::ModelNotAllowed => "model_not_allowed",
             Self::Store(_) | Self::Devices(_) | Self::Users(_) => "internal",
@@ -70,6 +73,7 @@ impl ChatsError {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::PreconditionRequired => StatusCode::PRECONDITION_REQUIRED,
             Self::Conflict(_) | Self::IdTaken | Self::Busy => StatusCode::CONFLICT,
+            Self::TooManyReplies => StatusCode::TOO_MANY_REQUESTS,
             Self::AiUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             Self::ModelNotAllowed => StatusCode::FORBIDDEN,
             Self::Store(_) | Self::Devices(_) | Self::Users(_) => StatusCode::INTERNAL_SERVER_ERROR,

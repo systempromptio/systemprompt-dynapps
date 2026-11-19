@@ -7,6 +7,7 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, PoisonError};
+use std::time::Duration;
 
 use async_trait::async_trait;
 use axum::Router;
@@ -22,7 +23,7 @@ use dynwork_chats::reply::registry::Replies;
 use dynwork_chats::store::ChatStore;
 use dynwork_chats::store::memory::MemoryChatStore;
 use dynwork_chats::store::postgres::PgChatStore;
-use dynwork_chats::{ChatsState, EXTENSION_BASE_PATH, Shared, chats_router};
+use dynwork_chats::{ChatsState, EXTENSION_BASE_PATH, Limits, Shared, chats_router};
 use dynwork_relay::ids::DeviceId;
 use dynwork_relay::mobile_auth::jwt;
 use dynwork_relay::store::postgres::PgRelayStore;
@@ -42,6 +43,10 @@ use crate::hints::RecordingHints;
 use crate::reply_support::{FakeModel, FakeSource};
 
 pub(crate) const ISSUER: &str = "https://chats.test";
+// The suites' `/log` heartbeat and model idle limit: short, so a revoked phone
+// and a stalled model show within a test's wait.
+pub(crate) const HEARTBEAT: Duration = Duration::from_millis(200);
+pub(crate) const REPLY_IDLE: Duration = Duration::from_secs(2);
 pub(crate) const RELAY_PING: &str = "/api/dynwork/relay/v1/ping";
 
 fn authority_with_seed(seed: u8) -> Arc<DeploymentTokenAuthority> {
@@ -99,6 +104,57 @@ fn mint_for_client(
             browser_session: false,
         })
         .expect("mint a token")
+}
+
+// A desktop JWT that expires `ttl` from now.
+pub(crate) fn desktop_token_expiring(name: &str, ttl: chrono::Duration) -> String {
+    let permissions = vec![Permission::User];
+    AUTHORITY
+        .mint_user_jwt(&UserJwtRequest {
+            user: AuthenticatedUser::new(
+                user(name),
+                name.to_owned(),
+                format!("{name}@example.test"),
+                permissions.clone(),
+            ),
+            session_id: SessionId::generate(),
+            jti: AccessTokenId::generate(),
+            permissions,
+            audience: vec![JwtAudience::Bridge, JwtAudience::Mcp],
+            ttl,
+            client_id: None,
+            purpose: None,
+            plugin_id: None,
+            interaction: None,
+            browser_session: false,
+        })
+        .expect("mint a short-lived desktop token")
+}
+
+// The phone's JWT for `device` as the relay mints it, but expiring `ttl` from
+// now instead of in an hour.
+pub(crate) fn mobile_token_expiring(name: &str, device: DeviceId, ttl: chrono::Duration) -> String {
+    let permissions = vec![Permission::User];
+    AUTHORITY
+        .mint_user_jwt(&UserJwtRequest {
+            user: AuthenticatedUser::new(
+                user(name),
+                name.to_owned(),
+                format!("{name}@example.test"),
+                permissions.clone(),
+            ),
+            session_id: SessionId::new(device.to_string()),
+            jti: AccessTokenId::generate(),
+            permissions,
+            audience: vec![JwtAudience::Resource(jwt::MOBILE_AUDIENCE.to_owned())],
+            ttl,
+            client_id: None,
+            purpose: Some(jwt::MOBILE_PURPOSE.to_owned()),
+            plugin_id: None,
+            interaction: None,
+            browser_session: false,
+        })
+        .expect("mint a short-lived mobile token")
 }
 
 // The DynWork desktop's JWT, as core's bridge device link mints it.
@@ -209,6 +265,11 @@ fn mount(store: Arc<dyn ChatStore>, devices: Arc<dyn DeviceCheck>, phones: Phone
         models: Arc::<FakeSource>::clone(&source),
         hints: Arc::<RecordingHints>::clone(&hints),
         replies: Replies::default(),
+        limits: Limits {
+            heartbeat: HEARTBEAT,
+            reply_idle: REPLY_IDLE,
+            ..Limits::default()
+        },
     });
     let relay = Router::new().route("/relay/v1/ping", get(|| async { "relay" }));
     let router = Router::new()
@@ -378,7 +439,7 @@ impl App {
             .state
             .replies
             .tasks()
-            .drain(std::time::Duration::from_secs(10))
+            .drain(Duration::from_secs(10))
             .await;
         assert!(drained.is_drained(), "a reply task outlived its test");
         if let Phones::Relay(db) = self.phones {

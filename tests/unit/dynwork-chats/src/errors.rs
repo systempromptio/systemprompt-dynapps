@@ -12,3 +12,10 @@ fn every_error_has_a_stable_key() {
         "internal"
     );
 }
+
+#[test]
+fn too_many_replies_is_429_with_its_own_key() {
+    let error = ChatsError::TooManyReplies;
+    assert_eq!(error.key(), "too_many_replies");
+    assert_eq!(error.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
+}

@@ -9,6 +9,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::{Method, StatusCode, header};
+use axum::response::Response;
 use dynwork_chats::admission::{Admission, LazyHook};
 use dynwork_chats::auth::Caller;
 use dynwork_chats::catalog::Listing;
@@ -242,22 +243,29 @@ impl App {
         if let Some(id) = last_event_id {
             call = call.header("last-event-id", id);
         }
-        let response = call.open().await;
-        let status = response.status();
-        let content_type = response
-            .headers()
-            .get(header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("")
-            .to_owned();
-        Log {
-            status,
-            content_type,
-            body: response.into_body(),
-            pending: String::new(),
-            ended: false,
+        Log::of(call.open().await)
+    }
+
+    // The log opened with this bearer token, such as a phone's.
+    pub(crate) async fn log_as(&self, token: &str, thread: &str, query: &str) -> Log {
+        let call = self
+            .call(Method::GET, &format!("/threads/{thread}/log{query}"))
+            .bearer(token);
+        Log::of(call.open().await)
+    }
+
+    // Waits until the model has been asked for `count` replies in all.
+    pub(crate) async fn asked(&self, count: usize) {
+        let deadline = tokio::time::Instant::now() + WAIT;
+        while self.model.requests().len() < count {
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "the model was not asked for {count} replies"
+            );
+            tokio::time::sleep(Duration::from_millis(5)).await;
         }
     }
+
 
     pub(crate) async fn messages(&self, caller: &str, thread: &str) -> Vec<Value> {
         let answer = self
@@ -301,8 +309,32 @@ pub(crate) const TERMINAL: [&str; 3] = [
 ];
 
 impl Log {
+    fn of(response: Response) -> Self {
+        let status = response.status();
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("")
+            .to_owned();
+        Self {
+            status,
+            content_type,
+            body: response.into_body(),
+            pending: String::new(),
+            ended: false,
+        }
+    }
+
+    // Whether the server has closed the stream.
+    pub(crate) const fn closed(&self) -> bool {
+        self.ended
+    }
+
     // The next event, or `None` when the stream ended or nothing came in time.
+    // `wait` bounds the whole call: heartbeat comments do not extend it.
     pub(crate) async fn next(&mut self, wait: Duration) -> Option<LogEvent> {
+        let deadline = tokio::time::Instant::now() + wait;
         loop {
             if let Some(at) = self.pending.find("\n\n") {
                 let block: String = self.pending.drain(..at + 2).collect();
@@ -314,7 +346,7 @@ impl Log {
             if self.ended {
                 return None;
             }
-            match tokio::time::timeout(wait, self.body.frame()).await {
+            match tokio::time::timeout_at(deadline, self.body.frame()).await {
                 Ok(Some(Ok(frame))) => {
                     if let Ok(data) = frame.into_data() {
                         self.pending.push_str(&String::from_utf8_lossy(&data));

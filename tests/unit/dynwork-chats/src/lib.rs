@@ -10,6 +10,8 @@
 //! - the memory store's own edges (page limits, the cursor it hands back)
 //! - replies: the event envelope per type, derived ids, finish reasons, the
 //!   history sent to the model, usage folding, the prompt and log inputs
+//! - model errors: the client gets a kind and a fixed message, never the
+//!   provider's text
 //!
 //! The store contract itself runs against both stores in the integration
 //! suite.
@@ -32,5 +34,7 @@ mod http;
 mod ids;
 #[cfg(test)]
 mod memory;
+#[cfg(test)]
+mod model_errors;
 #[cfg(test)]
 mod reply;
