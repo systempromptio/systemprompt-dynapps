@@ -29,12 +29,15 @@ pub struct ResolvedClass<'a> {
 }
 
 /// The class rows that bear on one target: its own, then each ancestor
-/// folder nearest first as `(folder_id, class_id)`.
+/// folder nearest first as `(folder_id, class_id)`. `document` is `true` for
+/// a document target and `false` for a folder, so a chain built without
+/// knowing which is never treated as a document.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ClassChain {
     pub own: Option<String>,
     pub ancestors: Vec<(String, Option<String>)>,
     pub created_by_agent: Option<String>,
+    pub document: bool,
 }
 
 impl ClassChain {
