@@ -18,7 +18,13 @@
 //! only on core's Drive-sync and live-checkpoint channels, whose whole-file
 //! saves and checkpoints core files under it, and only where the class lets
 //! that agent edit: a checkpoint persists edits already authorized one by one.
-//! Under `suggest` core writes the save as a proposal instead.
+//! Under `suggest` core writes the save as a proposal instead. A direct call
+//! may also replace the whole content of a document the same attended agent
+//! created, where the class lets it edit: core 0.84's `documents_edit` with
+//! `content_blob_ref` is how an agent rewrites a scripted HTML page it made.
+//! This needs core 0.84 or later: before it, `set_html` on an HTML document
+//! also counts as `ReplaceContent` and the sanitiser silently strips scripts
+//! and styles, where 0.84 refuses an edit the sanitiser would alter.
 //!
 //! Share is allowed to an attended agent calling directly (not the Drive sync
 //! or a live checkpoint), on a document (never a folder) that same agent
@@ -32,8 +38,8 @@
 //! revoke one grant, decide access requests and delete another person's
 //! comment, so those open on that document too. Transferring ownership and
 //! revoking every grant are `Administer`, and sharing by mention is
-//! `MentionGrant`; both stay denied, as do direct agent calls for
-//! `ReplaceContent` and every other hard-rule capability.
+//! `MentionGrant`; both stay denied, as does every other hard-rule
+//! capability.
 
 use std::sync::Arc;
 
@@ -129,6 +135,8 @@ pub fn allows_in(
     agent: &AgentActor,
 ) -> bool {
     let own = chain.created_by_agent.as_deref() == Some(agent.name.as_str());
+    let own_document_in_session =
+        agent.attended && agent.channel == AgentChannel::Direct && chain.document && own;
     match capability {
         AgentCapability::Trash => {
             let in_workspace = resolve(catalog, chain).is_some_and(|r| {
@@ -139,20 +147,17 @@ pub fn allows_in(
             (in_workspace && own) || device_delete
         },
         AgentCapability::ReplaceContent => {
-            matches!(
+            (matches!(
                 agent.channel,
                 AgentChannel::DriveSync | AgentChannel::LiveCheckpoint
-            ) && cap_in(catalog, chain, agent) == AgentCap::Edit
+            ) || own_document_in_session)
+                && cap_in(catalog, chain, agent) == AgentCap::Edit
         },
         AgentCapability::BroadRewrite => {
             agent.attended && cap_in(catalog, chain, agent) == AgentCap::Edit
         },
         AgentCapability::Share => {
-            agent.attended
-                && agent.channel == AgentChannel::Direct
-                && chain.document
-                && own
-                && cap_in(catalog, chain, agent) == AgentCap::Edit
+            own_document_in_session && cap_in(catalog, chain, agent) == AgentCap::Edit
         },
         _ => false,
     }
