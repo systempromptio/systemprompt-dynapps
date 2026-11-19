@@ -48,9 +48,12 @@ pub(crate) async fn token(
     let claims = identity_token::claims(
         &boot.config().jwt_issuer,
         &audience,
-        &user.user_id,
-        &identity.email,
-        &name,
+        identity_token::Caller {
+            user: &user.user_id,
+            email: &identity.email,
+            name: &name,
+            groups: &identity.group_ids,
+        },
     );
     let access_token = identity_token::sign(boot.token_authority().as_ref(), &claims)?;
     Ok((

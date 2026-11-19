@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **Groups in the identity token for external MCP servers.** The per-call JWT the gateway signs for an identity-backed external MCP server (`/api/public/identity/<server>/token`, `docs/EXTERNAL-MCP-IDENTITY.md`) now carries a `groups` claim: the ids of the groups the caller belongs to at that moment, sorted, or `["unassigned"]` for someone in no group. A server can now grant different rights to different groups without keeping its own list of people. The claim is additive; servers that ignore unknown claims see no change. Code: `extensions/web/admin/platform/src/services/identity_token.rs` (`Caller`, `IdentityClaims::groups`).
+
 ## 0.85.0 — 2026-11-19
 
 ### Added

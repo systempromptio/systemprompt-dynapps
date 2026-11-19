@@ -18,7 +18,7 @@ Gateway  /api/v1/mcp/<server>/mcp
   │  2. governance chain on tools/call: scope → secret scan → blocklist → rate limit
   │  3. GET /api/public/identity/<server>/token   (broker secret + user JWT)
   │       → rules.yaml entitlement for mcp_server/<server>
-  │       → sign RS256 JWT {iss, aud=endpoint, sub, email, name, iat, exp, jti}
+  │       → sign RS256 JWT {iss, aud=endpoint, sub, email, name, groups, iat, exp, jti}
   │  4. forward the MCP request with  Authorization: Bearer <that JWT>
   │     (the systemprompt JWT is never forwarded; the endpoint is never shown to clients)
   ▼
@@ -44,11 +44,21 @@ next call.
 | `sub` | the systemprompt user id, stable per user |
 | `email` | the user's email |
 | `name` | display name, or the username if there is none |
+| `groups` | the ids of the groups the user belongs to right now, sorted; a user in no group carries `["unassigned"]` |
 | `iat` / `exp` | issued-at and expiry; `exp = iat + 300` |
 | `jti` | unique id per token |
 
 The claim set is a contract. Adding a claim is compatible. Renaming or removing
 one is not.
+
+`groups` holds group **ids** as declared in `services/web/config/groups.yaml`
+and managed in the console (`/admin/groups`), read from the same membership
+the access rules use (`user_groups`), so an expired or revoked membership is
+gone from the very next token. The user's
+roles (`users.roles`) are not in the token: a server that needs to tell people
+apart by what they may do there reads `groups`, and an administrator decides
+membership in the console. A server that maps groups to its own roles should
+treat a group it does not know as no role at all.
 
 ## Registering a server
 
