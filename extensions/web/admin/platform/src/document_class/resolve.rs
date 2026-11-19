@@ -28,10 +28,12 @@ pub struct ResolvedClass<'a> {
     pub source: ClassSource,
 }
 
-/// The class rows that bear on one target: its own, then each ancestor
-/// folder nearest first as `(folder_id, class_id)`. `document` is `true` for
-/// a document target and `false` for a folder, so a chain built without
-/// knowing which is never treated as a document.
+/// The class rows that bear on one target.
+///
+/// Its own, then each ancestor folder nearest first as
+/// `(folder_id, class_id)`. `document` is `true` for a document target and
+/// `false` for a folder, so a chain built without knowing which is never
+/// treated as a document.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ClassChain {
     pub own: Option<String>,
