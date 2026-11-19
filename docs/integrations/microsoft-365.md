@@ -55,6 +55,12 @@ The server's YAML grants it `mcp_credential_broker_secret` and
 secret is missing, so `microsoft_365_graph_url` is not granted in the shipped
 file. The simulation adds that grant to its own copy.
 
+An installation whose file storage is S3 (`storage.backend: s3`, credential
+`files_s3`) must also grant `storage`, as it does for `documents` and
+`systemprompt`: the server builds the profile's file layer at startup, and
+without that grant it exits before it serves anything. A smoke boot on local
+storage does not show it.
+
 ## Shared and dedicated mode
 
 - **Shared** (`microsoft_365_tenant` unset or `organizations`): one Dynapps
