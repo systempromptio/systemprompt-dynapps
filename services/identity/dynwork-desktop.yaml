@@ -1,0 +1,30 @@
+# DynWork desktop's own UI session (core 0.84, documentation/documents.md,
+# "First-party desktop UI"). `person_ui: true` lets this client's code + PKCE
+# grant mint a UI session: a 300-second access token with only the `ui`
+# audience, accepted by the documents, folders and uploads routes alone, as
+# the person, for at most 12 hours after the sign-in. Sharing, transfer,
+# delete and agent caps ask for a fresh sign-in after 10 minutes.
+#
+# A person_ui client is public (no secret_key) and declares only the
+# authorization_code and refresh_token grants. Its redirect is the IP loopback
+# literal: core matches a registered loopback http URI on any port with the
+# same path (RFC 8252 section 7.3), so the desktop binds an ephemeral port per
+# sign-in. `localhost` is not accepted for person_ui (RFC 8252 section 8.3).
+#
+# The owner is a service account declared here, so the client does not depend
+# on a person's account. `.invalid` (RFC 2606): it is not a mailbox.
+users:
+- email: dynwork-desktop@service.invalid
+  name: DynWork desktop
+  kind: service
+  roles: [user]
+
+oauth_clients:
+- client_id: dynwork-desktop
+  name: DynWork desktop
+  owner: dynwork-desktop@service.invalid
+  redirect_uris:
+  - http://127.0.0.1/oauth/callback
+  grant_types: [authorization_code, refresh_token]
+  scopes: [user]
+  person_ui: true

@@ -66,6 +66,9 @@ pub(crate) fn store(pool: &Arc<sqlx::PgPool>) -> Store {
         background_tasks: BackgroundTasks::new(),
         unscoped_actor: Some(systemprompt::files::documents::agents::DocumentActor::Human),
         brain: Arc::new(systemprompt::runtime::documents::BrainUnavailableSink),
+        contexts: Arc::new(systemprompt::agent::services::ContextProviderService::new(
+            systemprompt::agent::repository::ContextRepository::new(&database),
+        )),
         database,
     });
     Store {

@@ -55,6 +55,8 @@ pub(crate) fn browser_session(name: &str, permissions: Vec<Permission>, browser:
             plugin_id: None,
             interaction: None,
             browser_session: browser,
+            ui_session: false,
+            auth_time: None,
         })
         .expect("mint a browser session")
 }

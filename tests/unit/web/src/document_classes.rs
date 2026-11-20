@@ -186,7 +186,6 @@ fn hard_rules_stay_denied_outside_the_agents_own_drafts() {
     let allows = |c: &ClassChain, cap, who: &AgentActor| allows_in(&DECLARED, c, cap, who);
     assert!(allows(&draft, AgentCapability::Trash, &me));
     assert!(!allows(&draft, AgentCapability::RestoreRevision, &me));
-    assert!(!allows(&draft, AgentCapability::ReplaceContent, &me));
     assert!(!allows(&draft, AgentCapability::CopyOut, &me));
     assert!(!allows(&draft, AgentCapability::ReviewProposal, &me));
     assert!(!allows(&draft, AgentCapability::Administer, &me));
@@ -386,4 +385,27 @@ fn an_attended_agent_shares_only_its_own_document_where_it_may_edit() {
     assert!(!share(&chain(Some("restricted"), &[], true), &me));
     assert!(!share(&chain(None, &[Some("confidential")], true), &me));
     assert!(!share(&chain(Some("retired-class"), &[], true), &me));
+}
+
+#[test]
+fn an_attended_agent_replaces_only_its_own_document_where_it_may_edit() {
+    let replace = |c: &ClassChain, who: &AgentActor| {
+        allows_in(&DECLARED, c, AgentCapability::ReplaceContent, who)
+    };
+    let me = agent(true);
+    let draft = chain(None, &[], true);
+    assert!(replace(&draft, &me));
+    assert!(replace(&chain(Some("internal"), &[], true), &me));
+    assert!(!replace(&draft, &agent(false)));
+    let folder = ClassChain {
+        document: false,
+        ..draft.clone()
+    };
+    assert!(!replace(&folder, &me));
+    assert!(!replace(&draft, &named("other-agent", true)));
+    assert!(!replace(&chain(Some("internal"), &[], false), &me));
+    assert!(!replace(&chain(Some("confidential"), &[], true), &me));
+    assert!(!replace(&chain(Some("restricted"), &[], true), &me));
+    assert!(!replace(&chain(None, &[Some("confidential")], true), &me));
+    assert!(!replace(&chain(Some("retired-class"), &[], true), &me));
 }

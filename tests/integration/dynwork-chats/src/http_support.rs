@@ -102,6 +102,8 @@ fn mint_for_client(
             plugin_id: None,
             interaction: None,
             browser_session: false,
+            ui_session: false,
+            auth_time: None,
         })
         .expect("mint a token")
 }
@@ -127,6 +129,8 @@ pub(crate) fn desktop_token_expiring(name: &str, ttl: chrono::Duration) -> Strin
             plugin_id: None,
             interaction: None,
             browser_session: false,
+            ui_session: false,
+            auth_time: None,
         })
         .expect("mint a short-lived desktop token")
 }
@@ -153,6 +157,8 @@ pub(crate) fn mobile_token_expiring(name: &str, device: DeviceId, ttl: chrono::D
             plugin_id: None,
             interaction: None,
             browser_session: false,
+            ui_session: false,
+            auth_time: None,
         })
         .expect("mint a short-lived mobile token")
 }

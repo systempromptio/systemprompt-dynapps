@@ -66,6 +66,8 @@ pub fn mint(
         plugin_id: None,
         interaction: None,
         browser_session: false,
+        ui_session: false,
+        auth_time: None,
     })?;
     Ok(MobileToken {
         token,
