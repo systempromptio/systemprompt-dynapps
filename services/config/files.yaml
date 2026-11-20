@@ -22,7 +22,7 @@ files:
     #
     # agentAuthored, for a document an agent has ever written (sticky
     # `agent_content`): scripts run so DynWork's HTML artifacts keep working,
-    # and only the two script CDNs load (David, 2026-11-20). It may only
+    # and only the two script CDNs load (David's decision). It may only
     # narrow the top level; a wider tier is refused when the profile loads.
     renderedHtml:
       scripts: true
