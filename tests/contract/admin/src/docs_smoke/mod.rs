@@ -28,7 +28,9 @@ use systemprompt::models::auth::{AuthenticatedUser, Permission};
 
 use crate::{globals, principal};
 
-const TOOLS_LIST_MAX_BYTES: usize = 7168;
+// Core 0.84 adds `documents_folder` and `documents_import` (21 tools,
+// measured 7750 bytes); the budget keeps about 5% of headroom over that.
+const TOOLS_LIST_MAX_BYTES: usize = 8192;
 const ONE_OP_EDIT_MAX_BYTES: usize = 400;
 const HISTORY_MAX_BYTES: usize = 800;
 
