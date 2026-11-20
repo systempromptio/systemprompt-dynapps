@@ -35,7 +35,7 @@ use systemprompt::runtime::documents::links::{
 };
 use systemprompt::runtime::documents::upload_links::SignedUploadLinks;
 use systemprompt::system::HostContext;
-use systemprompt::traits::FileByteStream;
+use systemprompt::traits::{DynContextDirectory, FileByteStream};
 
 use super::documents_support::{
     author, documents_error, link_error, upload_error, upload_record, upload_slot,
@@ -54,6 +54,7 @@ pub struct DocumentsFileStore {
     pub(super) documents: Arc<DocumentService>,
     uploads: Arc<UploadService>,
     links: Arc<dyn LinkIssuer>,
+    pub(super) contexts: DynContextDirectory,
 }
 
 impl fmt::Debug for DocumentsFileStore {
@@ -70,11 +71,13 @@ impl DocumentsFileStore {
         documents: Arc<DocumentService>,
         uploads: Arc<UploadService>,
         links: Arc<dyn LinkIssuer>,
+        contexts: DynContextDirectory,
     ) -> Self {
         Self {
             documents,
             uploads,
             links,
+            contexts,
         }
     }
 
@@ -91,6 +94,7 @@ impl DocumentsFileStore {
             Arc::clone(runtime.service()),
             Arc::clone(runtime.uploads()),
             links,
+            Arc::clone(runtime.contexts()),
         ))
     }
 }
@@ -224,7 +228,8 @@ impl FileStore for DocumentsFileStore {
             format: Some(DocumentFormat::File),
             mime: file.mime.clone(),
             bytes: file.bytes.clone(),
-            author: author(ctx, &file.exec_id),
+            author: author(self.contexts.as_ref(), ctx, &file.exec_id).await?,
+            message: None,
         };
         let (document, revision) = act_as_request(
             ctx,

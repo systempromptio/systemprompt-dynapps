@@ -77,6 +77,7 @@ pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
         act: None,
         interaction: None,
         browser_session: false,
+        ui_session: false,
     };
     let claims = JwtClaims { registered, custom };
 

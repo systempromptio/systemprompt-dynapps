@@ -8,6 +8,35 @@ files:
     enabled: true
   documents:
     enabled: true
+    # Rendered view of an uploaded .html (GET /api/v1/documents/{id}/rendered,
+    # core 0.84 documentation/documents.md "Rendered HTML"): the page shows as
+    # designed under a CSP `sandbox` without `allow-same-origin`, an opaque
+    # origin with no session, cookie or route of this instance. With scripts on,
+    # a page can still send its own content out (a listed origin, or navigating
+    # its own frame), so an embedding client must block that frame's navigation.
+    #
+    # Top level, for a document no agent has written: staff upload corporate
+    # HTML decks, so scripts run and the usual CDNs and web fonts load. Core
+    # 0.84 removed `remoteAssets: true` (any https origin); there is no
+    # wildcard, each origin is listed.
+    #
+    # agentAuthored, for a document an agent has ever written (sticky
+    # `agent_content`): scripts run so DynWork's HTML artifacts keep working,
+    # and only the two script CDNs load (David, 2026-11-20). It may only
+    # narrow the top level; a wider tier is refused when the profile loads.
+    renderedHtml:
+      scripts: true
+      remoteOrigins:
+      - https://cdnjs.cloudflare.com
+      - https://cdn.jsdelivr.net
+      - https://unpkg.com
+      - https://fonts.googleapis.com
+      - https://fonts.gstatic.com
+      agentAuthored:
+        scripts: true
+        remoteOrigins:
+        - https://cdnjs.cloudflare.com
+        - https://cdn.jsdelivr.net
     # Live sessions: snapshot cadence and the owner lease. Each replica
     # advertises its own address, resolved from the environment when this file
     # is read: FLY_PRIVATE_IP on Fly, POD_IP under Helm (each platform sets only

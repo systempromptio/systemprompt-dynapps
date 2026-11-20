@@ -27,6 +27,8 @@ fn request(permissions: Vec<Permission>, audience: Vec<JwtAudience>) -> UserJwtR
         plugin_id: None,
         interaction: None,
         browser_session: false,
+        ui_session: false,
+        auth_time: None,
     }
 }
 

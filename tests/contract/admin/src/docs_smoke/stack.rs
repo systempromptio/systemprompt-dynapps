@@ -302,6 +302,8 @@ impl Stack {
                 plugin_id: None,
                 interaction: None,
                 browser_session: true,
+                ui_session: false,
+                auth_time: None,
             })
             .expect("mint the session token")
     }
@@ -332,6 +334,8 @@ impl Stack {
                 plugin_id: None,
                 interaction: Some(TokenInteraction::Interactive),
                 browser_session: false,
+                ui_session: false,
+                auth_time: None,
             })
             .expect("mint the agent token");
         McpCaller {
@@ -376,6 +380,8 @@ impl Stack {
                 plugin_id: None,
                 interaction: None,
                 browser_session: false,
+                ui_session: false,
+                auth_time: None,
             })
             .expect("mint the Drive sync token")
     }

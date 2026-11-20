@@ -104,6 +104,8 @@ fn mint_with(authority: &dyn TokenAuthority, token: &Token<'_>) -> String {
             plugin_id: token.plugin.map(PluginId::new),
             interaction: None,
             browser_session: false,
+            ui_session: false,
+            auth_time: None,
         })
         .expect("mint a token")
 }

@@ -760,7 +760,8 @@
             "mcp",
             "internal",
             "bridge",
-            "hook"
+            "hook",
+            "ui"
           ]
         },
         {

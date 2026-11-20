@@ -1,6 +1,8 @@
 //! The pieces [`DocumentsFileStore`] is assembled from: reading one
 //! document's record as the request's actor, the upload session's record,
-//! the revision author a kept file is attributed to, and the translation of
+//! the revision author a kept file is attributed to (through core's own
+//! `request_author`, so the conversation is checked as on core's tools and
+//! one the caller does not own refuses the write), and the translation of
 //! core's upload, document and link errors into [`FilesError`].
 //!
 //! A document the caller may not open, trashed or capped away from the
@@ -9,15 +11,17 @@
 //! as [`FilesError::Unavailable`].
 
 use systemprompt::files::documents::DocumentsError;
-use systemprompt::files::documents::models::{RevisionAttribution, RevisionOrigin};
+use systemprompt::files::documents::models::RevisionOrigin;
 use systemprompt::files::documents::service::Author;
 use systemprompt::files::uploads::{UploadError, UploadSession, UploadStatus};
 use systemprompt::identifiers::{DocumentId, DocumentRevisionId, McpExecutionId};
 use systemprompt::models::documents::ActorKind;
 use systemprompt::models::execution::context::RequestContext;
 use systemprompt::runtime::documents::actor::act_as_request;
+use systemprompt::runtime::documents::attribution::request_author;
 use systemprompt::runtime::documents::links::LinkIssueError;
 use systemprompt::runtime::documents::refusal::{RefusalCode, refusal_of};
+use systemprompt::traits::ContextDirectory;
 
 use super::documents_store::DocumentsFileStore;
 use super::error::FilesError;
@@ -71,19 +75,20 @@ impl DocumentsFileStore {
     }
 }
 
-pub(super) fn author(ctx: &RequestContext, exec_id: &McpExecutionId) -> Author {
-    let present = |value: &str| !value.is_empty();
-    Author {
-        actor_kind: ActorKind::Agent,
-        origin: RevisionOrigin::McpExecution(exec_id.clone()),
-        attribution: RevisionAttribution {
-            session_id: Some(ctx.session_id().clone()).filter(|id| present(id.as_str())),
-            context_id: Some(ctx.context_id().clone()).filter(|id| present(id.as_str())),
-            trace_id: Some(ctx.trace_id().clone()).filter(|id| present(id.as_str())),
-            task_id: ctx.task_id().cloned(),
-            on_behalf_of: Some(ctx.user_id().clone()).filter(|id| present(id.as_str())),
-        },
-    }
+pub(super) async fn author(
+    contexts: &dyn ContextDirectory,
+    ctx: &RequestContext,
+    exec_id: &McpExecutionId,
+) -> Result<Author, FilesError> {
+    let origin = RevisionOrigin::McpExecution(exec_id.clone());
+    request_author(
+        contexts,
+        ctx,
+        (ActorKind::Agent, origin),
+        Some(ctx.context_id()),
+    )
+    .await
+    .map_err(|error| documents_error(&error))
 }
 
 pub(super) fn upload_slot(session: &UploadSession) -> UploadSlot {
