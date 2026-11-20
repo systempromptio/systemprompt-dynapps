@@ -67,6 +67,8 @@ pub(crate) fn desktop_token(name: &str) -> String {
             plugin_id: None,
             interaction: None,
             browser_session: false,
+            ui_session: false,
+            auth_time: None,
         })
         .expect("mint a token")
 }

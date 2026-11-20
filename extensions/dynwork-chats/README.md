@@ -163,10 +163,10 @@ A prompt starts a reply that runs on the server, in-process, with the `AiService
 user, and its model passes the admission check above (`model_not_allowed`). It does not go through the gateway's
 quota and rate windows, guards or safety scanners yet: those sit on the gateway's HTTP routes, not on `AiService`,
 and replies join them when they go through the gateway (stage 2). Until then the extension caps each person at 3
-replies running at once (`registry::MAX_RUNNING_REPLIES`). Stage 1 streams through `AiService::generate_stream`,
-which yields text and usage only: no reasoning, no tools. The call sits behind `reply::model::ReplyModel`
-(`GatewayModel`), so stage 2 swaps it for `generate_events_stream` (decision D1) without touching the runner or the
-wire.
+replies running at once (`registry::MAX_RUNNING_REPLIES`). Replies stream through `AiService::generate_events_stream`
+(decision D1): text deltas and the usage reported at the message stop reach the client; reasoning and tool events are
+not forwarded yet. The call sits behind `reply::model::ReplyModel` (`GatewayModel`), so later chunk kinds land there
+without touching the runner or the wire.
 
 - **Starting.** The thread must be the caller's and live. The model is the prompt's, else the thread's, else the
   instance's default. The prompt is stored as the user message (`{id, type: "user", text, time, metadata:

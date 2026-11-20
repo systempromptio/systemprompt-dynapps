@@ -1,9 +1,10 @@
 //! The model a reply streams from, behind [`ReplyModel`].
 //!
-//! Stage 1 answers through core's `AiService::generate_stream`, which yields
-//! text and usage only. Stage 2 swaps that call for
-//! `AiService::generate_events_stream` (decision D1) inside [`GatewayModel`]
-//! and adds chunk kinds here; nothing else in the crate names the AI service.
+//! [`GatewayModel`] answers through core's `AiService::generate_events_stream`
+//! (decision D1): text deltas become text chunks, and the usage the stream
+//! reports at its start and in later updates is folded into one usage chunk at
+//! the message stop. Thinking and tool events are not chunk kinds yet; nothing
+//! else in the crate names the AI service.
 //! A provider's finish reason maps to `OpenCode`'s `finish`; as `rawFinish`
 //! the known ones are kept and anything else becomes `other`, so no provider
 //! text reaches the log. A model error likewise reaches the client as its kind
@@ -19,8 +20,8 @@ use futures_util::{Stream, StreamExt};
 use systemprompt::ai::error::AiError;
 use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
-use systemprompt::models::ai::StreamChunk;
 use systemprompt::models::execution::context::RequestContext;
+use systemprompt::wire::canonical::{CanonicalEvent, CanonicalStopReason, CanonicalUsage};
 
 use crate::ids::ThreadId;
 use crate::store::{ModelRef, Role};
@@ -166,36 +167,56 @@ impl ReplyModel for GatewayModel {
 
     async fn stream(&self, request: ReplyRequest) -> Result<ChunkStream, ReplyError> {
         let ai_request = self.request(&request)?;
-        let stream = self
+        let events = self
             .ai
-            .generate_stream(&ai_request)
+            .generate_events_stream(&ai_request)
             .await
             .map_err(|error| failure(&error))?;
-        Ok(Box::pin(stream.map(|item| match item {
-            Ok(StreamChunk::Text(text)) => ModelChunk::Text(text),
-            Ok(StreamChunk::Usage {
-                input_tokens,
-                output_tokens,
-                cache_read_tokens,
-                cache_creation_tokens,
-                reasoning_tokens,
-                finish_reason,
-                ..
-            }) => ModelChunk::Usage(Usage {
-                input: count(input_tokens),
-                output: count(output_tokens),
-                reasoning: count(reasoning_tokens),
-                cache_read: count(cache_read_tokens),
-                cache_write: count(cache_creation_tokens),
-                raw_finish: finish_reason.as_deref().map(raw_finish_of),
-            }),
-            Err(error) => ModelChunk::Error(failure(&error)),
+        let mut usage = CanonicalUsage::default();
+        Ok(Box::pin(events.filter_map(move |item| {
+            std::future::ready(match item {
+                Ok(CanonicalEvent::TextDelta { text, .. }) => Some(ModelChunk::Text(text)),
+                Ok(CanonicalEvent::MessageStart { usage: start, .. }) => {
+                    usage = start;
+                    None
+                },
+                Ok(CanonicalEvent::UsageDelta(update)) => {
+                    update.apply_to(&mut usage);
+                    None
+                },
+                Ok(CanonicalEvent::MessageStop {
+                    stop_reason,
+                    raw_finish_reason,
+                    ..
+                }) => Some(ModelChunk::Usage(usage_of(
+                    &usage,
+                    raw_finish_reason
+                        .as_deref()
+                        .or_else(|| stop_reason.map(CanonicalStopReason::anthropic_str)),
+                ))),
+                Ok(CanonicalEvent::Error(detail)) => {
+                    tracing::warn!(detail = %detail, "dynwork chats reply stream reported an error");
+                    Some(ModelChunk::Error(ReplyError::new(
+                        "provider.error",
+                        "the model provider returned an error",
+                    )))
+                },
+                Ok(_) => None,
+                Err(error) => Some(ModelChunk::Error(failure(&error))),
+            })
         })))
     }
 }
 
-fn count(tokens: Option<u32>) -> u64 {
-    tokens.map_or(0, u64::from)
+fn usage_of(usage: &CanonicalUsage, raw_finish: Option<&str>) -> Usage {
+    Usage {
+        input: u64::from(usage.input_tokens),
+        output: u64::from(usage.output_tokens),
+        reasoning: u64::from(usage.reasoning_tokens),
+        cache_read: u64::from(usage.cache_read_tokens),
+        cache_write: u64::from(usage.cache_creation_tokens),
+        raw_finish: raw_finish.map(raw_finish_of),
+    }
 }
 
 pub fn failure(error: &AiError) -> ReplyError {

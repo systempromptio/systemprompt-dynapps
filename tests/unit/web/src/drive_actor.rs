@@ -43,6 +43,7 @@ fn web_session() -> JwtClaims {
             purpose: None,
             interaction: None,
             browser_session: true,
+            ui_session: false,
         },
     }
 }

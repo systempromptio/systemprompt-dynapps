@@ -225,6 +225,7 @@ impl FileStore for DocumentsFileStore {
             mime: file.mime.clone(),
             bytes: file.bytes.clone(),
             author: author(ctx, &file.exec_id),
+            message: None,
         };
         let (document, revision) = act_as_request(
             ctx,

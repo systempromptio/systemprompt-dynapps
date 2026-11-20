@@ -15,7 +15,7 @@ use systemprompt::files::uploads::{UploadError, UploadSession, UploadStatus};
 use systemprompt::identifiers::{DocumentId, DocumentRevisionId, McpExecutionId};
 use systemprompt::models::documents::ActorKind;
 use systemprompt::models::execution::context::RequestContext;
-use systemprompt::runtime::documents::actor::act_as_request;
+use systemprompt::runtime::documents::actor::{act_as_request, request_actor};
 use systemprompt::runtime::documents::links::LinkIssueError;
 use systemprompt::runtime::documents::refusal::{RefusalCode, refusal_of};
 
@@ -82,6 +82,8 @@ pub(super) fn author(ctx: &RequestContext, exec_id: &McpExecutionId) -> Author {
             trace_id: Some(ctx.trace_id().clone()).filter(|id| present(id.as_str())),
             task_id: ctx.task_id().cloned(),
             on_behalf_of: Some(ctx.user_id().clone()).filter(|id| present(id.as_str())),
+            agent_name: request_actor(ctx).as_agent().map(|agent| agent.name.clone()),
+            client_id: ctx.client_id().cloned(),
         },
     }
 }
