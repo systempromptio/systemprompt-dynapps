@@ -90,11 +90,15 @@ fn payload(result: &Value) -> Value {
 
 impl McpClient {
     pub(crate) async fn connect(url: &str, caller: McpCaller) -> Self {
+        // Core 0.84 refuses a write naming a conversation the caller does not
+        // own (`unknown_context`); the context derived from the caller's own
+        // session is the one id it accepts without a lookup.
+        let context_id = ContextId::derived_from_session(&caller.identity.session_id);
         let mut client = Self {
             http: reqwest::Client::new(),
             url: url.to_owned(),
             caller,
-            context_id: ContextId::generate().as_str().to_owned(),
+            context_id: context_id.as_str().to_owned(),
             session: String::new(),
             next_id: 0,
         };
