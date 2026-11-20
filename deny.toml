@@ -17,9 +17,14 @@ ignore = [
     # deny.toml. Drop when jsonwebtoken moves to elliptic-curve 0.14.
     "RUSTSEC-2026-0387",
     # chrono and chrono-tz declared unmaintained (2026-11-17); not a
-    # vulnerability. Both reach every crate through core (systemprompt-*,
-    # sqlx's chrono feature), so moving to jiff is a core change first.
-    # Drop when core leaves chrono.
+    # vulnerability, and every version is affected. chrono reaches every
+    # crate through core (systemprompt-*, sqlx's chrono feature) and the
+    # workspace's own chrono dependency. chrono-tz is a direct dependency of
+    # systemprompt-web-admin-core (the viewer time zone in
+    # extensions/web/shared/admin-core/src/ssr/viewer_tz.rs) and also comes in
+    # through core's tokio-cron-scheduler and ironcalc_base. Drop 0543 when
+    # core and this workspace leave chrono; drop 0555 when admin-core resolves
+    # zones without chrono-tz and core's dependencies move off it.
     "RUSTSEC-2026-0543",
     "RUSTSEC-2026-0555",
 ]
