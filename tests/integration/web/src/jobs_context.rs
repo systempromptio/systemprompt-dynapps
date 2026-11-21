@@ -127,6 +127,8 @@ pub(crate) fn test_config() -> Arc<Config> {
         api_key_max_lifetime_days: None,
         system_admin_username: "admin".to_owned(),
         system_admin_email: None,
+        ui_session: systemprompt::manifest::profile::UiSessionConfig::default(),
+        authorize: systemprompt::manifest::profile::AuthorizeConfig::default(),
     })
 }
 
