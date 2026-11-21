@@ -48,8 +48,8 @@ dependencies = [
  "sha2 0.11.1",
  "sqlx",
  "systemprompt",
- "systemprompt-provider-contracts",
- "systemprompt-security",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
@@ -104,7 +104,7 @@ dependencies = [
  "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "systemprompt-security",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
@@ -1044,13 +1044,13 @@ dependencies = [
  "reqwest",
  "rustls",
  "serde_json",
- "systemprompt-api",
+ "systemprompt-api 0.85.0",
  "systemprompt-bridge",
- "systemprompt-gateway",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-wire",
+ "systemprompt-gateway 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-wire 0.85.0",
  "temp-env",
  "tempfile",
  "tokio",
@@ -2374,7 +2374,7 @@ dependencies = [
  "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "systemprompt-extension",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -2397,7 +2397,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "systemprompt",
- "systemprompt-security",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tower",
 ]
@@ -2433,7 +2433,7 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
- "systemprompt-extension",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -2456,8 +2456,8 @@ dependencies = [
  "serde_json",
  "sqlx",
  "systemprompt",
- "systemprompt-api",
- "systemprompt-security",
+ "systemprompt-api 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tokio-tungstenite",
  "tower",
@@ -2472,7 +2472,7 @@ dependencies = [
  "dynwork-relay",
  "serde_json",
  "systemprompt",
- "systemprompt-security",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
 ]
 
@@ -2487,7 +2487,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "systemprompt",
- "systemprompt-extension",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-web-admin-core",
  "thiserror 2.0.21",
  "tracing",
@@ -2506,7 +2506,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "systemprompt",
- "systemprompt-security",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tokio-util",
  "tower",
@@ -3258,7 +3258,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0c1bce85c110ab718fd139e0cc89c51b63bd647b14a767e24bdfc77c83df79b"
 dependencies = [
  "arref",
- "heapless 0.9.3",
+ "heapless 0.9.4",
  "itertools 0.11.0",
  "loro-thunderdome",
  "proc-macro2",
@@ -3667,9 +3667,9 @@ dependencies = [
 
 [[package]]
 name = "heapless"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25ba4bd83f9415b58b4ed8dc5714c76e626a105be4646c02630ad730ad3b5aa4"
+checksum = "411fdef4df93751117bd9ef8caa0e7f99c65dafec5bd84313eb8e2fdd75e32f2"
 dependencies = [
  "hash32 0.3.1",
  "stable_deref_trait",
@@ -8718,53 +8718,55 @@ dependencies = [
 
 [[package]]
 name = "systemprompt"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f14deff3a9dd89943ecf8aa4bab200d25d428aa5a8efe547bb4c01accc62abc"
 dependencies = [
  "axum",
  "rmcp",
  "sqlx",
- "systemprompt-agent",
+ "systemprompt-agent 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-agent-runs",
- "systemprompt-ai",
- "systemprompt-analytics",
- "systemprompt-api",
+ "systemprompt-ai 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-analytics 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-api 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-brain",
  "systemprompt-cli",
- "systemprompt-client",
- "systemprompt-cloud",
- "systemprompt-config",
- "systemprompt-content",
- "systemprompt-database",
- "systemprompt-events",
- "systemprompt-extension",
- "systemprompt-files",
- "systemprompt-gateway",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-cloud 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-content 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-events 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-files 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-gateway 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-generator",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-marketplace",
- "systemprompt-mcp",
- "systemprompt-models",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-marketplace 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-mcp 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-notifications",
- "systemprompt-oauth",
- "systemprompt-oauth-issuance",
- "systemprompt-runtime",
- "systemprompt-scheduler",
- "systemprompt-security",
- "systemprompt-storage",
+ "systemprompt-oauth 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-oauth-issuance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-runtime 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-scheduler 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-storage 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-template-provider",
- "systemprompt-traits",
- "systemprompt-users",
- "systemprompt-wire",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "systemprompt-agent"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -8781,16 +8783,55 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-security",
- "systemprompt-traits",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tower-http 0.7.1",
+ "tracing",
+]
+
+[[package]]
+name = "systemprompt-agent"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d561225bf2e5f76980e83b6a59c3f0b5532dd14986a262021c44b8b63ab5acdd"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.23.1",
+ "chrono",
+ "futures",
+ "hex",
+ "http",
+ "inventory",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-stream",
@@ -8801,7 +8842,9 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-agent-runs"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bf06a562913e319c16ef5008517e002b0c99602de019d320c8b9b8c4701c01f"
 dependencies = [
  "async-trait",
  "chrono",
@@ -8813,19 +8856,19 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-agent",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-marketplace",
- "systemprompt-models",
- "systemprompt-oauth",
- "systemprompt-provider-contracts",
- "systemprompt-security",
- "systemprompt-traits",
- "systemprompt-users",
+ "systemprompt-agent 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-marketplace 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-oauth 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -8835,7 +8878,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-ai"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -8849,16 +8892,51 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-security",
- "systemprompt-traits",
- "systemprompt-wire",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-ai"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fd17c3df7894e49cc66dfa3ba7bd9a07f53f45dce9a9da872344a61329e19b5"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "futures",
+ "inventory",
+ "jsonschema 0.61.2",
+ "regex",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -8868,7 +8946,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-analytics"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -8878,12 +8956,39 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-logging",
- "systemprompt-models",
- "systemprompt-traits",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-analytics"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "088dc49ca158508a42b4c1367c18b6336e4ac3371b6f6c1bf5476407031475fa"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "http",
+ "inventory",
+ "maxminddb",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -8893,7 +8998,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-api"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -8921,38 +9026,112 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-agent",
+ "systemprompt-agent 0.85.0",
+ "systemprompt-ai 0.85.0",
+ "systemprompt-analytics 0.85.0",
+ "systemprompt-client 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-content 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-events 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-files 0.85.0",
+ "systemprompt-gateway 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-marketplace 0.85.0",
+ "systemprompt-mcp 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-oauth 0.85.0",
+ "systemprompt-oauth-issuance 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-runtime 0.85.0",
+ "systemprompt-scheduler 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-storage 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-users 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-stream",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+ "url",
+ "urlencoding",
+ "uuid",
+ "validator",
+ "webauthn-rs",
+]
+
+[[package]]
+name = "systemprompt-api"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d82ea0ab548623b0ac352d9c33d0e775579f814b23abf993a97cd60760c4b949"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64 0.23.1",
+ "bcrypt",
+ "bytes",
+ "chrono",
+ "futures-util",
+ "hex",
+ "http",
+ "http-body-util",
+ "ipnet",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "nix",
+ "opentelemetry-proto",
+ "prost 0.14.6",
+ "rand 0.10.3",
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-agent 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-agent-runs",
- "systemprompt-ai",
- "systemprompt-analytics",
+ "systemprompt-ai 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-analytics 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-brain",
- "systemprompt-client",
- "systemprompt-config",
- "systemprompt-content",
- "systemprompt-database",
- "systemprompt-events",
- "systemprompt-extension",
- "systemprompt-files",
- "systemprompt-gateway",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-marketplace",
- "systemprompt-mcp",
- "systemprompt-models",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-content 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-events 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-files 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-gateway 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-marketplace 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-mcp 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-notifications",
- "systemprompt-oauth",
- "systemprompt-oauth-issuance",
- "systemprompt-provider-contracts",
- "systemprompt-runtime",
- "systemprompt-scheduler",
- "systemprompt-security",
- "systemprompt-storage",
- "systemprompt-traits",
- "systemprompt-users",
- "systemprompt-wire",
+ "systemprompt-oauth 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-oauth-issuance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-runtime 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-scheduler 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-storage 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-stream",
@@ -8968,7 +9147,9 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-brain"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd612b983fa3341ac510f5159403e3e989ae6b36b3bc2d0f8eef320c63988e46"
 dependencies = [
  "async-trait",
  "chrono",
@@ -8980,14 +9161,14 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sqlx",
- "systemprompt-database",
- "systemprompt-events",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-events 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -8997,7 +9178,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-bridge"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "apple-native-keyring-store",
  "arc-swap",
@@ -9040,8 +9221,8 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.11.1",
- "systemprompt-identifiers",
- "systemprompt-models",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-models 0.85.0",
  "tar",
  "tauri-winrt-notification",
  "tempfile",
@@ -9069,7 +9250,9 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-cli"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1adea68c47f23ae6f605e8aa727d9f81c1262878f771111e757378d3a7c9aa8f"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -9097,36 +9280,36 @@ dependencies = [
  "sha2 0.11.1",
  "sqlx",
  "sse-stream",
- "systemprompt-agent",
+ "systemprompt-agent 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-agent-runs",
- "systemprompt-ai",
- "systemprompt-analytics",
- "systemprompt-api",
- "systemprompt-client",
- "systemprompt-cloud",
- "systemprompt-config",
- "systemprompt-content",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-files",
- "systemprompt-gateway",
+ "systemprompt-ai 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-analytics 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-api 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-cloud 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-content 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-files 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-gateway 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-generator",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-marketplace",
- "systemprompt-mcp",
- "systemprompt-models",
- "systemprompt-oauth",
- "systemprompt-oauth-issuance",
- "systemprompt-runtime",
- "systemprompt-scheduler",
- "systemprompt-security",
- "systemprompt-traits",
- "systemprompt-users",
- "systemprompt-wire",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-marketplace 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-mcp 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-oauth 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-oauth-issuance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-runtime 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-scheduler 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tabled",
  "tempfile",
  "thiserror 2.0.21",
@@ -9139,7 +9322,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-client"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "chrono",
  "futures",
@@ -9147,8 +9330,28 @@ dependencies = [
  "serde",
  "serde_json",
  "sse-stream",
- "systemprompt-identifiers",
- "systemprompt-models",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-models 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "systemprompt-client"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "082838b33863f5e4d735153d93fd30b29a1d4e2281cea4984d32c885baf52a3d"
+dependencies = [
+ "chrono",
+ "futures",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sse-stream",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9157,7 +9360,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-cloud"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -9170,13 +9373,45 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
- "systemprompt-config",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-models",
+ "systemprompt-config 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "urlencoding",
+ "uuid",
+ "validator",
+]
+
+[[package]]
+name = "systemprompt-cloud"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91912bf720c9613863e7000936d0f5bd245edcc83a89cc1a3a2efd52a589f849"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "chrono",
+ "clap",
+ "dirs",
+ "ipnet",
+ "open",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9187,7 +9422,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-config"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9202,12 +9437,44 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.11.1",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-traits",
- "systemprompt-wire",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "zeroize",
+]
+
+[[package]]
+name = "systemprompt-config"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4a954c3b35bdaa3139ba492f9b3947d223346b093f4bd08727cec0db21475c0"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "hex",
+ "inventory",
+ "nix",
+ "rand 0.10.3",
+ "reqwest",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9217,7 +9484,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-content"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9229,15 +9496,46 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-cloud",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
+ "systemprompt-cloud 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "walkdir",
+]
+
+[[package]]
+name = "systemprompt-content"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91b4b7f225ec9e267d42c903bf0fafaa7e7de3fd20a161921c5eb8159f9a6e09"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "hex",
+ "inventory",
+ "rand 0.10.3",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-cloud 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9246,7 +9544,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-database"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9259,10 +9557,38 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-traits",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "systemprompt-database"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4321a7e4d7e266c6cae84fc2bdfc7d328254d0266e36ced6c3514afd717cdc8a"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "futures-util",
+ "inventory",
+ "pg_query",
+ "rand 0.10.3",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9272,7 +9598,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-events"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -9282,10 +9608,34 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-models",
- "systemprompt-traits",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "systemprompt-events"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d67cf9b52e703e19833a1de095135cecf462cb2ef68fbac70cb97348a7bc9524"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "inventory",
+ "metrics",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -9294,7 +9644,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-extension"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -9303,11 +9653,34 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tracing",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "systemprompt-extension"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1699ba28ec8d0ab945850122b964dd5bdb8a282e48141d2e8af27818e3792a44"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "inventory",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tracing",
  "xxhash-rust",
@@ -9315,7 +9688,56 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-files"
-version = "0.84.0"
+version = "0.85.0"
+dependencies = [
+ "ammonia",
+ "async-trait",
+ "base64 0.23.1",
+ "bytes",
+ "chrono",
+ "diffy",
+ "ego-tree",
+ "flate2",
+ "futures-util",
+ "hex",
+ "http",
+ "inventory",
+ "metrics",
+ "png",
+ "pulldown-cmark",
+ "quick-xml 0.42.0",
+ "reqwest",
+ "schemars 1.2.3",
+ "scraper",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-cloud 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-events 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
+name = "systemprompt-files"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b684295646e2acee3955d76e6993ca40e29b26cd8c413af2d6d713b5cbf33a73"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -9345,17 +9767,17 @@ dependencies = [
  "sha2 0.11.1",
  "sqlx",
  "subsetter",
- "systemprompt-cloud",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-events",
- "systemprompt-extension",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
+ "systemprompt-cloud 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-events 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9369,7 +9791,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-gateway"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -9389,22 +9811,68 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-ai",
- "systemprompt-client",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-mcp",
- "systemprompt-models",
- "systemprompt-security",
- "systemprompt-traits",
- "systemprompt-users",
- "systemprompt-wire",
+ "systemprompt-ai 0.85.0",
+ "systemprompt-client 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-mcp 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-users 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-gateway"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3084d687c000baac5873d2c86ae650ab92618ac9e1baf170b2cc4eadd465f519"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.23.1",
+ "bytes",
+ "chacha20poly1305 0.11.0",
+ "chrono",
+ "futures-util",
+ "hex",
+ "http",
+ "inventory",
+ "metrics",
+ "rand 0.10.3",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-ai 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-mcp 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9413,7 +9881,9 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-generator"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58df6643232026851ce7d759cc72683ccd89922d0dd08de459e1d3fb7578778c"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9426,18 +9896,18 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml_ng",
- "systemprompt-analytics",
- "systemprompt-config",
- "systemprompt-content",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
+ "systemprompt-analytics 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-content 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-template-provider",
  "systemprompt-templates",
- "systemprompt-traits",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9445,7 +9915,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-governance"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9461,13 +9931,46 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-client",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-traits",
+ "systemprompt-client 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-governance"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17621444705e7cc59bc7a7ebf05176c9d281a068cbae375e77df5191a8e06590"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "hex",
+ "hmac 0.13.0",
+ "inventory",
+ "metrics",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9476,7 +9979,22 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-identifiers"
-version = "0.84.0"
+version = "0.85.0"
+dependencies = [
+ "chrono",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-identifiers"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "178c9631cb788e7f3f75eed6ff6a9d552f2cf1978f7a7ac40ac7f572e080d435"
 dependencies = [
  "chrono",
  "schemars 1.2.3",
@@ -9502,7 +10020,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-loader"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9516,14 +10034,47 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.11.1",
- "systemprompt-config",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-security",
- "systemprompt-traits",
- "systemprompt-wire",
+ "systemprompt-config 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "tar",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "systemprompt-loader"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12dfa15eb52884ed61c3448b4fb4c24870b694047a22dddac3732a68ffcc89c7"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "flate2",
+ "hex",
+ "libc",
+ "nix",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "thiserror 2.0.21",
  "tokio",
@@ -9533,7 +10084,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-logging"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9544,12 +10095,40 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sqlx",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-traits",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-logging"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5334b5379108ae681be4f9ac12761974bdcb1695f75df206f3d2d59fa0a034f"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "console",
+ "indicatif",
+ "inventory",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sqlx",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9559,7 +10138,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-manifest"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -9572,11 +10151,40 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.11.1",
- "systemprompt-identifiers",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
- "systemprompt-wire",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "thiserror 2.0.21",
+ "tracing",
+ "url",
+ "uuid",
+ "zeroize",
+]
+
+[[package]]
+name = "systemprompt-manifest"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "372c1142f11f7d4c654cd9e014cd1773ec445445c6410a59068064faf17b6ea2"
+dependencies = [
+ "base64 0.23.1",
+ "chrono",
+ "hex",
+ "ipnet",
+ "regex",
+ "schemars 1.2.3",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tracing",
  "url",
@@ -9586,7 +10194,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-marketplace"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9601,15 +10209,49 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-security",
- "systemprompt-traits",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "systemprompt-marketplace"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d53a43b2bff7f6b261af174c53d68b35a00abe34cb8a62db0fafcaa69321a2ed"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "globset",
+ "hex",
+ "inventory",
+ "libc",
+ "schemars 1.2.3",
+ "serde",
+ "serde_jcs 0.2.0",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9618,7 +10260,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -9634,20 +10276,62 @@ dependencies = [
  "serde_json",
  "sqlx",
  "sse-stream",
- "systemprompt-client",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-security",
- "systemprompt-traits",
- "systemprompt-wire",
+ "systemprompt-client 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tower-http 0.7.1",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-mcp"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce4888f9603552c69c51cf1ab33d8071f8625a5d61f2e525f89a0e23087e6686"
+dependencies = [
+ "async-trait",
+ "axum",
+ "bytes",
+ "chrono",
+ "futures",
+ "http",
+ "inventory",
+ "reqwest",
+ "rmcp",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "sse-stream",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tower-http 0.7.1",
@@ -9751,7 +10435,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-models"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9771,9 +10455,42 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-identifiers",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-models"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d037591faff8caa32f2c37fe4f355a726d9d05fb93303e38c741c2a1ac5da599"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "futures",
+ "hex",
+ "hmac 0.13.0",
+ "http",
+ "indexmap 2.14.2",
+ "regex",
+ "rmcp",
+ "schemars 1.2.3",
+ "semver",
+ "serde",
+ "serde_jcs 0.2.0",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tracing",
  "url",
@@ -9782,7 +10499,9 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-notifications"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbc3af4cb85cc055d0c4d4987089175bd9af05e611f203ac7bcfa30c3f8e8e10"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9793,14 +10512,14 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sqlx",
- "systemprompt-database",
- "systemprompt-events",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-events 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -9809,7 +10528,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-oauth"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9827,16 +10546,57 @@ dependencies = [
  "sha2 0.11.1",
  "sqlx",
  "subtle",
- "systemprompt-client",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-security",
- "systemprompt-traits",
+ "systemprompt-client 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+ "validator",
+ "webauthn-rs",
+]
+
+[[package]]
+name = "systemprompt-oauth"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8c4950b49f738f345a5a5f93b3db583cf72b1736258c34e1acc35d6699cf696"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "bcrypt",
+ "chrono",
+ "hex",
+ "http",
+ "inventory",
+ "jsonwebtoken",
+ "lru",
+ "rand 0.10.3",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "subtle",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9848,7 +10608,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-oauth-issuance"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9861,16 +10621,50 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.11.1",
- "systemprompt-client",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-oauth",
- "systemprompt-security",
- "systemprompt-traits",
- "systemprompt-users",
+ "systemprompt-client 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-oauth 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-users 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-oauth-issuance"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f95396d75b50458a78a893d52b1884acfbb670bfeabbc7a35b8e7d73ceccb86c"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "http",
+ "inventory",
+ "jsonwebtoken",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-oauth 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9880,7 +10674,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-provider-contracts"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9891,13 +10685,32 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.11.1",
- "systemprompt-identifiers",
+ "systemprompt-identifiers 0.85.0",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "systemprompt-provider-contracts"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad79c9ccc671ecc82ce489a2e4498dd90cb9ac87f44098e72a0a1d107e9ffbf1"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "hex",
+ "inventory",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "systemprompt-runtime"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9913,32 +10726,82 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sqlx",
- "systemprompt-agent",
- "systemprompt-ai",
- "systemprompt-analytics",
+ "systemprompt-agent 0.85.0",
+ "systemprompt-ai 0.85.0",
+ "systemprompt-analytics 0.85.0",
+ "systemprompt-client 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-content 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-events 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-files 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-marketplace 0.85.0",
+ "systemprompt-mcp 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-oauth 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-security 0.85.0",
+ "systemprompt-storage 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-users 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "systemprompt-runtime"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "586740c195fafb19ae129665912fef57a349f3dd43551d8a6967c2440dae65f7"
+dependencies = [
+ "async-trait",
+ "base64 0.23.1",
+ "chrono",
+ "http",
+ "indicatif",
+ "jsonwebtoken",
+ "maxminddb",
+ "reqwest",
+ "rmcp",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sqlx",
+ "systemprompt-agent 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-ai 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-analytics 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-brain",
- "systemprompt-client",
- "systemprompt-config",
- "systemprompt-content",
- "systemprompt-database",
- "systemprompt-events",
- "systemprompt-extension",
- "systemprompt-files",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-marketplace",
- "systemprompt-mcp",
- "systemprompt-models",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-content 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-events 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-files 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-marketplace 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-mcp 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-notifications",
- "systemprompt-oauth",
- "systemprompt-provider-contracts",
- "systemprompt-security",
- "systemprompt-storage",
- "systemprompt-traits",
- "systemprompt-users",
+ "systemprompt-oauth 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-storage 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -9947,7 +10810,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-scheduler"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9962,27 +10825,74 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "sqlx",
- "systemprompt-agent",
- "systemprompt-ai",
- "systemprompt-analytics",
- "systemprompt-client",
- "systemprompt-config",
- "systemprompt-database",
- "systemprompt-events",
- "systemprompt-extension",
- "systemprompt-files",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-loader",
- "systemprompt-logging",
- "systemprompt-manifest",
- "systemprompt-marketplace",
- "systemprompt-mcp",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-runtime",
- "systemprompt-traits",
- "systemprompt-users",
+ "systemprompt-agent 0.85.0",
+ "systemprompt-ai 0.85.0",
+ "systemprompt-analytics 0.85.0",
+ "systemprompt-client 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-database 0.85.0",
+ "systemprompt-events 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-files 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-loader 0.85.0",
+ "systemprompt-logging 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-marketplace 0.85.0",
+ "systemprompt-mcp 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-runtime 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-users 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-cron-scheduler",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "systemprompt-scheduler"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5829b9417d560f7fc5ce756585baeb9e22736f92864fdd9022f34080fa33c60"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "futures",
+ "hex",
+ "inventory",
+ "metrics",
+ "opentelemetry-proto",
+ "prost 0.14.6",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "systemprompt-agent 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-ai 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-analytics 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-events 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-files 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-loader 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-logging 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-marketplace 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-mcp 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-runtime 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-users 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-cron-scheduler",
@@ -10008,7 +10918,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-security"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -10026,13 +10936,49 @@ dependencies = [
  "serde_jcs 0.2.0",
  "serde_json",
  "sha2 0.11.1",
- "systemprompt-client",
- "systemprompt-config",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-models",
- "systemprompt-traits",
- "systemprompt-wire",
+ "systemprompt-client 0.85.0",
+ "systemprompt-config 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "systemprompt-wire 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-security"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7e7506cc07d6991db4ff8d4537b9b3fcd4d31d2f1b78ffbd31f13e6ba8e8305"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "chacha20poly1305 0.11.0",
+ "chrono",
+ "ed25519-dalek 3.0.0",
+ "hex",
+ "hmac 0.13.0",
+ "jsonwebtoken",
+ "lru",
+ "rand 0.10.3",
+ "reqwest",
+ "rsa 0.9.10",
+ "serde",
+ "serde_jcs 0.2.0",
+ "serde_json",
+ "sha2 0.11.1",
+ "systemprompt-client 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-config 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-wire 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -10042,7 +10988,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-storage"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -10053,9 +10999,36 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
- "systemprompt-identifiers",
- "systemprompt-manifest",
- "systemprompt-traits",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-manifest 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "url",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-storage"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9da6b4b709c4321222ebad25c152c10ed0d617d9dc629621ede3b5264e8555fc"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "futures",
+ "hex",
+ "hmac 0.13.0",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-manifest 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -10067,17 +11040,21 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-template-provider"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a13cd2564718f03a9a12de010b9cad9be7b3f7f52d938680362454bdff8575a9"
 dependencies = [
  "async-trait",
- "systemprompt-provider-contracts",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
 ]
 
 [[package]]
 name = "systemprompt-templates"
-version = "0.84.0"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78d6d7be98cd065822cbb0fe8a4ac90f2959384062b6a9c3e251848b29d17845"
 dependencies = [
  "handlebars",
  "serde",
@@ -10091,7 +11068,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-traits"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -10103,8 +11080,34 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "systemprompt-identifiers",
- "systemprompt-provider-contracts",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "xxhash-rust",
+ "zeroize",
+]
+
+[[package]]
+name = "systemprompt-traits"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e43e6cfc937576750f64eaa86e5d5c587b869c0c676d4bfb91ede33e837026ef"
+dependencies = [
+ "arc-swap",
+ "async-trait",
+ "bytes",
+ "chrono",
+ "futures",
+ "http",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -10115,7 +11118,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-users"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -10127,13 +11130,41 @@ dependencies = [
  "sha2 0.11.1",
  "sqlx",
  "subtle",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-governance",
- "systemprompt-identifiers",
- "systemprompt-models",
- "systemprompt-provider-contracts",
- "systemprompt-traits",
+ "systemprompt-database 0.85.0",
+ "systemprompt-extension 0.85.0",
+ "systemprompt-governance 0.85.0",
+ "systemprompt-identifiers 0.85.0",
+ "systemprompt-models 0.85.0",
+ "systemprompt-provider-contracts 0.85.0",
+ "systemprompt-traits 0.85.0",
+ "thiserror 2.0.21",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-users"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7980d41be1740f68461fd7d024bed5b600e13c9425e09e4b840a31d1501d4a19"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "hex",
+ "inventory",
+ "rand 0.10.3",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "sqlx",
+ "subtle",
+ "systemprompt-database 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-governance 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-models 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "systemprompt-traits 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tracing",
  "uuid",
@@ -10174,7 +11205,7 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
- "systemprompt-security",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-web-admin-core",
  "systemprompt-web-shared",
  "thiserror 2.0.21",
@@ -10314,7 +11345,7 @@ dependencies = [
  "sqlparser",
  "sqlx",
  "systemprompt",
- "systemprompt-security",
+ "systemprompt-security 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-web-admin-core",
  "systemprompt-web-shared",
  "thiserror 2.0.21",
@@ -10354,7 +11385,7 @@ dependencies = [
  "serde",
  "serde_json",
  "systemprompt",
- "systemprompt-extension",
+ "systemprompt-extension 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-secrets-onepassword",
  "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
@@ -10414,7 +11445,7 @@ dependencies = [
  "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "systemprompt-provider-contracts",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tracing",
  "url",
@@ -10441,14 +11472,32 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-wire"
-version = "0.84.0"
+version = "0.85.0"
 dependencies = [
  "bytes",
  "futures-util",
  "schemars 1.2.3",
  "serde",
  "serde_json",
- "systemprompt-identifiers",
+ "systemprompt-identifiers 0.85.0",
+ "thiserror 2.0.21",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-wire"
+version = "0.85.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fc0ef583f90dd5ac8a6c15b2a027b95878cfc5db166c6ab6605327b33cff8c4"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "systemprompt-identifiers 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
  "tracing",
  "url",
@@ -11727,7 +12776,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-kit-export",
  "systemprompt-mcp-shared",
- "systemprompt-provider-contracts",
+ "systemprompt-provider-contracts 0.85.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-catalog",
