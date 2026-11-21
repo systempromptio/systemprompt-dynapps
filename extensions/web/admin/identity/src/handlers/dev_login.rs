@@ -16,6 +16,7 @@ use axum::extract::rejection::QueryRejection;
 use axum::http::HeaderMap;
 use axum::http::header::SET_COOKIE;
 use axum::response::{IntoResponse, Redirect, Response};
+use chrono::Utc;
 use serde::Deserialize;
 use systemprompt::manifest::Profile;
 use systemprompt::manifest::profile::{Environment, ProfileType};
@@ -62,8 +63,8 @@ pub(crate) async fn dev_login_redeem(
         return Err(DevLoginRejected);
     };
 
-    let user = match consume_dev_login_code(&deps.write_pool, &code).await {
-        Ok(Some(user)) => user,
+    let (user, authenticated_at) = match consume_dev_login_code(&deps.write_pool, &code).await {
+        Ok(Some(user)) => (user, Utc::now()),
         Ok(None) => return Err(DevLoginRejected),
         Err(e) => {
             tracing::error!(error = %e, "dev login code lookup failed");
@@ -79,8 +80,14 @@ pub(crate) async fn dev_login_redeem(
         roles: &user.roles,
     };
     let analytics = SessionAnalyticsBuilder::new(&headers).build();
-    let minted = match mint_browser_session(&deps.session_service, config, &subject, &analytics)
-        .await
+    let minted = match mint_browser_session(
+        &deps.session_service,
+        config,
+        &subject,
+        authenticated_at,
+        &analytics,
+    )
+    .await
     {
         Ok(minted) => minted,
         Err(e) => {

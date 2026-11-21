@@ -5,6 +5,7 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::RngCore;
 use sha2::{Digest, Sha256};
+use systemprompt::sso::SsoReauth;
 
 use super::verify::resolve_issuer_template;
 
@@ -18,12 +19,23 @@ pub struct AuthorizeRequest<'a> {
     pub state: &'a str,
     pub nonce: &'a str,
     pub code_challenge: &'a str,
+    pub reauth: SsoReauth,
 }
 
 #[must_use]
 pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
     let scope = req.scopes.join(" ");
-    let params = [
+    let max_age = req
+        .reauth
+        .max_age
+        .filter(|max_age| *max_age >= 0)
+        .map(|max_age| max_age.to_string());
+    let prompt = if req.reauth.force {
+        "login"
+    } else {
+        "select_account"
+    };
+    let mut params = vec![
         ("client_id", req.client_id),
         ("response_type", "code"),
         ("redirect_uri", req.redirect_uri),
@@ -33,8 +45,11 @@ pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
         ("nonce", req.nonce),
         ("code_challenge", req.code_challenge),
         ("code_challenge_method", "S256"),
-        ("prompt", "select_account"),
+        ("prompt", prompt),
     ];
+    if let Some(max_age) = max_age.as_deref() {
+        params.push(("max_age", max_age));
+    }
     let query = params
         .iter()
         .map(|(key, value)| format!("{key}={}", urlencoding::encode(value)))

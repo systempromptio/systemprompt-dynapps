@@ -17,6 +17,8 @@ pub struct IdTokenClaims {
     pub exp: i64,
     pub iat: i64,
     #[serde(default)]
+    pub auth_time: Option<i64>,
+    #[serde(default)]
     pub nbf: Option<i64>,
     #[serde(default)]
     pub nonce: Option<String>,
