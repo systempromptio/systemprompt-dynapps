@@ -243,7 +243,9 @@ fn authorize_url_asks_entra_to_reauthenticate_when_told() {
     let url = build_authorize_url(&request);
     assert!(url.contains("prompt=login"));
     assert!(!url.contains("prompt=select_account"));
-    assert!(url.contains("max_age=0"));
+    // Entra refuses max_age=0 (AADSTS90023); prompt=login carries the forced
+    // sign-in.
+    assert!(!url.contains("max_age"));
 
     let plain = build_authorize_url(&AuthorizeRequest {
         reauth: SsoReauth::default(),
@@ -251,6 +253,29 @@ fn authorize_url_asks_entra_to_reauthenticate_when_told() {
     });
     assert!(plain.contains("prompt=select_account"));
     assert!(!plain.contains("max_age"));
+}
+
+#[test]
+fn authorize_url_keeps_max_age_inside_what_entra_accepts() {
+    let scopes = vec!["openid".to_owned()];
+    let request = |max_age| AuthorizeRequest {
+        authorization_endpoint: "https://login.microsoftonline.com/t/oauth2/v2.0/authorize",
+        client_id: "client-123",
+        redirect_uri: "https://example.test/admin/auth/entra/callback",
+        scopes: &scopes,
+        state: "st",
+        nonce: "nn",
+        code_challenge: "challenge",
+        reauth: SsoReauth {
+            force: false,
+            max_age: Some(max_age),
+        },
+    };
+    // A seven-day step-up window: Entra accepts at most 86399 (AADSTS90023).
+    assert!(build_authorize_url(&request(604_800)).contains("max_age=86399"));
+    assert!(build_authorize_url(&request(86_400)).contains("max_age=86399"));
+    assert!(build_authorize_url(&request(600)).contains("max_age=600"));
+    assert!(!build_authorize_url(&request(-1)).contains("max_age"));
 }
 
 #[test]

@@ -31,6 +31,15 @@ Conventions (strict — hold every entry to them):
 - **An attended agent may replace the whole content of a document it created.** The `dynapps-document-classes` policy now also allows `replace_content` on a direct call when the agent is attended, targets a document it created itself and may edit it under its class (the same conditions as sharing). Core 0.84's `documents_edit` with `content_blob_ref` counts a whole-file rewrite as `replace_content`, so DynWork can rewrite a scripted HTML page it made without losing its scripts. On core 0.83 and earlier, `set_html` on an HTML document also counts as `replace_content` and the sanitiser silently strips its scripts and styles; only 0.84 refuses an edit the sanitiser would alter. The Drive-sync and live-checkpoint rule is unchanged.
 - **`deny.toml` states the real reach of RUSTSEC-2026-0555.** `chrono-tz` is a direct dependency of `systemprompt-web-admin-core` (`viewer_tz.rs`), not only a transitive one through core, so the ignore names that use and its own exit condition.
 
+### Fixed
+
+- **SSO (Entra ID):** the sign-in no longer fails with AADSTS90023 when a re-authentication asks for a
+  `max_age` Entra does not accept. Entra takes only 1 to 86399 seconds, so
+  `extensions/web/admin/identity/src/sso/entra_oidc/authorize.rs` lowers a larger one (a step-up window
+  of seven days, `security.ui_session.step_up_max_age_secs: 604800`) to 86399, which a recent enough
+  sign-in satisfies too, and drops `max_age=0`, which `prompt=login` already covers. Until now a DynWork
+  step-up on a production that sets a long step-up window stopped at an Entra error page.
+
 ### Removed
 
 - **The dead `dynapps-drive-sync-saves` agent policy.** `extensions/web/admin/governance/src/document_agent_policy.rs` (`DriveSyncSavesPolicy`, `allows`) and its unit test are gone, together with the `pub mod document_agent_policy;` line in `systemprompt-web-admin-governance`. Since `dynapps-document-classes` registered, core applied only the first policy by name and ignored this one, so it logged "More than one agent access policy is registered; only the first by name applies" at every startup and never decided anything; that warning is gone. There is no behaviour change: `dynapps-document-classes` already allows `replace_content` and `trash` on the Drive sync channel wherever the document class lets the agent edit, which is the intended rule. Its tests cover both, and now also check that the sync channels get no other capability.
