@@ -22,14 +22,22 @@ pub struct AuthorizeRequest<'a> {
     pub reauth: SsoReauth,
 }
 
+// Why: Entra ID refuses a `max_age` outside 1..=86399 with AADSTS90023 ("must
+// be bigger than 0 and smaller than 86400"), and the person never reaches the
+// sign-in. A larger one, such as a step-up window of seven days, is lowered to
+// the largest Entra accepts: a sign-in that recent also satisfies the larger
+// age core asked for. A zero is dropped, because `prompt=login` already makes
+// Entra authenticate the person again.
+const ENTRA_MAX_AGE_LIMIT_SECS: i64 = 86_399;
+
 #[must_use]
 pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
     let scope = req.scopes.join(" ");
     let max_age = req
         .reauth
         .max_age
-        .filter(|max_age| *max_age >= 0)
-        .map(|max_age| max_age.to_string());
+        .filter(|max_age| *max_age > 0)
+        .map(|max_age| max_age.min(ENTRA_MAX_AGE_LIMIT_SECS).to_string());
     let prompt = if req.reauth.force {
         "login"
     } else {
