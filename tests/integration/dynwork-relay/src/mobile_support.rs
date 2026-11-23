@@ -56,7 +56,7 @@ pub(crate) fn browser_session(name: &str, permissions: Vec<Permission>, browser:
             interaction: None,
             browser_session: browser,
             ui_session: false,
-            auth_time: None,
+            auth_time: Some(chrono::Utc::now().timestamp()),
         })
         .expect("mint a browser session")
 }

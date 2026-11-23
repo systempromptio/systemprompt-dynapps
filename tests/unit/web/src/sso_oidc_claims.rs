@@ -4,7 +4,7 @@
 //! key.
 
 use serde_json::{Value, json};
-use systemprompt::sso::SsoError;
+use systemprompt::sso::{SsoError, SsoReauth};
 use systemprompt_web_admin_identity::sso::entra_oidc::{
     AuthorizeRequest, EntraOidcConfig, IdTokenClaims, build_authorize_url, identity_from_claims,
     pkce_challenge,
@@ -206,6 +206,7 @@ fn authorize_url_carries_every_parameter() {
         state: "st",
         nonce: "nn",
         code_challenge: &pkce_challenge("verifier"),
+        reauth: SsoReauth::default(),
     });
     assert!(url.starts_with("https://login.microsoftonline.com/t/oauth2/v2.0/authorize?"));
     for expected in [
@@ -221,6 +222,35 @@ fn authorize_url_carries_every_parameter() {
     ] {
         assert!(url.contains(expected), "{expected} missing from {url}");
     }
+}
+
+#[test]
+fn authorize_url_asks_entra_to_reauthenticate_when_told() {
+    let scopes = vec!["openid".to_owned()];
+    let request = AuthorizeRequest {
+        authorization_endpoint: "https://login.microsoftonline.com/t/oauth2/v2.0/authorize",
+        client_id: "client-123",
+        redirect_uri: "https://example.test/admin/auth/entra/callback",
+        scopes: &scopes,
+        state: "st",
+        nonce: "nn",
+        code_challenge: &pkce_challenge("verifier"),
+        reauth: SsoReauth {
+            force: true,
+            max_age: Some(0),
+        },
+    };
+    let url = build_authorize_url(&request);
+    assert!(url.contains("prompt=login"));
+    assert!(!url.contains("prompt=select_account"));
+    assert!(url.contains("max_age=0"));
+
+    let plain = build_authorize_url(&AuthorizeRequest {
+        reauth: SsoReauth::default(),
+        ..request
+    });
+    assert!(plain.contains("prompt=select_account"));
+    assert!(!plain.contains("max_age"));
 }
 
 #[test]
