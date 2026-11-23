@@ -21,6 +21,8 @@ pub struct UserContext {
     pub is_developer: bool,
     pub email_verified: bool,
     pub session_id: Option<SessionId>,
+    pub auth_time: i64,
+    pub browser_sign_in: bool,
 }
 
 impl UserContext {
