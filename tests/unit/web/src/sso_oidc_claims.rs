@@ -243,7 +243,8 @@ fn authorize_url_asks_entra_to_reauthenticate_when_told() {
     let url = build_authorize_url(&request);
     assert!(url.contains("prompt=login"));
     assert!(!url.contains("prompt=select_account"));
-    // Entra refuses max_age=0 (AADSTS90023); prompt=login carries the forced sign-in.
+    // Entra refuses max_age=0 (AADSTS90023); prompt=login carries the forced
+    // sign-in.
     assert!(!url.contains("max_age"));
 
     let plain = build_authorize_url(&AuthorizeRequest {
