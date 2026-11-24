@@ -12,7 +12,9 @@ use std::sync::Arc;
 
 use serde_json::Value;
 use systemprompt::database::{CreateServiceInput, ServiceModule, ServiceStatus};
-use systemprompt::identifiers::{AccessTokenId, DocumentId, McpServerId, ServiceName, UserId};
+use systemprompt::identifiers::{
+    AccessTokenId, ClientId, DocumentId, McpServerId, ServiceName, UserId,
+};
 use systemprompt::mcp::services::process::spawner;
 use systemprompt::models::auth::{
     AuthenticatedUser, JwtAudience, McpHopIdentity, Permission, TokenInteraction, UserJwtRequest,
@@ -344,6 +346,47 @@ impl Stack {
 
     pub(super) async fn agent_bearer(&self, pool: &sqlx::PgPool, id: &UserId) -> String {
         self.token(pool, id, false).await
+    }
+
+    // The person's UI session, as core mints it for a `person_ui` client such
+    // as DynWork desktop: the `ui` audience alone, a client id, no purpose.
+    pub(super) async fn ui_bearer(&self, pool: &sqlx::PgPool, id: &UserId) -> String {
+        let session = docs::seed_session(pool, id).await;
+        self.ctx
+            .token_authority()
+            .mint_user_jwt(&UserJwtRequest {
+                user: user(id),
+                session_id: session,
+                jti: AccessTokenId::generate(),
+                permissions: vec![Permission::User],
+                audience: vec![JwtAudience::Ui],
+                ttl: chrono::Duration::minutes(5),
+                client_id: Some(ClientId::new("dynwork-desktop")),
+                purpose: None,
+                plugin_id: None,
+                interaction: None,
+                browser_session: false,
+                ui_session: true,
+                auth_time: Some(chrono::Utc::now().timestamp()),
+            })
+            .expect("mint the UI session token")
+    }
+
+    // A page load as the browser makes it: a navigation, never following a
+    // redirect, so a trip to the sign-in page is seen as such.
+    pub(super) async fn navigate(&self, path: &str, cookie: Option<&str>) -> reqwest::Response {
+        let mut request = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("build a client that does not follow redirects")
+            .get(format!("{}{path}", self.api))
+            .header("accept", "text/html")
+            .header("sec-fetch-mode", "navigate")
+            .header("sec-fetch-site", "same-origin");
+        if let Some(cookie) = cookie {
+            request = request.header("cookie", cookie);
+        }
+        request.send().await.expect("reach the page")
     }
 
     // An attended agent on the `documents` server, as the proxy hands it on:

@@ -11,12 +11,14 @@
 //! (`manifest`); every other request goes as the browser sends it, the web
 //! login's cookie from the site's own page, to `/api/v1/artifacts/...`:
 //! consent (`consent`), tool calls with their approvals and cache (`calls`)
-//! and the page republishing itself (`publish`). The run ends by reading the
-//! audit rows back.
+//! and the page republishing itself (`publish`). Then the page as a client
+//! opens it (`live`): the viewer shell, the sandboxed frame and the manifest
+//! read. The run ends by reading the audit rows back.
 
 mod calls;
 mod consent;
 mod fake;
+mod live;
 mod manifest;
 mod publish;
 mod stack;
@@ -143,6 +145,8 @@ async fn artifacts_broker_runs_a_tool_as_the_viewer() {
     calls::list_and_describe(&stack, &owner_cookie, &page).await;
     calls::consent_gates_the_cache(&stack, &owner_cookie, &page).await;
     outsiders_get_nothing(&stack, &outsider_cookie, &page).await;
+    let outsider_ui = stack.ui_bearer(&db.pool, &outsider).await;
+    live::a_stranger_gets_nothing(&stack, &outsider_cookie, &outsider_ui, &page).await;
     let people = publish::People {
         owner: &owner,
         owner_cookie: &owner_cookie,
@@ -150,6 +154,23 @@ async fn artifacts_broker_runs_a_tool_as_the_viewer() {
         reader_cookie: &outsider_cookie,
     };
     publish::the_page_republishes_itself(&stack, &people, &page, &undeclared).await;
+
+    let viewer = manifest::state(&stack, &owner_cookie, &page).await["viewer"].clone();
+    assert_eq!(
+        viewer["id"],
+        owner.as_str(),
+        "the shell learns who views the page"
+    );
+    assert_eq!(viewer["owner"], true);
+    let owner_ui = stack.ui_bearer(&db.pool, &owner).await;
+    let clients = live::Who {
+        owner: &owner_cookie,
+        owner_ui: &owner_ui,
+        agent: &agent,
+    };
+    live::the_frame_is_opaque_and_offline(&stack, &clients, &page).await;
+    live::the_shell_signs_in_first(&stack, &clients, &page).await;
+    live::a_client_reads_the_manifest(&stack, &clients, &page, &undeclared).await;
 
     let row = |user: &UserId, tool: &str, outcome: &str| {
         let server = if tool == "-" {

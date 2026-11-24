@@ -176,6 +176,80 @@ edit (`not_writer`), the HTML must start with its doctype
 must be the head (`conflict`, with `live`). Comments anchored in the old page
 detach. The manifest stays. `200` `{version}`.
 
+### The page runtime and the viewer shell
+
+A live page is opened at `/drive/{document_id}/live` (the shell) and runs in
+`/drive/{document_id}/live/frame` (the page). The web Drive's workspace shows
+an HTML document that declares capabilities through the same shell, in place
+of `/rendered`. Code: `storage/files/js/workspace/live/`,
+`extensions/web/admin/platform/src/handlers/ssr/drive/live*.rs`.
+
+- **The frame** serves the stored HTML (`?revision=` the version the shell
+  loaded) with the runtime inlined right after `<head>`, under
+  `sandbox allow-scripts` (never `allow-same-origin`, so an opaque origin
+  with no session and no cookie, framed or not), `default-src 'none'`,
+  `connect-src 'none'`, `form-action 'none'`, `base-uri 'none'` and
+  `frame-ancestors 'self'`. Whether the page's own scripts run, and which
+  origins it loads styles, fonts and scripts from, is the document's
+  rendered-HTML tier (`files.documents.renderedHtml`) as on `/rendered`; with
+  that tier's scripts off only the runtime runs (by its nonce) and the page
+  stays static.
+- **The runtime** (`runtime-core.js`, `runtime-mcp.js`, `runtime-use.js`) defines `window.governance` and
+  `window.claude`, one frozen object with only `use(name)`, before any page
+  script. It follows Anthropic's artifact runtime contract 0.2.99 (copies of
+  the `.d.ts` files are with the plan that built it): `use()` resolves a
+  frozen namespace once the shell has answered, memoized per capability
+  (`self` is `artifact`), `null` for a name not served, at the top level, or
+  after 10 s with no answer. The namespaces are `permissions` (`state`,
+  `request`, `manage`), `mcp` (`callTool`, `watchTool`, `listTools`,
+  `server`, `describeTool`, `invalidate`), `user` (`me`, `id`, `name`,
+  `email`, `avatarUrl`, `isOwner`, `canEdit`, `can`, `profiles`, `search`)
+  and `artifact` (`publish(html)`; the files form rejects
+  `capability_disabled`; `metadata` is not offered). A tool failure rejects
+  `tool_error` with the whole result; a success carries `payload`.
+  `watchTool` replays the last result it holds (`cache.revalidating: true`
+  while its refresh runs), shares one flight per call identity (input keys
+  sorted), polls at `refetchInterval` with a 30 s floor, pauses while the
+  page is hidden and catches up on return, takes at most 64 watches, and
+  hears every newer result of the identity, `invalidate` included. A request
+  the shell does not answer within its reply budget (130 s, kept alive while
+  the viewer decides) rejects `upstream_error`.
+- **The shell** (`shell.js`, `bridge.js`, `router.js`, `prompts.js`, `viewer.js`) frames
+  the page and reads only messages whose source is that frame: the
+  runtime's requests and MCP Apps JSON-RPC (`ui/initialize`, `tools/call` on
+  the one declared server listing the tool, size notifications). It calls the
+  broker with the viewer's web session, which never reaches the frame. Before
+  a first call on a connector (a `callTool` or a `watchTool`) it asks the
+  viewer to allow it, records the answer with `POST permissions`, and keeps a
+  decline for the rest of the load (`not_in_manifest`, never asked again).
+  A call the broker answers `approval_required` once the connector is
+  allowed is a write: the shell names the server, the tool and a summary of
+  the input, and only on Allow posts `mcp/approve` and repeats the call with
+  the approval. A watch never approves a write. The permissions panel
+  (`permissions.manage`, at most five times a load, or the shell's own
+  Permissions button) sets each connector to Allowed, Ask first or Blocked.
+  The status line says when data was last updated and how to reconnect a
+  connector. `user` hands the page only what the manifest's `user` scopes
+  allow: the id with `user: {}`, the name with `profile`, the email with
+  `email`. A publish sends the version the view loaded and reloads the frame
+  to the new one, or to the live one on a `conflict`.
+- **Broker codes to runtime codes.** The broker's keys pass through, except
+  `reauth`, `cross_site` and `internal`, which are `upstream_error` (a
+  `reauth` also puts "Sign in again" on the status line), and `not_found`,
+  which is `not_granted`. `server_unavailable` is stamped `retryable`.
+- **Embedding** (`?embed=1`): no bar, only the page, the prompts and the
+  status line; the shell posts `{type: "live.status", state, height}` to a
+  parent of the same origin. The shell keeps the instance's framing policy,
+  so a client (DynWork desktop, Mobile) shows it as a top-level view of its
+  own, not inside another site's frame. Without a web session the Drive's
+  gate sends the shell to `/admin/login?redirect=/drive/{id}/live?embed=1`.
+- **For clients**, `GET manifest` answers `{declared, capabilities,
+  contract, live_url}` (`declared: false` and the rest `null` for a document
+  with none) to the web session or the person's `ui` bearer, for a reader
+  who may see the document, so a client decides whether to open the shell.
+  `GET permissions` also answers `viewer: {id, name, email, owner}` for the
+  shell.
+
 ### Tests
 
 `tests/contract/admin/src/artifacts_broker/` boots the runtime and API on a
@@ -183,7 +257,11 @@ throwaway database and hosts two servers in-process: a fake MCP server with
 core's toolset host, and the extension's own `documents` server with its
 router. The agent declares a page through `documents`; every other request
 goes as the shell sends it, so each call crosses core's real proxy, hop token
-and per-tool access.
+and per-tool access. The same suite loads the shell and the frame as a
+browser does (the frame's policy, the runtime inlined before the page, the
+trip to sign in) and reads the manifest with the web and the `ui` session.
+The runtime and the shell's bridge and router have their own tests under
+`tests/bridge/live-*.test.mjs` (`node --test`).
 
 ## Analytics
 

@@ -1,0 +1,114 @@
+@layer components {
+
+/* A live page fills the viewport under a thin bar, or the whole window when
+   a client embeds it; the shell's status line stays one line under the
+   frame so the page itself keeps every other pixel. */
+
+.sp-live-page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100dvh;
+  background: var(--sp-bg-surface);
+}
+
+.sp-live-page--embed { grid-template-rows: minmax(0, 1fr); }
+
+.sp-live-page__bar {
+  display: flex;
+  gap: var(--sp-space-2);
+  align-items: center;
+  padding: var(--sp-space-1) var(--sp-space-3);
+  border-block-end: 1px solid var(--sp-border-subtle);
+}
+
+.sp-live-page__back {
+  display: inline-flex;
+  color: var(--sp-text-secondary);
+}
+
+.sp-live-page__title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--sp-text-base);
+  font-weight: var(--sp-font-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-live-page__main { min-block-size: 0; }
+
+.sp-live {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  block-size: 100%;
+  min-block-size: 60vh;
+}
+
+.sp-live__frame {
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+  background: var(--sp-doc-paper);
+}
+
+.sp-live__status {
+  margin: 0;
+  padding: var(--sp-space-1) var(--sp-space-3);
+  font-size: var(--sp-text-xs);
+  color: var(--sp-text-secondary);
+  border-block-start: 1px solid var(--sp-border-subtle);
+}
+
+.sp-live__link { margin-inline-start: var(--sp-space-1); }
+
+.sp-live__text,
+.sp-live__muted { margin: 0; }
+
+.sp-live__muted {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-text-secondary);
+}
+
+.sp-live__servers,
+.sp-live__permissions {
+  display: grid;
+  gap: var(--sp-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sp-font-mono);
+  font-size: var(--sp-text-sm);
+}
+
+.sp-live__permission {
+  display: flex;
+  gap: var(--sp-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-live__summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--sp-space-1) var(--sp-space-3);
+  margin: 0;
+  font-size: var(--sp-text-sm);
+}
+
+.sp-live__summary dt { font-family: var(--sp-font-mono); }
+
+.sp-live__summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sp-live__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-space-2);
+  margin: 0;
+  padding: 0;
+}
+
+}

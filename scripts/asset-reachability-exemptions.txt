@@ -3,3 +3,8 @@
 # Embedded by the admin MCP renderer, not a public script-src entrypoint.
 storage/files/js/admin-report-bridge.js
 storage/files/js/admin-report-shell.js
+
+# Inlined by the Drive's live frame route (`include_str!`) into each live page.
+storage/files/js/workspace/live/runtime-core.js
+storage/files/js/workspace/live/runtime-mcp.js
+storage/files/js/workspace/live/runtime-use.js
