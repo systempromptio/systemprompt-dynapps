@@ -19,12 +19,15 @@
 //!
 //! - [`document_class`] — the document classes and the agent access policy that
 //!   resolves an agent's cap on a document through them.
+//! - [`artifacts`] — the artifacts broker: a Drive page's MCP tool call, run as
+//!   the person viewing it through core's MCP proxy.
 //!
 //! The connector accounts register as core's connection snapshot source
 //! through `inventory`, so a binary that serves connections must link this
 //! crate. The agent access policy registers the same way, so a binary that
 //! serves documents must link it too.
 
+pub mod artifacts;
 pub mod document_class;
 pub(crate) mod handlers;
 pub mod repositories;

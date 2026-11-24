@@ -93,7 +93,7 @@ pub const fn is_browser_session(claims: &JwtClaims) -> bool {
     claims.custom.browser_session
 }
 
-fn site_origins(boot: &ExtensionBoot) -> Vec<String> {
+pub(crate) fn site_origins(boot: &ExtensionBoot) -> Vec<String> {
     let config = boot.config();
     [
         Some(&config.api_external_url),
