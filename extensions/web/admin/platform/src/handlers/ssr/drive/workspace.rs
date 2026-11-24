@@ -11,10 +11,11 @@
 //! than `/rendered`.
 //!
 //! With `?embed=1` the page leaves out what takes a person away from the
-//! document (the home link, the name menu, the notification bell and the
-//! navigation rail) and marks `<html data-embed>`, so a client that shows the
-//! page as its own view (`DynWork` desktop) is not wrapped in a second app
-//! chrome. The document toolbar, the comments and the editor stay.
+//! document (the home link, the name menu, the notification bell) and marks
+//! `<html data-embed>`, so a client that shows the page as its own view
+//! (`DynWork` desktop) is not wrapped in a second app chrome. The navigation
+//! rail is the document's own (outline, sheet tabs, slides), so it stays with
+//! the document toolbar, the comments and the editor.
 
 use std::sync::Arc;
 

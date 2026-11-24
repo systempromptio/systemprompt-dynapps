@@ -1,24 +1,24 @@
 //! The Drive's editor page as a client opens it: `/drive/{id}` with the web's
 //! whole chrome, and with `?embed=1` without what takes a person away from the
-//! document, so a client that shows the page as a view of its own draws no
-//! second app chrome around it.
+//! document (the document's own navigation rail stays), so a client that shows
+//! the page as a view of its own draws no second app chrome around it.
 
 use reqwest::header::LOCATION;
 use systemprompt::identifiers::DocumentId;
 
 use super::stack::Stack;
 
-const CHROME: [&str; 6] = [
+const CHROME: [&str; 4] = [
     "sp-ws__home",
     "sp-ws__title",
     "sp-ws__format",
     "data-notification-bell",
-    "sp-ws__rail",
-    "data-slot=\"ws-outline\"",
 ];
 
-const DOCUMENT: [&str; 6] = [
+const DOCUMENT: [&str; 8] = [
     "data-ws-root",
+    "sp-ws__rail",
+    "data-slot=\"ws-outline\"",
     "data-command=\"comments\"",
     "data-command=\"details\"",
     "data-command=\"share\"",

@@ -30,13 +30,11 @@
         Your access to this document was removed. <a href="{{base_url}}"{{#if embed}} target="_blank" rel="noopener"{{/if}}>Back to Drive</a>
     </div>
     <div class="sp-ws__body" data-slot="ws-body">
-        {{#unless embed}}
         <nav class="sp-ws__rail" aria-label="Document navigation">
             <h2 class="sp-ws__rail-title" data-field="rail-title">Outline</h2>
             <ol class="sp-ws__outline" data-slot="ws-outline"></ol>
             <p class="sp-ws__muted" data-slot="ws-outline-empty" hidden>Nothing to navigate yet.</p>
         </nav>
-        {{/unless}}
         <main class="sp-ws__canvas" id="main" data-slot="ws-editor">
             <iframe class="sp-ws__paper" sandbox title="Document" data-slot="ws-paper"></iframe>
         </main>

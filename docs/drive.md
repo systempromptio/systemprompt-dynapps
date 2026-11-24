@@ -44,12 +44,12 @@ come from `/drive/people`. **New document** creates one from a template,
 `dynapps-word` first.
 
 With `?embed=1` the workspace drops what takes a person away from the
-document: the home link, the name menu with the format badge, the
-notification bell and the navigation rail (a workbook has its sheet tabs and
-a deck its filmstrip). It marks `<html data-embed>`, so CSS
-(`32-workspace-embed.css`) gives the canvas the rail's column. The bar keeps
-the save status, the presence avatars and the Comments, Present, Details and
-Share buttons, and the editor keeps its own toolbar. A command that would
+document: the home link, the name menu with the format badge and the
+notification bell. It marks `<html data-embed>`. The navigation rail stays,
+because it is the document's own (the outline of a text, the sheet tabs of a
+workbook, the slides of a deck). The bar keeps the save status, the presence
+avatars and the Comments, Present, Details and Share buttons, and the editor
+keeps its own toolbar. A command that would
 leave the page (`leaves: true` in `workspace/commands.js`: back to Drive,
 block editor, make a copy, move to trash) is neither listed nor run, and the
 "access removed" link opens in a new tab. A client (DynWork desktop) shows
@@ -340,8 +340,8 @@ The runtime and the shell's bridge and router have their own tests under
 `tests/bridge/live-*.test.mjs` (`node --test`).
 The same suite loads the editor page `/drive/{id}` with and without
 `?embed=1` (`editor`): the embedded page has `data-embed` and no home link,
-name menu, bell or rail, and keeps the comments, details and share buttons and
-the editor slot; the plain page has all of the chrome and no `data-embed`.
+name menu or bell, and keeps the rail, the comments, details and share buttons
+and the editor slot; the plain page has all of the chrome and no `data-embed`.
 
 ## Analytics
 

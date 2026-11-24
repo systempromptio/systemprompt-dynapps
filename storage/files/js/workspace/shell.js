@@ -3,7 +3,7 @@
 // palette from what the feature modules registered, mounts the format editor
 // and feeds every live document event to the registered handlers through
 // one subscription to the document event stream. With `?embed=1` the page
-// has no home link, name menu, format badge or rail, so each of those is only
+// has no home link, name menu or format badge, so each of those is only
 // filled when it is there, and a load failure is told in the save status.
 import { subscribeDocument } from '../documents/documents-events.js';
 import { readJson } from '../services/drive-rows.js';
