@@ -33,3 +33,5 @@ sha2 = { workspace = true }
 serde_json = { workspace = true }
 jsonwebtoken = { workspace = true }
 url = { workspace = true }
+rmcp = { workspace = true }
+async-trait = { workspace = true }
