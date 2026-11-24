@@ -8,6 +8,7 @@
 // parent window of the same origin its state and height.
 import { createBridge } from './bridge.js';
 import { createPrompts } from './prompts.js';
+import { connectorHint } from './labels.js';
 import { rawResponse } from '../../services/api.js';
 import { PROTOCOL, createRouter, normalized } from './router.js';
 
@@ -22,11 +23,6 @@ const transport = async (url, options) => {
 };
 
 const el = (tag, className, attrs = {}) => Object.assign(document.createElement(tag), { className, ...attrs });
-
-const HINTS = {
-  server_not_connected: (server) => `Connect "${server}" in your connectors to see its data.`,
-  needs_reauth: (server) => `Reconnect "${server}" in your connectors.`,
-};
 
 export const mountLiveShell = async (root, options) => {
   const status = el('p', 'sp-live__status', { role: 'status' });
@@ -69,8 +65,9 @@ export const mountLiveShell = async (root, options) => {
 
   const onActivity = (method, params, outcome) => {
     if (!method.startsWith('mcp.') || state === 'signed-out') return;
-    if (outcome.error && HINTS[outcome.error.code]) {
-      show(HINTS[outcome.error.code](params.server), { href: options.connectors, label: 'Connectors' });
+    const hint = outcome.error && connectorHint(outcome.error.code, params.server);
+    if (hint) {
+      show(hint.text, { href: options.connectors, label: hint.label });
       return;
     }
     if (outcome.result && outcome.result.content) {

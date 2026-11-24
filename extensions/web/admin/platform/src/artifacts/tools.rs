@@ -5,9 +5,10 @@
 //! reaches. A server the viewer allowed is asked for its tools as the
 //! viewer, and lists the declared ones it has for them, with their
 //! annotations (`authStatus: connected`); one not asked about yet lists from
-//! the manifest alone (`authStatus: unknown`, no descriptions); one the
-//! viewer declined, that is off, outside the policy or not connected for the
-//! viewer is left out. Listing never asks anything.
+//! the manifest alone (`authStatus: unknown`, no descriptions); one whose
+//! connector the viewer must connect again lists no tools (`authStatus:
+//! needs_reauth`); one the viewer declined, that is off, outside the policy
+//! or not connected for the viewer is left out. Listing never asks anything.
 //! `POST .../mcp/describe {server, tool}`: one declared tool of an allowed
 //! server, with its schemas. `POST .../mcp/invalidate {server?, tool?,
 //! input?}` drops the viewer's cached results on the page, narrowed by each
@@ -131,6 +132,11 @@ async fn connected(
     let listed = match listing(broker, viewer, &server.server).await {
         Ok(listed) => listed,
         Err(error) if error.code() == ArtifactCallCode::ServerNotConnected => return None,
+        Err(error) if error.code() == ArtifactCallCode::NeedsReauth => {
+            return Some(
+                json!({ "server": server.server, "authStatus": "needs_reauth", "tools": [] }),
+            );
+        },
         Err(error) => {
             tracing::debug!(
                 error_key = error.code().as_str(),

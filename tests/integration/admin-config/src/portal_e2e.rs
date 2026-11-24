@@ -9,7 +9,9 @@
 //!   `tools/call` at `/mcp/<odoo path>`;
 //! - an inactive account is refused, at consent and at the broker;
 //! - an expired token is refreshed: the portal sees a `refresh_token` grant and
-//!   the next MCP call carries the new bearer.
+//!   the next MCP call carries the new bearer;
+//! - a refresh the portal refuses (`invalid_grant`) is answered 404, not
+//!   connected, so core reports a connector to reconnect, not an outage.
 //!
 //! Seam: core's `/api/v1/mcp/dynapps-odoo/mcp` route is not built here -- it
 //! needs core's whole API runtime (`AppContext`, governance, the proxy). Its
@@ -216,5 +218,57 @@ async fn an_expired_token_is_refreshed_and_the_new_bearer_is_forwarded() {
     let rotated = stored_grant(&h, &erin, "dynapps-odoo").await;
     assert_eq!(rotated.access_token, fresh);
     assert!(rotated.expires_at > chrono::Utc::now().timestamp());
+    h.db.cleanup().await;
+}
+
+// Core turns any accessor answer but 404 into an unavailable server; a grant
+// the portal refuses to refresh is answered 404, so core reports the server
+// not connected and a live page asks to reconnect instead of an outage.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_refused_refresh_is_not_connected_until_the_person_reconnects() {
+    let Some(h) = Harness::create_or_skip().await else {
+        return;
+    };
+    let fay = h.person("portal-fay").await;
+    h.connect(&fay, "dynapps-odoo", "portal-fay").await;
+    let mut grant = stored_grant(&h, &fay, "dynapps-odoo").await;
+    grant.expires_at = 0;
+    grant.refresh_token = Some("a-refresh-token-the-portal-never-issued".to_owned());
+    let mut tx = h.db.pool.begin().await.expect("tx");
+    credentials::store(
+        &mut tx,
+        &fay.id,
+        "dynapps-odoo",
+        &oauth::seal(h.env.boot.secrets().as_ref(), &grant).expect("seal"),
+    )
+    .await
+    .expect("store the grant the portal will refuse");
+    tx.commit().await.expect("commit");
+
+    let (status, bearer) = h.broker_token(&fay.jwt, "dynapps-odoo", None).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "a refused refresh is not connected, not unavailable"
+    );
+    assert!(bearer.is_none(), "no credential material is returned");
+    assert_eq!(
+        h.env.portal.token_grant_types().last().map(String::as_str),
+        Some("refresh_token"),
+        "the broker did ask the portal to refresh"
+    );
+    let account = accounts::list_accounts(&h.db.pool, &fay.id)
+        .await
+        .expect("accounts")
+        .into_iter()
+        .find(|a| a.provider == "dynapps-odoo")
+        .expect("account row");
+    assert_eq!(account.status, "reconnect_required");
+    let (status, _) = h.broker_token(&fay.jwt, "dynapps-odoo", None).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "and stays so until the person reconnects"
+    );
     h.db.cleanup().await;
 }

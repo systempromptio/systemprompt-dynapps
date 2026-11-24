@@ -27,7 +27,7 @@ use systemprompt::identifiers::{McpServerId, McpToolName};
 use systemprompt::models::ApiPaths;
 use systemprompt::models::net::{LoopbackPolicy, validate_outbound_url};
 
-use super::answer::{find_reply, refuse_status, rpc_result, unavailable, unreadable};
+use super::answer::{error_key, find_reply, refuse_status, rpc_result, unavailable, unreadable};
 use super::error::{ArtifactCallCode, ArtifactCallError};
 
 const PROTOCOL_VERSION: &str = "2025-11-25";
@@ -35,6 +35,7 @@ const SESSION_HEADER: &str = "mcp-session-id";
 const PROTOCOL_HEADER: &str = "mcp-protocol-version";
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_ANSWER_BYTES: usize = 8 * 1024 * 1024;
+const MAX_REFUSAL_BYTES: usize = 16 * 1024;
 const MAX_LIST_PAGES: usize = 20;
 
 #[derive(Debug, Clone)]
@@ -189,7 +190,10 @@ impl Session<'_> {
             tracing::warn!(%error, "the MCP proxy did not answer");
             unavailable()
         })?;
-        refuse_status(response.status())?;
+        if !response.status().is_success() {
+            let refusal = refusal_body(&mut response).await;
+            refuse_status(response.status(), error_key(&refusal).as_deref())?;
+        }
         let session = response
             .headers()
             .get(SESSION_HEADER)
@@ -244,4 +248,19 @@ impl Session<'_> {
             tracing::debug!(%error, "the MCP session was not closed; the proxy's cleanup job ends it");
         }
     }
+}
+
+async fn refusal_body(response: &mut reqwest::Response) -> Vec<u8> {
+    let mut body = Vec::new();
+    while body.len() < MAX_REFUSAL_BYTES {
+        match response.chunk().await {
+            Ok(Some(chunk)) => body.extend_from_slice(&chunk),
+            Ok(None) => break,
+            Err(error) => {
+                tracing::debug!(%error, "the MCP proxy's refusal broke off");
+                break;
+            },
+        }
+    }
+    body
 }

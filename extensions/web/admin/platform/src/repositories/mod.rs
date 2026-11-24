@@ -8,7 +8,7 @@
 //! rows (`artifact_tool_calls`), a live page's manifest
 //! (`artifact_capabilities`), its viewers' consents (`artifact_consents`),
 //! write approvals (`artifact_approvals`) and cached reads
-//! (`artifact_call_cache`).
+//! (`artifact_call_cache`), and the session handoff codes (`drive_handoffs`).
 //!
 //! Callers path-qualify (`repositories::devices::pats::…`); nothing is
 //! re-exported, so the module path is the only name a symbol has.
@@ -21,6 +21,7 @@ pub mod artifact_tool_calls;
 pub mod connectors;
 pub mod devices;
 pub mod document_classes;
+pub mod drive_handoffs;
 pub mod drive_people;
 pub mod jobs;
 pub mod service_account_group;

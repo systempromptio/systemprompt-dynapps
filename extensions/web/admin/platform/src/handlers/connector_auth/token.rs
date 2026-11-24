@@ -2,6 +2,11 @@
 //! resolves the caller from the forwarded token and returns a live access
 //! token for the requested provider, spending a service account's credential
 //! only for the purposes its caller header allows.
+//!
+//! A grant that must be connected again (the provider refused to refresh it,
+//! or it can no longer be opened) is answered 404, like no grant at all:
+//! core reports that as a server not connected (`409
+//! provider_not_connected`), while any other answer reads as an outage.
 
 use super::deps::ConsentDeps;
 use super::live_user;
@@ -66,7 +71,8 @@ pub(crate) async fn token(
             provider,
             false,
         )
-        .await?;
+        .await
+        .map_err(not_connected)?;
         return Ok(bearer_response(&access_token));
     }
     let user = live_user(&pool, boot, &headers, false).await?;
@@ -81,7 +87,8 @@ pub(crate) async fn token(
         provider.clone(),
         false,
     )
-    .await?;
+    .await
+    .map_err(not_connected)?;
     Ok(bearer_response(&access_token))
 }
 
@@ -114,6 +121,16 @@ async fn service_account_token(
         false,
     )
     .await
+    .map_err(not_connected)
+}
+
+// Why: core maps every accessor answer except 404 to an unavailable server,
+// and a 401 out of token resolution always means the person must reconnect.
+fn not_connected(error: AdminError) -> AdminError {
+    match error {
+        AdminError::Unauthorized(message) => AdminError::NotFound(message),
+        other => other,
+    }
 }
 
 // Why: core's machine grants mint the complete Authorization header, so the

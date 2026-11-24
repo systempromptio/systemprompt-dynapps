@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBridge } from '../../storage/files/js/workspace/live/bridge.js';
 import { createRouter, PROTOCOL } from '../../storage/files/js/workspace/live/router.js';
-import { summaryOf } from '../../storage/files/js/workspace/live/labels.js';
+import { connectorHint, summaryOf } from '../../storage/files/js/workspace/live/labels.js';
 
 const API = '/api/v1/artifacts/doc-1';
 
@@ -36,9 +36,11 @@ const broker = (routes) => {
 
 const prompts = (answers = {}) => {
   const asked = [];
+  const consented = [];
   return {
     asked,
-    consent: async (servers) => { asked.push(['consent', servers]); return answers.consent ?? true; },
+    consented,
+    consent: async (servers, call) => { asked.push(['consent', servers]); consented.push(call); return answers.consent ?? true; },
     confirm: async (call) => { asked.push(['confirm', call]); return answers.confirm ?? true; },
     panel: async () => { asked.push(['panel']); },
     busy: () => false,
@@ -61,7 +63,7 @@ const bridgeWith = async (routes, answers, extra = {}) => {
     onFailure: (why) => failures.push(why),
   });
   await bridge.load();
-  return { bridge, calls: fake.calls, asked: asked.asked, published, failures };
+  return { bridge, calls: fake.calls, asked: asked.asked, consented: asked.consented, published, failures };
 };
 
 const granted = () => ok(permissions({ states: { 'mcp:odoo': 'granted', mcp: 'granted' } }));
@@ -151,6 +153,20 @@ test('a write is confirmed with its server, tool and input, approved, and called
   assert.equal(callCount, 2);
 });
 
+test('a first write asks once: the one Allow opens the connector and approves this call', async () => {
+  const run = await bridgeWith({
+    'POST /permissions': () => granted(),
+    'POST /mcp/call': (body) => (body.approval === 'appr-7' ? ok({ content: [] }) : refused(428, 'approval_required')),
+    'POST /mcp/approve': () => ok({ approval: 'appr-7' }),
+  });
+  await run.bridge.handle('mcp.callTool', { server: 'odoo', tool: 'write_partner', input: { name: 'Acme' } });
+  assert.deepEqual(run.asked, [['consent', ['odoo']]], 'one prompt, no second confirmation');
+  assert.deepEqual(run.consented, [{ server: 'odoo', tool: 'write_partner', summary: [['name', 'Acme']] }], 'the prompt names the call it approves');
+  assert.equal(run.calls.filter((call) => call.url.endsWith('/mcp/approve')).length, 1);
+  await run.bridge.handle('mcp.callTool', { server: 'odoo', tool: 'write_partner', input: { name: 'Beta' } });
+  assert.equal(run.asked.at(-1)[0], 'confirm', 'a later write is confirmed on its own');
+});
+
 test('a declined write is approval_required and never approved; a watch never asks to approve one', async () => {
   const run = await bridgeWith({
     'POST /mcp/call': () => refused(428, 'approval_required'),
@@ -171,7 +187,7 @@ test('a watch peeks at the stored entry of any age, a refresh always runs the to
 });
 
 test('broker refusals become the runtime codes; a lapsed session tells the shell', async () => {
-  const answers = [refused(503, 'server_unavailable'), refused(404, 'not_found'), refused(401, 'reauth'), refused(409, 'server_not_connected')];
+  const answers = [refused(503, 'server_unavailable'), refused(404, 'not_found'), refused(401, 'reauth'), refused(409, 'server_not_connected'), refused(409, 'needs_reauth')];
   const run = await bridgeWith({ 'POST /mcp/call': () => answers.shift() }, {}, { permissions: { states: { 'mcp:odoo': 'granted', mcp: 'granted' } } });
   const call = () => run.bridge.handle('mcp.callTool', { server: 'odoo', tool: 'search', input: {} });
   await assert.rejects(call(), (error) => error.code === 'server_unavailable' && error.retryable === true && error.server === 'odoo');
@@ -179,6 +195,13 @@ test('broker refusals become the runtime codes; a lapsed session tells the shell
   await assert.rejects(call(), { code: 'upstream_error' });
   assert.deepEqual(run.failures, ['reauth']);
   await assert.rejects(call(), { code: 'server_not_connected' });
+  await assert.rejects(call(), (error) => error.code === 'needs_reauth' && error.server === 'odoo' && error.retryable === undefined);
+});
+
+test('the status line offers to connect a connector, or to reconnect one that must be signed in to again', () => {
+  assert.deepEqual(connectorHint('needs_reauth', 'odoo'), { text: 'Your connection to "odoo" needs you to sign in again.', label: 'Reconnect' });
+  assert.deepEqual(connectorHint('server_not_connected', 'odoo'), { text: 'Connect "odoo" in your connectors to see its data.', label: 'Connectors' });
+  assert.equal(connectorHint('server_unavailable', 'odoo'), null, 'an outage is not a connection to fix');
 });
 
 test('publish needs the declaration, sends the loaded revision, and reloads on success or conflict', async () => {

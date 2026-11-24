@@ -81,8 +81,8 @@ export const createBridge = ({ urls, transport, prompts, onPublished, onFailure 
     return states();
   };
 
-  const askConsent = async (servers) => {
-    const allowed = await prompts.consent(servers);
+  const askConsent = async (servers, call) => {
+    const allowed = await prompts.consent(servers, call);
     if (!allowed) {
       servers.forEach((server) => declined.add(scopeOf(server)));
       return false;
@@ -91,20 +91,24 @@ export const createBridge = ({ urls, transport, prompts, onPublished, onFailure 
     return true;
   };
 
-  const ensureConsent = async (server) => {
-    if (!declared().includes(server)) return;
+  // Resolves true when the viewer allowed the connector just now, in a
+  // prompt that showed `call`: that one Allow also approves this call.
+  const ensureConsent = async (server, call) => {
+    if (!declared().includes(server)) return false;
     const refused = fail('not_in_manifest', `the viewer has not allowed "${server}" for this page`, { server });
     const state = states()[scopeOf(server)];
-    if (state === 'granted') return;
-    if (state === 'denied' || !(await askConsent([server]))) throw refused;
+    if (state === 'granted') return false;
+    if (state === 'denied' || !(await askConsent([server], call))) throw refused;
+    return Boolean(call);
   };
 
   const callTool = async ({ server, tool, input, cache }) => {
-    await ensureConsent(server);
+    const call = { server, tool, summary: summaryOf(input) };
+    const allowedNow = await ensureConsent(server, call);
     const body = { server, tool, input, ...(cache === undefined ? {} : { cache }) };
     let reply = await post('/mcp/call', body, server);
     if (reply.status === 428 && states()[scopeOf(server)] === 'granted') {
-      if (!(await prompts.confirm({ server, tool, summary: summaryOf(input) }))) {
+      if (!allowedNow && !(await prompts.confirm(call))) {
         throw fail('approval_required', 'the viewer did not approve this call', { server });
       }
       const approved = await post('/mcp/approve', { server, tool, input }, server);
