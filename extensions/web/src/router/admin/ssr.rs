@@ -201,8 +201,15 @@ pub fn drive_ssr_router(
 }
 
 pub fn bridge_auth_ssr_router(pool: Arc<PgPool>, engine: AdminTemplateEngine) -> Router {
+    let db = Arc::new(systemprompt::database::Database::from_pools(
+        Arc::clone(&pool),
+        Some(Arc::clone(&pool)),
+    ));
     let inner = ssr_bridge::routes()
         .layer(Extension(engine))
+        .layer(Extension(
+            systemprompt::oauth::repository::ClientRepository::new(&db),
+        ))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),
             marketplace_context::marketplace_context_middleware,

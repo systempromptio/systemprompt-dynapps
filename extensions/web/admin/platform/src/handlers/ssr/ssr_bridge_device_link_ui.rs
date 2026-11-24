@@ -16,13 +16,9 @@
 //! while it lasts. A refused request is an error page that says why; nothing
 //! is issued.
 
-use std::sync::Arc;
-
 use axum::response::{IntoResponse, Redirect, Response};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
-use systemprompt::database::Database;
 use systemprompt::identifiers::ClientId;
 use systemprompt::oauth::PkceMethod;
 use systemprompt::oauth::repository::{ClientRepository, OAuthRepository};
@@ -134,11 +130,11 @@ pub(super) enum Gate {
 }
 
 pub(super) async fn gate(
-    pool: &Arc<PgPool>,
+    clients: &ClientRepository,
     user: &UserContext,
     request: &UiSessionRequest<'_>,
 ) -> AdminHtmlResult<Gate> {
-    let redirect_uri = check_request(pool, request).await?;
+    let redirect_uri = check_request(clients, request).await?;
     if !user.browser_sign_in {
         return Err(Refusal::NotBrowser.into());
     }
@@ -156,14 +152,9 @@ pub(super) async fn gate(
 }
 
 async fn check_request(
-    pool: &Arc<PgPool>,
+    clients: &ClientRepository,
     request: &UiSessionRequest<'_>,
 ) -> AdminHtmlResult<String> {
-    let db = Arc::new(Database::from_pools(
-        Arc::clone(pool),
-        Some(Arc::clone(pool)),
-    ));
-    let clients = ClientRepository::new(&db);
     if !clients
         .is_person_ui(request.client_id)
         .await

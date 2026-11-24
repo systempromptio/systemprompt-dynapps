@@ -23,6 +23,7 @@ use sqlx::PgPool;
 use systemprompt_web_shared::html_escape;
 
 use systemprompt::identifiers::UserId;
+use systemprompt::oauth::repository::ClientRepository;
 use systemprompt_web_admin_core::bridge_client::BRIDGE_BINARY;
 use systemprompt_web_admin_core::error::{AdminHtmlError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::bridge;
@@ -84,7 +85,7 @@ struct DeviceCodeContext<'a> {
 pub(crate) async fn device_link_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
-    State(pool): State<Arc<PgPool>>,
+    Extension(clients): Extension<ClientRepository>,
     Query(query): Query<DeviceLinkQuery>,
 ) -> AdminHtmlResult<Response> {
     let redirect_host = match query.redirect.as_deref() {
@@ -96,7 +97,10 @@ pub(crate) async fn device_link_page(
     };
     let ui = query.ui.request()?;
     if let Some(request) = ui
-        && matches!(gate(&pool, &user_ctx, &request).await?, Gate::StaleSignIn)
+        && matches!(
+            gate(&clients, &user_ctx, &request).await?,
+            Gate::StaleSignIn
+        )
     {
         return Ok(fresh_sign_in(
             query.redirect.as_deref(),
@@ -126,6 +130,7 @@ pub(crate) async fn device_link_approve(
     Extension(user_ctx): Extension<UserContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(boot): Extension<ExtensionBoot>,
+    Extension(clients): Extension<ClientRepository>,
     State(pool): State<Arc<PgPool>>,
     Form(form): Form<DeviceLinkApproveForm>,
 ) -> AdminHtmlResult<Response> {
@@ -137,7 +142,7 @@ pub(crate) async fn device_link_approve(
 
     let issued = match form.ui.request()? {
         None => bridge::issue_exchange_code(&pool, &user_ctx.user_id).await?,
-        Some(request) => match gate(&pool, &user_ctx, &request).await? {
+        Some(request) => match gate(&clients, &user_ctx, &request).await? {
             Gate::Allowed {
                 redirect_uri,
                 authenticated_at,
