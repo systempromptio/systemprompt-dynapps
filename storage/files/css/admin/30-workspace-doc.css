@@ -159,7 +159,7 @@
 .sp-doc-thread__quote { margin: 0 0 var(--sp-space-2); padding-inline-start: var(--sp-space-2); color: var(--sp-text-secondary); border-inline-start: 3px solid var(--sp-accent); }
 .sp-doc-thread__entry { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--sp-space-2); margin-block-end: var(--sp-space-2); }
 .sp-doc-thread__author { font-weight: var(--sp-font-semibold); }
-.sp-doc-thread__body { grid-column: 1 / -1; margin: 0; white-space: pre-wrap; }
+.sp-doc-thread__body { grid-column: 1 / -1; margin: 0; overflow-wrap: anywhere; }
 .sp-doc-thread__actions { display: flex; gap: var(--sp-space-1); justify-content: flex-end; }
 
 .sp-doc-caret--tone-0, .sp-doc-select--tone-0 { --sp-tone: var(--sp-avatar-tone-0); }
