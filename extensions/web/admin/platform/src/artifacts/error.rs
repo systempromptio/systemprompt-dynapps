@@ -1,13 +1,16 @@
-//! What a broker call answers when it does not return a tool result.
+//! What a broker request answers when it does not succeed.
 //!
 //! Every refusal carries a stable `error_key` the page's runtime switches on;
-//! the message is for people. The keys that name a tool call's outcome are
-//! the ones Anthropic's artifact runtime uses (`server_not_connected`,
-//! `blocked_by_policy`, `tool_error`, `server_unavailable`, `bad_request`);
+//! the message is for people. The keys that name a tool call's or a
+//! publish's outcome are the ones Anthropic's artifact runtime uses
+//! (`server_not_connected`, `not_in_manifest`, `blocked_by_policy`,
+//! `approval_required`, `tool_error`, `server_unavailable`, `bad_request`;
+//! `conflict`, `not_writer`, `not_declared`, `too_large`, `invalid_content`);
 //! `reauth`, `cross_site`, `not_found` and `internal` are about the viewer's
 //! own request. Its `needs_reauth` has no source yet: core's proxy answers a
 //! connector grant that needs signing in again as an unavailable server. The
-//! same key is the `outcome` of the call's audit row, beside `ok`.
+//! same key is the `outcome` of a call's audit row, beside `ok` and `cached`.
+//! A `conflict` names the version that is live (`live`).
 
 use std::borrow::Cow;
 
@@ -23,9 +26,16 @@ pub(crate) enum ArtifactCallCode {
     NotFound,
     BadRequest,
     ServerNotConnected,
+    NotInManifest,
     BlockedByPolicy,
+    ApprovalRequired,
     ToolError,
     ServerUnavailable,
+    Conflict,
+    NotWriter,
+    NotDeclared,
+    TooLarge,
+    InvalidContent,
     Internal,
 }
 
@@ -38,9 +48,16 @@ impl ArtifactCallCode {
             Self::NotFound => "not_found",
             Self::BadRequest => "bad_request",
             Self::ServerNotConnected => "server_not_connected",
+            Self::NotInManifest => "not_in_manifest",
             Self::BlockedByPolicy => "blocked_by_policy",
+            Self::ApprovalRequired => "approval_required",
             Self::ToolError => "tool_error",
             Self::ServerUnavailable => "server_unavailable",
+            Self::Conflict => "conflict",
+            Self::NotWriter => "not_writer",
+            Self::NotDeclared => "not_declared",
+            Self::TooLarge => "too_large",
+            Self::InvalidContent => "invalid_content",
             Self::Internal => "internal",
         }
     }
@@ -48,10 +65,16 @@ impl ArtifactCallCode {
     const fn status(self) -> StatusCode {
         match self {
             Self::Reauth => StatusCode::UNAUTHORIZED,
-            Self::CrossSite | Self::BlockedByPolicy => StatusCode::FORBIDDEN,
+            Self::CrossSite
+            | Self::NotInManifest
+            | Self::BlockedByPolicy
+            | Self::NotWriter
+            | Self::NotDeclared => StatusCode::FORBIDDEN,
+            Self::ApprovalRequired => StatusCode::PRECONDITION_REQUIRED,
             Self::NotFound => StatusCode::NOT_FOUND,
-            Self::BadRequest => StatusCode::BAD_REQUEST,
-            Self::ServerNotConnected => StatusCode::CONFLICT,
+            Self::BadRequest | Self::InvalidContent => StatusCode::BAD_REQUEST,
+            Self::ServerNotConnected | Self::Conflict => StatusCode::CONFLICT,
+            Self::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             Self::ToolError => StatusCode::UNPROCESSABLE_ENTITY,
             Self::ServerUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
@@ -63,6 +86,7 @@ impl ArtifactCallCode {
 pub(crate) struct ArtifactCallError {
     code: ArtifactCallCode,
     message: Cow<'static, str>,
+    live: Option<String>,
 }
 
 impl ArtifactCallError {
@@ -70,6 +94,7 @@ impl ArtifactCallError {
         Self {
             code,
             message: Cow::Borrowed(message),
+            live: None,
         }
     }
 
@@ -77,6 +102,15 @@ impl ArtifactCallError {
         Self {
             code,
             message: Cow::Owned(message),
+            live: None,
+        }
+    }
+
+    pub(crate) const fn conflict(live: String) -> Self {
+        Self {
+            code: ArtifactCallCode::Conflict,
+            message: Cow::Borrowed("a newer version of this page was published first"),
+            live: Some(live),
         }
     }
 
@@ -90,6 +124,8 @@ impl ArtifactCallError {
 struct ErrorBody<'a> {
     error: &'a str,
     error_key: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    live: Option<&'a str>,
 }
 
 impl IntoResponse for ArtifactCallError {
@@ -101,6 +137,7 @@ impl IntoResponse for ArtifactCallError {
         let body = ErrorBody {
             error: &self.message,
             error_key: self.code.as_str(),
+            live: self.live.as_deref(),
         };
         (status, Json(body)).into_response()
     }

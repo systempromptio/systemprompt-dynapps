@@ -183,7 +183,7 @@ impl McpClient {
         read_body(&content_type, &body)
     }
 
-    pub(super) async fn list_tools(&mut self) -> Value {
+    pub(crate) async fn list_tools(&mut self) -> Value {
         self.request("tools/list", json!({})).await
     }
 

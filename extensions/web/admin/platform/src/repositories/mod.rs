@@ -5,11 +5,18 @@
 //! the scheduled-jobs listing (`jobs`), service-account group membership
 //! (`service_account_group`), the names drive pages show (`drive_people`), the
 //! document class rows (`document_classes`), and the artifacts broker's audit
-//! rows (`artifact_tool_calls`).
+//! rows (`artifact_tool_calls`), a live page's manifest
+//! (`artifact_capabilities`), its viewers' consents (`artifact_consents`),
+//! write approvals (`artifact_approvals`) and cached reads
+//! (`artifact_call_cache`).
 //!
 //! Callers path-qualify (`repositories::devices::pats::…`); nothing is
 //! re-exported, so the module path is the only name a symbol has.
 
+pub mod artifact_approvals;
+pub mod artifact_call_cache;
+pub mod artifact_capabilities;
+pub mod artifact_consents;
 pub mod artifact_tool_calls;
 pub mod connectors;
 pub mod devices;

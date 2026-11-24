@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM artifact_consents\n            WHERE user_id = $1 AND document_id = $2::text::uuid AND scope = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2e9a7ff1036bcd5608d181637458e7bb9983c09b7ec32ea06e0cd76dd40e34c5"
+}

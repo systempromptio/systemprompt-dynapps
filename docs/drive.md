@@ -46,51 +46,144 @@ come from `/drive/people`. **New document** creates one from a template,
 ## Live pages
 
 A Drive page may ask for an MCP tool's result; the page never holds a
-credential and never reaches a server itself. It asks the artifacts broker,
-`POST /api/v1/artifacts/{document_id}/mcp/call` with `{server, tool, input}`
-(`input` is the tool's arguments, a JSON object; omitted means `{}`). The
-broker runs the tool **as the person viewing the page**, through this
-instance's own MCP proxy at `/api/v1/mcp/{server}/mcp` on the API's internal
-URL, with that person's own session token as the bearer. So the proxy and the
-server decide exactly as they do for that person's agent: the server's scopes
-and access rules, the tool's `access:` block, and, for a connector, the
-person's own OAuth grant. Code: `extensions/web/admin/platform/src/artifacts/`.
+credential and never reaches a server itself. It asks the artifacts broker
+under `/api/v1/artifacts/{document_id}/`, and the broker runs the tool **as
+the person viewing the page**, through this instance's own MCP proxy at
+`/api/v1/mcp/{server}/mcp` on the API's internal URL, with that person's own
+session token as the bearer. So the proxy and the server decide exactly as
+they do for that person's agent: the server's scopes and access rules, the
+tool's `access:` block, and, for a connector, the person's own OAuth grant.
+The shape follows Anthropic's artifact runtime, contract 0.2.99. Code:
+`extensions/web/admin/platform/src/artifacts/`.
 
 - **Who may call.** Only the web login's session: the `access_token` cookie
   with a token core signed `browser_session`, from this site's own pages
   (`Origin` or `Sec-Fetch-Site`, as `/drive` checks them). A request with an
   `Authorization` header is refused, so an agent's, the bridge's or a
-  person's `ui` bearer cannot run a page's tools; core's MCP proxy does not
-  take the `ui` audience either.
-- **What is checked here.** The viewer's `view` on the document, asked of the
-  document service as the viewer (a document they cannot see is a 404, as in
-  Drive), then that the server is declared and enabled. The page's declared
-  capabilities and the viewer's consent will be checked at the same point.
-- **The answer.** `200` with the tool result as core shapes it (`content`,
-  `structuredContent`, `isError`), or an error `{error, error_key}`:
+  person's `ui` bearer cannot run a page's tools or decide for the viewer;
+  core's MCP proxy does not take the `ui` audience either. A visitor without
+  a session (a public link, an invite not yet claimed) gets nothing.
+
+### The manifest
+
+The agent that writes a page declares what it calls, with `capabilities` on
+the `documents` server's `documents_create`, `documents_import`,
+`documents_edit` or `documents_update` (topic `live_pages` of
+`documents_guide`):
+
+```json
+{"mcp": {"servers": [{"server": "dynapps-odoo", "tools": ["search_read"]}]},
+ "artifact": {}, "user": {}}
+```
+
+- `mcp` lists each server and the tools the page calls on it (at least one);
+  `artifact` lets the page republish itself unless `publish` is `false`;
+  `user` (with optional `scopes`, `profile` and `email`) lets it know who is
+  viewing. Any other capability is refused.
+- Before anything is written, each server must exist here and be on, the
+  operator's policy must allow it and each tool, and the server must list
+  each tool for the declaring person (asked through the proxy with the
+  agent's own bearer). A refused declaration stops the call.
+- After core's tool has written, the declaration is recorded on the document
+  when it is an HTML page the caller may edit; the tool result says whether
+  it was. `{}` clears it, leaving `capabilities` out keeps it, and an update
+  with only `document_id` and `capabilities` only declares.
+- Stored in `artifact_capabilities` (one row per document, with the contract
+  version and who declared it).
+
+### The operator's policy
+
+`services/documents/live-pages.yaml` names the servers a page may use, and
+on each `tools: all` or a list. A server it does not name is closed to every
+page, and so is everything when the file is missing. Read when the broker and
+the `documents` server start. Dynapps ships `dynapps-odoo`, `microsoft-365`
+and `dynbrain` whole and the Drive's read tools on `documents`.
+
+### Consent and approvals
+
+- `GET permissions` answers `{capabilities, contract_version, revision,
+  writer, states}`: the manifest (`null` without one), the version the viewer
+  loaded (a publish's base), whether the viewer may edit, and the states the
+  runtime's `permissions.state()` reads: `mcp:<server>` per declared server
+  (`granted`, `denied` or `prompt`), `mcp` for all of them, and `artifact`
+  and `user` when declared.
+- `POST permissions` `{scope, decision}` records `granted` or `denied` for
+  `mcp:<server>`, or for every declared server with `mcp`; `DELETE
+  permissions/{scope}` forgets it. Per viewer, document and scope, in
+  `artifact_consents`.
+- A tool that does not declare `readOnlyHint: true` (read from the server's
+  own listing for the viewer) is a write: each call needs an approval of that
+  exact call. The shell asks the viewer and posts `POST mcp/approve` `{server,
+  tool, input}`; the answer's `approval` is valid two minutes, for that
+  viewer, document, server, tool and input (hashed with its keys sorted), and
+  the call that presents it spends it (`artifact_approvals`).
+
+### Calls
+
+`POST mcp/call` `{server, tool, input?, approval?, cache?}`. The checks, in
+order: the viewer's `view` on the document (404 otherwise, as in Drive), the
+server exists and is on, the manifest declares the tool, the policy allows
+it, the viewer allowed the server, the cache, then one proxy session: the
+server's tool list for the viewer (a declared tool it does not list is
+`blocked_by_policy`), the approval for a write, the call. `200` with the tool
+result as core shapes it (`content`, `structuredContent`, `isError`), or
+`{error, error_key}` (`live` on a `conflict`):
 
 | `error_key` | Status | When |
 |---|---|---|
 | `reauth` | 401 | No web session, a token that is not a browser session, or one core's proxy refuses (revoked) |
 | `cross_site` | 403 | The session comes from another site's page |
 | `not_found` | 404 | The document does not exist or the viewer cannot see it |
-| `bad_request` | 400 | Malformed body or names, an unknown server or tool, bad arguments |
-| `blocked_by_policy` | 403 | The proxy or the server refused the viewer (scopes, access rules, the tool's `access:`) |
+| `bad_request` | 400 | Malformed body or names, an unknown server, bad arguments |
+| `not_in_manifest` | 403 | The page does not declare the tool, or the viewer declined the server |
+| `blocked_by_policy` | 403 | The live-pages policy, the proxy or the server refused (scopes, access rules, the tool's `access:`) |
+| `approval_required` | 428 | The viewer has not allowed the server yet, or a write came without a valid approval |
 | `server_not_connected` | 409 | The viewer has not connected this connector |
 | `server_unavailable` | 503 | The server is off, not running or did not answer (retry); also a connector grant that needs signing in again, which core's proxy does not tell apart |
 | `tool_error` | 422 | The tool answered with a JSON-RPC error, or a result larger than 8 MiB |
-| `internal` | 500 | The document check failed |
+| `internal` | 500 | The document or the page's state could not be read |
 
+- **Cache.** Only a read is cached, per viewer, document and call
+  (`artifact_call_cache`). Without `cache` a read is stored for five minutes
+  and never served to a call; `{staleTime, gcTime}` (ms, at most 7 days)
+  serves an entry younger than `staleTime` without running the tool, marked
+  `cache: {storedAt, revalidating: false}`; `refresh: true` runs and
+  overwrites; `false` neither serves nor stores. A write is never stored or
+  served. Revoking or declining a server, losing the document and a denied
+  call drop the viewer's entries; `POST mcp/invalidate` `{server?, tool?,
+  input?}` drops them on request.
+- **Listing.** `POST mcp/tools` `{server?}` lists the manifest as far as the
+  viewer reaches: an allowed server with the declared tools it lists for the
+  viewer and their annotations (`authStatus: connected`), one not asked yet
+  from the manifest alone (`authStatus: unknown`); declined, closed and not
+  connected servers are left out. `POST mcp/describe` `{server, tool}`
+  answers one declared tool of an allowed server with its schemas
+  (`not_in_manifest` otherwise).
 - **Audit.** Every call with a well-formed request from a signed-in viewer
   leaves one row in `artifact_tool_calls`: `user_id`, `document_id`, `server`,
-  `tool`, `outcome` (`ok`, `tool_error` for a result with `isError`, or the
-  refusal's `error_key`), `duration_ms` and `called_at`. Never the input or
-  the result. The proxy and the server keep their own records as for any
-  call.
-- **Tests.** `tests/contract/admin/src/artifacts_broker/` boots the runtime
-  and API on a throwaway database and hosts a fake MCP server in-process with
-  core's toolset host, so every call goes through core's real proxy, hop
-  token and per-tool access.
+  `tool`, `outcome` (`ok`, `cached`, `tool_error` for a result with
+  `isError`, or the refusal's `error_key`), `duration_ms` and `called_at`.
+  Never the input or the result. The proxy and the server keep their own
+  records as for any call.
+
+### Publishing
+
+`POST artifact/publish` `{html, base_revision}` writes the page as a new
+version of its document, as the viewer, byte for byte (its scripts stay).
+The page must declare `artifact` (`not_declared`), the viewer must be able to
+edit (`not_writer`), the HTML must start with its doctype
+(`invalid_content`) and be at most 2 MiB (`too_large`), and `base_revision`
+must be the head (`conflict`, with `live`). Comments anchored in the old page
+detach. The manifest stays. `200` `{version}`.
+
+### Tests
+
+`tests/contract/admin/src/artifacts_broker/` boots the runtime and API on a
+throwaway database and hosts two servers in-process: a fake MCP server with
+core's toolset host, and the extension's own `documents` server with its
+router. The agent declares a page through `documents`; every other request
+goes as the shell sends it, so each call crosses core's real proxy, hop token
+and per-tool access.
 
 ## Analytics
 

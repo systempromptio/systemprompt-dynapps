@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT result, stored_at\n             FROM artifact_call_cache\n            WHERE user_id = $1 AND document_id = $2::text::uuid\n              AND server = $3 AND tool = $4 AND input_hash = $5\n              AND expires_at > CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "result",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "artifact_call_cache",
+            "name": "result"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "stored_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "artifact_call_cache",
+            "name": "stored_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "1fb6c6ac9f7669eb32f9e9ab2e412d51988a88f06d893dee6a8cde037baae880"
+}
