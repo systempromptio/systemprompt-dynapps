@@ -53,6 +53,12 @@
     {{#if sources.base.provenance_error}}
     {{> components/notice tone="warn" title="Serving a fallback tree" message=sources.base.provenance_error}}
     {{/if}}
+    {{#if sources.refusals.unreadable}}
+    {{> components/notice tone="err" title="Refused sources unknown" message=sources.refusals.unreadable}}
+    {{/if}}
+    {{#each sources.refusals.held}}
+    {{> components/notice tone="err" title="Source refused" message=detail}}
+    {{/each}}
     {{#if sources.restart_pending}}
     {{> components/notice tone="warn" title="Reconcile pending" message="The composition was recomposed but has not been projected into the authz tables. Press Import sources to reconcile it in place — no restart is involved."}}
     {{/if}}
@@ -221,7 +227,7 @@ owner key for rules.yaml: {{owner_key}}</pre>
             <button type="button" class="sp-ac-dialog__close" data-action="close-dialog" aria-label="Close">&times;</button>
         </div>
         <div class="sp-ac-dialog__body">
-            <p data-sync="refresh-body">Re-fetch every pinned source, verify it, and recompose. If the composition changed, its entitlements are projected and the skill inventory refreshed in place — the running process serves the new tree without a restart. The profile's pins are never rewritten.</p>
+            <p data-sync="refresh-body">Re-fetch every pinned source, verify it, and recompose. If the composition changed, its entitlements are projected and the skill inventory refreshed in place — the running process serves the new tree without a restart. A source that is refused keeps its previous bundle and is named here with the reason. The profile's pins are never rewritten.</p>
             <pre class="sp-ac-yaml-pre" data-sync="refresh-result" hidden></pre>
         </div>
         <div class="sp-ac-dialog__actions">

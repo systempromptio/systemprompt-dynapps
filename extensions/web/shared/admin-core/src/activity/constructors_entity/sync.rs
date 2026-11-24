@@ -6,10 +6,12 @@
 //! what the review reads back to hold that entity out of the to-do list.
 
 use systemprompt::identifiers::UserId;
+use systemprompt::loader::bundle::SourceRefusal;
 
 use super::super::enums::{ActivityAction, ActivityCategory, ActivityEntity};
 use super::super::types::{ActivityEntityRef, NewActivity};
 use crate::repositories::sync::plane::{ApplyOutcome, SyncMode};
+use crate::repositories::sync::source_refusals::RefusedSource;
 
 /// What a core-plane apply moved: the entities written, settled, kept as
 /// drift and left in conflict, and the entities it was narrowed to.
@@ -31,6 +33,17 @@ pub struct PlaneApply<'a> {
     pub mode: SyncMode,
     pub outcome: &'a ApplyOutcome,
     pub reason: Option<&'a str>,
+}
+
+/// What an import of the services sources moved. `fallback` is core's reason
+/// when the whole composition could not be served; `refused` names the sources
+/// held back on a previous bundle while the others advanced.
+#[derive(Debug, Clone, Copy)]
+pub struct SourcesRefresh<'a> {
+    pub changed: bool,
+    pub reconciled: bool,
+    pub fallback: Option<&'a str>,
+    pub refused: &'a [SourceRefusal],
 }
 
 fn plane_ref(plane: &str, label: &str) -> ActivityEntityRef {
@@ -226,19 +239,43 @@ impl NewActivity {
     }
 
     #[must_use]
-    pub fn sources_refreshed(user_id: &UserId, changed: bool, reconciled: bool) -> Self {
+    pub fn sources_refreshed(user_id: &UserId, refresh: SourcesRefresh<'_>) -> Self {
+        let SourcesRefresh {
+            changed,
+            reconciled,
+            fallback,
+            refused,
+        } = refresh;
+        let held: Vec<String> = refused
+            .iter()
+            .map(|refusal| RefusedSource::of(refusal).detail)
+            .collect();
+        let description = match fallback {
+            Some(error) => format!("Import of services sources was not served: {error}"),
+            None if !held.is_empty() && changed => {
+                format!("Imported services sources in part: {}", held.join("; "))
+            },
+            None if !held.is_empty() => {
+                format!("Import of services sources refused: {}", held.join("; "))
+            },
+            None if changed => {
+                "Imported services sources: composition changed and reconciled in place".to_owned()
+            },
+            None => "Refreshed services sources: unchanged".to_owned(),
+        };
         Self {
             user_id: user_id.clone(),
             category: ActivityCategory::UserManagement,
             action: ActivityAction::Imported,
             entity: Some(plane_ref("sources", "services sources")),
-            description: if changed {
-                "Imported services sources: composition changed and reconciled in place".to_owned()
-            } else {
-                "Refreshed services sources: unchanged".to_owned()
-            },
-            // JSON: JSONB column — composition changed / projected into authz tables
-            metadata: serde_json::json!({ "changed": changed, "reconciled": reconciled }),
+            description,
+            // JSON: JSONB column — what the import moved and what core did not take
+            metadata: serde_json::json!({
+                "changed": changed,
+                "reconciled": reconciled,
+                "fallback": fallback,
+                "refused": held,
+            }),
         }
     }
 }

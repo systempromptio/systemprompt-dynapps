@@ -3,7 +3,7 @@
 
 mod constructors;
 mod constructors_entity;
-pub use constructors_entity::{CorePlaneApply, PlaneApply, RuleChange};
+pub use constructors_entity::{CorePlaneApply, PlaneApply, RuleChange, SourcesRefresh};
 mod constructors_session;
 pub mod enums;
 pub mod types;

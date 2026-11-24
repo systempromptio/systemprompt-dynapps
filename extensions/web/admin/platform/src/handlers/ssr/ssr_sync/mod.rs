@@ -123,6 +123,10 @@ fn visible_sources(
                 .iter()
                 .any(|m| user_ctx.participation.includes_marketplace(m))
         });
+        sources
+            .refusals
+            .held
+            .retain(|r| sources.bundles.iter().any(|b| b.name == r.name));
     }
     sources
 }

@@ -137,7 +137,9 @@ release; nothing else has to be done by hand.
    shipped version; otherwise it packs and signs → publishes
    `ghcr.io/<owner>/<kit>:vX.Y.Z` and moves `:stable` to the same digest →
    creates the tag and the GitHub release → prints the **digest** → asks the
-   instance to import. A hand-cut release still publishes, for a tag made
+   instance to import. The import fails the job, naming each source and
+   reason, when the reply lists any under `refused` or carries
+   `provenance.error`. A hand-cut release still publishes, for a tag made
    outside this flow.
 3. In this repository, once: `just services-pin <kit> stable` makes the profile
    follow the channel (or `just services-pin <kit> sha256:<digest>` to pin one

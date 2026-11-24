@@ -24,9 +24,18 @@ const askRefresh = () => {
   dialog('refresh')?.showModal();
 };
 
-// Why: the reply is shown verbatim — `reconciled` says the new composition is
-// live, and `restart_recommended` names the one case (a kit shipping hooks)
-// an in-process import cannot fully serve.
+const unserved = (result) => [
+  ...(result?.provenance?.error ? [result.provenance.error] : []),
+  ...(result?.refused ?? []).map(
+    (held) => `${held.source}: ${held.reason} (still serving ${held.serving_version})`,
+  ),
+];
+
+// Why: core answers a held-back source or a whole-composition fallback with
+// HTTP 200 and often `changed: false`; either is a failure here, so the dialog
+// stays open on core's reason and the page reloads only once it is closed.
+// `restart_recommended` names the one case (a kit shipping hooks) an
+// in-process import cannot fully serve.
 const runRefresh = async (button) => {
   button.disabled = true;
   const out = field('refresh-result');
@@ -34,6 +43,13 @@ const runRefresh = async (button) => {
   out.textContent = 'Refreshing…';
   try {
     const result = await apiFetch('/sync/sources/refresh', { method: 'POST' });
+    const failures = unserved(result);
+    if (failures.length > 0) {
+      out.textContent = `${failures.join('\n')}\n\n${JSON.stringify(result, null, 2)}`;
+      showToast(`Import refused: ${failures.join('; ')}`, 'error');
+      dialog('refresh')?.addEventListener('close', () => window.location.reload(), { once: true });
+      return;
+    }
     out.textContent = JSON.stringify(result, null, 2);
     let summary = 'Composition unchanged';
     if (result?.changed) {
