@@ -89,6 +89,10 @@ fn live_js_assets(live: &Path) -> Vec<AssetDefinition> {
         AssetDefinition::js(live.join("prompts.js"), "js/workspace/live/prompts.js"),
         AssetDefinition::js(live.join("router.js"), "js/workspace/live/router.js"),
         AssetDefinition::js(
+            live.join("runtime-boot.js"),
+            "js/workspace/live/runtime-boot.js",
+        ),
+        AssetDefinition::js(
             live.join("runtime-core.js"),
             "js/workspace/live/runtime-core.js",
         ),

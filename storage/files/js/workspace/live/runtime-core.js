@@ -1,16 +1,17 @@
 // The live page runtime: `window.governance.use(name)`, with `window.claude`
 // as the same frozen object, as Anthropic's artifact runtime contract 0.2.99
-// defines it (names, timing, error codes). It is three files read as one
-// script, in this order: runtime-core.js (this one: the transport to the
-// shell and the argument rules), runtime-mcp.js and runtime-use.js. The
-// Drive's live frame route inlines them at the top of the page's head and
-// replaces the HOST marker at the end with `{origins, contract}`. The page
+// defines it (names, timing, error codes). It is four files, each one a
+// complete function expression: runtime-core.js (this one: the transport to
+// the shell and the argument rules, returned as `core`), runtime-mcp.js,
+// runtime-use.js and runtime-boot.js, which calls the other three with
+// `{origins, contract}`. The Drive's live frame route inlines them as one
+// script at the top of the page's head. The page
 // sits in an opaque-origin sandbox with no network: everything it asks goes
 // to its parent, the viewer shell, by postMessage, and only answers from
 // that parent are read. No credential ever reaches this frame.
-(function governanceRuntime(host) {
+(function governanceCore(host) {
   'use strict';
-  if (Object.getOwnPropertyDescriptor(window, 'governance')) return;
+  if (Object.getOwnPropertyDescriptor(window, 'governance')) return null;
 
   const PROTOCOL = 'governance-live/1';
   const HOST_WAIT_MS = 10000;
@@ -179,3 +180,9 @@
     if (cache.refresh === true) tuned.refresh = true;
     return tuned;
   };
+
+  return {
+    ask, post, fail, later, served, framed, isPlainObject, checkCall, identityOf, inputOf, shaped, cacheOption,
+    DENIALS, CAPABILITIES, POLL_FLOOR_MS, MAX_WATCHES,
+  };
+})

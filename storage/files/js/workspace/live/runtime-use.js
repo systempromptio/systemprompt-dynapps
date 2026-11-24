@@ -1,6 +1,12 @@
-  // Part three of the page runtime (see runtime-core.js): every namespace
-  // `use()` hands out, the frozen `window.governance` with its alias
-  // `window.claude`, and the page height the shell is told about.
+// Part three of the page runtime (see runtime-core.js): every namespace
+// `use()` hands out, the frozen `window.governance` with its alias
+// `window.claude`, and the page height the shell is told about. A function
+// expression the boot file calls with core's helpers and the mcp namespace.
+(function governanceUse(core, mcp) {
+  'use strict';
+  const { ask, post, fail, later, served, framed, isPlainObject, CAPABILITIES } = core;
+  const { callTool, watchTool, invalidate, listTools, serverHandle, describeTool } = mcp;
+
   const quiet = (method, params, fallback) => ask(method, params).catch(() => fallback);
 
   const BUILDERS = {
@@ -69,4 +75,4 @@
       post({ type: 'size', height });
     }).observe(document.documentElement);
   }
-})(/*HOST*/null);
+})

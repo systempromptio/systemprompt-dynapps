@@ -7,10 +7,11 @@ import test, { afterEach, beforeEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-// The frame route inlines the three parts in this order, as one script.
-const SOURCE = ['runtime-core.js', 'runtime-mcp.js', 'runtime-use.js']
-  .map((part) => readFileSync(new URL(`../../storage/files/js/workspace/live/${part}`, import.meta.url), 'utf8'))
-  .join('');
+// The frame route inlines the four parts as one script: the boot function
+// called with the text of core, mcp and use, and then the host.
+const [BOOT, CORE, MCP, USE] = ['runtime-boot.js', 'runtime-core.js', 'runtime-mcp.js', 'runtime-use.js']
+  .map((part) => readFileSync(new URL(`../../storage/files/js/workspace/live/${part}`, import.meta.url), 'utf8'));
+const script = (host) => `(${BOOT})(${CORE}, ${MCP}, ${USE}, ${JSON.stringify(host)})`;
 const ORIGIN = 'https://governance.test';
 const PROTOCOL = 'governance-live/1';
 
@@ -53,8 +54,7 @@ const boot = ({ framed = true, served = null, answer = null, host = { origins: [
     },
   };
   window.parent = framed ? parent : window;
-  const source = SOURCE.replace('/*HOST*/null', JSON.stringify(host));
-  new Function('window', 'document', source)(window, document);
+  new Function('window', 'document', script(host))(window, document);
   const requests = (method) => sent.filter((m) => m.type === 'request' && (!method || m.method === method));
   const hidden = (value) => {
     document.visibilityState = value ? 'hidden' : 'visible';

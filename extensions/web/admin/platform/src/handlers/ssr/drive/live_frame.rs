@@ -3,9 +3,10 @@
 //! (after the doctype, or first, when it has no head), so the runtime runs
 //! before any script of the page.
 //!
-//! The runtime (`runtime-core.js`, `runtime-mcp.js` and `runtime-use.js`
-//! under `storage/files/js/workspace/live/`, compiled in and read as one
-//! script in that order) is the page's only way out: `window.governance.use`,
+//! The runtime (`runtime-boot.js`, `runtime-core.js`, `runtime-mcp.js` and
+//! `runtime-use.js` under `storage/files/js/workspace/live/`, compiled in
+//! and joined into one script, each a complete function expression) is the
+//! page's only way out: `window.governance.use`,
 //! and its alias `window.claude`, post to the frame's parent, the viewer
 //! shell. The response's policy keeps the page there: `sandbox
 //! allow-scripts` without `allow-same-origin` makes it an opaque-origin
@@ -38,12 +39,12 @@ use super::user::{DriveDocuments, caller};
 use crate::artifacts::manifest::CONTRACT_VERSION;
 use crate::routes::drive_actor::site_origins;
 
-const RUNTIME: [&str; 3] = [
+const RUNTIME: [&str; 4] = [
+    include_str!("../../../../../../../../storage/files/js/workspace/live/runtime-boot.js"),
     include_str!("../../../../../../../../storage/files/js/workspace/live/runtime-core.js"),
     include_str!("../../../../../../../../storage/files/js/workspace/live/runtime-mcp.js"),
     include_str!("../../../../../../../../storage/files/js/workspace/live/runtime-use.js"),
 ];
-const HOST_MARKER: &str = "/*HOST*/null";
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct FrameQuery {
@@ -104,10 +105,8 @@ fn runtime_tag(nonce: &str, origins: &[String]) -> String {
         .replace('<', "\\u003c")
         .replace('>', "\\u003e")
         .replace('&', "\\u0026");
-    format!(
-        "<script nonce=\"{nonce}\">{}</script>",
-        RUNTIME.concat().replace(HOST_MARKER, &host)
-    )
+    let [boot, core, mcp, usage] = RUNTIME;
+    format!("<script nonce=\"{nonce}\">({boot})({core}, {mcp}, {usage}, {host})</script>")
 }
 
 fn policy(scripts: bool, origins: &[&str], nonce: &str) -> String {

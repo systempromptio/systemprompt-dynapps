@@ -1,5 +1,11 @@
-  // Part two of the page runtime (see runtime-core.js): the `mcp` namespace.
-  // Calls, watches and their per-identity flights, polling and invalidation.
+// Part two of the page runtime (see runtime-core.js): the `mcp` namespace.
+// Calls, watches and their per-identity flights, polling and invalidation.
+// A function expression the boot file calls with core's helpers.
+(function governanceMcp(core) {
+  'use strict';
+  const {
+    ask, fail, later, checkCall, identityOf, inputOf, shaped, cacheOption, DENIALS, POLL_FLOOR_MS, MAX_WATCHES,
+  } = core;
   const entries = new Map();
   const groups = new Map();
   let watchCount = 0;
@@ -198,3 +204,6 @@
     if (invalid) return Promise.reject(invalid);
     return ask('mcp.describeTool', { server, tool });
   };
+
+  return { callTool, watchTool, invalidate, listTools, serverHandle, describeTool };
+})

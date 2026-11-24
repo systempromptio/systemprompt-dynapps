@@ -194,7 +194,8 @@ of `/rendered`. Code: `storage/files/js/workspace/live/`,
   rendered-HTML tier (`files.documents.renderedHtml`) as on `/rendered`; with
   that tier's scripts off only the runtime runs (by its nonce) and the page
   stays static.
-- **The runtime** (`runtime-core.js`, `runtime-mcp.js`, `runtime-use.js`) defines `window.governance` and
+- **The runtime** (`runtime-core.js`, `runtime-mcp.js`, `runtime-use.js`, each a complete function expression, and
+  `runtime-boot.js`, which calls them in that order and is inlined with them as one script) defines `window.governance` and
   `window.claude`, one frozen object with only `use(name)`, before any page
   script. It follows Anthropic's artifact runtime contract 0.2.99 (copies of
   the `.d.ts` files are with the plan that built it): `use()` resolves a
