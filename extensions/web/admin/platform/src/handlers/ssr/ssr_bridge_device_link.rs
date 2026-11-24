@@ -9,8 +9,8 @@
 //! *displays* the code for the user to copy back into the terminal.
 //!
 //! A device link may also ask for the person's UI session
-//! ([`super::ssr_bridge_device_link_ui`]), and name the device key it
-//! `replaces`, which approval retires.
+//! ([`super::ssr_bridge_device_link_ui`]), and name by its `key_prefix` the
+//! device key it `replaces`, which approval retires.
 
 use std::sync::Arc;
 use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
@@ -221,12 +221,12 @@ async fn retire_replaced_key(
     user_id: &UserId,
     replaces: Option<&str>,
 ) -> AdminHtmlResult<()> {
-    let Some(api_key_id) = replaces.filter(|id| !id.is_empty()) else {
+    let Some(key_prefix) = replaces.filter(|prefix| !prefix.is_empty()) else {
         return Ok(());
     };
-    let revoked = bridge::revoke_device_key(pool, user_id, api_key_id).await?;
+    let revoked = bridge::revoke_device_key(pool, user_id, key_prefix).await?;
     tracing::info!(
-        api_key_id,
+        key_prefix,
         revoked,
         "Device link approval retired the device key it replaces"
     );

@@ -247,9 +247,11 @@ browser sign-in can approve one, never a bearer token, and only one less than
 a day old: an older sign-in is first sent through Entra ID with `max_age`, then
 back to the same page. The UI session starts from that sign-in time, not from
 the click. Core's `POST /v1/auth/bridge/session-pat` then returns a `ui_code`
-next to the device key. A link may also name the device key it `replaces`;
-approval revokes it when it is a `device` key of the same person and ignores
-any other id.
+next to the device key. A link may also name the device key it `replaces`,
+by its `key_prefix` (`sp-live-` and 12 hex characters, the part of the PAT
+before the dot; not secret, and all a device knows of its key): approval
+revokes it when it is an unrevoked `device` key of the same person and ignores
+any other prefix.
 
 ## Operator Recovery — CLI Only
 

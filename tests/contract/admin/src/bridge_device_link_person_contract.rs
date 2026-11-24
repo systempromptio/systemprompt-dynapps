@@ -6,8 +6,9 @@
 //! authorization code. Every way the request can be wrong is refused with a
 //! page and issues nothing. Only a browser sign-in may approve it, and only
 //! one under a day old: an older one is sent through Entra first with a
-//! `redirect` core's `sanitize_return_to` keeps. `replaces` retires the
-//! approving person's own device key and nothing else.
+//! `redirect` core's `sanitize_return_to` keeps. `replaces` names a device
+//! key by its `key_prefix` (the PAT before the dot, all a device knows of it)
+//! and retires the approving person's own device key and nothing else.
 //!
 //! `session-pat` itself is core's HTTP handler and needs a booted runtime; its
 //! two steps — consuming the code and minting the bound authorization code —
@@ -265,7 +266,7 @@ async fn a_pkce_approval_carries_the_ui_session_to_session_pat() {
         .expect("consume the code")
         .expect("the code is live");
     let grant = link.ui_grant.expect("the code carries the UI session");
-    let device_key = insert_key(&db.pool, &people.admin, "device").await;
+    let (device_key, _) = insert_key(&db.pool, &people.admin, "device").await;
     let ui_code = oauth
         .mint_device_authorization_code(
             MintAuthCodeParams {
@@ -444,7 +445,7 @@ async fn a_sign_in_older_than_a_day_goes_through_entra_first() {
         return;
     };
     let mut pairs = with_callback(ui_fields(&[]));
-    pairs.push(("replaces".to_owned(), "ak_previous".to_owned()));
+    pairs.push(("replaces".to_owned(), "sp-live-0123456789ab".to_owned()));
     let query = encode(&pairs);
     let before = codes_for(&db.pool, &people.admin).await;
 
@@ -514,14 +515,14 @@ async fn replaces_retires_only_the_same_persons_device_key() {
     let Some((db, app, people)) = setup_or_skip().await else {
         return;
     };
-    let own_device = insert_key(&db.pool, &people.admin, "device").await;
-    let own_user_key = insert_key(&db.pool, &people.admin, "user").await;
-    let foreign_device = insert_key(&db.pool, &people.other, "device").await;
+    let (_, own_device) = insert_key(&db.pool, &people.admin, "device").await;
+    let (_, own_user_key) = insert_key(&db.pool, &people.admin, "user").await;
+    let (_, foreign_device) = insert_key(&db.pool, &people.other, "device").await;
 
     for (replaces, retired) in [
         (own_user_key.as_str(), false),
         (foreign_device.as_str(), false),
-        ("ak_unknown", false),
+        ("sp-live-000000000000", false),
         (own_device.as_str(), true),
     ] {
         let mut pairs = with_callback(Vec::new());
@@ -533,7 +534,7 @@ async fn replaces_retires_only_the_same_persons_device_key() {
         let (status, location) = app.redirect_of(approve).await;
         assert!(
             status.is_redirection() && location.contains("code="),
-            "replaces={replaces}: an id that matches nothing is no error, got {status} {location}"
+            "replaces={replaces}: a prefix that matches nothing is no error, got {status} {location}"
         );
         assert_eq!(
             is_revoked(&db.pool, replaces).await,
@@ -553,27 +554,33 @@ async fn replaces_retires_only_the_same_persons_device_key() {
     db.cleanup().await;
 }
 
-async fn insert_key(pool: &sqlx::PgPool, user: &UserId, kind: &str) -> String {
+// A key as core stores it: its id, and the `key_prefix` a device sends back
+// in `replaces` (`sp-live-` and 12 hex, the PAT before the dot).
+async fn insert_key(pool: &sqlx::PgPool, user: &UserId, kind: &str) -> (String, String) {
     let id = format!("ak_{}", uuid::Uuid::new_v4().simple());
+    let key_prefix = format!(
+        "sp-live-{}",
+        &uuid::Uuid::new_v4().simple().to_string()[..12]
+    );
     sqlx::query(
         "INSERT INTO user_api_keys (id, user_id, name, key_prefix, key_hash, kind)
          VALUES ($1, $2, 'contract device', $3, 'not-a-hash', $4)",
     )
     .bind(&id)
     .bind(user.as_str())
-    .bind(&id[..20])
+    .bind(&key_prefix)
     .bind(kind)
     .execute(pool)
     .await
     .expect("insert an api key");
-    id
+    (id, key_prefix)
 }
 
-async fn is_revoked(pool: &sqlx::PgPool, id: &str) -> bool {
+async fn is_revoked(pool: &sqlx::PgPool, key_prefix: &str) -> bool {
     sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS (SELECT 1 FROM user_api_keys WHERE id = $1 AND revoked_at IS NOT NULL)",
+        "SELECT EXISTS (SELECT 1 FROM user_api_keys WHERE key_prefix = $1 AND revoked_at IS NOT NULL)",
     )
-    .bind(id)
+    .bind(key_prefix)
     .fetch_one(pool)
     .await
     .expect("read the key")
