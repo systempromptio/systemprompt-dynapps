@@ -5,14 +5,20 @@
 //! proxy there); and two servers hosted in-process, booted from the
 //! environment core's spawner hands a server process and registered as
 //! running: the fake, by core's toolset host, and the extension's own
-//! `documents` server, by the same router its binary serves.
+//! `documents` server, by the same router its binary serves. An external
+//! server, `artifacts-remote`, has its bearer accessor served by the suite on
+//! the API's own listener, answering the status a case sets (`accessor`);
+//! the profile's external URL is that listener, so core reaches it.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU16, Ordering};
 
 use serde_json::Value;
 use systemprompt::database::{CreateServiceInput, ServiceModule, ServiceStatus};
-use systemprompt::identifiers::{AccessTokenId, DocumentId, McpServerId, ServiceName, UserId};
+use systemprompt::identifiers::{
+    AccessTokenId, ClientId, DocumentId, McpServerId, ServiceName, UserId,
+};
 use systemprompt::mcp::services::process::spawner;
 use systemprompt::models::auth::{
     AuthenticatedUser, JwtAudience, McpHopIdentity, Permission, TokenInteraction, UserJwtRequest,
@@ -27,17 +33,23 @@ use crate::globals;
 
 pub(super) const SERVER: &str = "artifacts-fake";
 pub(super) const DOCUMENTS: &str = "documents";
+pub(super) const REMOTE: &str = "artifacts-remote";
+pub(super) const REMOTE_TOOL: &str = "remote_search";
+const REMOTE_ACCESSOR: &str = "/contract/artifacts-remote/token";
 const FAKE_SERVER_YAML: &str = include_str!("../../fixtures/artifacts_fake.yaml");
-const FAKE_INCLUDE: &str = "  - ../mcp/artifacts_fake.yaml\n";
+const REMOTE_SERVER_YAML: &str = include_str!("../../fixtures/artifacts_remote.yaml");
+const FAKE_INCLUDE: &str = "  - ../mcp/artifacts_fake.yaml\n  - ../mcp/artifacts_remote.yaml\n";
 // The suite's operator policy: the fake's `off` tool and every other server
 // are left out, so a page may not ask for them.
 const LIVE_PAGES_POLICY: &str = "live_pages:\n  servers:\n    artifacts-fake:\n      tools:\n      \
-     - artifacts_fake_echo\n      - artifacts_fake_secret\n      - artifacts_fake_write\n";
+     - artifacts_fake_echo\n      - artifacts_fake_secret\n      - artifacts_fake_write\n    \
+     artifacts-remote:\n      tools:\n      - remote_search\n";
 
 pub(super) struct Stack {
     pub(super) ctx: Arc<AppContext>,
     pub(super) api: String,
     pub(super) origin: String,
+    pub(super) accessor: Arc<AtomicU16>,
     documents_mcp: String,
     _api: tokio::task::JoinHandle<()>,
     _servers: [tokio::task::JoinHandle<()>; 2],
@@ -118,6 +130,10 @@ fn write_profile(database_url: &str, api_port: u16, ports: [u16; 2]) -> PathBuf 
         &profile,
         &[
             ("port: 8099", &format!("port: {api_port}")),
+            (
+                "external_url: http://localhost:8099",
+                &format!("external_url: http://127.0.0.1:{api_port}"),
+            ),
             ("signing_key_path: signing_key.pem", &signing),
             (&repo_storage, &run_storage),
         ],
@@ -137,6 +153,11 @@ fn write_profile(database_url: &str, api_port: u16, ports: [u16; 2]) -> PathBuf 
         FAKE_SERVER_YAML.replace("__PORT__", &ports[1].to_string()),
     )
     .expect("write the fake server's YAML");
+    std::fs::write(
+        services.join("mcp/artifacts_remote.yaml"),
+        REMOTE_SERVER_YAML,
+    )
+    .expect("write the remote server's YAML");
     std::fs::write(
         services.join("documents/live-pages.yaml"),
         LIVE_PAGES_POLICY,
@@ -234,34 +255,35 @@ async fn start_documents(
     served
 }
 
-// The `mcp_server/artifacts-fake` band, as `config apply` writes one for a
-// server declared closed and open to every signed-in user.
-async fn seed_fake_access(pool: &sqlx::PgPool) {
+// The `mcp_server/<server>` band, as `config apply` writes one for a server
+// declared closed and open to every signed-in user.
+async fn seed_access(pool: &sqlx::PgPool, server: &str) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
          VALUES ('mcp_server', $1, false, 'console:artifacts-broker')",
     )
-    .bind(SERVER)
+    .bind(server)
     .execute(pool)
     .await
-    .expect("register the fake server");
+    .expect("register the server");
     sqlx::query(
         "INSERT INTO access_control_rules
              (id, entity_type, entity_id, rule_type, rule_value, access, justification, source)
          VALUES ($1, 'mcp_server', $2, 'role', 'user', 'allow',
-                 'every signed-in user reaches the fake server', 'console:artifacts-broker')",
+                 'every signed-in user reaches the server', 'console:artifacts-broker')",
     )
     .bind(uuid::Uuid::new_v4().to_string())
-    .bind(SERVER)
+    .bind(server)
     .execute(pool)
     .await
-    .expect("open the fake server to users");
+    .expect("open the server to users");
 }
 
 pub(super) async fn start(pool: &sqlx::PgPool, database_url: &str) -> Stack {
     docs::seed_system_admin(pool).await;
     docs::seed_documents_access(pool).await;
-    seed_fake_access(pool).await;
+    seed_access(pool, SERVER).await;
+    seed_access(pool, REMOTE).await;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind the API listener");
@@ -277,8 +299,10 @@ pub(super) async fn start(pool: &sqlx::PgPool, database_url: &str) -> Stack {
         .await
         .expect("register the folder entities");
     let readiness = Arc::new(systemprompt::api::services::server::ReadinessState::new());
+    let accessor = Arc::new(AtomicU16::new(404));
     let router = systemprompt::api::services::server::setup_api_server(&ctx, None, &readiness)
-        .expect("the API router builds");
+        .expect("the API router builds")
+        .merge(remote_accessor(Arc::clone(&accessor)));
     let api = tokio::spawn(async move {
         axum::serve(
             listener,
@@ -297,10 +321,29 @@ pub(super) async fn start(pool: &sqlx::PgPool, database_url: &str) -> Stack {
         ctx,
         api: format!("http://127.0.0.1:{api_port}"),
         origin,
+        accessor,
         documents_mcp: format!("http://127.0.0.1:{}/mcp", ports[0]),
         _api: api,
         _servers: [documents, fake],
     }
+}
+
+// The remote server's bearer accessor, as core calls the extension's: it
+// answers whatever status the case set.
+fn remote_accessor(answer: Arc<AtomicU16>) -> axum::Router {
+    axum::Router::new().route(
+        REMOTE_ACCESSOR,
+        axum::routing::get(move || {
+            let status = axum::http::StatusCode::from_u16(answer.load(Ordering::SeqCst))
+                .expect("a case sets an HTTP status");
+            async move {
+                (
+                    status,
+                    axum::Json(serde_json::json!({ "error": "contract accessor" })),
+                )
+            }
+        }),
+    )
 }
 
 fn user(id: &UserId) -> AuthenticatedUser {
@@ -346,6 +389,58 @@ impl Stack {
         self.token(pool, id, false).await
     }
 
+    // The person's UI session, as core mints it for a `person_ui` client such
+    // as DynWork desktop: the `ui` audience alone, a client id, no purpose.
+    pub(super) async fn ui_bearer(&self, pool: &sqlx::PgPool, id: &UserId) -> String {
+        self.ui_bearer_signed_in_at(pool, id, chrono::Utc::now().timestamp())
+            .await
+    }
+
+    // The same session, signed in at `auth_time` (Unix seconds).
+    pub(super) async fn ui_bearer_signed_in_at(
+        &self,
+        pool: &sqlx::PgPool,
+        id: &UserId,
+        auth_time: i64,
+    ) -> String {
+        let session = docs::seed_session(pool, id).await;
+        self.ctx
+            .token_authority()
+            .mint_user_jwt(&UserJwtRequest {
+                user: user(id),
+                session_id: session,
+                jti: AccessTokenId::generate(),
+                permissions: vec![Permission::User],
+                audience: vec![JwtAudience::Ui],
+                ttl: chrono::Duration::minutes(5),
+                client_id: Some(ClientId::new("dynwork-desktop")),
+                purpose: None,
+                plugin_id: None,
+                interaction: None,
+                browser_session: false,
+                ui_session: true,
+                auth_time: Some(auth_time),
+            })
+            .expect("mint the UI session token")
+    }
+
+    // A page load as the browser makes it: a navigation, never following a
+    // redirect, so a trip to the sign-in page is seen as such.
+    pub(super) async fn navigate(&self, path: &str, cookie: Option<&str>) -> reqwest::Response {
+        let mut request = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("build a client that does not follow redirects")
+            .get(format!("{}{path}", self.api))
+            .header("accept", "text/html")
+            .header("sec-fetch-mode", "navigate")
+            .header("sec-fetch-site", "same-origin");
+        if let Some(cookie) = cookie {
+            request = request.header("cookie", cookie);
+        }
+        request.send().await.expect("reach the page")
+    }
+
     // An attended agent on the `documents` server, as the proxy hands it on:
     // the agent's bearer and a hop token naming the same person.
     pub(super) async fn agent(&self, pool: &sqlx::PgPool, id: &UserId) -> McpClient {
@@ -371,6 +466,16 @@ impl Stack {
     }
 
     pub(super) async fn owned_document(&self, owner: &UserId, template: &str) -> DocumentId {
+        Box::pin(self.named_document(owner, template, &format!("artifacts-broker-{template}")))
+            .await
+    }
+
+    pub(super) async fn named_document(
+        &self,
+        owner: &UserId,
+        template: &str,
+        name: &str,
+    ) -> DocumentId {
         use systemprompt::files::documents::agents::{DocumentActor, act_as};
         use systemprompt::files::documents::models::{RevisionAttribution, RevisionOrigin};
         use systemprompt::files::documents::service::{Author, CreateRequest};
@@ -390,7 +495,7 @@ impl Stack {
             CreateRequest {
                 template_id: DocumentTemplateId::new(template),
                 folder: None,
-                name: format!("artifacts-broker-{template}"),
+                name: name.to_owned(),
                 params: systemprompt_provider_contracts::documents::TemplateParams::default(),
                 ops: Vec::new(),
                 author: Author {

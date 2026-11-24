@@ -1,9 +1,11 @@
 //! What core's MCP proxy answered, in the broker's codes.
 //!
-//! The proxy's HTTP status says whether it let the viewer through; a JSON or
-//! SSE body carries the JSON-RPC response, the message whose `id` is the
-//! request's; and a JSON-RPC error says whether the server refused the viewer,
-//! the request was wrong, or the tool itself failed.
+//! The proxy's HTTP status says whether it let the viewer through, and on a
+//! `409` its `error_key` says why: `provider_not_connected` is a connector the
+//! viewer must connect again (`needs_reauth`). A JSON or SSE body carries the
+//! JSON-RPC response, the message whose `id` is the request's; and a JSON-RPC
+//! error says whether the server refused the viewer, the request was wrong, or
+//! the tool itself failed.
 
 use axum::http::StatusCode;
 // JSON: MCP-protocol boundary, JSON-RPC messages carry schema-less payloads.
@@ -14,8 +16,12 @@ use super::error::{ArtifactCallCode, ArtifactCallError};
 const INVALID_REQUEST: i64 = -32600;
 const METHOD_NOT_FOUND: i64 = -32601;
 const INVALID_PARAMS: i64 = -32602;
+const PROVIDER_NOT_CONNECTED: &str = "provider_not_connected";
 
-pub(super) fn refuse_status(status: StatusCode) -> Result<(), ArtifactCallError> {
+pub(super) fn refuse_status(
+    status: StatusCode,
+    error_key: Option<&str>,
+) -> Result<(), ArtifactCallError> {
     if status.is_success() {
         return Ok(());
     }
@@ -27,6 +33,10 @@ pub(super) fn refuse_status(status: StatusCode) -> Result<(), ArtifactCallError>
         StatusCode::FORBIDDEN => (
             ArtifactCallCode::BlockedByPolicy,
             "the viewer may not use this server",
+        ),
+        StatusCode::CONFLICT if error_key == Some(PROVIDER_NOT_CONNECTED) => (
+            ArtifactCallCode::NeedsReauth,
+            "the viewer must connect this server again",
         ),
         StatusCode::CONFLICT => (
             ArtifactCallCode::ServerNotConnected,
@@ -43,6 +53,15 @@ pub(super) fn refuse_status(status: StatusCode) -> Result<(), ArtifactCallError>
     };
     tracing::debug!(%status, error_key = code.as_str(), "the MCP proxy refused an artifact tool call");
     Err(ArtifactCallError::new(code, message))
+}
+
+// JSON: core's API error envelope, read only for its `error_key`.
+pub(super) fn error_key(body: &[u8]) -> Option<String> {
+    serde_json::from_slice::<Value>(body)
+        .ok()?
+        .get("error_key")?
+        .as_str()
+        .map(str::to_owned)
 }
 
 // JSON: MCP-protocol boundary, the JSON-RPC message answering `id`.

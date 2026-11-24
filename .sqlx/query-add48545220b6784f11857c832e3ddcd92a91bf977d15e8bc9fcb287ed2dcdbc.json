@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH expired AS (\n               DELETE FROM drive_handoffs WHERE expires_at <= CURRENT_TIMESTAMP\n           )\n           INSERT INTO drive_handoffs (code_hash, user_id, path, authenticated_at, expires_at)\n           SELECT $1, $2, $4, $5, $6\n            WHERE EXISTS (\n                  SELECT 1\n                    FROM user_sessions s\n                    JOIN users u ON u.id = s.user_id\n                   WHERE s.session_id = $3\n                     AND s.user_id = $2\n                     AND s.revoked_at IS NULL\n                     AND s.expires_at > CURRENT_TIMESTAMP\n                     AND u.status = 'active')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "add48545220b6784f11857c832e3ddcd92a91bf977d15e8bc9fcb287ed2dcdbc"
+}

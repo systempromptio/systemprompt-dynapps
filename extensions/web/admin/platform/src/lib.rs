@@ -21,6 +21,8 @@
 //!   resolves an agent's cap on a document through them.
 //! - [`artifacts`] — the artifacts broker: a Drive page's MCP tool call, run as
 //!   the person viewing it through core's MCP proxy.
+//! - [`handoff`] — the session handoff: a person's `ui` session opens a web
+//!   session in the view of a client that embeds the viewer shell.
 //!
 //! The connector accounts register as core's connection snapshot source
 //! through `inventory`, so a binary that serves connections must link this
@@ -30,6 +32,7 @@
 pub mod artifacts;
 pub mod document_class;
 pub(crate) mod handlers;
+pub mod handoff;
 pub mod repositories;
 pub mod routes;
 pub(crate) mod services;

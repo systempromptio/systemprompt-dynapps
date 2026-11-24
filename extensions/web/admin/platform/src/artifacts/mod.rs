@@ -17,7 +17,9 @@
 //!
 //! The routes take only the web login's browser session (`viewer`), never an
 //! agent's or the bridge's bearer, and each tool call writes one audit row
-//! to `artifact_tool_calls`. [`artifacts_router`] mounts them under
+//! to `artifact_tool_calls`. One read also takes the person's `ui` session:
+//! whether a document is a live page (`manifest_read`), for a client
+//! deciding to open the viewer shell. [`artifacts_router`] mounts them under
 //! `/api/v1/artifacts/{document_id}/` outside the admin session; the web
 //! facade merges it when the document store is on. [`LivePages`] is the part
 //! the `documents` server shares to check and record a declaration.
@@ -31,6 +33,7 @@ mod consent;
 mod error;
 mod live_pages;
 pub mod manifest;
+mod manifest_read;
 mod policy;
 mod proxy;
 mod publish;
@@ -58,6 +61,7 @@ const INVALIDATE_PATH: &str = "/api/v1/artifacts/{document_id}/mcp/invalidate";
 const PERMISSIONS_PATH: &str = "/api/v1/artifacts/{document_id}/permissions";
 const PERMISSION_PATH: &str = "/api/v1/artifacts/{document_id}/permissions/{scope}";
 const PUBLISH_PATH: &str = "/api/v1/artifacts/{document_id}/artifact/publish";
+const MANIFEST_PATH: &str = "/api/v1/artifacts/{document_id}/manifest";
 const MAX_BODY_BYTES: usize = 4 * 1024 * 1024;
 
 /// What the broker is built from.
@@ -121,6 +125,7 @@ pub fn artifacts_router(parts: ArtifactsBrokerParts) -> Result<Router, LivePages
         .route(PERMISSIONS_PATH, get(consent::read).post(consent::decide))
         .route(PERMISSION_PATH, delete(consent::revoke))
         .route(PUBLISH_PATH, post(publish::publish))
+        .route(MANIFEST_PATH, get(manifest_read::read))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(broker))
 }
