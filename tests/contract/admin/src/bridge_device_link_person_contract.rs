@@ -44,6 +44,14 @@ const UI_REDIRECT: &str = "http://127.0.0.1:9876/oauth/callback";
 const VERIFIER: &str = "contract-device-link-verifier-0123456789abcdefghijklmnop";
 const DAY: i64 = 86_400;
 
+/// A malformed UI request: what it is, the query fields it overrides (`None`
+/// drops one), and the word the refusal must name.
+type BadUiRequest = (
+    &'static str,
+    &'static [(&'static str, Option<&'static str>)],
+    &'static str,
+);
+
 fn challenge() -> String {
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(Sha256::digest(VERIFIER.as_bytes()))
 }
@@ -329,7 +337,7 @@ async fn each_bad_ui_request_is_refused_and_issues_nothing() {
         return;
     };
     let cookie = browser_cookie(&people, signed_in_ago(60));
-    let cases: [(&str, &[(&str, Option<&str>)], &str); 8] = [
+    let cases: [BadUiRequest; 8] = [
         (
             "an undeclared client",
             &[("client_id", Some("nobody"))],
