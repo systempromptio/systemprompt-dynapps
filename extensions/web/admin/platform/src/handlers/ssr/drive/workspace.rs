@@ -9,11 +9,17 @@
 //! document that declares live capabilities carries the viewer shell's
 //! paths, so the page shows it through the shell (`js/workspace/live/`) rather
 //! than `/rendered`.
+//!
+//! With `?embed=1` the page leaves out what takes a person away from the
+//! document (the home link, the name menu, the notification bell and the
+//! navigation rail) and marks `<html data-embed>`, so a client that shows the
+//! page as its own view (`DynWork` desktop) is not wrapped in a second app
+//! chrome. The document toolbar, the comments and the editor stay.
 
 use std::sync::Arc;
 
 use axum::Extension;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
@@ -27,6 +33,7 @@ use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_workspace_page};
 use systemprompt_web_admin_core::ssr::page::Page;
 
 use super::document_api;
+use super::live::EmbedQuery;
 use super::user::{DriveDocuments, USER_BASE_URL, caller};
 use crate::artifacts::LivePages;
 
@@ -69,6 +76,7 @@ pub(super) async fn authorize(
 struct DriveWorkspacePage {
     page: &'static str,
     title: String,
+    embed: bool,
     base_url: &'static str,
     documents_api: &'static str,
     blocks_url: String,
@@ -93,6 +101,7 @@ pub(crate) async fn drive_workspace_page(
     State(pool): State<Arc<PgPool>>,
     Extension(documents): Extension<DriveDocuments>,
     Path(raw_id): Path<String>,
+    Query(query): Query<EmbedQuery>,
 ) -> AdminHtmlResult<Response> {
     let doc = authorize(&shell, &documents, raw_id).await?;
     let api = document_api(doc.document_id.as_str());
@@ -104,6 +113,7 @@ pub(crate) async fn drive_workspace_page(
     let page = DriveWorkspacePage {
         page: "drive-workspace",
         title: doc.name,
+        embed: query.embedded(),
         base_url: USER_BASE_URL,
         documents_api: ApiPaths::DOCUMENTS,
         blocks_url: format!(

@@ -99,7 +99,7 @@ const present = (root) => root.dispatchEvent(new CustomEvent('ws:present'));
 
 [
   { id: 'rename', label: 'Rename', menu: true, when: canEdit, run: rename },
-  { id: 'duplicate', label: 'Make a copy', menu: true, when: canEdit, run: duplicate },
+  { id: 'duplicate', label: 'Make a copy', menu: true, leaves: true, when: canEdit, run: duplicate },
   { id: 'move', label: 'Move to folder', menu: true, when: isOwner, run: move },
   { id: 'download', label: 'Download', menu: true, run: download },
   { id: 'export-pdf', label: 'Export as PDF', menu: true, when: canRenderPdf, run: exportPdf },
@@ -110,9 +110,9 @@ const present = (root) => root.dispatchEvent(new CustomEvent('ws:present'));
   { id: 'share', label: 'Share', menu: true, when: (ctx) => ctx.canShare, run: (root) => toggleDrawer(root, 'sharing', true) },
   { id: 'details', label: 'Details', keys: '⌘I', menu: true, run: (root) => toggleDrawer(root, 'details') },
   { id: 'proposals', label: 'Proposals', run: (root) => toggleDrawer(root, 'proposals', true) },
-  { id: 'blocks', label: 'Block editor', menu: true, run: (root) => go(root.dataset.blocksUrl) },
-  { id: 'trash', label: 'Move to trash', menu: true, when: isOwner, run: trash },
+  { id: 'blocks', label: 'Block editor', menu: true, leaves: true, run: (root) => go(root.dataset.blocksUrl) },
+  { id: 'trash', label: 'Move to trash', menu: true, leaves: true, when: isOwner, run: trash },
   { id: 'comments', label: 'Show comments', run: toggleComments },
   { id: 'present', label: 'Present', when: canPresent, run: present },
-  { id: 'home', label: 'Back to Drive', run: (root) => go(root.dataset.baseUrl) },
+  { id: 'home', label: 'Back to Drive', leaves: true, run: (root) => go(root.dataset.baseUrl) },
 ].forEach((command) => registerCommand(command));

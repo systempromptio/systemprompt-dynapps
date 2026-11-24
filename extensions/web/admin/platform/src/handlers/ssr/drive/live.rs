@@ -10,7 +10,8 @@
 //! status line. Without a web session the Drive's gate sends the request to the
 //! web login with this path, query included, as the way back. The shell keeps
 //! the instance's framing policy: a client shows it as a page of its own, never
-//! inside another site's frame.
+//! inside another site's frame. The editor page reads the same `?embed=1`
+//! switch (`EmbedQuery`).
 
 use axum::Extension;
 use axum::extract::{Path, Query};
@@ -32,9 +33,15 @@ const CONNECTORS: &str = "/admin/connectors";
 const EMBED: &str = "1";
 
 #[derive(Debug, Default, Deserialize)]
-pub(crate) struct LiveQuery {
+pub(crate) struct EmbedQuery {
     #[serde(default)]
     embed: Option<String>,
+}
+
+impl EmbedQuery {
+    pub(super) fn embedded(&self) -> bool {
+        self.embed.as_deref() == Some(EMBED)
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -80,10 +87,10 @@ pub(crate) async fn drive_live_page(
     shell: Page,
     Extension(documents): Extension<DriveDocuments>,
     Path(raw_id): Path<String>,
-    Query(query): Query<LiveQuery>,
+    Query(query): Query<EmbedQuery>,
 ) -> AdminHtmlResult<Response> {
     let (document_id, title) = live_document(&shell, &documents, raw_id).await?;
-    let embed = query.embed.as_deref() == Some(EMBED);
+    let embed = query.embedded();
     let encoded = urlencoding::encode(document_id.as_str()).into_owned();
     let document_url = format!("{USER_BASE_URL}/{encoded}");
     let back = format!("{document_url}/live{}", if embed { "?embed=1" } else { "" });

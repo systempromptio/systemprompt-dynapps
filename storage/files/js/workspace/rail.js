@@ -1,6 +1,7 @@
 // The navigation rail: headings for documents, sheet tabs for workbooks and
 // slides for decks, read from the head revision's projection. Choosing an
-// entry asks the mounted editor to reveal that node.
+// entry asks the mounted editor to reveal that node. An embedded page has no
+// rail, and there is nothing to fill.
 import { readJson } from '../services/drive-rows.js';
 
 const DECKS = new Set(['pptx', 'odp']);
@@ -43,8 +44,9 @@ const outlineItem = (node, index) => {
 };
 
 export const showRail = async (root, format) => {
-  root.querySelector('[data-field="rail-title"]').textContent = railTitle(format);
   const list = root.querySelector('[data-slot="ws-outline"]');
+  if (!list) return;
+  root.querySelector('[data-field="rail-title"]').textContent = railTitle(format);
   const empty = root.querySelector('[data-slot="ws-outline-empty"]');
   try {
     const { projection } = await readJson(root.dataset.projectionApi);

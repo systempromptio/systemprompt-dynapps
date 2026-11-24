@@ -13,13 +13,15 @@
 //! consent (`consent`), tool calls with their approvals and cache (`calls`)
 //! and the page republishing itself (`publish`). Then the page as a client
 //! opens it (`live`): the viewer shell, the sandboxed frame and the manifest
-//! read. A `ui` session is handed to a web session the broker takes
-//! (`handoff`), and a connector that must be signed in again asks to
-//! reconnect while an accessor that is down stays an outage (`reconnect`).
-//! The run ends by reading the audit rows back.
+//! read; and the editor page, with and without its embed mode (`editor`). A
+//! `ui` session is handed to a web session the broker takes (`handoff`), and a
+//! connector that must be signed in again asks to reconnect while an accessor
+//! that is down stays an outage (`reconnect`). The run ends by reading the
+//! audit rows back.
 
 mod calls;
 mod consent;
+mod editor;
 mod fake;
 mod handoff;
 mod live;
@@ -176,6 +178,8 @@ async fn artifacts_broker_runs_a_tool_as_the_viewer() {
     live::the_frame_is_opaque_and_offline(&stack, &clients, &page).await;
     live::the_shell_signs_in_first(&stack, &clients, &page).await;
     live::a_client_reads_the_manifest(&stack, &clients, &page, &undeclared).await;
+    editor::the_editor_has_an_embed_mode(&stack, &owner_cookie, &page).await;
+    editor::the_embedded_editor_signs_in_first(&stack, &page).await;
     let handing = handoff::Who {
         owner: &owner,
         owner_cookie: &owner_cookie,
