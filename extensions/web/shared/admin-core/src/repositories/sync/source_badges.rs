@@ -30,7 +30,7 @@ pub enum SourceHold<'a> {
 
 impl<'a> SourceHold<'a> {
     #[must_use]
-    pub fn of(refusals: &'a RefusalsView, name: &str) -> Self {
+    pub fn for_source(refusals: &'a RefusalsView, name: &str) -> Self {
         if let Some(reason) = &refusals.unreadable {
             return Self::Unknown(reason);
         }
@@ -68,19 +68,7 @@ pub(super) fn source_badges(input: &BadgeInputs<'_>) -> Vec<SourceBadge> {
         }),
         _ => {},
     }
-    match input.hold {
-        SourceHold::Served => {},
-        SourceHold::Refused(detail) => badges.push(SourceBadge {
-            text: "refused",
-            tone: "err",
-            detail: detail.to_owned(),
-        }),
-        SourceHold::Unknown(detail) => badges.push(SourceBadge {
-            text: "refusal unknown",
-            tone: "err",
-            detail: detail.to_owned(),
-        }),
-    }
+    badges.extend(hold_badge(input.hold));
     if input.restart_pending && input.active_digest.is_some() {
         badges.push(SourceBadge {
             text: "reconcile pending",
@@ -123,4 +111,17 @@ pub(super) fn source_badges(input: &BadgeInputs<'_>) -> Vec<SourceBadge> {
         });
     }
     badges
+}
+
+fn hold_badge(hold: SourceHold<'_>) -> Option<SourceBadge> {
+    let (text, detail) = match hold {
+        SourceHold::Served => return None,
+        SourceHold::Refused(detail) => ("refused", detail),
+        SourceHold::Unknown(detail) => ("refusal unknown", detail),
+    };
+    Some(SourceBadge {
+        text,
+        tone: "err",
+        detail: detail.to_owned(),
+    })
 }

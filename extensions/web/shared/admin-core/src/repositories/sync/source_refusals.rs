@@ -22,7 +22,7 @@ pub struct RefusedSource {
 
 impl RefusedSource {
     #[must_use]
-    pub fn of(refusal: &SourceRefusal) -> Self {
+    pub fn from_refusal(refusal: &SourceRefusal) -> Self {
         Self {
             name: refusal.source.clone(),
             serving_version: refusal.serving_version.clone(),
@@ -57,7 +57,7 @@ impl RefusalsView {
                 held: refusals
                     .iter()
                     .filter(|refusal| pinned.iter().any(|s| s.name == refusal.source))
-                    .map(RefusedSource::of)
+                    .map(RefusedSource::from_refusal)
                     .collect(),
                 unreadable: None,
             },

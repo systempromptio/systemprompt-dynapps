@@ -35,7 +35,9 @@ pub struct PlaneApply<'a> {
     pub reason: Option<&'a str>,
 }
 
-/// What an import of the services sources moved. `fallback` is core's reason
+/// What an import of the services sources moved.
+///
+/// `fallback` is core's reason
 /// when the whole composition could not be served; `refused` names the sources
 /// held back on a previous bundle while the others advanced.
 #[derive(Debug, Clone, Copy)]
@@ -248,7 +250,7 @@ impl NewActivity {
         } = refresh;
         let held: Vec<String> = refused
             .iter()
-            .map(|refusal| RefusedSource::of(refusal).detail)
+            .map(|refusal| RefusedSource::from_refusal(refusal).detail)
             .collect();
         let description = match fallback {
             Some(error) => format!("Import of services sources was not served: {error}"),

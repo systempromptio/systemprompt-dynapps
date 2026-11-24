@@ -212,7 +212,7 @@ fn bundle_view(source: &ServicesSource, row: &RowContext<'_>) -> BundleSourceVie
         active_digest: active.map(|a| a.digest.as_str()),
         following_tag,
         restart_pending,
-        hold: SourceHold::of(refusals, &source.name),
+        hold: SourceHold::for_source(refusals, &source.name),
         kit_access: owns
             .marketplaces
             .iter()
