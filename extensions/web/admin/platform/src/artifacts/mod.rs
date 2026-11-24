@@ -1,47 +1,72 @@
-//! The artifacts broker: a Drive page's MCP tool call, run as the person
-//! viewing the page.
+//! The artifacts broker: a Drive page's capabilities, and its MCP tool
+//! calls run as the person viewing the page.
 //!
 //! A live page never holds a credential and never reaches a server itself;
 //! it asks the broker, and the broker runs the tool through this instance's
 //! own MCP proxy with the viewer's own session, so the viewer's per-tool
 //! access, the proxy's checks and a connector's per-user OAuth apply exactly
-//! as they do for an agent's call (`proxy`). The route takes only the web
-//! login's browser session (`viewer`), checks the viewer's `view` on the
-//! document and the call's admission (`call`, `ArtifactsBroker::admit`),
-//! and writes one audit row per call to `artifact_tool_calls`.
+//! as they do for an agent's call (`proxy`). Before that, every call passes
+//! one admission (`admit`): the viewer sees the document, the page's
+//! manifest declares the server and the tool (`manifest`, written by the
+//! agent through the `documents` server), the operator's policy allows them
+//! (`policy`), and the viewer has allowed the server for this page
+//! (`consent`). A tool that does not declare `readOnlyHint: true` also needs
+//! a one-shot approval of that exact call (`approve`). A read may be served
+//! from the viewer's cache (`cache`). The page can list and describe what it
+//! may call (`tools`) and republish itself (`publish`).
 //!
-//! [`artifacts_router`] mounts `POST /api/v1/artifacts/{document_id}/mcp/call`
-//! outside the admin session; the web facade merges it when the document
-//! store is on.
+//! The routes take only the web login's browser session (`viewer`), never an
+//! agent's or the bridge's bearer, and each tool call writes one audit row
+//! to `artifact_tool_calls`. [`artifacts_router`] mounts them under
+//! `/api/v1/artifacts/{document_id}/` outside the admin session; the web
+//! facade merges it when the document store is on. [`LivePages`] is the part
+//! the `documents` server shares to check and record a declaration.
 
+mod admit;
 mod answer;
+mod approve;
+mod cache;
 mod call;
+mod consent;
 mod error;
+mod live_pages;
+pub mod manifest;
+mod policy;
 mod proxy;
+mod publish;
+mod tools;
 mod viewer;
 
 use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
-use axum::routing::post;
+use axum::routing::{delete, get, post};
 use sqlx::PgPool;
-use systemprompt::identifiers::McpServerId;
 use systemprompt::manifest::services::ServicesView;
 use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use crate::routes::drive_user::DriveDocuments;
-use error::{ArtifactCallCode, ArtifactCallError};
-use proxy::LoopbackProxy;
+pub use live_pages::{LivePages, LivePagesError};
+pub use policy::{LivePagesPolicy, LivePagesPolicyError};
 
 pub const CALL_PATH: &str = "/api/v1/artifacts/{document_id}/mcp/call";
-const MAX_BODY_BYTES: usize = 1024 * 1024;
+const APPROVE_PATH: &str = "/api/v1/artifacts/{document_id}/mcp/approve";
+const TOOLS_PATH: &str = "/api/v1/artifacts/{document_id}/mcp/tools";
+const DESCRIBE_PATH: &str = "/api/v1/artifacts/{document_id}/mcp/describe";
+const INVALIDATE_PATH: &str = "/api/v1/artifacts/{document_id}/mcp/invalidate";
+const PERMISSIONS_PATH: &str = "/api/v1/artifacts/{document_id}/permissions";
+const PERMISSION_PATH: &str = "/api/v1/artifacts/{document_id}/permissions/{scope}";
+const PUBLISH_PATH: &str = "/api/v1/artifacts/{document_id}/artifact/publish";
+const MAX_BODY_BYTES: usize = 4 * 1024 * 1024;
 
 /// What the broker is built from.
 ///
-/// The document service the view check asks, the live services view the
-/// servers are looked up in, the boot values (the token authority, the site's
-/// origins and the API's internal URL) and the pool the audit rows go to.
+/// The document service the view check asks and a publish writes through,
+/// the live services view the servers are looked up in, the boot values (the
+/// token authority, the site's origins, the services root the live-pages
+/// policy is read from and the API's internal URL) and the pool the
+/// manifest, consents, approvals, cache and audit rows live in.
 pub struct ArtifactsBrokerParts {
     pub documents: DriveDocuments,
     pub services: ServicesView,
@@ -63,7 +88,7 @@ pub(crate) struct ArtifactsBroker {
 
 struct Broker {
     parts: ArtifactsBrokerParts,
-    proxy: LoopbackProxy,
+    live: LivePages,
 }
 
 impl std::fmt::Debug for ArtifactsBroker {
@@ -72,33 +97,30 @@ impl std::fmt::Debug for ArtifactsBroker {
     }
 }
 
-pub fn artifacts_router(parts: ArtifactsBrokerParts) -> Result<Router, reqwest::Error> {
-    let proxy = LoopbackProxy::new(&parts.boot.config().api_internal_url)?;
+impl ArtifactsBroker {
+    fn pool(&self) -> &PgPool {
+        &self.inner.parts.pool
+    }
+}
+
+pub fn artifacts_router(parts: ArtifactsBrokerParts) -> Result<Router, LivePagesError> {
+    let live = LivePages::new(
+        parts.boot.services_root(),
+        parts.services.config.clone(),
+        &parts.boot.config().api_internal_url,
+    )?;
     let broker = ArtifactsBroker {
-        inner: Arc::new(Broker { parts, proxy }),
+        inner: Arc::new(Broker { parts, live }),
     };
     Ok(Router::new()
         .route(CALL_PATH, post(call::call))
+        .route(APPROVE_PATH, post(approve::approve))
+        .route(TOOLS_PATH, post(tools::list))
+        .route(DESCRIBE_PATH, post(tools::describe))
+        .route(INVALIDATE_PATH, post(tools::invalidate))
+        .route(PERMISSIONS_PATH, get(consent::read).post(consent::decide))
+        .route(PERMISSION_PATH, delete(consent::revoke))
+        .route(PUBLISH_PATH, post(publish::publish))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(broker))
-}
-
-impl ArtifactsBroker {
-    // Why: every admission check lives here (today the server; next the
-    // page's declared capabilities and the viewer's consent), so no call
-    // reaches the proxy around one of them.
-    fn admit(&self, server: &McpServerId) -> Result<(), ArtifactCallError> {
-        let services = self.inner.parts.services.config();
-        match services.mcp_servers.get(server.as_str()) {
-            None => Err(ArtifactCallError::new(
-                ArtifactCallCode::BadRequest,
-                "this instance has no such MCP server",
-            )),
-            Some(deployment) if !deployment.enabled => Err(ArtifactCallError::new(
-                ArtifactCallCode::ServerUnavailable,
-                "this MCP server is switched off",
-            )),
-            Some(_) => Ok(()),
-        }
-    }
 }

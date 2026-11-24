@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM artifact_capabilities WHERE document_id = $1::text::uuid",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fe8f4438ad54bbd2647d007158cb4830465a7e6bda2a3c4ae031cdf676cb7d90"
+}

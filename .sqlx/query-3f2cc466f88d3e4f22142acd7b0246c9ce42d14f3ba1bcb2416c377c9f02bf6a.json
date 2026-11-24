@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT capabilities, contract_version\n             FROM artifact_capabilities\n            WHERE document_id = $1::text::uuid",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "capabilities",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "artifact_capabilities",
+            "name": "capabilities"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "contract_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artifact_capabilities",
+            "name": "contract_version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "3f2cc466f88d3e4f22142acd7b0246c9ce42d14f3ba1bcb2416c377c9f02bf6a"
+}

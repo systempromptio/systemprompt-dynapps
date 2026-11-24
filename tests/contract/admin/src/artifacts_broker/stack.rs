@@ -1,10 +1,11 @@
 //! The installation the broker suite drives: a profile over the run's
-//! throwaway database with the document store on and the `artifacts-fake`
-//! MCP server declared, the API served on the loopback port the profile
-//! names (the broker reaches core's MCP proxy there), and the fake server
-//! hosted in-process by core's toolset host, booted from the environment
-//! core's spawner hands a server process and registered as running, so the
-//! proxy forwards to it exactly as it forwards to a spawned server.
+//! throwaway database with the document store on, the `artifacts-fake` MCP
+//! server declared and a live-pages policy of the suite's own; the API served
+//! on the loopback port the profile names (the broker reaches core's MCP
+//! proxy there); and two servers hosted in-process, booted from the
+//! environment core's spawner hands a server process and registered as
+//! running: the fake, by core's toolset host, and the extension's own
+//! `documents` server, by the same router its binary serves.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -13,23 +14,33 @@ use serde_json::Value;
 use systemprompt::database::{CreateServiceInput, ServiceModule, ServiceStatus};
 use systemprompt::identifiers::{AccessTokenId, DocumentId, McpServerId, ServiceName, UserId};
 use systemprompt::mcp::services::process::spawner;
-use systemprompt::models::auth::{AuthenticatedUser, JwtAudience, Permission, UserJwtRequest};
+use systemprompt::models::auth::{
+    AuthenticatedUser, JwtAudience, McpHopIdentity, Permission, TokenInteraction, UserJwtRequest,
+    UserType,
+};
 use systemprompt::system::{AppContext, HostContext};
 use systemprompt_security::keys::RsaSigningKey;
 
+use crate::docs_smoke::mcp::{McpCaller, McpClient};
 use crate::docs_smoke::stack as docs;
 use crate::globals;
 
 pub(super) const SERVER: &str = "artifacts-fake";
+pub(super) const DOCUMENTS: &str = "documents";
 const FAKE_SERVER_YAML: &str = include_str!("../../fixtures/artifacts_fake.yaml");
 const FAKE_INCLUDE: &str = "  - ../mcp/artifacts_fake.yaml\n";
+// The suite's operator policy: the fake's `off` tool and every other server
+// are left out, so a page may not ask for them.
+const LIVE_PAGES_POLICY: &str = "live_pages:\n  servers:\n    artifacts-fake:\n      tools:\n      \
+     - artifacts_fake_echo\n      - artifacts_fake_secret\n      - artifacts_fake_write\n";
 
 pub(super) struct Stack {
     pub(super) ctx: Arc<AppContext>,
     pub(super) api: String,
     pub(super) origin: String,
+    documents_mcp: String,
     _api: tokio::task::JoinHandle<()>,
-    _fake: tokio::task::JoinHandle<()>,
+    _servers: [tokio::task::JoinHandle<()>; 2],
 }
 
 pub(super) struct Reply {
@@ -42,6 +53,21 @@ impl Reply {
         serde_json::from_str(&self.body)
             .unwrap_or_else(|e| panic!("{} is not JSON ({e}): {}", self.status, self.body))
     }
+
+    pub(super) fn key(&self) -> String {
+        self.json()["error_key"]
+            .as_str()
+            .unwrap_or_else(|| panic!("no error_key in {}: {}", self.status, self.body))
+            .to_owned()
+    }
+}
+
+// Who a request presents itself as.
+#[derive(Clone, Copy)]
+pub(super) enum As<'a> {
+    Nobody,
+    Cookie(&'a str),
+    Bearer(&'a str),
 }
 
 fn free_ports() -> [u16; 2] {
@@ -111,6 +137,11 @@ fn write_profile(database_url: &str, api_port: u16, ports: [u16; 2]) -> PathBuf 
         FAKE_SERVER_YAML.replace("__PORT__", &ports[1].to_string()),
     )
     .expect("write the fake server's YAML");
+    std::fs::write(
+        services.join("documents/live-pages.yaml"),
+        LIVE_PAGES_POLICY,
+    )
+    .expect("write the suite's live-pages policy");
     let anchor = "  - ../mcp/dynbrain.yaml\n";
     edit(
         &services.join("config/config.yaml"),
@@ -119,11 +150,11 @@ fn write_profile(database_url: &str, api_port: u16, ports: [u16; 2]) -> PathBuf 
     profile
 }
 
-fn server_environment(ctx: &AppContext, profile: &Path, port: u16) -> Vec<(String, String)> {
+async fn host(ctx: &AppContext, profile: &Path, server: &str, port: u16) -> HostContext {
     let config = ctx
         .mcp_registry()
-        .get_server(SERVER)
-        .expect("the fake server is in the run's services config");
+        .get_server(server)
+        .expect("the server is in the run's services config");
     let (tools_json, model_json) =
         spawner::serialize_server_configs(&config).expect("serialise the server's configs");
     let mut environment = spawner::spawn_environment(
@@ -141,20 +172,32 @@ fn server_environment(ctx: &AppContext, profile: &Path, port: u16) -> Vec<(Strin
         |name| std::env::var(name).ok(),
     )
     .expect("build the environment the API's spawner hands the server");
-    environment.push(("MCP_SERVICE_ID".to_owned(), SERVER.to_owned()));
-    environment
-}
-
-async fn start_fake(ctx: &AppContext, profile: &Path, port: u16) -> tokio::task::JoinHandle<()> {
-    let environment = server_environment(ctx, profile, port);
-    let host = HostContext::boot(move |name| {
+    environment.push(("MCP_SERVICE_ID".to_owned(), server.to_owned()));
+    HostContext::boot(move |name| {
         environment
             .iter()
             .find(|(key, _)| key == name)
             .map(|(_, value)| value.clone())
     })
     .await
-    .expect("the fake server's host context boots");
+    .expect("the server's host context boots")
+}
+
+async fn register_running(ctx: &AppContext, server: &str, port: u16) {
+    ctx.service_repository()
+        .create_service(CreateServiceInput {
+            name: &ServiceName::new(server),
+            module_name: ServiceModule::Mcp,
+            status: ServiceStatus::Running,
+            port,
+            binary_mtime: None,
+        })
+        .await
+        .expect("register the server as running");
+}
+
+async fn start_fake(ctx: &AppContext, profile: &Path, port: u16) -> tokio::task::JoinHandle<()> {
+    let host = host(ctx, profile, SERVER, port).await;
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
         .await
         .expect("bind the fake server's port");
@@ -167,17 +210,28 @@ async fn start_fake(ctx: &AppContext, profile: &Path, port: u16) -> tokio::task:
         .await
         .expect("the fake server serves");
     });
-    ctx.service_repository()
-        .create_service(CreateServiceInput {
-            name: &ServiceName::new(SERVER),
-            module_name: ServiceModule::Mcp,
-            status: ServiceStatus::Running,
-            port,
-            binary_mtime: None,
-        })
-        .await
-        .expect("register the fake server as running");
+    register_running(ctx, SERVER, port).await;
     fake
+}
+
+async fn start_documents(
+    ctx: &AppContext,
+    profile: &Path,
+    port: u16,
+) -> tokio::task::JoinHandle<()> {
+    let host = host(ctx, profile, DOCUMENTS, port).await;
+    let router = systemprompt_mcp_documents::router(&host, &McpServerId::new(DOCUMENTS))
+        .expect("the documents server's router builds");
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
+        .await
+        .expect("bind the documents server's port");
+    let served = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .await
+            .expect("the documents server serves");
+    });
+    register_running(ctx, DOCUMENTS, port).await;
+    served
 }
 
 // The `mcp_server/artifacts-fake` band, as `config apply` writes one for a
@@ -206,6 +260,7 @@ async fn seed_fake_access(pool: &sqlx::PgPool) {
 
 pub(super) async fn start(pool: &sqlx::PgPool, database_url: &str) -> Stack {
     docs::seed_system_admin(pool).await;
+    docs::seed_documents_access(pool).await;
     seed_fake_access(pool).await;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
@@ -232,6 +287,7 @@ pub(super) async fn start(pool: &sqlx::PgPool, database_url: &str) -> Stack {
         .await
         .expect("the API serves");
     });
+    let documents = start_documents(&ctx, &profile, ports[0]).await;
     let fake = start_fake(&ctx, &profile, ports[1]).await;
     let origin = url::Url::parse(&ctx.config().api_external_url)
         .expect("the run's external URL parses")
@@ -241,27 +297,31 @@ pub(super) async fn start(pool: &sqlx::PgPool, database_url: &str) -> Stack {
         ctx,
         api: format!("http://127.0.0.1:{api_port}"),
         origin,
+        documents_mcp: format!("http://127.0.0.1:{}/mcp", ports[0]),
         _api: api,
-        _fake: fake,
+        _servers: [documents, fake],
     }
 }
 
+fn user(id: &UserId) -> AuthenticatedUser {
+    AuthenticatedUser::new_with_roles(
+        id.clone(),
+        id.as_str().to_owned(),
+        format!("{}@contract.test", id.as_str()),
+        vec![Permission::User],
+        vec!["user".to_owned()],
+    )
+}
+
 impl Stack {
-    // The web login's session as the browser holds it: a live session row
-    // and a `browser_session` token the runtime mints with the run's key.
-    pub(super) async fn session_cookie(&self, pool: &sqlx::PgPool, user: &UserId) -> String {
-        let session = docs::seed_session(pool, user).await;
-        let token = self
-            .ctx
+    // A token over a live session row, minted with the run's key: the web
+    // login's `browser_session` one, or an attended agent's.
+    async fn token(&self, pool: &sqlx::PgPool, id: &UserId, browser: bool) -> String {
+        let session = docs::seed_session(pool, id).await;
+        self.ctx
             .token_authority()
             .mint_user_jwt(&UserJwtRequest {
-                user: AuthenticatedUser::new_with_roles(
-                    user.clone(),
-                    user.as_str().to_owned(),
-                    format!("{}@contract.test", user.as_str()),
-                    vec![Permission::User],
-                    vec!["user".to_owned()],
-                ),
+                user: user(id),
                 session_id: session,
                 jti: AccessTokenId::generate(),
                 permissions: vec![Permission::User],
@@ -270,16 +330,47 @@ impl Stack {
                 client_id: None,
                 purpose: None,
                 plugin_id: None,
-                interaction: None,
-                browser_session: true,
+                interaction: (!browser).then_some(TokenInteraction::Interactive),
+                browser_session: browser,
                 ui_session: false,
-                auth_time: Some(chrono::Utc::now().timestamp()),
+                auth_time: browser.then(|| chrono::Utc::now().timestamp()),
             })
-            .expect("mint the session token");
-        format!("access_token={token}")
+            .expect("mint the token")
     }
 
-    pub(super) async fn owned_document(&self, owner: &UserId) -> DocumentId {
+    pub(super) async fn session_cookie(&self, pool: &sqlx::PgPool, id: &UserId) -> String {
+        format!("access_token={}", self.token(pool, id, true).await)
+    }
+
+    pub(super) async fn agent_bearer(&self, pool: &sqlx::PgPool, id: &UserId) -> String {
+        self.token(pool, id, false).await
+    }
+
+    // An attended agent on the `documents` server, as the proxy hands it on:
+    // the agent's bearer and a hop token naming the same person.
+    pub(super) async fn agent(&self, pool: &sqlx::PgPool, id: &UserId) -> McpClient {
+        let bearer = self.agent_bearer(pool, id).await;
+        let session = docs::seed_session(pool, id).await;
+        let caller = McpCaller {
+            bearer,
+            tokens: self.ctx.token_authority(),
+            server: McpServerId::new(DOCUMENTS),
+            identity: McpHopIdentity {
+                user_id: id.clone(),
+                user: Some(user(id)),
+                session_id: session,
+                user_type: UserType::User,
+                client_id: None,
+                act_chain: Vec::new(),
+                purpose: None,
+                interaction: Some(TokenInteraction::Interactive),
+                mcp_session: None,
+            },
+        };
+        McpClient::connect(&self.documents_mcp, caller).await
+    }
+
+    pub(super) async fn owned_document(&self, owner: &UserId, template: &str) -> DocumentId {
         use systemprompt::files::documents::agents::{DocumentActor, act_as};
         use systemprompt::files::documents::models::{RevisionAttribution, RevisionOrigin};
         use systemprompt::files::documents::service::{Author, CreateRequest};
@@ -297,9 +388,9 @@ impl Stack {
         let created = service.create_from_template(
             &caller,
             CreateRequest {
-                template_id: DocumentTemplateId::new("dynapps-word"),
+                template_id: DocumentTemplateId::new(template),
                 folder: None,
-                name: "artifacts-broker".to_owned(),
+                name: format!("artifacts-broker-{template}"),
                 params: systemprompt_provider_contracts::documents::TemplateParams::default(),
                 ops: Vec::new(),
                 author: Author {
@@ -319,25 +410,26 @@ impl Stack {
         document.id
     }
 
-    // One broker call as the Drive page makes it: the session cookie, from
-    // the site's own page.
-    pub(super) async fn call(
+    // One request as the shell makes it: from the site's own page, with
+    // whichever credential `who` names.
+    pub(super) async fn send(
         &self,
-        cookie: Option<&str>,
-        document: &DocumentId,
-        body: &Value,
+        method: reqwest::Method,
+        path: &str,
+        who: As<'_>,
+        body: Option<&Value>,
     ) -> Reply {
         let mut request = reqwest::Client::new()
-            .post(format!(
-                "{}/api/v1/artifacts/{}/mcp/call",
-                self.api,
-                document.as_str()
-            ))
+            .request(method, format!("{}{path}", self.api))
             .header("origin", &self.origin)
-            .header("sec-fetch-site", "same-origin")
-            .json(body);
-        if let Some(cookie) = cookie {
-            request = request.header("cookie", cookie);
+            .header("sec-fetch-site", "same-origin");
+        request = match who {
+            As::Nobody => request,
+            As::Cookie(cookie) => request.header("cookie", cookie),
+            As::Bearer(bearer) => request.bearer_auth(bearer),
+        };
+        if let Some(body) = body {
+            request = request.json(body);
         }
         let response = request.send().await.expect("reach the API");
         let status = response.status();

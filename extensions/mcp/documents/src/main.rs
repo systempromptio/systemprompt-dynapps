@@ -5,9 +5,7 @@ use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use systemprompt::identifiers::McpServerId;
-use systemprompt::runtime::documents::mcp::DocumentsMcpTools;
 use systemprompt::system::HostContext;
-use systemprompt_mcp_documents::DocumentsServer;
 // Why: core discovers the governance authz hook, the connection snapshot
 // source, the group/project/role subject providers and the document template
 // providers through inventory, so the crates that register them must be
@@ -106,33 +104,7 @@ async fn main() -> Result<()> {
         )
         .context("Invalid MCP_SERVICE_ID")?;
 
-    let server = DocumentsServer::new(
-        Arc::clone(ctx.db_pool()),
-        systemprompt_mcp_shared::auth::ServerAccess {
-            authz_hook: Arc::clone(ctx.authz_hook()),
-            services: ctx.services_state().watch().clone(),
-        },
-        ctx.artifact_ingest(),
-        DocumentsMcpTools::from_host(&ctx, service_id.clone())
-            .context("Document store unavailable")?,
-    );
-    let requires_oauth = ctx
-        .services_state()
-        .config()
-        .mcp_servers
-        .get(service_id.as_str())
-        .is_some_and(|deployment| deployment.oauth.required);
-    let router = systemprompt::mcp::create_router(
-        server,
-        Arc::clone(ctx.mcp_session_repository()),
-        systemprompt::mcp::McpHttpConfig::default(),
-        systemprompt::mcp::middleware::HopVerifier::new(
-            ctx.verification_keys().clone(),
-            &ctx.config().jwt_issuer,
-            service_id.clone(),
-        )
-        .requiring_hop(requires_oauth),
-    );
+    let router = systemprompt_mcp_documents::router(&ctx, &service_id)?;
 
     tracing::info!(
         service_id = %service_id,

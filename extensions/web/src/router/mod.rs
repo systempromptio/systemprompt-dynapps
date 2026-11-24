@@ -5,8 +5,8 @@
 //! crates' route fragments into the admin plane's routers, [`api`] mounts the
 //! JSON/webhook plane, and [`admin_ssr`] mounts the server-rendered dashboard
 //! plus the desktop-bridge sign-in flow, and [`sso`] discovers core's SSO
-//! driver. With the document store on, the artifacts broker's route
-//! (`POST /api/v1/artifacts/{document_id}/mcp/call`) is merged beside them.
+//! driver. With the document store on, the artifacts broker's routes
+//! (`/api/v1/artifacts/{document_id}/...`) are merged beside them.
 //! `build` composes them over the extension's loaded config; if
 //! the admin template engine cannot initialise, the API plane still mounts at
 //! its normal prefix and only the SSR nests are skipped, so a misconfigured
@@ -66,7 +66,7 @@ fn artifacts(
         pool: Arc::clone(&db.write),
     })
     .unwrap_or_else(|error| {
-        tracing::error!(%error, "artifacts broker HTTP client refused; live pages are not mounted");
+        tracing::error!(%error, "the artifacts broker could not be built; live pages are not mounted");
         Router::new()
     })
 }

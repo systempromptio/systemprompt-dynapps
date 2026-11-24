@@ -2,13 +2,15 @@
 //! page asks for, run as the person viewing it.
 //!
 //! First the request itself: the viewer (`viewer`), a well-formed document
-//! id and a body naming a server and a tool. A request that fails there is
-//! answered without an audit row, because it names nothing to record. Then,
-//! audited: the viewer's `view` on the document (asked of core's document
-//! service as the viewer, so a document they cannot see is a 404 exactly as
-//! in Drive), the input, the call's admission and the call through core's
-//! MCP proxy. The row holds the outcome and the duration, never the input or
-//! the result.
+//! id and a body `{server, tool, input?, approval?, cache?}`. A request that
+//! fails there is answered without an audit row, because it names nothing to
+//! record. Then, audited: the page and the call's admission (`admit`), the
+//! viewer's cache for a read (`cache`), and one session with core's MCP
+//! proxy as the viewer: the server's tool list says whether the tool is a
+//! read (`readOnlyHint: true`) or a write, and a write runs only on an
+//! approval of exactly this call, which the call spends. The row holds the
+//! outcome (`ok`, `cached` or the error key) and the duration, never the
+//! input or the result.
 
 use std::time::Instant;
 
@@ -20,18 +22,20 @@ use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 // JSON: MCP-protocol boundary, a tool's arguments and result are schema-less.
 use serde_json::Value;
-use systemprompt::files::documents::DocumentsError;
 use systemprompt::files::documents::agents::{DocumentActor, act_as};
-use systemprompt::identifiers::{DocumentId, McpServerId, McpToolName, TraceId};
+use systemprompt::identifiers::{DocumentId, McpServerId, McpToolName};
 
 use super::ArtifactsBroker;
+use super::cache::{self, CacheOption, Freshness};
 use super::error::{ArtifactCallCode, ArtifactCallError};
-use super::proxy::ProxiedCall;
+use super::manifest::is_name;
 use super::viewer::ArtifactViewer;
+use crate::repositories::artifact_approvals::{self, ArtifactApproval};
+use crate::repositories::artifact_call_cache::{self, CachedCallKey, CachedCallScope};
 use crate::repositories::artifact_tool_calls::{self, NewToolCall};
 
 const OK: &str = "ok";
-const MAX_NAME_BYTES: usize = 128;
+const CACHED: &str = "cached";
 
 // JSON: MCP-protocol boundary, the tool's arguments as the page sends them.
 #[derive(Debug, Deserialize)]
@@ -41,6 +45,10 @@ struct CallBody {
     tool: String,
     #[serde(default)]
     input: Option<Value>,
+    #[serde(default)]
+    approval: Option<String>,
+    #[serde(default)]
+    cache: Option<CacheOption>,
 }
 
 struct Target {
@@ -48,6 +56,14 @@ struct Target {
     server: McpServerId,
     tool: McpToolName,
     input: Option<Value>,
+    approval: Option<String>,
+    cache: Option<CacheOption>,
+}
+
+// JSON: MCP-protocol boundary, the result and whether the cache served it.
+struct Served {
+    result: Value,
+    cached: bool,
 }
 
 pub(super) async fn call(
@@ -60,11 +76,13 @@ pub(super) async fn call(
     let viewer = ArtifactViewer::from_request(&broker.inner.parts.boot, &headers)?;
     let target = target(raw_document, &body)?;
     let answer = act_as(DocumentActor::Human, run(&broker, &viewer, &target)).await;
-    let outcome = answer
-        .as_ref()
-        .map_or_else(|error| error.code().as_str(), result_outcome);
+    let outcome = match &answer {
+        Ok(served) if served.cached => CACHED,
+        Ok(served) => result_outcome(&served.result),
+        Err(error) => error.code().as_str(),
+    };
     let recorded = artifact_tool_calls::record_artifact_tool_call(
-        &broker.inner.parts.pool,
+        broker.pool(),
         &NewToolCall {
             user: &viewer.user.id,
             document: &target.document,
@@ -78,7 +96,7 @@ pub(super) async fn call(
     if let Err(error) = recorded {
         tracing::error!(%error, outcome, "artifact tool call ran but its audit row was not written");
     }
-    answer.map(|result| Json(result).into_response())
+    answer.map(|served| Json(served.result).into_response())
 }
 
 fn target(raw_document: String, body: &[u8]) -> Result<Target, ArtifactCallError> {
@@ -89,7 +107,7 @@ fn target(raw_document: String, body: &[u8]) -> Result<Target, ArtifactCallError
         tracing::debug!(%error, "artifact tool call body did not parse");
         ArtifactCallError::new(
             ArtifactCallCode::BadRequest,
-            "the body is `{server, tool, input}`",
+            "the body is `{server, tool, input, approval, cache}`",
         )
     })?;
     if !is_name(&body.server) || !is_name(&body.tool) {
@@ -103,78 +121,164 @@ fn target(raw_document: String, body: &[u8]) -> Result<Target, ArtifactCallError
         server: McpServerId::new(body.server),
         tool: McpToolName::new(body.tool),
         input: body.input,
+        approval: body.approval,
+        cache: body.cache,
     })
 }
 
-// Why: MCP's tool-name alphabet also covers every server key this instance
-// declares, and it bounds what an audit row can hold.
-fn is_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= MAX_NAME_BYTES
-        && name
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.'))
+// JSON: MCP-protocol boundary, the call's arguments.
+pub(super) fn arguments(input: Option<&Value>) -> Result<Value, ArtifactCallError> {
+    match input {
+        None | Some(Value::Null) => Ok(Value::Object(serde_json::Map::new())),
+        Some(input @ Value::Object(_)) => Ok(input.clone()),
+        Some(_) => Err(ArtifactCallError::new(
+            ArtifactCallCode::BadRequest,
+            "`input` is a JSON object",
+        )),
+    }
 }
 
-// JSON: MCP-protocol boundary, the tool result as core shapes it.
 async fn run(
     broker: &ArtifactsBroker,
     viewer: &ArtifactViewer,
     target: &Target,
-) -> Result<Value, ArtifactCallError> {
-    ensure_viewable(broker, viewer, &target.document).await?;
-    let arguments = match &target.input {
-        None => Value::Object(serde_json::Map::new()),
-        Some(input @ Value::Object(_)) => input.clone(),
-        Some(_) => {
-            return Err(ArtifactCallError::new(
-                ArtifactCallCode::BadRequest,
-                "`input` is a JSON object",
-            ));
+) -> Result<Served, ArtifactCallError> {
+    let page = broker.page(viewer, &target.document).await?;
+    let arguments = arguments(target.input.as_ref())?;
+    broker
+        .admit(viewer, &page, target.server.as_str(), target.tool.as_str())
+        .await?;
+    let input_hash = cache::input_hash(&arguments);
+    let key = CachedCallKey {
+        user: &viewer.user.id,
+        document: &target.document,
+        server: target.server.as_str(),
+        tool: target.tool.as_str(),
+        input_hash: &input_hash,
+    };
+    let freshness = Freshness::of(target.cache.as_ref());
+    if freshness.serve_within_ms > 0
+        && let Some(hit) = artifact_call_cache::find_artifact_cached_call(broker.pool(), &key)
+            .await
+            .map_err(|error| super::admit::internal(&error))?
+            .filter(|hit| freshness.serves(hit.stored_at))
+    {
+        return Ok(Served {
+            result: cache::served(hit.result, hit.stored_at),
+            cached: true,
+        });
+    }
+    let proxy = broker.inner.live.proxy();
+    let mut session = proxy.open(&target.server, viewer.credential()).await?;
+    let ran = in_session(broker, &mut session, target, &key, arguments).await;
+    session.close().await;
+    let (result, read) = match ran {
+        Ok(ran) => ran,
+        Err(error) => {
+            forget_on_denial(broker, &key, &error).await;
+            return Err(error);
         },
     };
-    broker.admit(&target.server)?;
-    broker
-        .inner
-        .proxy
-        .call_tool(ProxiedCall {
-            server: &target.server,
-            tool: &target.tool,
-            arguments,
-            bearer: viewer.credential(),
-        })
-        .await
+    let result = cache::stripped(result);
+    if read
+        && cache::storable(&result)
+        && let Some(expires_at) = freshness.expiry()
+        && let Err(error) =
+            artifact_call_cache::set_artifact_cached_call(broker.pool(), &key, &result, expires_at)
+                .await
+    {
+        tracing::warn!(%error, "a page's read ran but was not cached");
+    }
+    Ok(Served {
+        result,
+        cached: false,
+    })
 }
 
-async fn ensure_viewable(
+// JSON: MCP-protocol boundary, the tool listing and the call's result.
+async fn in_session(
     broker: &ArtifactsBroker,
-    viewer: &ArtifactViewer,
-    document: &DocumentId,
+    session: &mut super::proxy::Session<'_>,
+    target: &Target,
+    key: &CachedCallKey<'_>,
+    arguments: Value,
+) -> Result<(Value, bool), ArtifactCallError> {
+    let tools = session.tools().await?;
+    let Some(listed) = tools
+        .iter()
+        .find(|tool| tool.get("name").and_then(Value::as_str) == Some(target.tool.as_str()))
+    else {
+        return Err(ArtifactCallError::new(
+            ArtifactCallCode::BlockedByPolicy,
+            "the server lists no such tool for this viewer",
+        ));
+    };
+    let read = listed
+        .pointer("/annotations/readOnlyHint")
+        .and_then(Value::as_bool)
+        == Some(true);
+    if !read {
+        spend_approval(broker, target, key).await?;
+    }
+    session
+        .call(&target.tool, arguments)
+        .await
+        .map(|result| (result, read))
+}
+
+async fn spend_approval(
+    broker: &ArtifactsBroker,
+    target: &Target,
+    key: &CachedCallKey<'_>,
 ) -> Result<(), ArtifactCallError> {
-    let lookup = broker
-        .inner
-        .parts
-        .documents
-        .0
-        .get(&viewer.user, document, &TraceId::generate())
-        .await;
-    match lookup {
-        Ok(_) => Ok(()),
-        Err(
-            DocumentsError::Forbidden { .. }
-            | DocumentsError::NotFound { .. }
-            | DocumentsError::Trashed { .. },
-        ) => Err(ArtifactCallError::new(
-            ArtifactCallCode::NotFound,
-            "document not found",
-        )),
-        Err(error) => {
-            tracing::error!(%error, "the document service failed an artifact tool call's view check");
-            Err(ArtifactCallError::new(
-                ArtifactCallCode::Internal,
-                "the document could not be checked",
-            ))
-        },
+    let needed = || {
+        ArtifactCallError::new(
+            ArtifactCallCode::ApprovalRequired,
+            "this tool changes things; the viewer approves each call",
+        )
+    };
+    let id = target.approval.as_deref().ok_or_else(needed)?;
+    let approval = ArtifactApproval {
+        id,
+        user: key.user,
+        document: key.document,
+        server: key.server,
+        tool: key.tool,
+        input_hash: key.input_hash,
+    };
+    let spent = artifact_approvals::delete_artifact_approval(broker.pool(), &approval)
+        .await
+        .map_err(|error| super::admit::internal(&error))?;
+    if spent { Ok(()) } else { Err(needed()) }
+}
+
+// Why: Anthropic's artifact runtime drops a cached entry when a call on it
+// is denied, so revoked access never keeps answering from the cache.
+async fn forget_on_denial(
+    broker: &ArtifactsBroker,
+    key: &CachedCallKey<'_>,
+    error: &ArtifactCallError,
+) {
+    let denied = matches!(
+        error.code(),
+        ArtifactCallCode::Reauth
+            | ArtifactCallCode::BlockedByPolicy
+            | ArtifactCallCode::ServerNotConnected
+    );
+    if !denied {
+        return;
+    }
+    let scope = CachedCallScope {
+        user: key.user,
+        document: key.document,
+        server: Some(key.server),
+        tool: Some(key.tool),
+        input_hash: Some(key.input_hash),
+    };
+    if let Err(error) =
+        artifact_call_cache::delete_artifact_cached_calls(broker.pool(), &scope).await
+    {
+        tracing::warn!(%error, "a denied call's cached result was not dropped");
     }
 }
 

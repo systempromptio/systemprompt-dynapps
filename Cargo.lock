@@ -7648,6 +7648,7 @@ dependencies = [
  "axum",
  "rmcp",
  "rustls",
+ "serde_json",
  "systemprompt",
  "systemprompt-mcp-shared",
  "systemprompt-secrets-onepassword",

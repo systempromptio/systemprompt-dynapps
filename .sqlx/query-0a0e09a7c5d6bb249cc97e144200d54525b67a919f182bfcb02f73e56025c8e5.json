@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT scope, granted\n             FROM artifact_consents\n            WHERE user_id = $1 AND document_id = $2::text::uuid\n            ORDER BY scope",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "scope",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "artifact_consents",
+            "name": "scope"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "granted",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "artifact_consents",
+            "name": "granted"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "0a0e09a7c5d6bb249cc97e144200d54525b67a919f182bfcb02f73e56025c8e5"
+}

@@ -3,7 +3,8 @@
 # the fake toolset `artifacts-fake` (tests/contract/admin/src/artifacts_broker),
 # so every call meets core's own hop-token check, server ACL and per-tool
 # access. `artifacts_fake_secret` is granted to admins only; a person with the
-# `user` role sees it refused by the server, not by the broker. The binary is
+# `user` role neither lists it nor runs it, which is the server's refusal, not
+# the broker's. The binary is
 # never spawned; it names one the extension index knows because core builds
 # every enabled internal server's config from that index, and a name it does
 # not know fails every proxied call, not only this server's.

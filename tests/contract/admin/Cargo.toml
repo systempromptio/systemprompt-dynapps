@@ -34,4 +34,5 @@ serde_json = { workspace = true }
 jsonwebtoken = { workspace = true }
 url = { workspace = true }
 rmcp = { workspace = true }
+systemprompt-mcp-documents = { workspace = true }
 async-trait = { workspace = true }

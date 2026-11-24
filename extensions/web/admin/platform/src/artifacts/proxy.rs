@@ -1,8 +1,10 @@
-//! One `tools/call` through this instance's own MCP proxy, as the viewer.
+//! MCP sessions through this instance's own MCP proxy, as one person.
 //!
 //! The broker is an MCP client of `/api/v1/mcp/{server}/mcp` on the API's
 //! internal URL, the way core's own MCP client reaches a managed server, and
-//! it presents the viewer's own session token as the bearer. So the proxy
+//! it presents the person's own token as the bearer (the viewer's web
+//! session for a page's call, the agent's own bearer when the `documents`
+//! server checks a declaration). So the proxy
 //! does what it does for any caller: it authenticates the token, checks the
 //! server's scopes, resolves a connector's per-user OAuth for an external
 //! server, and signs the hop token that carries the viewer to a managed
@@ -11,8 +13,9 @@
 //! or the server decides.
 //!
 //! The exchange is the streamable-HTTP handshake at the last MCP protocol
-//! version that still has `initialize` (`PROTOCOL_VERSION`): `initialize`,
-//! `notifications/initialized`, `tools/call`, then `DELETE` of the session.
+//! version that still has `initialize` (`PROTOCOL_VERSION`): `initialize`
+//! and `notifications/initialized`, then `tools/list` (every page) and
+//! `tools/call` as the caller needs them, then `DELETE` of the session.
 //! `answer` reads what came back into the broker's codes.
 
 use std::time::Duration;
@@ -32,8 +35,7 @@ const SESSION_HEADER: &str = "mcp-session-id";
 const PROTOCOL_HEADER: &str = "mcp-protocol-version";
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_ANSWER_BYTES: usize = 8 * 1024 * 1024;
-const INITIALIZE_ID: u64 = 1;
-const CALL_ID: u64 = 2;
+const MAX_LIST_PAGES: usize = 20;
 
 #[derive(Debug, Clone)]
 pub(crate) struct LoopbackProxy {
@@ -41,20 +43,13 @@ pub(crate) struct LoopbackProxy {
     base: String,
 }
 
-// JSON: MCP-protocol boundary, schema-less tool arguments and results.
-pub(crate) struct ProxiedCall<'a> {
-    pub(crate) server: &'a McpServerId,
-    pub(crate) tool: &'a McpToolName,
-    pub(crate) arguments: Value,
-    pub(crate) bearer: &'a str,
-}
-
-struct Session<'a> {
+pub(crate) struct Session<'a> {
     proxy: &'a LoopbackProxy,
     url: String,
     bearer: &'a str,
     id: Option<String>,
     version: String,
+    next: u64,
 }
 
 impl LoopbackProxy {
@@ -70,16 +65,16 @@ impl LoopbackProxy {
         })
     }
 
-    // JSON: MCP-protocol boundary, the tool result as core shapes it.
-    pub(crate) async fn call_tool(
-        &self,
-        call: ProxiedCall<'_>,
-    ) -> Result<Value, ArtifactCallError> {
+    pub(crate) async fn open<'a>(
+        &'a self,
+        server: &McpServerId,
+        bearer: &'a str,
+    ) -> Result<Session<'a>, ArtifactCallError> {
         let url = validate_outbound_url(
             &format!(
                 "{}{}",
                 self.base,
-                ApiPaths::mcp_server_endpoint(call.server.as_str())
+                ApiPaths::mcp_server_endpoint(server.as_str())
             ),
             LoopbackPolicy::Allow,
         )
@@ -93,47 +88,84 @@ impl LoopbackProxy {
         let mut session = Session {
             proxy: self,
             url: url.to_string(),
-            bearer: call.bearer,
+            bearer,
             id: None,
             version: PROTOCOL_VERSION.to_owned(),
+            next: 0,
         };
-        let answer = session.call(&call).await;
-        session.close().await;
-        answer
+        match session.handshake().await {
+            Ok(()) => Ok(session),
+            Err(error) => {
+                session.close().await;
+                Err(error)
+            },
+        }
     }
 }
 
 impl Session<'_> {
-    async fn call(&mut self, call: &ProxiedCall<'_>) -> Result<Value, ArtifactCallError> {
+    async fn handshake(&mut self) -> Result<(), ArtifactCallError> {
         let initialize = json!({
-            "jsonrpc": "2.0",
-            "id": INITIALIZE_ID,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": PROTOCOL_VERSION,
-                "capabilities": {},
-                "clientInfo": { "name": "systemprompt-dynapps-artifacts", "version": env!("CARGO_PKG_VERSION") },
-            },
+            "protocolVersion": PROTOCOL_VERSION,
+            "capabilities": {},
+            "clientInfo": { "name": "systemprompt-dynapps-artifacts", "version": env!("CARGO_PKG_VERSION") },
         });
-        let (session, handshake) = self.post(&initialize, Some(INITIALIZE_ID)).await?;
+        let (session, handshake) = self.request("initialize", initialize).await?;
         self.id = session;
-        if let Some(version) = handshake
-            .as_ref()
-            .and_then(|result| result.get("protocolVersion"))
-            .and_then(Value::as_str)
-        {
+        if let Some(version) = handshake.get("protocolVersion").and_then(Value::as_str) {
             version.clone_into(&mut self.version);
         }
         let initialized = json!({ "jsonrpc": "2.0", "method": "notifications/initialized" });
-        self.post(&initialized, None).await?;
-        let request = json!({
-            "jsonrpc": "2.0",
-            "id": CALL_ID,
-            "method": "tools/call",
-            "params": { "name": call.tool.as_str(), "arguments": call.arguments },
-        });
-        let (_, answer) = self.post(&request, Some(CALL_ID)).await?;
-        answer.ok_or_else(unreadable)
+        self.post(&initialized, None).await.map(|_| ())
+    }
+
+    // JSON: MCP-protocol boundary, each tool as the server lists it.
+    pub(crate) async fn tools(&mut self) -> Result<Vec<Value>, ArtifactCallError> {
+        let mut tools = Vec::new();
+        let mut cursor: Option<String> = None;
+        for _ in 0..MAX_LIST_PAGES {
+            let params = cursor.map_or_else(|| json!({}), |cursor| json!({ "cursor": cursor }));
+            let (_, page) = self.request("tools/list", params).await?;
+            if let Some(listed) = page.get("tools").and_then(Value::as_array) {
+                tools.extend(listed.iter().cloned());
+            }
+            cursor = page
+                .get("nextCursor")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+            if cursor.is_none() {
+                return Ok(tools);
+            }
+        }
+        tracing::warn!("an MCP server listed more tool pages than a page may read");
+        Ok(tools)
+    }
+
+    // JSON: MCP-protocol boundary, the tool's arguments and result.
+    pub(crate) async fn call(
+        &mut self,
+        tool: &McpToolName,
+        arguments: Value,
+    ) -> Result<Value, ArtifactCallError> {
+        let params = json!({ "name": tool.as_str(), "arguments": arguments });
+        self.request("tools/call", params)
+            .await
+            .map(|(_, result)| result)
+    }
+
+    // JSON: MCP-protocol boundary, one JSON-RPC request and its result.
+    async fn request(
+        &mut self,
+        method: &str,
+        params: Value,
+    ) -> Result<(Option<String>, Value), ArtifactCallError> {
+        self.next += 1;
+        let id = self.next;
+        let message = json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params });
+        let (session, answer) = self.post(&message, Some(id)).await?;
+        answer
+            .map(|result| (session, result))
+            .ok_or_else(unreadable)
     }
 
     // JSON: MCP-protocol boundary, one JSON-RPC message out and its answer back.
@@ -195,7 +227,7 @@ impl Session<'_> {
         rpc_result(reply).map(|result| (session, Some(result)))
     }
 
-    async fn close(&self) {
+    pub(crate) async fn close(self) {
         let Some(session) = &self.id else {
             return;
         };
