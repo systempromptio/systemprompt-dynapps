@@ -137,7 +137,7 @@ impl LivePages {
         bearer: &str,
     ) -> Result<BTreeSet<String>, DeclarationRefused> {
         let unreachable = |error: super::error::ArtifactCallError| {
-            DeclarationRefused(format!(
+            DeclarationRefused::Instance(format!(
                 "`{server}` could not be asked for its tools: {}",
                 error.code().as_str()
             ))
@@ -194,5 +194,5 @@ impl LivePages {
 }
 
 const fn refused(why: String) -> Result<(), DeclarationRefused> {
-    Err(DeclarationRefused(why))
+    Err(DeclarationRefused::Instance(why))
 }

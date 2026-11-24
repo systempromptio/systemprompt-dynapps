@@ -66,19 +66,21 @@ pub enum UserScope {
 }
 
 /// Why a declaration was not recorded, in words the agent can act on.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{0}")]
-pub struct DeclarationRefused(pub String);
+#[derive(Debug, thiserror::Error)]
+pub enum DeclarationRefused {
+    #[error(
+        "`capabilities` is {{mcp: {{servers: [{{server, tools}}]}}, artifact: {{}}, user: {{}}}}; \
+         this instance offers no other capability: {0}"
+    )]
+    Shape(#[from] serde_json::Error),
+    #[error("{0}")]
+    Instance(String),
+}
 
 impl Capabilities {
     // JSON: the `capabilities` argument as the agent sent it.
     pub fn parse(value: &Value) -> Result<Self, DeclarationRefused> {
-        let capabilities: Self = serde_json::from_value(value.clone()).map_err(|error| {
-            DeclarationRefused(format!(
-                "`capabilities` is {{mcp: {{servers: [{{server, tools}}]}}, artifact: {{}}, user: {{}}}}; \
-                 this instance offers no other capability: {error}"
-            ))
-        })?;
+        let capabilities: Self = serde_json::from_value(value.clone())?;
         capabilities.check_shape()?;
         Ok(capabilities)
     }
@@ -114,7 +116,7 @@ impl Capabilities {
     }
 
     fn check_shape(&self) -> Result<(), DeclarationRefused> {
-        let refuse = |why: String| Err(DeclarationRefused(why));
+        let refuse = |why: String| Err(DeclarationRefused::Instance(why));
         let Some(mcp) = &self.mcp else {
             return Ok(());
         };
