@@ -527,9 +527,10 @@ async fn replaces_retires_only_the_same_persons_device_key() {
     ] {
         let mut pairs = with_callback(Vec::new());
         pairs.push(("replaces".to_owned(), replaces.to_owned()));
+        let body = encode(&pairs);
         let approve = Call {
             principal: Principal::Admin,
-            ..post(APPROVE, &encode(&pairs))
+            ..post(APPROVE, &body)
         };
         let (status, location) = app.redirect_of(approve).await;
         assert!(
