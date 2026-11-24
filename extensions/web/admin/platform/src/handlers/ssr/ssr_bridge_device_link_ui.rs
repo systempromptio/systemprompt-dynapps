@@ -135,12 +135,12 @@ pub(super) async fn gate(
     request: &UiSessionRequest<'_>,
 ) -> AdminHtmlResult<Gate> {
     let redirect_uri = check_request(clients, request).await?;
-    if !user.browser_sign_in {
+    let Some(auth_time) = user.browser_sign_in_at else {
         return Err(Refusal::NotBrowser.into());
-    }
+    };
     let now = Utc::now();
-    let signed_in = DateTime::<Utc>::from_timestamp(user.auth_time, 0)
-        .filter(|_| user.auth_time > 0)
+    let signed_in = DateTime::<Utc>::from_timestamp(auth_time, 0)
+        .filter(|_| auth_time > 0)
         .map(|at| at.min(now));
     Ok(match signed_in {
         Some(at) if (now - at).num_seconds() <= FRESH_SIGN_IN_SECS => Gate::Allowed {

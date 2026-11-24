@@ -43,8 +43,7 @@ fn ctx(roles: &[&str], groups: &[&str]) -> UserContext {
         roles,
         email_verified: true,
         session_id: None,
-        auth_time: 0,
-        browser_sign_in: false,
+        browser_sign_in_at: None,
     }
 }
 

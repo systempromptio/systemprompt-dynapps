@@ -45,10 +45,11 @@ pub async fn issue_exchange_code(pool: &PgPool, user_id: &UserId) -> Result<Issu
     Ok(IssuedExchangeCode { code, expires_at })
 }
 
-/// The UI session a device link was approved for: a declared `person_ui`
-/// client, its registered redirect, the scope, the S256 challenge whose
-/// verifier stays with the client, and when the person signed in to the
-/// approving browser.
+/// The UI session a device link was approved for.
+///
+/// A declared `person_ui` client, its registered redirect, the scope, the
+/// S256 challenge whose verifier stays with the client, and when the person
+/// signed in to the approving browser.
 #[derive(Debug, Clone, Copy)]
 pub struct UiSessionGrant<'a> {
     pub client_id: &'a ClientId,

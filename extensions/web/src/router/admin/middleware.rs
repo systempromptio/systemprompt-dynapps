@@ -139,8 +139,7 @@ pub(crate) async fn resolve_user_context(
         participation,
         email_verified: false,
         session_id: session.session_id,
-        auth_time: session.auth_time,
-        browser_sign_in: session.browser_sign_in,
+        browser_sign_in_at: session.browser_sign_in.then_some(session.auth_time),
     };
 
     let tz = find_viewer_tz(pool, &ctx.user_id).await;
