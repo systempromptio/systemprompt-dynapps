@@ -36,9 +36,11 @@ const broker = (routes) => {
 
 const prompts = (answers = {}) => {
   const asked = [];
+  const consented = [];
   return {
     asked,
-    consent: async (servers) => { asked.push(['consent', servers]); return answers.consent ?? true; },
+    consented,
+    consent: async (servers, call) => { asked.push(['consent', servers]); consented.push(call); return answers.consent ?? true; },
     confirm: async (call) => { asked.push(['confirm', call]); return answers.confirm ?? true; },
     panel: async () => { asked.push(['panel']); },
     busy: () => false,
@@ -61,7 +63,7 @@ const bridgeWith = async (routes, answers, extra = {}) => {
     onFailure: (why) => failures.push(why),
   });
   await bridge.load();
-  return { bridge, calls: fake.calls, asked: asked.asked, published, failures };
+  return { bridge, calls: fake.calls, asked: asked.asked, consented: asked.consented, published, failures };
 };
 
 const granted = () => ok(permissions({ states: { 'mcp:odoo': 'granted', mcp: 'granted' } }));
@@ -149,6 +151,20 @@ test('a write is confirmed with its server, tool and input, approved, and called
   assert.deepEqual(result.content, [{ type: 'text', text: '{"id":9}' }]);
   assert.deepEqual(run.asked, [['confirm', { server: 'odoo', tool: 'write_partner', summary: [['name', 'Acme']] }]]);
   assert.equal(callCount, 2);
+});
+
+test('a first write asks once: the one Allow opens the connector and approves this call', async () => {
+  const run = await bridgeWith({
+    'POST /permissions': () => granted(),
+    'POST /mcp/call': (body) => (body.approval === 'appr-7' ? ok({ content: [] }) : refused(428, 'approval_required')),
+    'POST /mcp/approve': () => ok({ approval: 'appr-7' }),
+  });
+  await run.bridge.handle('mcp.callTool', { server: 'odoo', tool: 'write_partner', input: { name: 'Acme' } });
+  assert.deepEqual(run.asked, [['consent', ['odoo']]], 'one prompt, no second confirmation');
+  assert.deepEqual(run.consented, [{ server: 'odoo', tool: 'write_partner', summary: [['name', 'Acme']] }], 'the prompt names the call it approves');
+  assert.equal(run.calls.filter((call) => call.url.endsWith('/mcp/approve')).length, 1);
+  await run.bridge.handle('mcp.callTool', { server: 'odoo', tool: 'write_partner', input: { name: 'Beta' } });
+  assert.equal(run.asked.at(-1)[0], 'confirm', 'a later write is confirmed on its own');
 });
 
 test('a declined write is approval_required and never approved; a watch never asks to approve one', async () => {

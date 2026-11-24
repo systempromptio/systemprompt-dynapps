@@ -225,7 +225,9 @@ of `/rendered`. Code: `storage/files/js/workspace/live/`,
   A call the broker answers `approval_required` once the connector is
   allowed is a write: the shell names the server, the tool and a summary of
   the input, and only on Allow posts `mcp/approve` and repeats the call with
-  the approval. A watch never approves a write. The permissions panel
+  the approval. When a page's own call is the first on a connector, that
+  one prompt names the call too and its Allow also approves it, so a first
+  write asks once. A watch never approves a write. The permissions panel
   (`permissions.manage`, at most five times a load, or the shell's own
   Permissions button) sets each connector to Allowed, Ask first or Blocked.
   The status line says when data was last updated and how to reconnect a

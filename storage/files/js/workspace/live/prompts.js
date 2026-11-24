@@ -46,14 +46,28 @@ export const createPrompts = (root, onOpenChange) => {
     form.append(menu);
   };
 
-  const consent = (servers) => dialog((form, resolve) => {
+  const facts = (form, summary) => {
+    if (summary.length === 0) return;
+    const list = el('dl', 'sp-live__summary');
+    summary.forEach(([key, text]) => list.append(el('dt', '', { textContent: key }), el('dd', '', { textContent: text })));
+    form.append(list);
+  };
+
+  // With `call` (a page's own call waiting on it), the one Allow both opens
+  // the connector to the page and approves that call, so it names the call.
+  const consent = (servers, call) => dialog((form, resolve) => {
     form.append(
       el('h3', '', { textContent: 'Allow this page to use your connectors?' }),
       el('p', 'sp-live__text', { textContent: 'It reads and acts as you, with your own access, through:' }),
     );
     const list = el('ul', 'sp-live__servers');
     list.append(...servers.map((server) => el('li', '', { textContent: server })));
-    form.append(list, el('p', 'sp-live__muted', { textContent: 'You can change this later in the page\'s permissions.' }));
+    form.append(list);
+    if (call) {
+      form.append(el('p', 'sp-live__text', { textContent: `Allow also runs "${call.tool}" on "${call.server}" now, as you. It may change data there.` }));
+      facts(form, call.summary);
+    }
+    form.append(el('p', 'sp-live__muted', { textContent: 'You can change this later in the page\'s permissions.' }));
     actions(form, 'Don\'t allow', 'Allow');
     return (value) => resolve(value === 'accept');
   });
@@ -63,11 +77,7 @@ export const createPrompts = (root, onOpenChange) => {
       el('h3', '', { textContent: 'Allow this action?' }),
       el('p', 'sp-live__text', { textContent: `The page wants to run "${tool}" on "${server}" as you. It may change data there.` }),
     );
-    if (summary.length > 0) {
-      const facts = el('dl', 'sp-live__summary');
-      summary.forEach(([key, text]) => facts.append(el('dt', '', { textContent: key }), el('dd', '', { textContent: text })));
-      form.append(facts);
-    }
+    facts(form, summary);
     actions(form, 'Cancel', 'Allow');
     return (value) => resolve(value === 'accept');
   });
