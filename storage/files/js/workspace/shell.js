@@ -2,7 +2,9 @@
 // access, loads the document, then builds the drawer, the name menu and the
 // palette from what the feature modules registered, mounts the format editor
 // and feeds every live document event to the registered handlers through
-// one subscription to the document event stream.
+// one subscription to the document event stream. With `?embed=1` the page
+// has no home link, name menu or format badge, so each of those is only
+// filled when it is there, and a load failure is told in the save status.
 import { subscribeDocument } from '../documents/documents-events.js';
 import { readJson } from '../services/drive-rows.js';
 import { showDetails } from './drawer-details.js';
@@ -31,6 +33,7 @@ const contextOf = (root) => {
     doc: null,
     view: null,
     access,
+    embed: document.documentElement.hasAttribute('data-embed'),
     canEdit: root.dataset.canEdit === 'true',
     canShare: root.dataset.canShare === 'true',
     isOwner: access === 'own',
@@ -50,8 +53,10 @@ const showDocument = async (ctx) => {
   const view = await readJson(root.dataset.documentApi);
   ctx.view = view;
   ctx.doc = view.document;
-  root.querySelector('[data-field="name"]').textContent = view.document.name;
-  root.querySelector('[data-field="format"]').textContent = view.document.format.toUpperCase();
+  const nameField = root.querySelector('[data-field="name"]');
+  const formatField = root.querySelector('[data-field="format"]');
+  if (nameField) nameField.textContent = view.document.name;
+  if (formatField) formatField.textContent = view.document.format.toUpperCase();
   root.classList.add(`sp-ws--${SUITES[view.document.format] ?? 'doc'}`);
   document.title = `${view.document.name} - Drive`;
   await showDetails(root, view);
@@ -77,7 +82,7 @@ export const init = async () => {
     initDrawer(ctx);
     doc = await showDocument(ctx);
   } catch {
-    root.querySelector('[data-field="name"]').textContent = 'This document could not be loaded.';
+    root.querySelector('[data-field="name"], [data-field="save"]').textContent = 'This document could not be loaded.';
     return;
   }
   initMenu(ctx, initPalette(ctx));

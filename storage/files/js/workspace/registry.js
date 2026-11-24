@@ -4,7 +4,9 @@
 // what was registered, so no feature is wired into the shell by name.
 // Every `when(ctx)` and `run`/`load` receives the page context:
 // { root, doc, view, access, canEdit, canShare, canComment, isOwner, userId,
-//   documentId, peopleApi, openPane(id), refresh() }.
+//   documentId, peopleApi, embed, openPane(id), refresh() }.
+// A command with `leaves: true` takes the page to another page, so an
+// embedded page (`ctx.embed`) neither lists nor runs it.
 const editors = new Map();
 const tabs = new Map();
 const commands = new Map();
@@ -37,11 +39,13 @@ export const registerCommand = (command) => {
   commands.set(command.id, { label: command.id, keys: '', menu: false, ...command });
 };
 
-export const availableCommands = (ctx) => [...commands.values()].filter((c) => allowed(c, ctx));
+const usable = (command, ctx) => allowed(command, ctx) && !(ctx.embed && command.leaves);
+
+export const availableCommands = (ctx) => [...commands.values()].filter((c) => usable(c, ctx));
 
 export const runCommand = async (id, ctx) => {
   const command = commands.get(id);
-  if (!command || !allowed(command, ctx)) return;
+  if (!command || !usable(command, ctx)) return;
   try {
     await command.run(ctx.root, ctx);
   } catch {

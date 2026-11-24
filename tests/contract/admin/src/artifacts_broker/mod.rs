@@ -11,14 +11,23 @@
 //! (`manifest`); every other request goes as the browser sends it, the web
 //! login's cookie from the site's own page, to `/api/v1/artifacts/...`:
 //! consent (`consent`), tool calls with their approvals and cache (`calls`)
-//! and the page republishing itself (`publish`). The run ends by reading the
+//! and the page republishing itself (`publish`). Then the page as a client
+//! opens it (`live`): the viewer shell, the sandboxed frame and the manifest
+//! read; and the editor page, with and without its embed mode (`editor`). A
+//! `ui` session is handed to a web session the broker takes (`handoff`), and a
+//! connector that must be signed in again asks to reconnect while an accessor
+//! that is down stays an outage (`reconnect`). The run ends by reading the
 //! audit rows back.
 
 mod calls;
 mod consent;
+mod editor;
 mod fake;
+mod handoff;
+mod live;
 mod manifest;
 mod publish;
+mod reconnect;
 mod stack;
 
 use serde_json::json;
@@ -26,7 +35,7 @@ use systemprompt::identifiers::{DocumentId, UserId};
 
 use crate::{globals, principal};
 use fake::{ECHO, SECRET, WRITE};
-use stack::{As, SERVER, Stack};
+use stack::{As, REMOTE, REMOTE_TOOL, SERVER, Stack};
 
 const AUDIT_COLUMNS: [&str; 8] = [
     "id",
@@ -143,6 +152,8 @@ async fn artifacts_broker_runs_a_tool_as_the_viewer() {
     calls::list_and_describe(&stack, &owner_cookie, &page).await;
     calls::consent_gates_the_cache(&stack, &owner_cookie, &page).await;
     outsiders_get_nothing(&stack, &outsider_cookie, &page).await;
+    let outsider_ui = stack.ui_bearer(&db.pool, &outsider).await;
+    live::a_stranger_gets_nothing(&stack, &outsider_cookie, &outsider_ui, &page).await;
     let people = publish::People {
         owner: &owner,
         owner_cookie: &owner_cookie,
@@ -150,6 +161,47 @@ async fn artifacts_broker_runs_a_tool_as_the_viewer() {
         reader_cookie: &outsider_cookie,
     };
     publish::the_page_republishes_itself(&stack, &people, &page, &undeclared).await;
+
+    let viewer = manifest::state(&stack, &owner_cookie, &page).await["viewer"].clone();
+    assert_eq!(
+        viewer["id"],
+        owner.as_str(),
+        "the shell learns who views the page"
+    );
+    assert_eq!(viewer["owner"], true);
+    let owner_ui = stack.ui_bearer(&db.pool, &owner).await;
+    let clients = live::Who {
+        owner: &owner_cookie,
+        owner_ui: &owner_ui,
+        agent: &agent,
+    };
+    live::the_frame_is_opaque_and_offline(&stack, &clients, &page).await;
+    live::the_shell_signs_in_first(&stack, &clients, &page).await;
+    live::a_client_reads_the_manifest(&stack, &clients, &page, &undeclared).await;
+    editor::the_editor_has_an_embed_mode(&stack, &owner_cookie, &page).await;
+    editor::the_embedded_editor_signs_in_first(&stack, &page).await;
+    let handing = handoff::Who {
+        owner: &owner,
+        owner_cookie: &owner_cookie,
+        agent: &agent,
+    };
+    handoff::the_ui_session_opens_a_web_session(&stack, &db.pool, &handing, &page).await;
+    handoff::only_a_ui_session_issues(&stack, &db.pool, &handing, &page).await;
+    let remote =
+        reconnect::a_refused_grant_asks_to_reconnect(&stack, &db.pool, &owner, &owner_cookie).await;
+    let remote_row = |outcome: &str| {
+        (
+            owner.as_str().to_owned(),
+            REMOTE.to_owned(),
+            REMOTE_TOOL.to_owned(),
+            outcome.to_owned(),
+        )
+    };
+    assert_eq!(
+        audit_rows(&db.pool, &remote).await,
+        vec![remote_row("needs_reauth"), remote_row("server_unavailable")],
+        "a reconnect and an outage are audited as what they are"
+    );
 
     let row = |user: &UserId, tool: &str, outcome: &str| {
         let server = if tool == "-" {

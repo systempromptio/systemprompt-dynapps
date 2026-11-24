@@ -5,12 +5,25 @@
 //! viewer's access, which the scripts gate every command and editor on.
 //!
 //! The page asks the document service for the viewer's access before it
-//! renders, so a person without a grant meets a 404, never a page shell.
+//! renders, so a person without a grant meets a 404, never a page shell. A
+//! document that declares live capabilities carries the viewer shell's
+//! paths, so the page shows it through the shell (`js/workspace/live/`) rather
+//! than `/rendered`.
+//!
+//! With `?embed=1` the page leaves out what takes a person away from the
+//! document (the home link, the name menu, the notification bell) and marks
+//! `<html data-embed>`, so a client that shows the page as its own view
+//! (`DynWork` desktop) is not wrapped in a second app chrome. The navigation
+//! rail is the document's own (outline, sheet tabs, slides), so it stays with
+//! the document toolbar, the comments and the editor.
+
+use std::sync::Arc;
 
 use axum::Extension;
-use axum::extract::Path;
+use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Serialize;
+use sqlx::PgPool;
 use systemprompt::files::documents::DocumentsError;
 use systemprompt::identifiers::{DocumentId, TraceId, UserId};
 use systemprompt::models::ApiPaths;
@@ -21,7 +34,9 @@ use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_workspace_page};
 use systemprompt_web_admin_core::ssr::page::Page;
 
 use super::document_api;
+use super::live::EmbedQuery;
 use super::user::{DriveDocuments, USER_BASE_URL, caller};
+use crate::artifacts::LivePages;
 
 pub(super) struct Authorized {
     pub(super) document_id: DocumentId,
@@ -62,6 +77,7 @@ pub(super) async fn authorize(
 struct DriveWorkspacePage {
     page: &'static str,
     title: String,
+    embed: bool,
     base_url: &'static str,
     documents_api: &'static str,
     blocks_url: String,
@@ -77,18 +93,28 @@ struct DriveWorkspacePage {
     can_edit: bool,
     can_share: bool,
     user_id: UserId,
+    live_frame_url: Option<String>,
+    live_api: Option<String>,
 }
 
 pub(crate) async fn drive_workspace_page(
     shell: Page,
+    State(pool): State<Arc<PgPool>>,
     Extension(documents): Extension<DriveDocuments>,
     Path(raw_id): Path<String>,
+    Query(query): Query<EmbedQuery>,
 ) -> AdminHtmlResult<Response> {
     let doc = authorize(&shell, &documents, raw_id).await?;
     let api = document_api(doc.document_id.as_str());
+    let encoded = urlencoding::encode(doc.document_id.as_str()).into_owned();
+    let live = LivePages::manifest(&pool, &doc.document_id)
+        .await
+        .map_err(AdminError::internal)?
+        .is_some();
     let page = DriveWorkspacePage {
         page: "drive-workspace",
         title: doc.name,
+        embed: query.embedded(),
         base_url: USER_BASE_URL,
         documents_api: ApiPaths::DOCUMENTS,
         blocks_url: format!(
@@ -106,6 +132,8 @@ pub(crate) async fn drive_workspace_page(
         can_edit: doc.access >= AccessLevel::Edit,
         can_share: doc.access >= AccessLevel::Share,
         user_id: shell.user.user_id.clone(),
+        live_frame_url: live.then(|| format!("{USER_BASE_URL}/{encoded}/live/frame")),
+        live_api: live.then(|| format!("/api/v1/artifacts/{encoded}")),
         document_api: api,
     };
     Ok(render_workspace_page(

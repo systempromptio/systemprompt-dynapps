@@ -1,5 +1,6 @@
 //! The Drive pages, nested at `/drive` beside the admin plane: the listing,
-//! one document's workspace and block editor, and the names the pages show.
+//! one document's workspace and block editor, a live page's viewer shell and
+//! its sandboxed frame, and the names the pages show.
 //!
 //! They sit outside the admin router so the non-admin path gate never
 //! redirects them: every signed-in person reaches their own documents, and
@@ -27,6 +28,11 @@ pub fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/{document_id}/blocks",
             get(handlers::ssr::drive_document_page),
+        )
+        .route("/{document_id}/live", get(handlers::ssr::drive_live_page))
+        .route(
+            "/{document_id}/live/frame",
+            get(handlers::ssr::drive_live_frame),
         )
         .route(
             "/classes",

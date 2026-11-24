@@ -1,0 +1,25 @@
+# Contract-suite fixture: an external MCP server for the artifacts broker
+# suite's reconnect cases (tests/contract/admin/src/artifacts_broker/reconnect.rs).
+# Core asks its accessor for the viewer's bearer before every proxied request;
+# the suite serves that accessor itself on the API's listener and answers 404
+# (a grant to connect again) or 503 (an accessor that is down), so the remote
+# endpoint is never reached.
+mcp_servers:
+  artifacts-remote:
+    server_type: external
+    endpoint: https://remote.invalid/mcp
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: Artifacts broker contract fixture, external
+    oauth:
+      required: true
+      scopes:
+      - user
+      audience: mcp
+      client_id: null
+    external_auth:
+      token_endpoint: /contract/artifacts-remote/token
+      header: Authorization
+      scheme: ""

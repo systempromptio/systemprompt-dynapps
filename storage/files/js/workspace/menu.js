@@ -2,7 +2,8 @@
 // commands the viewer may run: the menu lists every `menu` command, and a
 // toolbar button whose command is not available is hidden. Any element with
 // `data-command` inside the workspace runs that command when clicked, and a
-// command's `⌘<letter>` keys bind that shortcut.
+// command's `⌘<letter>` keys bind that shortcut. An embedded page has no name
+// menu: the buttons and the shortcuts still work.
 import { availableCommands, runCommand } from './registry.js';
 
 const menuItem = (command) => {
@@ -23,23 +24,24 @@ export const initMenu = (ctx, openPalette) => {
   const ids = new Set(commands.map((c) => c.id));
   const toggle = root.querySelector('[data-action="ws-name-menu"]');
   const menu = root.querySelector('[data-slot="ws-menu"]');
-  menu.replaceChildren(...commands.filter((c) => c.menu).map(menuItem));
+  menu?.replaceChildren(...commands.filter((c) => c.menu).map(menuItem));
   root.querySelectorAll('.sp-ws__bar [data-command]').forEach((b) => { b.hidden = !ids.has(b.dataset.command); });
 
   const setOpen = (open) => {
+    if (!menu) return;
     menu.hidden = !open;
     toggle.setAttribute('aria-expanded', String(open));
     if (open) menu.querySelector('[role="menuitem"]')?.focus();
   };
-  toggle.addEventListener('click', () => setOpen(menu.hidden));
-  menu.addEventListener('keydown', (event) => {
+  toggle?.addEventListener('click', () => setOpen(menu.hidden));
+  menu?.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       setOpen(false);
       toggle.focus();
     }
   });
   document.addEventListener('pointerdown', (event) => {
-    if (!menu.hidden && !event.target.closest('.sp-ws__title')) setOpen(false);
+    if (menu && !menu.hidden && !event.target.closest('.sp-ws__title')) setOpen(false);
   });
   root.addEventListener('click', (event) => {
     const id = event.target.closest('button[data-command]')?.dataset.command;

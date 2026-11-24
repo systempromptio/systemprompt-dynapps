@@ -2,9 +2,12 @@
 //! what its viewer decided, read and changed only by that viewer's web
 //! session.
 //!
-//! `GET` answers `{capabilities, contract_version, revision, writer,
+//! `GET` answers `{capabilities, contract_version, revision, writer, viewer,
 //! states}`: the manifest (`null` when none), the version the viewer loaded
-//! (a publish's base), whether the viewer may edit, and a state per name in
+//! (a publish's base), whether the viewer may edit, who the viewer is
+//! (`{id, name, email, owner}`, for the shell's `user` capability, which
+//! hands the page only what the manifest's `user` scopes allow), and a state
+//! per name in
 //! the shape of the runtime's `permissions.state()`: `mcp:<server>` for each
 //! declared server (`granted`, `denied` or `prompt`), `mcp` for all of them
 //! together, and `artifact` and `user` when declared (they need no standing
@@ -31,6 +34,7 @@ use super::admit::{ConsentState, Page, consent_of, internal, mcp_scope};
 use super::error::{ArtifactCallCode, ArtifactCallError};
 use super::viewer::ArtifactViewer;
 use crate::repositories::artifact_consents::{self, ArtifactConsent};
+use crate::repositories::drive_people::list_drive_people;
 
 const ALL_SERVERS: &str = "mcp";
 
@@ -164,11 +168,23 @@ async fn answer(
 ) -> Result<Response, ArtifactCallError> {
     let page = broker.page(viewer, document).await?;
     let consents = broker.consents(viewer, document).await?;
+    let me = viewer.user.id.as_str().to_owned();
+    let person = list_drive_people(broker.pool(), &[me])
+        .await
+        .map_err(|error| internal(&error))?
+        .into_iter()
+        .next();
     Ok(Json(json!({
         "capabilities": page.manifest,
         "contract_version": page.contract_version,
         "revision": page.view.document.head_revision_id,
         "writer": page.view.my_access >= AccessLevel::Edit,
+        "viewer": {
+            "id": viewer.user.id,
+            "name": person.as_ref().and_then(|person| person.display_name.clone()).unwrap_or_default(),
+            "email": person.and_then(|person| person.email),
+            "owner": page.view.document.owner_user_id == viewer.user.id,
+        },
         "states": states(&page, &consents),
     }))
     .into_response())

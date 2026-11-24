@@ -1,7 +1,9 @@
 //! Static asset manifest for the admin dashboard.
 //!
 //! The admin crate owns the front-end it serves: per-page scripts under
-//! `storage/files/js/pages/` and the generated `admin-bundle.css`. The facade
+//! `storage/files/js/pages/`, the live-page viewer shell under
+//! `storage/files/js/workspace/live/` (its page runtime is also inlined by the
+//! frame route) and the generated `admin-bundle.css`. The facade
 //! merges this with the public-site manifest in `required_assets`.
 //! `admin-bundle.css` registers as optional: `bundle_admin_css` generates it,
 //! and a fresh checkout has not run that job yet.
@@ -22,6 +24,7 @@ pub fn admin_assets(paths: &dyn AssetPaths) -> Vec<AssetDefinition> {
     let storage_js = paths.storage_files().join("js");
 
     let mut assets = page_js_assets(&storage_js);
+    assets.extend(live_js_assets(&storage_js.join("workspace/live")));
     assets.extend(crate::vendor::assets::vendor_assets(&storage_js));
     assets.push(admin_bundle_css(&storage_css));
     assets.push(AssetDefinition::css(
@@ -75,6 +78,34 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
         page_js!(&pages, "admin-users.js"),
         page_js!(&pages, "connect-code.js"),
         page_js!(&pages, "connectors.js"),
+    ]
+}
+
+fn live_js_assets(live: &Path) -> Vec<AssetDefinition> {
+    vec![
+        AssetDefinition::js(live.join("bridge.js"), "js/workspace/live/bridge.js"),
+        AssetDefinition::js(live.join("labels.js"), "js/workspace/live/labels.js"),
+        AssetDefinition::js(live.join("page.js"), "js/workspace/live/page.js"),
+        AssetDefinition::js(live.join("prompts.js"), "js/workspace/live/prompts.js"),
+        AssetDefinition::js(live.join("router.js"), "js/workspace/live/router.js"),
+        AssetDefinition::js(
+            live.join("runtime-boot.js"),
+            "js/workspace/live/runtime-boot.js",
+        ),
+        AssetDefinition::js(
+            live.join("runtime-core.js"),
+            "js/workspace/live/runtime-core.js",
+        ),
+        AssetDefinition::js(
+            live.join("runtime-mcp.js"),
+            "js/workspace/live/runtime-mcp.js",
+        ),
+        AssetDefinition::js(
+            live.join("runtime-use.js"),
+            "js/workspace/live/runtime-use.js",
+        ),
+        AssetDefinition::js(live.join("shell.js"), "js/workspace/live/shell.js"),
+        AssetDefinition::js(live.join("viewer.js"), "js/workspace/live/viewer.js"),
     ]
 }
 

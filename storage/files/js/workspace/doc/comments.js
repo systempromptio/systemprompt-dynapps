@@ -8,6 +8,7 @@ import { formatDate } from '../../services/drive-rows.js';
 import { toggleDrawer } from '../drawer.js';
 import { person, resolvePeople } from '../people.js';
 import { createComposer } from './composer.js';
+import { isSystemLine } from './markdown.js';
 import { mentionIds, renderBody } from './mentions.js';
 import { schema } from './schema.js';
 
@@ -19,7 +20,7 @@ const el = (tag, className, text) => {
 };
 
 const bodyOf = (text) => {
-  const body = el('p', 'sp-doc-thread__body');
+  const body = el('div', 'sp-doc-thread__body');
   body.append(renderBody(text));
   return body;
 };
@@ -84,6 +85,11 @@ export const createComments = ({ root, api, getView, canComment }) => {
     for (const c of [thread, ...replies]) {
       const entry = el('div', 'sp-doc-thread__entry');
       entry.dataset.commentId = c.id;
+      if (c !== thread && isSystemLine(c.body)) {
+        entry.append(el('p', 'sp-doc-thread__system', `${c.body.trim()} · ${formatDate(c.created_at)}`));
+        item.append(entry);
+        continue;
+      }
       entry.append(el('span', 'sp-doc-thread__author', person(c.author_user_id)), el('span', 'sp-ws__muted', formatDate(c.created_at)), bodyOf(c.body));
       item.append(entry);
     }
