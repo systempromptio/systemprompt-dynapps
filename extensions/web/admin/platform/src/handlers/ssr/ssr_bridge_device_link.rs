@@ -126,6 +126,10 @@ pub(crate) async fn device_link_page(
     Ok(Html(html).into_response())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each argument is one axum extractor the approval needs; bundling them would add a state type used by this handler alone"
+)]
 pub(crate) async fn device_link_approve(
     Extension(user_ctx): Extension<UserContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
