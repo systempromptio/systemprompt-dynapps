@@ -17,7 +17,10 @@ pub struct NewToolCall<'a> {
     pub duration_ms: i32,
 }
 
-pub async fn record(pool: &PgPool, call: &NewToolCall<'_>) -> Result<(), sqlx::Error> {
+pub async fn record_artifact_tool_call(
+    pool: &PgPool,
+    call: &NewToolCall<'_>,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"INSERT INTO artifact_tool_calls
                 (user_id, document_id, server, tool, outcome, duration_ms)

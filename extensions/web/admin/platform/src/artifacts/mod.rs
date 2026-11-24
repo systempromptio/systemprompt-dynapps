@@ -7,7 +7,7 @@
 //! access, the proxy's checks and a connector's per-user OAuth apply exactly
 //! as they do for an agent's call (`proxy`). The route takes only the web
 //! login's browser session (`viewer`), checks the viewer's `view` on the
-//! document and the call's admission (`call`, [`ArtifactsBroker::admit`]),
+//! document and the call's admission (`call`, `ArtifactsBroker::admit`),
 //! and writes one audit row per call to `artifact_tool_calls`.
 //!
 //! [`artifacts_router`] mounts `POST /api/v1/artifacts/{document_id}/mcp/call`

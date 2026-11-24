@@ -63,7 +63,7 @@ pub(super) async fn call(
     let outcome = answer
         .as_ref()
         .map_or_else(|error| error.code().as_str(), result_outcome);
-    let recorded = artifact_tool_calls::record(
+    let recorded = artifact_tool_calls::record_artifact_tool_call(
         &broker.inner.parts.pool,
         &NewToolCall {
             user: &viewer.user.id,
