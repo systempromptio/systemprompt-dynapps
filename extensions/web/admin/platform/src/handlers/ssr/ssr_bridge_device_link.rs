@@ -7,6 +7,10 @@
 //! `redirect` is optional. A CLI with no browser has nothing listening on
 //! loopback, so it sends the user here without one and the approve step
 //! *displays* the code for the user to copy back into the terminal.
+//!
+//! A device link may also ask for the person's UI session
+//! ([`super::ssr_bridge_device_link_ui`]), and name by its `key_prefix` the
+//! device key it `replaces`, which approval retires.
 
 use std::sync::Arc;
 use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
@@ -18,6 +22,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt_web_shared::html_escape;
 
+use systemprompt::identifiers::UserId;
+use systemprompt::oauth::repository::ClientRepository;
 use systemprompt_web_admin_core::bridge_client::BRIDGE_BINARY;
 use systemprompt_web_admin_core::error::{AdminHtmlError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::bridge;
@@ -27,14 +33,22 @@ use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::ssr::helpers::branding_context;
 use systemprompt_web_shared::BrandingConfig;
 
+use super::ssr_bridge_device_link_ui::{Gate, UiSessionParams, fresh_sign_in, gate};
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct DeviceLinkQuery {
     pub redirect: Option<String>,
+    #[serde(flatten)]
+    pub ui: UiSessionParams,
+    pub replaces: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct DeviceLinkApproveForm {
     pub redirect: Option<String>,
+    #[serde(flatten)]
+    pub ui: UiSessionParams,
+    pub replaces: Option<String>,
 }
 
 // Why: Handlebars `{{#if}}` guards need a missing key, not a null, so unset
@@ -49,6 +63,10 @@ struct DeviceLinkContext<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     redirect_host: Option<String>,
     code_ttl_seconds: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ui: Option<&'a UiSessionParams>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    replaces: Option<&'a str>,
 }
 
 #[derive(Debug, Serialize)]
@@ -67,6 +85,7 @@ struct DeviceCodeContext<'a> {
 pub(crate) async fn device_link_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
+    Extension(clients): Extension<ClientRepository>,
     Query(query): Query<DeviceLinkQuery>,
 ) -> AdminHtmlResult<Response> {
     let redirect_host = match query.redirect.as_deref() {
@@ -76,15 +95,30 @@ pub(crate) async fn device_link_page(
         },
         None => None,
     };
+    let ui = query.ui.request()?;
+    if let Some(request) = ui
+        && matches!(
+            gate(&clients, &user_ctx, &request).await?,
+            Gate::StaleSignIn
+        )
+    {
+        return Ok(fresh_sign_in(
+            query.redirect.as_deref(),
+            &query.ui,
+            query.replaces.as_deref(),
+        ));
+    }
 
     let branding = branding_context(&engine).branding;
 
     let data = DeviceLinkContext {
         branding,
         user_email: user_ctx.email.to_string(),
-        redirect: query.redirect,
+        redirect: query.redirect.clone(),
         redirect_host,
         code_ttl_seconds: bridge::EXCHANGE_CODE_TTL_SECONDS,
+        ui: ui.is_some().then_some(&query.ui),
+        replaces: query.replaces.as_deref(),
     };
     let data = serde_json::to_value(&data).map_err(AdminHtmlError::internal)?;
 
@@ -92,10 +126,15 @@ pub(crate) async fn device_link_page(
     Ok(Html(html).into_response())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each argument is one axum extractor the approval needs; bundling them would add a state type used by this handler alone"
+)]
 pub(crate) async fn device_link_approve(
     Extension(user_ctx): Extension<UserContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(boot): Extension<ExtensionBoot>,
+    Extension(clients): Extension<ClientRepository>,
     State(pool): State<Arc<PgPool>>,
     Form(form): Form<DeviceLinkApproveForm>,
 ) -> AdminHtmlResult<Response> {
@@ -105,7 +144,32 @@ pub(crate) async fn device_link_approve(
         return Ok(bad_redirect_response(redirect));
     }
 
-    let issued = bridge::issue_exchange_code(&pool, &user_ctx.user_id).await?;
+    let issued = match form.ui.request()? {
+        None => bridge::issue_exchange_code(&pool, &user_ctx.user_id).await?,
+        Some(request) => match gate(&clients, &user_ctx, &request).await? {
+            Gate::Allowed {
+                redirect_uri,
+                authenticated_at,
+            } => {
+                let grant = bridge::UiSessionGrant {
+                    client_id: request.client_id,
+                    redirect_uri: &redirect_uri,
+                    scope: request.scope,
+                    code_challenge: request.code_challenge,
+                    authenticated_at,
+                };
+                bridge::issue_device_link_code(&pool, &user_ctx.user_id, grant).await?
+            },
+            Gate::StaleSignIn => {
+                return Ok(fresh_sign_in(
+                    form.redirect.as_deref(),
+                    &form.ui,
+                    form.replaces.as_deref(),
+                ));
+            },
+        },
+    };
+    retire_replaced_key(&pool, &user_ctx.user_id, form.replaces.as_deref()).await?;
 
     let Some(redirect) = form.redirect else {
         let expires_in_seconds = (issued.expires_at - chrono::Utc::now())
@@ -159,6 +223,23 @@ pub(crate) async fn device_link_deny(
     let sep = if redirect.contains('?') { '&' } else { '?' };
     let location = format!("{redirect}{sep}error=denied");
     Ok(Redirect::to(&location).into_response())
+}
+
+async fn retire_replaced_key(
+    pool: &PgPool,
+    user_id: &UserId,
+    replaces: Option<&str>,
+) -> AdminHtmlResult<()> {
+    let Some(key_prefix) = replaces.filter(|prefix| !prefix.is_empty()) else {
+        return Ok(());
+    };
+    let revoked = bridge::revoke_device_key(pool, user_id, key_prefix).await?;
+    tracing::info!(
+        key_prefix,
+        revoked,
+        "Device link approval retired the device key it replaces"
+    );
+    Ok(())
 }
 
 fn render_code_page(

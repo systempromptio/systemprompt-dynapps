@@ -7,6 +7,7 @@ mod configuration;
 mod devices;
 mod drive;
 mod ssr_bridge_device_link;
+mod ssr_bridge_device_link_ui;
 mod ssr_connect;
 mod ssr_connectors;
 pub(crate) mod ssr_connectors_cards;

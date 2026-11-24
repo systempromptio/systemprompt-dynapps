@@ -30,6 +30,7 @@ fn ctx(user: &str, roles: &[&str]) -> UserContext {
         is_developer: roles.contains(&"developer"),
         email_verified: true,
         session_id: None,
+        browser_sign_in_at: None,
     }
 }
 

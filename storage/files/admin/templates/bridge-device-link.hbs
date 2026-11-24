@@ -22,6 +22,7 @@
         <p class="sp-device-card__lede">
             {{#if redirect_host}}A local helper is asking to sign in as you.{{else}}A command-line helper on another machine is asking to sign in as you.{{/if}}
             Approving issues a personal access token that stays valid until you revoke it.
+            {{#if ui}}It also signs this app in as you, for documents and sharing, until your session ends.{{/if}}
         </p>
 
         <dl class="sp-device-facts">
@@ -30,6 +31,10 @@
             {{#if redirect_host}}
             <dt class="sp-device-facts__key">Helper</dt>
             <dd class="sp-device-facts__value">{{redirect_host}}</dd>
+            {{/if}}
+            {{#if ui}}
+            <dt class="sp-device-facts__key">App session</dt>
+            <dd class="sp-device-facts__value">{{ui.client_id}}</dd>
             {{/if}}
             <dt class="sp-device-facts__key">Code valid for</dt>
             <dd class="sp-device-facts__value">{{code_ttl_seconds}}&nbsp;seconds</dd>
@@ -42,6 +47,14 @@
         <div class="sp-device-actions">
             <form method="POST" action="/bridge-auth/device-link/approve" class="sp-device-actions__form">
                 {{#if redirect}}<input type="hidden" name="redirect" value="{{redirect}}">{{/if}}
+                {{#if ui}}
+                <input type="hidden" name="client_id" value="{{ui.client_id}}">
+                <input type="hidden" name="redirect_uri" value="{{ui.redirect_uri}}">
+                <input type="hidden" name="scope" value="{{ui.scope}}">
+                <input type="hidden" name="code_challenge" value="{{ui.code_challenge}}">
+                <input type="hidden" name="code_challenge_method" value="{{ui.code_challenge_method}}">
+                {{/if}}
+                {{#if replaces}}<input type="hidden" name="replaces" value="{{replaces}}">{{/if}}
                 <button type="submit" class="sp-btn sp-btn--primary">Allow</button>
             </form>
             <form method="POST" action="/bridge-auth/device-link/deny" class="sp-device-actions__form">
