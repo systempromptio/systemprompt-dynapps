@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBridge } from '../../storage/files/js/workspace/live/bridge.js';
 import { createRouter, PROTOCOL } from '../../storage/files/js/workspace/live/router.js';
-import { summaryOf } from '../../storage/files/js/workspace/live/labels.js';
+import { connectorHint, summaryOf } from '../../storage/files/js/workspace/live/labels.js';
 
 const API = '/api/v1/artifacts/doc-1';
 
@@ -187,7 +187,7 @@ test('a watch peeks at the stored entry of any age, a refresh always runs the to
 });
 
 test('broker refusals become the runtime codes; a lapsed session tells the shell', async () => {
-  const answers = [refused(503, 'server_unavailable'), refused(404, 'not_found'), refused(401, 'reauth'), refused(409, 'server_not_connected')];
+  const answers = [refused(503, 'server_unavailable'), refused(404, 'not_found'), refused(401, 'reauth'), refused(409, 'server_not_connected'), refused(409, 'needs_reauth')];
   const run = await bridgeWith({ 'POST /mcp/call': () => answers.shift() }, {}, { permissions: { states: { 'mcp:odoo': 'granted', mcp: 'granted' } } });
   const call = () => run.bridge.handle('mcp.callTool', { server: 'odoo', tool: 'search', input: {} });
   await assert.rejects(call(), (error) => error.code === 'server_unavailable' && error.retryable === true && error.server === 'odoo');
@@ -195,6 +195,13 @@ test('broker refusals become the runtime codes; a lapsed session tells the shell
   await assert.rejects(call(), { code: 'upstream_error' });
   assert.deepEqual(run.failures, ['reauth']);
   await assert.rejects(call(), { code: 'server_not_connected' });
+  await assert.rejects(call(), (error) => error.code === 'needs_reauth' && error.server === 'odoo' && error.retryable === undefined);
+});
+
+test('the status line offers to connect a connector, or to reconnect one that must be signed in to again', () => {
+  assert.deepEqual(connectorHint('needs_reauth', 'odoo'), { text: 'Your connection to "odoo" needs you to sign in again.', label: 'Reconnect' });
+  assert.deepEqual(connectorHint('server_not_connected', 'odoo'), { text: 'Connect "odoo" in your connectors to see its data.', label: 'Connectors' });
+  assert.equal(connectorHint('server_unavailable', 'odoo'), null, 'an outage is not a connection to fix');
 });
 
 test('publish needs the declaration, sends the loaded revision, and reloads on success or conflict', async () => {

@@ -7,9 +7,9 @@
 //! `approval_required`, `tool_error`, `server_unavailable`, `bad_request`;
 //! `conflict`, `not_writer`, `not_declared`, `too_large`, `invalid_content`);
 //! `reauth`, `cross_site`, `not_found` and `internal` are about the viewer's
-//! own request. Its `needs_reauth` has no source yet: core's proxy answers a
-//! connector grant that needs signing in again as an unavailable server. The
-//! same key is the `outcome` of a call's audit row, beside `ok` and `cached`.
+//! own request. `needs_reauth` is a connector the viewer must connect again:
+//! core's proxy answers it `409 provider_not_connected` (`answer`). The same
+//! key is the `outcome` of a call's audit row, beside `ok` and `cached`.
 //! A `conflict` names the version that is live (`live`).
 
 use std::borrow::Cow;
@@ -26,6 +26,7 @@ pub(crate) enum ArtifactCallCode {
     NotFound,
     BadRequest,
     ServerNotConnected,
+    NeedsReauth,
     NotInManifest,
     BlockedByPolicy,
     ApprovalRequired,
@@ -48,6 +49,7 @@ impl ArtifactCallCode {
             Self::NotFound => "not_found",
             Self::BadRequest => "bad_request",
             Self::ServerNotConnected => "server_not_connected",
+            Self::NeedsReauth => "needs_reauth",
             Self::NotInManifest => "not_in_manifest",
             Self::BlockedByPolicy => "blocked_by_policy",
             Self::ApprovalRequired => "approval_required",
@@ -73,7 +75,7 @@ impl ArtifactCallCode {
             Self::ApprovalRequired => StatusCode::PRECONDITION_REQUIRED,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::BadRequest | Self::InvalidContent => StatusCode::BAD_REQUEST,
-            Self::ServerNotConnected | Self::Conflict => StatusCode::CONFLICT,
+            Self::ServerNotConnected | Self::NeedsReauth | Self::Conflict => StatusCode::CONFLICT,
             Self::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             Self::ToolError => StatusCode::UNPROCESSABLE_ENTITY,
             Self::ServerUnavailable => StatusCode::SERVICE_UNAVAILABLE,

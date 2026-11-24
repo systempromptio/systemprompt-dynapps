@@ -264,6 +264,7 @@ async fn forget_on_denial(
         ArtifactCallCode::Reauth
             | ArtifactCallCode::BlockedByPolicy
             | ArtifactCallCode::ServerNotConnected
+            | ArtifactCallCode::NeedsReauth
     );
     if !denied {
         return;

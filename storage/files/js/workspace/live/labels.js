@@ -1,10 +1,15 @@
 // What the viewer shell shows of people and of a call: a person's colour and
-// avatar (a data: URL, so the frame needs no network to draw it), and the
-// readable summary of a tool's input that the write confirmation names.
-// Pure functions, shared by the bridge and the prompts.
+// avatar (a data: URL, so the frame needs no network to draw it), the
+// readable summary of a tool's input that the write confirmation names, and
+// the status line's hint for a connector to connect or sign in to again.
+// Pure functions, shared by the bridge, the prompts and the shell.
 const PALETTE = ['#3b6fd8', '#2f8f6b', '#b05a2a', '#8a4fc2', '#c0446d', '#1f8a9e', '#7a7f1f', '#a83f3f'];
 const MAX_ENTRIES = 8;
 const MAX_TEXT = 80;
+const CONNECTOR_HINTS = {
+  server_not_connected: { text: (server) => `Connect "${server}" in your connectors to see its data.`, label: 'Connectors' },
+  needs_reauth: { text: (server) => `Your connection to "${server}" needs you to sign in again.`, label: 'Reconnect' },
+};
 
 export const colorFor = (id) => {
   const text = String(id || '');
@@ -45,4 +50,9 @@ export const summaryOf = (input) => {
   const shown = keys.slice(0, MAX_ENTRIES).map((key) => [key, valueText(input[key])]);
   if (keys.length > MAX_ENTRIES) shown.push(['…', `${keys.length - MAX_ENTRIES} more`]);
   return shown;
+};
+
+export const connectorHint = (code, server) => {
+  const hint = CONNECTOR_HINTS[code];
+  return hint ? { text: hint.text(server), label: hint.label } : null;
 };

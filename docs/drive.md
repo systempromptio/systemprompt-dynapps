@@ -138,8 +138,9 @@ result as core shapes it (`content`, `structuredContent`, `isError`), or
 | `not_in_manifest` | 403 | The page does not declare the tool, or the viewer declined the server |
 | `blocked_by_policy` | 403 | The live-pages policy, the proxy or the server refused (scopes, access rules, the tool's `access:`) |
 | `approval_required` | 428 | The viewer has not allowed the server yet, or a write came without a valid approval |
-| `server_not_connected` | 409 | The viewer has not connected this connector |
-| `server_unavailable` | 503 | The server is off, not running or did not answer (retry); also a connector grant that needs signing in again, which core's proxy does not tell apart |
+| `needs_reauth` | 409 | The viewer's connector has no usable grant: never connected, or the provider refused to refresh it; the viewer connects it again on the connections page (not retryable) |
+| `server_not_connected` | 409 | Core's proxy answered 409 for any other reason |
+| `server_unavailable` | 503 | The server is off, not running or did not answer, or the connector accessor failed (retry) |
 | `tool_error` | 422 | The tool answered with a JSON-RPC error, or a result larger than 8 MiB |
 | `internal` | 500 | The document or the page's state could not be read |
 
@@ -155,10 +156,20 @@ result as core shapes it (`content`, `structuredContent`, `isError`), or
 - **Listing.** `POST mcp/tools` `{server?}` lists the manifest as far as the
   viewer reaches: an allowed server with the declared tools it lists for the
   viewer and their annotations (`authStatus: connected`), one not asked yet
-  from the manifest alone (`authStatus: unknown`); declined, closed and not
-  connected servers are left out. `POST mcp/describe` `{server, tool}`
+  from the manifest alone (`authStatus: unknown`), one whose connector must
+  be connected again with no tools (`authStatus: needs_reauth`); declined
+  and closed servers are left out. `POST mcp/describe` `{server, tool}`
   answers one declared tool of an allowed server with its schemas
   (`not_in_manifest` otherwise).
+- **Reconnect, not outage.** Core asks the extension's connector accessor
+  (`/api/public/connectors/{provider}/token`) for the viewer's grant and
+  maps any answer but 404 to an unavailable server (`503
+  service_not_running`). The accessor therefore answers 404 when the grant
+  must be connected again: none stored, or one the provider refused to
+  refresh (`invalid_grant`, which also marks the account
+  `reconnect_required`). Core then answers `409 provider_not_connected`,
+  which the broker reads from the body and answers `needs_reauth`. A real
+  outage (the provider or the accessor down) stays `server_unavailable`.
 - **Audit.** Every call with a well-formed request from a signed-in viewer
   leaves one row in `artifact_tool_calls`: `user_id`, `document_id`, `server`,
   `tool`, `outcome` (`ok`, `cached`, `tool_error` for a result with
@@ -238,19 +249,62 @@ of `/rendered`. Code: `storage/files/js/workspace/live/`,
 - **Broker codes to runtime codes.** The broker's keys pass through, except
   `reauth`, `cross_site` and `internal`, which are `upstream_error` (a
   `reauth` also puts "Sign in again" on the status line), and `not_found`,
-  which is `not_granted`. `server_unavailable` is stamped `retryable`.
+  which is `not_granted`. `server_unavailable` is stamped `retryable`;
+  `needs_reauth` is not, and the status line offers Reconnect, linking to
+  the instance's connections page (`/admin/connectors`).
 - **Embedding** (`?embed=1`): no bar, only the page, the prompts and the
   status line; the shell posts `{type: "live.status", state, height}` to a
   parent of the same origin. The shell keeps the instance's framing policy,
   so a client (DynWork desktop, Mobile) shows it as a top-level view of its
   own, not inside another site's frame. Without a web session the Drive's
-  gate sends the shell to `/admin/login?redirect=/drive/{id}/live?embed=1`.
+  gate sends the shell to `/admin/login?redirect=/drive/{id}/live?embed=1`;
+  a client that holds the person's `ui` session opens one with the session
+  handoff below instead.
 - **For clients**, `GET manifest` answers `{declared, capabilities,
   contract, live_url}` (`declared: false` and the rest `null` for a document
   with none) to the web session or the person's `ui` bearer, for a reader
   who may see the document, so a client decides whether to open the shell.
   `GET permissions` also answers `viewer: {id, name, email, owner}` for the
   shell.
+
+### The session handoff
+
+The broker and the shell take only the web login's cookie: core's MCP proxy
+admits the first-party audiences, never a person's `ui` session. A client
+that holds the `ui` session (DynWork desktop; Mobile later) turns it into a
+real web session for the view that shows the shell. Code:
+`extensions/web/admin/platform/src/handoff/`, table `drive_handoffs`
+(migration `029_drive_handoffs.sql`).
+
+1. **Issue.** `POST /api/v1/drive/handoff` `{path}` with `Authorization:
+   Bearer <ui session>`, checked as `GET manifest` checks it (core's
+   signature and expiry for the `ui` audience, the `ui_session` claim, the
+   shape core gives it) and, in the statement that stores the code, that
+   its session row is live (not revoked, not expired) and its person active.
+   Nothing else issues: no cookie is read, and a web session, an agent's
+   bearer, an API key or a Device key is `401 reauth`. `path` must resolve,
+   as a browser resolves it, to a path under `/drive/` on this site (`400
+   bad_request` otherwise). The answer is `{url}`,
+   `<api_external_url>/drive/handoff?code=<code>&path=<path>`, with
+   `Cache-Control: no-store`. The code is 32 random bytes (base64url),
+   stored only as its SHA-256, bound to the person, the path and the `ui`
+   session's sign-in time (`auth_time`), and lives 60 s.
+2. **Redeem.** The view loads the URL. `GET /drive/handoff` deletes the code
+   as it reads it, live or not; storing a code sweeps the expired ones, so
+   nothing else is kept. For a live code of an active person, core's
+   `mint_browser_session` mints a web session whose `auth_time` is the `ui`
+   session's sign-in time, never the redeem, so the web's freshness and
+   step-up rules see the real sign-in; the cookie is set by core's own
+   `session_cookie_redirect` (the SSO callback's `access_token`, `Path=/`,
+   `HttpOnly`, `SameSite=Lax`, `Secure` on https), the login is recorded in
+   `user_activity` with `metadata.via = "dynwork_handoff"` (deduplicated
+   within the hour as every login), and the answer is `303` to the code's
+   path. Every failure (unknown, spent or expired code, inactive person,
+   failed mint) is the same `303` to `/admin/login?redirect=<path>`, the
+   query's `path` when it is a Drive path, `/drive` otherwise. There is no
+   grace for a second redeem: DynWork's view prefetches nothing.
+3. **Scope.** Both routes are mounted on every profile, production
+   included, beside the web router.
 
 ### Tests
 
@@ -262,6 +316,10 @@ goes as the shell sends it, so each call crosses core's real proxy, hop token
 and per-tool access. The same suite loads the shell and the frame as a
 browser does (the frame's policy, the runtime inlined before the page, the
 trip to sign in) and reads the manifest with the web and the `ui` session.
+It also hands a `ui` session to a web session the broker takes (`handoff`),
+and calls an external server whose accessor answers 404 and then 503
+(`reconnect`); the accessor's own 404 for a refused refresh is
+`tests/integration/admin-config/src/portal_e2e.rs`, against the fake portal.
 The runtime and the shell's bridge and router have their own tests under
 `tests/bridge/live-*.test.mjs` (`node --test`).
 
