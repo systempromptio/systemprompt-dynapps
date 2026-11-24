@@ -44,8 +44,8 @@ const UI_REDIRECT: &str = "http://127.0.0.1:9876/oauth/callback";
 const VERIFIER: &str = "contract-device-link-verifier-0123456789abcdefghijklmnop";
 const DAY: i64 = 86_400;
 
-/// A malformed UI request: what it is, the query fields it overrides (`None`
-/// drops one), and the word the refusal must name.
+// A malformed UI request: what it is, the query fields it overrides (`None`
+// drops one), and the word the refusal must name.
 type BadUiRequest = (
     &'static str,
     &'static [(&'static str, Option<&'static str>)],
