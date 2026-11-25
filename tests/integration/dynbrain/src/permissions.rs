@@ -177,15 +177,11 @@ async fn a_none_grant_removes_an_inherited_subject_for_the_subtree() {
     assert_eq!(level(&f, root.id, "erin").await, Some(Level::Write));
     assert_eq!(level(&f, child.id, "erin").await, None);
     assert_eq!(level(&f, grandchild.id, "erin").await, None);
-    let stored: Vec<Level> = f
-        .repo
-        .list_access(grandchild.id)
-        .await
-        .expect("closure")
-        .into_iter()
-        .map(|entry| entry.level)
-        .collect();
-    assert!(!stored.contains(&Level::NoAccess));
+    let closure = f.repo.list_access(grandchild.id).await.expect("closure");
+    assert!(
+        closure.iter().all(|entry| entry.level != Level::NoAccess),
+        "none never reaches the closure"
+    );
     f.finish().await;
 }
 
