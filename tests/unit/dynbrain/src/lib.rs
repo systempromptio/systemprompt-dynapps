@@ -1,7 +1,8 @@
 //! Unit tests for `dynbrain` pure logic:
-//! - the inheritance rule: what an ungranted article gives, inheritance down
-//!   the tree, own grants replacing the parent's, `inherit = false` cutting
-//!   inheritance, highest level wins, the subtree a rewrite covers
+//! - the access rule: what an ungranted article gives, space grants, own grants
+//!   adding to the inherited ones or replacing a subject's level, `none`,
+//!   `inherit_access` off cutting, what an article inherits, the owner and
+//!   administrators, the subtree a rewrite covers
 //! - levels and subject kinds as the schema stores them
 //! - typed properties: the definitions a space may declare and the values a
 //!   variant may carry, for every type

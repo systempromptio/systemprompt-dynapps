@@ -3,9 +3,11 @@
 //! Documentation lives in spaces. A space holds a tree of articles; an
 //! article has one variant per language (title, description, Markdown body,
 //! free front matter and typed property values) and every write of a variant
-//! appends a revision. Permissions are grants of `read`, `write` or `manage`
-//! to a user, a role or a group, inherited down the tree until an article
-//! declares its own; the resolved result is kept in the access closure
+//! appends a revision. Permissions are grants of `none`, `read`, `write` or
+//! `manage` to a user, a role or a group, on a space or on an article. An
+//! article inherits its parent's (or its space's) access unless it turns
+//! `inherit_access` off, and its own grants add to or replace what it
+//! inherits; the resolved result is kept in the access closure
 //! (`dynbrain_access`), the one permission source retrieval reads.
 //!
 //! This crate holds the schema (Postgres with pgvector, including the

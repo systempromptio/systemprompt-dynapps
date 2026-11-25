@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dynbrain_grant\n              WHERE space_id = $1 AND article_id IS NOT DISTINCT FROM $2\n                AND subject_kind = $3 AND subject_id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "16d38b7f098d17079ff52096e504fd99b8a7bfd58374a54c2e3f4b40121647d7"
+}

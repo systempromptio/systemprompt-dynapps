@@ -1,18 +1,25 @@
-//! Grants and the access they resolve to.
+//! Grants, inheritance switches and the access they resolve to.
 //!
-//! Writing or revoking a grant rewrites the access closure of the article
-//! and its subtree in the same transaction. [`BrainRepository::find_level`]
-//! reads only the closure, as retrieval will: a user reaches an article
-//! through a row for them, for one of their roles or for one of their groups,
-//! and only while their account is active.
+//! Writing or revoking a grant rewrites the access closure of its target (the
+//! whole space for a space grant, the article and its subtree otherwise) in
+//! the same transaction, and so does turning an article's `inherit_access`
+//! on or off. Turning it off with `copy_inherited` first writes what the
+//! article inherited as its own grants (an own grant for the same subject is
+//! kept), so the article keeps the same access and stops following its
+//! parent; without it the article just cuts.
+//!
+//! [`BrainRepository::find_level`] reads only the closure, as retrieval will:
+//! a user reaches an article through a row for them, for one of their roles
+//! or for one of their groups, and only while their account is active.
 
 use systemprompt::identifiers::UserId;
 
-use super::types::{AccessRow, GrantRow};
-use super::{BrainRepository, lock_space, rewrite_access};
-use crate::access::{AccessEntry, Grant, Level, Subject};
+use super::types::{AccessRow, ArticleRow, GrantRow};
+use super::{BrainRepository, list_space_grants, list_tree, lock_space, rewrite_access};
+use crate::access::{self, AccessEntry, Grant, Level, Subject};
 use crate::error::BrainError;
 use crate::ids::{ArticleId, SpaceId};
+use crate::model::Article;
 
 impl BrainRepository {
     pub async fn set_grant(&self, grant: &Grant, granted_by: &UserId) -> Result<(), BrainError> {
@@ -22,41 +29,49 @@ impl BrainRepository {
             ));
         }
         let mut tx = self.pool.begin().await?;
-        let space = space_of(&mut tx, grant.article).await?;
-        let owner = lock_space(&mut tx, space).await?;
+        if let Some(article) = grant.article
+            && space_of(&mut tx, article).await? != grant.space
+        {
+            return Err(BrainError::Invalid(
+                "the article of a grant must be in the grant's space",
+            ));
+        }
+        let owner = lock_space(&mut tx, grant.space).await?;
         sqlx::query!(
-            "INSERT INTO dynbrain_grant (article_id, subject_kind, subject_id, level, inherit, granted_by)
+            "INSERT INTO dynbrain_grant (space_id, article_id, subject_kind, subject_id, level, granted_by)
              VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (article_id, subject_kind, subject_id) DO UPDATE SET
+             ON CONFLICT (space_id, article_id, subject_kind, subject_id) DO UPDATE SET
                     level = EXCLUDED.level,
-                    inherit = EXCLUDED.inherit,
                     granted_by = EXCLUDED.granted_by,
                     updated_at = CURRENT_TIMESTAMP",
-            grant.article.0,
+            grant.space.0,
+            grant.article.map(|article| article.0),
             grant.subject.kind.as_db(),
             grant.subject.id,
             grant.level.as_db(),
-            grant.inherit,
             granted_by.as_str()
         )
         .execute(&mut *tx)
         .await?;
-        rewrite_access(&mut tx, space, owner.as_ref(), grant.article).await?;
+        rewrite_access(&mut tx, grant.space, owner.as_ref(), grant.article).await?;
         tx.commit().await?;
         Ok(())
     }
 
     pub async fn revoke_grant(
         &self,
-        article: ArticleId,
+        space: SpaceId,
+        article: Option<ArticleId>,
         subject: &Subject,
     ) -> Result<bool, BrainError> {
         let mut tx = self.pool.begin().await?;
-        let space = space_of(&mut tx, article).await?;
         let owner = lock_space(&mut tx, space).await?;
         let removed = sqlx::query!(
-            "DELETE FROM dynbrain_grant WHERE article_id = $1 AND subject_kind = $2 AND subject_id = $3",
-            article.0,
+            "DELETE FROM dynbrain_grant
+              WHERE space_id = $1 AND article_id IS NOT DISTINCT FROM $2
+                AND subject_kind = $3 AND subject_id = $4",
+            space.0,
+            article.map(|article| article.0),
             subject.kind.as_db(),
             subject.id
         )
@@ -68,19 +83,80 @@ impl BrainRepository {
         Ok(removed > 0)
     }
 
-    pub async fn list_grants(&self, article: ArticleId) -> Result<Vec<Grant>, BrainError> {
+    pub async fn list_grants(
+        &self,
+        space: SpaceId,
+        article: Option<ArticleId>,
+    ) -> Result<Vec<Grant>, BrainError> {
         sqlx::query_as!(
             GrantRow,
-            "SELECT article_id, subject_kind, subject_id, level, inherit
-               FROM dynbrain_grant WHERE article_id = $1
+            "SELECT space_id, article_id, subject_kind, subject_id, level
+               FROM dynbrain_grant
+              WHERE space_id = $1 AND article_id IS NOT DISTINCT FROM $2
               ORDER BY subject_kind, subject_id",
-            article.0
+            space.0,
+            article.map(|article| article.0)
         )
         .fetch_all(&*self.pool)
         .await?
         .into_iter()
         .map(Grant::try_from)
         .collect()
+    }
+
+    pub async fn set_inherit(
+        &self,
+        article: ArticleId,
+        inherit: bool,
+        copy_inherited: bool,
+        changed_by: &UserId,
+    ) -> Result<Article, BrainError> {
+        let mut tx = self.pool.begin().await?;
+        let space = space_of(&mut tx, article).await?;
+        let owner = lock_space(&mut tx, space).await?;
+        if !inherit && copy_inherited {
+            let nodes = list_tree(&mut tx, space).await?;
+            let grants = list_space_grants(&mut tx, space).await?;
+            let copied = access::inherited(&nodes, &grants, article);
+            let kinds: Vec<String> = copied
+                .iter()
+                .map(|(subject, _)| subject.kind.as_db().to_owned())
+                .collect();
+            let subjects: Vec<String> = copied
+                .iter()
+                .map(|(subject, _)| subject.id.clone())
+                .collect();
+            let levels: Vec<i16> = copied.iter().map(|(_, level)| level.as_db()).collect();
+            sqlx::query!(
+                "INSERT INTO dynbrain_grant (space_id, article_id, subject_kind, subject_id, level, granted_by)
+                 SELECT $1::int8, $2::int8, copied.kind, copied.subject, copied.level, $6::text
+                   FROM UNNEST($3::text[], $4::text[], $5::int2[]) AS copied(kind, subject, level)
+                 ON CONFLICT (space_id, article_id, subject_kind, subject_id) DO NOTHING",
+                space.0,
+                article.0,
+                kinds.as_slice(),
+                subjects.as_slice(),
+                levels.as_slice(),
+                changed_by.as_str()
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        let row = sqlx::query_as!(
+            ArticleRow,
+            "UPDATE dynbrain_article SET inherit_access = $2, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $1
+             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by,
+                       created_at, updated_at, trashed_at",
+            article.0,
+            inherit
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        let updated = Article::try_from(row)?;
+        rewrite_access(&mut tx, space, owner.as_ref(), Some(article)).await?;
+        tx.commit().await?;
+        Ok(updated)
     }
 
     pub async fn list_access(&self, article: ArticleId) -> Result<Vec<AccessEntry>, BrainError> {

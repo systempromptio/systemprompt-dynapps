@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS dynbrain_space (
 -- (the composite foreign key). Trashing stamps `trashed_at` on an article and
 -- its whole subtree; nothing is ever hard-deleted by the extension.
 -- `rag_mode` forces an article in or out of the retrieval index; `default`
--- leaves it to `dynbrain_rag_rule`.
+-- leaves it to `dynbrain_rag_rule`. With `inherit_access` off an article takes
+-- no access from its parent (or its space) and keeps only its own grants.
 CREATE TABLE IF NOT EXISTS dynbrain_article (
     id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     space_id   BIGINT NOT NULL REFERENCES dynbrain_space(id) ON DELETE CASCADE,
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS dynbrain_article (
     slug       TEXT NOT NULL CHECK (slug ~ '^[a-z0-9][a-z0-9-]{0,127}$'),
     icon       TEXT CHECK (icon IS NULL OR length(icon) BETWEEN 1 AND 64),
     rag_mode   TEXT NOT NULL DEFAULT 'default' CHECK (rag_mode IN ('default', 'always', 'never')),
+    inherit_access BOOLEAN NOT NULL DEFAULT true,
     created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -105,20 +107,24 @@ DROP TRIGGER IF EXISTS trg_dynbrain_revision_append_only ON dynbrain_article_rev
 CREATE TRIGGER trg_dynbrain_revision_append_only BEFORE UPDATE ON dynbrain_article_revision
     FOR EACH ROW EXECUTE FUNCTION dynbrain_revision_append_only();
 
--- What a subject may do with an article and, through `inherit`, with the
--- descendants that have no grants of their own. Subjects are Governance's
--- own: a user id, a role name (`users.roles`) or a group id (`groups`).
--- `level`: 1 read, 2 write, 3 manage.
+-- What a subject may do with a space (`article_id` NULL) or with one of its
+-- articles. Subjects are Governance's own: a user id, a role name
+-- (`users.roles`) or a group id (`groups`). `level`: 0 none, 1 read, 2 write,
+-- 3 manage. An article adds its own grants to what it inherits, an own grant
+-- replaces the inherited level of its subject, and `none` takes the subject's
+-- inherited access away for the article and below.
 CREATE TABLE IF NOT EXISTS dynbrain_grant (
-    article_id   BIGINT NOT NULL REFERENCES dynbrain_article(id) ON DELETE CASCADE,
+    id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    space_id     BIGINT NOT NULL REFERENCES dynbrain_space(id) ON DELETE CASCADE,
+    article_id   BIGINT,
     subject_kind TEXT NOT NULL CHECK (subject_kind IN ('user', 'role', 'group')),
     subject_id   TEXT NOT NULL CHECK (length(subject_id) BETWEEN 1 AND 255),
-    level        SMALLINT NOT NULL CHECK (level BETWEEN 1 AND 3),
-    inherit      BOOLEAN NOT NULL DEFAULT true,
+    level        SMALLINT NOT NULL CHECK (level BETWEEN 0 AND 3),
     granted_by   TEXT,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (article_id, subject_kind, subject_id)
+    UNIQUE NULLS NOT DISTINCT (space_id, article_id, subject_kind, subject_id),
+    FOREIGN KEY (space_id, article_id) REFERENCES dynbrain_article(space_id, id) ON DELETE CASCADE
 );
 
 -- The access closure: every subject that reaches an article, at its highest

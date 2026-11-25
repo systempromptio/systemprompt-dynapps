@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,\n                    updated_at, trashed_at\n               FROM dynbrain_article\n              WHERE space_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND trashed_at IS NULL\n              ORDER BY position, id",
+  "query": "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by, created_at,\n                    updated_at, trashed_at\n               FROM dynbrain_article WHERE space_id = $1\n              ORDER BY parent_id NULLS FIRST, position, id",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,17 @@
       },
       {
         "ordinal": 7,
+        "name": "inherit_access",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article",
+            "name": "inherit_access"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "created_by",
         "type_info": "Text",
         "origin": {
@@ -92,7 +103,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -103,7 +114,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -114,7 +125,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "trashed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -127,7 +138,6 @@
     ],
     "parameters": {
       "Left": [
-        "Int8",
         "Int8"
       ]
     },
@@ -139,11 +149,12 @@
       false,
       true,
       false,
+      false,
       true,
       false,
       false,
       true
     ]
   },
-  "hash": "def31aa43ca7a71c6cd7522415dbb7b6aad331dbb6340ab1e3a9215891bf0ce3"
+  "hash": "12050010b9350ab6c62cf8bd844bab4c7c38e2c3c5aa4c216a37f2e8e357857d"
 }

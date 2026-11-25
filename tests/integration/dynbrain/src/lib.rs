@@ -7,10 +7,13 @@
 //!   space does not list or a property the schema refuses writes nothing, and
 //!   revisions refuse updates
 //! - permissions: nobody without a grant reaches an article but its owner and
-//!   administrators; a grant reaches the subtree and revoking it takes it back;
-//!   `inherit = false` cuts inheritance; a group grant reaches its live members
-//!   and a role grant the users holding the role; an inactive account reaches
-//!   nothing
+//!   administrators; a space grant reaches every article; a grant reaches the
+//!   subtree and revoking it takes it back; a child's grant keeps the parent's
+//!   subjects and can lower one; `none` removes a subject for the subtree;
+//!   `inherit_access` off cuts, and with `copy_inherited` copies; a group grant
+//!   reaches its live members and a role grant the users holding the role; an
+//!   inactive account reaches nothing; a grant on another space's article is
+//!   refused
 //! - moving: the subtree's closure is rewritten, so what it inherited from its
 //!   old place is gone; moves below itself or into another space fail
 //! - trash: an article goes with its subtree and comes back with it

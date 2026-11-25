@@ -81,6 +81,7 @@ pub struct Article {
     pub slug: String,
     pub icon: Option<String>,
     pub rag_mode: RagMode,
+    pub inherit_access: bool,
     pub created_by: Option<UserId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

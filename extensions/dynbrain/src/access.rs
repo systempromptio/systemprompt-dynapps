@@ -1,31 +1,40 @@
 //! Permission levels, subjects, grants and the inheritance rule.
 //!
-//! The rule, as dynbrain applies it:
+//! A grant names a subject and a level, on a space or on one of its articles.
+//! The access of an article is resolved top-down:
 //!
-//! - an article with grants of its own is reached by exactly those grants;
-//! - an article without grants takes its parent's grants that inherit;
-//! - a grant with `inherit = false` reaches its article only, never the
-//!   descendants;
-//! - an article that ends up with no grant is reached by nobody but the space's
-//!   creator and administrators, who reach every article.
+//! - it starts from what its parent (its space, for a top-level article)
+//!   resolves to, unless the article has `inherit_access` off, in which case it
+//!   starts empty;
+//! - its own grants are added on top, and an own grant for a subject the
+//!   article inherited replaces the inherited level, lower or higher;
+//! - an own `none` grant removes the subject, here and below, until a
+//!   descendant grants it again;
+//! - the space's creator and the `admin` role manage every article, whatever
+//!   the grants say.
 //!
 //! Nothing is granted by default. [`closure`] resolves the rule into the rows
-//! of `dynbrain_access`.
+//! of `dynbrain_access` (ordered by article, then subject), where `none` never
+//! appears. [`inherited`] is what an article would take from above, the
+//! grants alone, without the owner and the administrators. [`subtree`] is an
+//! article and everything below it, root first.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::UserId;
 
-use crate::ids::ArticleId;
+use crate::ids::{ArticleId, SpaceId};
 
 pub const ADMIN_ROLE: &str = "admin";
 
 /// What a subject may do with an article. Ordered: `Manage` covers `Write`,
-/// which covers `Read`.
+/// which covers `Read`; `NoAccess` (`none`) only takes inherited access away.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Level {
+    #[serde(rename = "none")]
+    NoAccess,
     Read,
     Write,
     Manage,
@@ -34,6 +43,7 @@ pub enum Level {
 impl Level {
     pub const fn as_db(self) -> i16 {
         match self {
+            Self::NoAccess => 0,
             Self::Read => 1,
             Self::Write => 2,
             Self::Manage => 3,
@@ -42,6 +52,7 @@ impl Level {
 
     pub const fn from_db(value: i16) -> Option<Self> {
         match value {
+            0 => Some(Self::NoAccess),
             1 => Some(Self::Read),
             2 => Some(Self::Write),
             3 => Some(Self::Manage),
@@ -112,13 +123,13 @@ impl Subject {
     }
 }
 
-/// A grant written on an article.
+/// A grant written on a space (`article: None`) or on one of its articles.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Grant {
-    pub article: ArticleId,
+    pub space: SpaceId,
+    pub article: Option<ArticleId>,
     pub subject: Subject,
     pub level: Level,
-    pub inherit: bool,
 }
 
 /// One row of the access closure: `subject` reaches `article` at `level`.
@@ -129,51 +140,25 @@ pub struct AccessEntry {
     pub level: Level,
 }
 
-/// An article and its parent: the shape of a space's tree.
+/// An article, its parent and whether it inherits: the shape of a space's
+/// tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TreeNode {
     pub id: ArticleId,
     pub parent: Option<ArticleId>,
+    pub inherit_access: bool,
 }
 
-#[derive(Clone)]
-struct Reach {
-    subject: Subject,
-    level: Level,
-    inherit: bool,
-}
+type Levels = BTreeMap<Subject, Level>;
 
 pub fn closure(nodes: &[TreeNode], grants: &[Grant], owner: Option<&UserId>) -> Vec<AccessEntry> {
-    let own = grants_by_article(grants);
-    let children = children_by_parent(nodes);
-    let known: HashSet<ArticleId> = nodes.iter().map(|node| node.id).collect();
-    let mut pending: Vec<(ArticleId, Vec<Reach>)> = nodes
-        .iter()
-        .filter(|node| node.parent.is_none_or(|parent| !known.contains(&parent)))
-        .map(|node| (node.id, Vec::new()))
-        .collect();
-    let mut resolved: BTreeMap<ArticleId, BTreeMap<Subject, Level>> = BTreeMap::new();
-    while let Some((article, inherited)) = pending.pop() {
-        let effective = own.get(&article).map_or(inherited, Clone::clone);
-        let levels = resolved.entry(article).or_default();
-        for reach in &effective {
-            raise(levels, reach.subject.clone(), reach.level);
-        }
-        if let Some(owner) = owner {
-            raise(levels, Subject::user(owner), Level::Manage);
-        }
-        raise(levels, Subject::role(ADMIN_ROLE), Level::Manage);
-        let passed: Vec<Reach> = effective
-            .into_iter()
-            .filter(|reach| reach.inherit)
-            .collect();
-        for child in children.get(&article).into_iter().flatten() {
-            pending.push((*child, passed.clone()));
-        }
-    }
-    resolved
+    resolve(nodes, grants)
         .into_iter()
-        .flat_map(|(article, levels)| {
+        .flat_map(|(article, mut levels)| {
+            if let Some(owner) = owner {
+                levels.insert(Subject::user(owner), Level::Manage);
+            }
+            levels.insert(Subject::role(ADMIN_ROLE), Level::Manage);
             levels.into_iter().map(move |(subject, level)| AccessEntry {
                 article,
                 subject,
@@ -181,6 +166,22 @@ pub fn closure(nodes: &[TreeNode], grants: &[Grant], owner: Option<&UserId>) -> 
             })
         })
         .collect()
+}
+
+pub fn inherited(
+    nodes: &[TreeNode],
+    grants: &[Grant],
+    article: ArticleId,
+) -> Vec<(Subject, Level)> {
+    let parent = nodes
+        .iter()
+        .find(|node| node.id == article)
+        .and_then(|node| node.parent);
+    let source = parent.map_or_else(
+        || space_levels(grants),
+        |parent| resolve(nodes, grants).remove(&parent).unwrap_or_default(),
+    );
+    source.into_iter().collect()
 }
 
 pub fn subtree(nodes: &[TreeNode], root: ArticleId) -> Vec<ArticleId> {
@@ -199,19 +200,59 @@ pub fn subtree(nodes: &[TreeNode], root: ArticleId) -> Vec<ArticleId> {
     found
 }
 
-fn raise(levels: &mut BTreeMap<Subject, Level>, subject: Subject, level: Level) {
-    let current = levels.entry(subject).or_insert(level);
-    *current = (*current).max(level);
+fn resolve(nodes: &[TreeNode], grants: &[Grant]) -> BTreeMap<ArticleId, Levels> {
+    let own = article_grants(grants);
+    let children = children_by_parent(nodes);
+    let known: HashSet<ArticleId> = nodes.iter().map(|node| node.id).collect();
+    let from_space = space_levels(grants);
+    let mut pending: Vec<(TreeNode, Levels)> = nodes
+        .iter()
+        .filter(|node| node.parent.is_none_or(|parent| !known.contains(&parent)))
+        .map(|node| (*node, from_space.clone()))
+        .collect();
+    let by_id: HashMap<ArticleId, TreeNode> = nodes.iter().map(|node| (node.id, *node)).collect();
+    let mut resolved = BTreeMap::new();
+    while let Some((node, above)) = pending.pop() {
+        let mut levels = if node.inherit_access {
+            above
+        } else {
+            Levels::new()
+        };
+        for grant in own.get(&node.id).into_iter().flatten() {
+            apply(&mut levels, grant);
+        }
+        for child in children.get(&node.id).into_iter().flatten() {
+            if let Some(child) = by_id.get(child) {
+                pending.push((*child, levels.clone()));
+            }
+        }
+        resolved.insert(node.id, levels);
+    }
+    resolved
 }
 
-fn grants_by_article(grants: &[Grant]) -> HashMap<ArticleId, Vec<Reach>> {
-    let mut by_article: HashMap<ArticleId, Vec<Reach>> = HashMap::new();
+fn space_levels(grants: &[Grant]) -> Levels {
+    let mut levels = Levels::new();
+    for grant in grants.iter().filter(|grant| grant.article.is_none()) {
+        apply(&mut levels, grant);
+    }
+    levels
+}
+
+fn apply(levels: &mut Levels, grant: &Grant) {
+    if grant.level == Level::NoAccess {
+        levels.remove(&grant.subject);
+    } else {
+        levels.insert(grant.subject.clone(), grant.level);
+    }
+}
+
+fn article_grants(grants: &[Grant]) -> HashMap<ArticleId, Vec<&Grant>> {
+    let mut by_article: HashMap<ArticleId, Vec<&Grant>> = HashMap::new();
     for grant in grants {
-        by_article.entry(grant.article).or_default().push(Reach {
-            subject: grant.subject.clone(),
-            level: grant.level,
-            inherit: grant.inherit,
-        });
+        if let Some(article) = grant.article {
+            by_article.entry(article).or_default().push(grant);
+        }
     }
     by_article
 }

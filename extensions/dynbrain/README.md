@@ -21,10 +21,10 @@ come in later phases.
 | Table | What it holds |
 | --- | --- |
 | `dynbrain_space` | slug, name, default language, languages, property schema (JSON), creator |
-| `dynbrain_article` | the tree: space, parent (same space), position, slug, icon, retrieval mode, trash stamp |
+| `dynbrain_article` | the tree: space, parent (same space), position, slug, icon, retrieval mode, `inherit_access`, trash stamp |
 | `dynbrain_article_variant` | one per article and language: title, description, Markdown body, front matter, property values, content hash, revision |
 | `dynbrain_article_revision` | every write of a variant, append-only (a trigger refuses updates) |
-| `dynbrain_grant` | subject (user, role or group), level (read, write, manage), `inherit` |
+| `dynbrain_grant` | target (a space, or one of its articles), subject (user, role or group), level (none, read, write, manage) |
 | `dynbrain_access` | the access closure: article × subject × level after inheritance |
 | `dynbrain_chunk` | retrieval chunks: `heading_path`, content, synopsis, `fts_config`, generated `search_vector`, `embedding vector(1536)` and its fingerprint |
 | `dynbrain_rag_rule` | eligibility rules, denied by default |
@@ -48,10 +48,16 @@ written.
 
 - Subjects are Governance's own: a user id, a role (`users.roles`) or a group (`groups`, resolved through the
   `user_groups` view, so only live memberships count).
-- An article with grants of its own is reached by exactly those grants. An article without grants takes its parent's
-  grants that inherit. A grant with `inherit = false` reaches its own article only.
-- An article that no grant reaches is seen only by the space's creator and the `admin` role, who manage every article.
-  Nothing is granted by default.
+- A grant is written on a space or on one of its articles, at `none`, `read`, `write` or `manage`.
+- An article starts from what its parent resolves to (its space, for a top-level article), unless its
+  `inherit_access` is off, in which case it starts empty. Its own grants are added on top; an own grant for a subject
+  it inherited replaces that level, lower or higher; an own `none` takes the subject away for the article and below,
+  until a descendant grants it again. `none` never appears in `dynbrain_access`.
+- Turning `inherit_access` off (`set_inherit(article, false, copy_inherited, ..)`) either just cuts, or, with
+  `copy_inherited`, first writes what the article inherited as its own grants (an existing own grant for the same
+  subject is kept), as the access dialog's checkbox does.
+- The space's creator and the `admin` role manage every article, whatever the grants say. Nothing else is granted by
+  default.
 - `dynbrain_access` holds the result and is the only permission source retrieval reads. It is rewritten for the
   affected subtree in the same transaction as the grant change, the new article or the move that alters it, under a
   lock on the space row, never in the background.

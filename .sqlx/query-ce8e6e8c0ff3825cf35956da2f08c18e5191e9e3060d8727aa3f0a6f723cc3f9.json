@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, parent_id FROM dynbrain_article WHERE space_id = $1",
+  "query": "SELECT id, parent_id, inherit_access FROM dynbrain_article WHERE space_id = $1",
   "describe": {
     "columns": [
       {
@@ -24,6 +24,17 @@
             "name": "parent_id"
           }
         }
+      },
+      {
+        "ordinal": 2,
+        "name": "inherit_access",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article",
+            "name": "inherit_access"
+          }
+        }
       }
     ],
     "parameters": {
@@ -33,8 +44,9 @@
     },
     "nullable": [
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "32d527afc82d3724c1d65760aabe75ce9f9628c7dcfad658379717a90dddfd34"
+  "hash": "ce8e6e8c0ff3825cf35956da2f08c18e5191e9e3060d8727aa3f0a6f723cc3f9"
 }

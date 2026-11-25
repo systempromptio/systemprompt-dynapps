@@ -54,7 +54,7 @@ async fn lock_space(conn: &mut PgConnection, space: SpaceId) -> Result<Option<Us
 async fn list_tree(conn: &mut PgConnection, space: SpaceId) -> Result<Vec<TreeNode>, BrainError> {
     let rows = sqlx::query_as!(
         NodeRow,
-        "SELECT id, parent_id FROM dynbrain_article WHERE space_id = $1",
+        "SELECT id, parent_id, inherit_access FROM dynbrain_article WHERE space_id = $1",
         space.0
     )
     .fetch_all(&mut *conn)
@@ -68,10 +68,8 @@ async fn list_space_grants(
 ) -> Result<Vec<Grant>, BrainError> {
     let rows = sqlx::query_as!(
         GrantRow,
-        "SELECT g.article_id, g.subject_kind, g.subject_id, g.level, g.inherit
-           FROM dynbrain_grant g
-           JOIN dynbrain_article a ON a.id = g.article_id
-          WHERE a.space_id = $1",
+        "SELECT space_id, article_id, subject_kind, subject_id, level
+           FROM dynbrain_grant WHERE space_id = $1",
         space.0
     )
     .fetch_all(&mut *conn)
@@ -83,11 +81,14 @@ async fn rewrite_access(
     conn: &mut PgConnection,
     space: SpaceId,
     owner: Option<&UserId>,
-    root: ArticleId,
+    root: Option<ArticleId>,
 ) -> Result<(), BrainError> {
     let nodes = list_tree(conn, space).await?;
     let grants = list_space_grants(conn, space).await?;
-    let scope: Vec<ArticleId> = access::subtree(&nodes, root);
+    let scope: Vec<ArticleId> = root.map_or_else(
+        || nodes.iter().map(|node| node.id).collect(),
+        |root| access::subtree(&nodes, root),
+    );
     let in_scope: HashSet<ArticleId> = scope.iter().copied().collect();
     let entries: Vec<access::AccessEntry> = access::closure(&nodes, &grants, owner)
         .into_iter()

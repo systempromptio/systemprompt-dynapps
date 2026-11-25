@@ -1,10 +1,11 @@
 //! Moving an article rewrites the access closure of its subtree.
 
 use dynbrain::BrainError;
-use dynbrain::access::{Grant, Level, Subject};
+use dynbrain::access::{Level, Subject};
 use dynbrain::model::ArticleMove;
 
 use crate::fixture::{Fixture, user};
+use crate::permissions::on;
 
 #[tokio::test]
 async fn moving_drops_what_the_subtree_inherited_from_its_old_place() {
@@ -18,12 +19,12 @@ async fn moving_drops_what_the_subtree_inherited_from_its_old_place() {
     for (article, name) in [(sales.id, "bob"), (people.id, "erin")] {
         f.repo
             .set_grant(
-                &Grant {
-                    article,
-                    subject: Subject::user(&user(name)),
-                    level: Level::Read,
-                    inherit: true,
-                },
+                &on(
+                    space.id,
+                    Some(article),
+                    Subject::user(&user(name)),
+                    Level::Read,
+                ),
                 &user("alice"),
             )
             .await

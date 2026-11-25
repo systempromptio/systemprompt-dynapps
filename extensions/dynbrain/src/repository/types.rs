@@ -33,6 +33,7 @@ pub struct ArticleRow {
     pub slug: String,
     pub icon: Option<String>,
     pub rag_mode: String,
+    pub inherit_access: bool,
     pub created_by: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -72,17 +73,18 @@ pub struct RevisionRow {
 
 #[derive(Debug)]
 pub struct GrantRow {
-    pub article_id: i64,
+    pub space_id: i64,
+    pub article_id: Option<i64>,
     pub subject_kind: String,
     pub subject_id: String,
     pub level: i16,
-    pub inherit: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeRow {
     pub id: i64,
     pub parent_id: Option<i64>,
+    pub inherit_access: bool,
 }
 
 /// The space row a tree write locks: its id and its owner.
@@ -131,6 +133,7 @@ impl TryFrom<ArticleRow> for Article {
             icon: row.icon,
             rag_mode: RagMode::parse(&row.rag_mode)
                 .ok_or(BrainError::Invalid("a stored rag mode is unknown"))?,
+            inherit_access: row.inherit_access,
             created_by: row.created_by.map(UserId::new),
             created_at: row.created_at,
             updated_at: row.updated_at,
@@ -185,7 +188,8 @@ impl TryFrom<GrantRow> for Grant {
 
     fn try_from(row: GrantRow) -> Result<Self, BrainError> {
         Ok(Self {
-            article: ArticleId(row.article_id),
+            space: SpaceId(row.space_id),
+            article: row.article_id.map(ArticleId),
             subject: Subject {
                 kind: SubjectKind::parse(&row.subject_kind)
                     .ok_or(BrainError::Invalid("a stored subject kind is unknown"))?,
@@ -193,7 +197,6 @@ impl TryFrom<GrantRow> for Grant {
             },
             level: Level::from_db(row.level)
                 .ok_or(BrainError::Invalid("a stored level is unknown"))?,
-            inherit: row.inherit,
         })
     }
 }
@@ -203,6 +206,7 @@ impl From<NodeRow> for TreeNode {
         Self {
             id: ArticleId(row.id),
             parent: row.parent_id.map(ArticleId),
+            inherit_access: row.inherit_access,
         }
     }
 }

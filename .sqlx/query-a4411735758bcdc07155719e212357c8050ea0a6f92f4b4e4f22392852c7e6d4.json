@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE dynbrain_article\n                SET parent_id = $2,\n                    position = COALESCE($3::int4, (SELECT COALESCE(MAX(position) + 1, 0)\n                                                     FROM dynbrain_article\n                                                    WHERE space_id = $4\n                                                      AND parent_id IS NOT DISTINCT FROM $2\n                                                      AND id <> $1)),\n                    updated_at = CURRENT_TIMESTAMP\n              WHERE id = $1\n             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,\n                       updated_at, trashed_at",
+  "query": "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by, created_at,\n                updated_at, trashed_at\n           FROM dynbrain_article WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,17 @@
       },
       {
         "ordinal": 7,
+        "name": "inherit_access",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article",
+            "name": "inherit_access"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "created_by",
         "type_info": "Text",
         "origin": {
@@ -92,7 +103,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -103,7 +114,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -114,7 +125,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "trashed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -127,9 +138,6 @@
     ],
     "parameters": {
       "Left": [
-        "Int8",
-        "Int8",
-        "Int4",
         "Int8"
       ]
     },
@@ -141,11 +149,12 @@
       false,
       true,
       false,
+      false,
       true,
       false,
       false,
       true
     ]
   },
-  "hash": "7360eb2af01b18b45ec91d5cabbacfe172a1c2ca44297de5e8729c7143b5ff4f"
+  "hash": "a4411735758bcdc07155719e212357c8050ea0a6f92f4b4e4f22392852c7e6d4"
 }

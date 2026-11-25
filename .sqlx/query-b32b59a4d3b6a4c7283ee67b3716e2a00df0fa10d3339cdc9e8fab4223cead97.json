@@ -1,10 +1,21 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT g.article_id, g.subject_kind, g.subject_id, g.level, g.inherit\n           FROM dynbrain_grant g\n           JOIN dynbrain_article a ON a.id = g.article_id\n          WHERE a.space_id = $1",
+  "query": "SELECT space_id, article_id, subject_kind, subject_id, level\n               FROM dynbrain_grant\n              WHERE space_id = $1 AND article_id IS NOT DISTINCT FROM $2\n              ORDER BY subject_kind, subject_id",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
+        "name": "space_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_grant",
+            "name": "space_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
         "name": "article_id",
         "type_info": "Int8",
         "origin": {
@@ -15,7 +26,7 @@
         }
       },
       {
-        "ordinal": 1,
+        "ordinal": 2,
         "name": "subject_kind",
         "type_info": "Text",
         "origin": {
@@ -26,7 +37,7 @@
         }
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "subject_id",
         "type_info": "Text",
         "origin": {
@@ -37,7 +48,7 @@
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "level",
         "type_info": "Int2",
         "origin": {
@@ -46,31 +57,21 @@
             "name": "level"
           }
         }
-      },
-      {
-        "ordinal": 4,
-        "name": "inherit",
-        "type_info": "Bool",
-        "origin": {
-          "Table": {
-            "table": "dynbrain_grant",
-            "name": "inherit"
-          }
-        }
       }
     ],
     "parameters": {
       "Left": [
+        "Int8",
         "Int8"
       ]
     },
     "nullable": [
       false,
-      false,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "15b429f0e6932a79b3e205be34e93b7b88e3dd2e0c9d8310fb7b1f4d60eaf8cf"
+  "hash": "b32b59a4d3b6a4c7283ee67b3716e2a00df0fa10d3339cdc9e8fab4223cead97"
 }

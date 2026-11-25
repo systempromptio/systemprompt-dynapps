@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO dynbrain_article (space_id, parent_id, position, slug, icon, rag_mode, created_by)\n             VALUES ($1, $2, COALESCE($3::int4, (SELECT COALESCE(MAX(position) + 1, 0)\n                                                   FROM dynbrain_article\n                                                  WHERE space_id = $1\n                                                    AND parent_id IS NOT DISTINCT FROM $2)),\n                     $4, $5, $6, $7)\n             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,\n                       updated_at, trashed_at",
+  "query": "UPDATE dynbrain_article SET inherit_access = $2, updated_at = CURRENT_TIMESTAMP\n              WHERE id = $1\n             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by,\n                       created_at, updated_at, trashed_at",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,17 @@
       },
       {
         "ordinal": 7,
+        "name": "inherit_access",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article",
+            "name": "inherit_access"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "created_by",
         "type_info": "Text",
         "origin": {
@@ -92,7 +103,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -103,7 +114,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -114,7 +125,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "trashed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -128,12 +139,7 @@
     "parameters": {
       "Left": [
         "Int8",
-        "Int8",
-        "Int4",
-        "Text",
-        "Text",
-        "Text",
-        "Text"
+        "Bool"
       ]
     },
     "nullable": [
@@ -144,11 +150,12 @@
       false,
       true,
       false,
+      false,
       true,
       false,
       false,
       true
     ]
   },
-  "hash": "0b6947a2a9e937fe952de0d83d58957380e31d79bbb1f4d23f11fbc694f095f1"
+  "hash": "b88c176d01c48ba486570e3cf509f184767205fd467263b527d5e6d8509d4410"
 }

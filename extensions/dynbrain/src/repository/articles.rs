@@ -40,7 +40,7 @@ impl BrainRepository {
                                                   WHERE space_id = $1
                                                     AND parent_id IS NOT DISTINCT FROM $2)),
                      $4, $5, $6, $7)
-             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,
+             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by, created_at,
                        updated_at, trashed_at",
             article.space.0,
             article.parent.map(|parent| parent.0),
@@ -53,7 +53,7 @@ impl BrainRepository {
         .fetch_one(&mut *tx)
         .await?;
         let created = Article::try_from(row)?;
-        rewrite_access(&mut tx, article.space, owner.as_ref(), created.id).await?;
+        rewrite_access(&mut tx, article.space, owner.as_ref(), Some(created.id)).await?;
         tx.commit().await?;
         Ok(created)
     }
@@ -66,7 +66,7 @@ impl BrainRepository {
     pub async fn list_articles(&self, space: SpaceId) -> Result<Vec<Article>, BrainError> {
         sqlx::query_as!(
             ArticleRow,
-            "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,
+            "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by, created_at,
                     updated_at, trashed_at
                FROM dynbrain_article WHERE space_id = $1
               ORDER BY parent_id NULLS FIRST, position, id",
@@ -86,7 +86,7 @@ impl BrainRepository {
     ) -> Result<Vec<Article>, BrainError> {
         sqlx::query_as!(
             ArticleRow,
-            "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,
+            "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by, created_at,
                     updated_at, trashed_at
                FROM dynbrain_article
               WHERE space_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND trashed_at IS NULL
@@ -136,7 +136,7 @@ impl BrainRepository {
                                                       AND id <> $1)),
                     updated_at = CURRENT_TIMESTAMP
               WHERE id = $1
-             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,
+             RETURNING id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by, created_at,
                        updated_at, trashed_at",
             article.0,
             target.parent.map(|parent| parent.0),
@@ -146,7 +146,7 @@ impl BrainRepository {
         .fetch_one(&mut *tx)
         .await?;
         let moved = Article::try_from(row)?;
-        rewrite_access(&mut tx, current.space, owner.as_ref(), article).await?;
+        rewrite_access(&mut tx, current.space, owner.as_ref(), Some(article)).await?;
         tx.commit().await?;
         Ok(moved)
     }
@@ -200,7 +200,7 @@ async fn find_article_in(
 ) -> Result<Option<Article>, BrainError> {
     sqlx::query_as!(
         ArticleRow,
-        "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, created_by, created_at,
+        "SELECT id, space_id, parent_id, position, slug, icon, rag_mode, inherit_access, created_by, created_at,
                 updated_at, trashed_at
            FROM dynbrain_article WHERE id = $1",
         article.0
