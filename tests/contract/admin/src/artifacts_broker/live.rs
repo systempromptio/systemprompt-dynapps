@@ -223,7 +223,7 @@ pub(super) async fn a_client_reads_the_manifest(
     assert_eq!(plain.status, 200, "{}", plain.body);
     assert_eq!(
         plain.json(),
-        serde_json::json!({ "declared": false, "capabilities": null, "contract": null, "live_url": null })
+        serde_json::json!({ "declared": false, "capabilities": null, "contract": null, "live_url": null, "servers": [] })
     );
 
     let agent = stack

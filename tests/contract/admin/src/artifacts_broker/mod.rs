@@ -16,8 +16,9 @@
 //! read; and the editor page, with and without its embed mode (`editor`). A
 //! `ui` session is handed to a web session the broker takes (`handoff`), and a
 //! connector that must be signed in again asks to reconnect while an accessor
-//! that is down stays an outage (`reconnect`). The run ends by reading the
-//! audit rows back.
+//! that is down stays an outage (`reconnect`). A native client runs a page of
+//! its own with the `ui` session alone, and no other bearer is taken
+//! (`native`). The run ends by reading the audit rows back.
 
 mod calls;
 mod consent;
@@ -26,6 +27,7 @@ mod fake;
 mod handoff;
 mod live;
 mod manifest;
+mod native;
 mod publish;
 mod reconnect;
 mod stack;
@@ -189,6 +191,15 @@ async fn artifacts_broker_runs_a_tool_as_the_viewer() {
     handoff::only_a_ui_session_issues(&stack, &db.pool, &handing, &page).await;
     let remote =
         reconnect::a_refused_grant_asks_to_reconnect(&stack, &db.pool, &owner, &owner_cookie).await;
+    let native_client = native::Who {
+        owner: &owner,
+        owner_cookie: &owner_cookie,
+        agent: &agent,
+    };
+    let drawn =
+        native::a_native_client_runs_the_page(&stack, &db.pool, &native_client, &remote).await;
+    native::a_stranger_reads_no_page(&stack, &db.pool, &outsider, &drawn).await;
+    native::only_the_person_session_is_taken(&stack, &db.pool, &native_client, &drawn).await;
     let remote_row = |outcome: &str| {
         (
             owner.as_str().to_owned(),

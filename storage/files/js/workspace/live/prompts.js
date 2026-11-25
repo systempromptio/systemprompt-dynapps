@@ -2,7 +2,8 @@
 // connector for the page, approving one action, and the permissions panel.
 // They are the shell's, drawn outside the page's frame, so the page can
 // neither draw nor click them. One dialog is open at a time; a second ask
-// waits for the first to close. All text is set with textContent.
+// waits for the first to close. A server is shown by its name (`nameOf`, the
+// broker's display name, else its id). All text is set with textContent.
 const STATES = [
   ['granted', 'Allowed'],
   ['prompt', 'Ask first'],
@@ -11,7 +12,7 @@ const STATES = [
 
 const el = (tag, className, attrs = {}) => Object.assign(document.createElement(tag), { className, ...attrs });
 
-export const createPrompts = (root, onOpenChange) => {
+export const createPrompts = (root, onOpenChange, nameOf = (server) => server) => {
   let queue = Promise.resolve();
   let open = false;
 
@@ -61,10 +62,10 @@ export const createPrompts = (root, onOpenChange) => {
       el('p', 'sp-live__text', { textContent: 'It reads and acts as you, with your own access, through:' }),
     );
     const list = el('ul', 'sp-live__servers');
-    list.append(...servers.map((server) => el('li', '', { textContent: server })));
+    list.append(...servers.map((server) => el('li', '', { textContent: nameOf(server) })));
     form.append(list);
     if (call) {
-      form.append(el('p', 'sp-live__text', { textContent: `Allow also runs "${call.tool}" on "${call.server}" now, as you. It may change data there.` }));
+      form.append(el('p', 'sp-live__text', { textContent: `Allow also runs "${call.tool}" on "${nameOf(call.server)}" now, as you. It may change data there.` }));
       facts(form, call.summary);
     }
     form.append(el('p', 'sp-live__muted', { textContent: 'You can change this later in the page\'s permissions.' }));
@@ -75,7 +76,7 @@ export const createPrompts = (root, onOpenChange) => {
   const confirm = ({ server, tool, summary }) => dialog((form, resolve) => {
     form.append(
       el('h3', '', { textContent: 'Allow this action?' }),
-      el('p', 'sp-live__text', { textContent: `The page wants to run "${tool}" on "${server}" as you. It may change data there.` }),
+      el('p', 'sp-live__text', { textContent: `The page wants to run "${tool}" on "${nameOf(server)}" as you. It may change data there.` }),
     );
     facts(form, summary);
     actions(form, 'Cancel', 'Allow');
@@ -89,7 +90,7 @@ export const createPrompts = (root, onOpenChange) => {
     servers.forEach((server) => {
       const scope = `mcp:${server}`;
       const choice = el('select', 'sp-live__choice', { name: scope });
-      choice.setAttribute('aria-label', `Access to ${server}`);
+      choice.setAttribute('aria-label', `Access to ${nameOf(server)}`);
       STATES.forEach(([value, label]) => choice.append(el('option', '', { value, textContent: label, selected: states[scope] === value })));
       choice.addEventListener('change', async () => {
         choice.disabled = true;
@@ -100,7 +101,7 @@ export const createPrompts = (root, onOpenChange) => {
         }
       });
       const row = el('li', 'sp-live__permission');
-      row.append(el('span', '', { textContent: server }), choice);
+      row.append(el('span', '', { textContent: nameOf(server) }), choice);
       rows.append(row);
     });
     form.append(rows);

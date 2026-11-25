@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { createBridge } from '../../storage/files/js/workspace/live/bridge.js';
 import { createRouter, PROTOCOL } from '../../storage/files/js/workspace/live/router.js';
 import { connectorHint, summaryOf } from '../../storage/files/js/workspace/live/labels.js';
+import { createPrompts } from '../../storage/files/js/workspace/live/prompts.js';
 
 const API = '/api/v1/artifacts/doc-1';
 
@@ -245,4 +246,86 @@ test('the write summary names each top-level input and clips long values', () =>
   assert.deepEqual(summary.slice(0, 2), [['name', 'Acme'], ['tags', '2 items: ["a","b"]']]);
   assert.equal(summary[2][1].length, 80);
   assert.deepEqual(summaryOf(null), []);
+});
+
+test('a server goes by the name the broker gives it, and by its id without one', async () => {
+  const named = await bridgeWith({}, {}, { permissions: { servers: [{ id: 'odoo', name: 'Dynapps Odoo' }] } });
+  assert.equal(named.bridge.nameOf('odoo'), 'Dynapps Odoo');
+  assert.equal(named.bridge.nameOf('dynbrain'), 'dynbrain', 'a server the answer does not name keeps its id');
+  const unnamed = await bridgeWith({}, {});
+  assert.equal(unnamed.bridge.nameOf('odoo'), 'odoo', 'an answer without names shows ids');
+});
+
+// A minimal recorder of the elements the prompts draw: enough to read their
+// text and to close a dialog with the viewer's choice.
+class Drawn {
+  constructor(tag) {
+    this.tag = tag;
+    this.children = [];
+    this.attributes = {};
+    this.listeners = {};
+  }
+
+  append(...nodes) { this.children.push(...nodes); }
+
+  setAttribute(name, value) { this.attributes[name] = value; }
+
+  addEventListener(type, listener) { this.listeners[type] = listener; }
+
+  showModal() { this.opened = true; }
+
+  remove() { this.removed = true; }
+
+  text() { return [this.textContent || '', ...this.children.map((child) => child.text())].filter(Boolean).join(' | '); }
+
+  labels() { return [this.attributes['aria-label'], ...this.children.flatMap((child) => child.labels())].filter(Boolean); }
+}
+
+const drawnPrompts = () => {
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: (tag) => new Drawn(tag) } });
+  const root = new Drawn('section');
+  const names = { odoo: 'Dynapps Odoo' };
+  const prompts = createPrompts(root, () => {}, (server) => names[server] || server);
+  const restore = () => {
+    if (saved) Object.defineProperty(globalThis, 'document', saved);
+    else delete globalThis.document;
+  };
+  const answer = async (value) => {
+    const dialog = root.children.at(-1);
+    dialog.returnValue = value;
+    dialog.listeners.close();
+  };
+  return { root, prompts, restore, answer };
+};
+
+const settled = () => new Promise((resolve) => setImmediate(resolve));
+
+test('the consent prompt, the confirmation and the panel name each server, never its bare id when it has a name', async (t) => {
+  const drawn = drawnPrompts();
+  t.after(drawn.restore);
+
+  const consent = drawn.prompts.consent(['odoo', 'dynbrain'], { server: 'odoo', tool: 'write_partner', summary: [] });
+  await settled();
+  const asked = drawn.root.children.at(-1).text();
+  assert.match(asked, /Dynapps Odoo/, 'the prompt lists the server by its name');
+  assert.match(asked, /runs "write_partner" on "Dynapps Odoo"/, 'the call it approves names the server');
+  assert.match(asked, /dynbrain/, 'a server with no name is listed by its id');
+  assert.doesNotMatch(asked, /"odoo"|\| odoo \|/, 'the named server never shows its id');
+  await drawn.answer('accept');
+  assert.equal(await consent, true);
+
+  const confirm = drawn.prompts.confirm({ server: 'odoo', tool: 'write_partner', summary: [] });
+  await settled();
+  assert.match(drawn.root.children.at(-1).text(), /run "write_partner" on "Dynapps Odoo" as you/);
+  await drawn.answer('cancel');
+  assert.equal(await confirm, false);
+
+  const panel = drawn.prompts.panel({ servers: ['odoo', 'dynbrain'], states: { 'mcp:odoo': 'granted', 'mcp:dynbrain': 'prompt' }, decide: async () => ({}) });
+  await settled();
+  const rows = drawn.root.children.at(-1);
+  assert.match(rows.text(), /Dynapps Odoo/);
+  assert.deepEqual(rows.labels(), ['Access to Dynapps Odoo', 'Access to dynbrain']);
+  await drawn.answer('close');
+  await panel;
 });

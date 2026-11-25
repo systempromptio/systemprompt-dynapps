@@ -1,5 +1,5 @@
 //! The artifacts broker: a Drive page's capabilities, and its MCP tool
-//! calls run as the person viewing the page.
+//! calls run as the person viewing it.
 //!
 //! A live page never holds a credential and never reaches a server itself;
 //! it asks the broker, and the broker runs the tool through this instance's
@@ -15,11 +15,14 @@
 //! from the viewer's cache (`cache`). The page can list and describe what it
 //! may call (`tools`) and republish itself (`publish`).
 //!
-//! The routes take only the web login's browser session (`viewer`), never an
-//! agent's or the bridge's bearer, and each tool call writes one audit row
-//! to `artifact_tool_calls`. One read also takes the person's `ui` session:
-//! whether a document is a live page (`manifest_read`), for a client
-//! deciding to open the viewer shell. [`artifacts_router`] mounts them under
+//! Every route takes the person and never an agent or the bridge
+//! (`viewer`): the web login's browser session from this site's pages, or the
+//! person's `ui` session as the bearer, for a native client that draws the
+//! page itself. For that client the broker serves the page with its runtime
+//! (`page`), says whether a document is a live page and names its servers
+//! (`manifest_read`), and presents core's proxy a web session it mints for
+//! the `ui` session (`minted`). Each tool call writes one audit row to
+//! `artifact_tool_calls`. [`artifacts_router`] mounts the routes under
 //! `/api/v1/artifacts/{document_id}/` outside the admin session; the web
 //! facade merges it when the document store is on. [`LivePages`] is the part
 //! the `documents` server shares to check and record a declaration.
@@ -34,6 +37,8 @@ mod error;
 mod live_pages;
 pub mod manifest;
 mod manifest_read;
+mod minted;
+mod page;
 mod policy;
 mod proxy;
 mod publish;
@@ -47,10 +52,13 @@ use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, post};
 use sqlx::PgPool;
 use systemprompt::manifest::services::ServicesView;
+use systemprompt::oauth::SessionCreationService;
 use systemprompt_web_admin_core::extension_boot::ExtensionBoot;
 
 use crate::routes::drive_user::DriveDocuments;
 pub use live_pages::{LivePages, LivePagesError};
+use minted::MintedSessions;
+pub(crate) use page::framed_page;
 pub use policy::{LivePagesPolicy, LivePagesPolicyError};
 
 pub const CALL_PATH: &str = "/api/v1/artifacts/{document_id}/mcp/call";
@@ -62,6 +70,7 @@ const PERMISSIONS_PATH: &str = "/api/v1/artifacts/{document_id}/permissions";
 const PERMISSION_PATH: &str = "/api/v1/artifacts/{document_id}/permissions/{scope}";
 const PUBLISH_PATH: &str = "/api/v1/artifacts/{document_id}/artifact/publish";
 const MANIFEST_PATH: &str = "/api/v1/artifacts/{document_id}/manifest";
+const PAGE_PATH: &str = "/api/v1/artifacts/{document_id}/page";
 const MAX_BODY_BYTES: usize = 4 * 1024 * 1024;
 
 /// What the broker is built from.
@@ -69,13 +78,16 @@ const MAX_BODY_BYTES: usize = 4 * 1024 * 1024;
 /// The document service the view check asks and a publish writes through,
 /// the live services view the servers are looked up in, the boot values (the
 /// token authority, the site's origins, the services root the live-pages
-/// policy is read from and the API's internal URL) and the pool the
-/// manifest, consents, approvals, cache and audit rows live in.
+/// policy is read from, the API's internal URL and the configuration a web
+/// session is minted under), the pool the manifest, consents, approvals,
+/// cache and audit rows live in, and core's session service that mints the
+/// web session a `ui` session's calls reach the proxy with.
 pub struct ArtifactsBrokerParts {
     pub documents: DriveDocuments,
     pub services: ServicesView,
     pub boot: ExtensionBoot,
     pub pool: Arc<PgPool>,
+    pub session_service: Arc<SessionCreationService>,
 }
 
 impl std::fmt::Debug for ArtifactsBrokerParts {
@@ -93,6 +105,7 @@ pub(crate) struct ArtifactsBroker {
 struct Broker {
     parts: ArtifactsBrokerParts,
     live: LivePages,
+    minted: MintedSessions,
 }
 
 impl std::fmt::Debug for ArtifactsBroker {
@@ -114,7 +127,11 @@ pub fn artifacts_router(parts: ArtifactsBrokerParts) -> Result<Router, LivePages
         &parts.boot.config().api_internal_url,
     )?;
     let broker = ArtifactsBroker {
-        inner: Arc::new(Broker { parts, live }),
+        inner: Arc::new(Broker {
+            parts,
+            live,
+            minted: MintedSessions::default(),
+        }),
     };
     Ok(Router::new()
         .route(CALL_PATH, post(call::call))
@@ -126,6 +143,7 @@ pub fn artifacts_router(parts: ArtifactsBrokerParts) -> Result<Router, LivePages
         .route(PERMISSION_PATH, delete(consent::revoke))
         .route(PUBLISH_PATH, post(publish::publish))
         .route(MANIFEST_PATH, get(manifest_read::read))
+        .route(PAGE_PATH, get(page::read))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(broker))
 }

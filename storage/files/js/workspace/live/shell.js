@@ -44,7 +44,7 @@ export const mountLiveShell = async (root, options) => {
     if (link) status.append(' ', el('a', 'sp-live__link', { href: link.href, textContent: link.label }));
   };
 
-  const prompts = createPrompts(root, (open) => { state = open ? 'asking' : 'ready'; tell(); });
+  const prompts = createPrompts(root, (open) => { state = open ? 'asking' : 'ready'; tell(); }, (server) => bridge.nameOf(server));
   const load = (revision) => {
     frame.src = revision ? `${options.frameUrl}?revision=${encodeURIComponent(revision)}` : options.frameUrl;
   };
@@ -65,7 +65,7 @@ export const mountLiveShell = async (root, options) => {
 
   const onActivity = (method, params, outcome) => {
     if (!method.startsWith('mcp.') || state === 'signed-out') return;
-    const hint = outcome.error && connectorHint(outcome.error.code, params.server);
+    const hint = outcome.error && connectorHint(outcome.error.code, bridge.nameOf(params.server));
     if (hint) {
       show(hint.text, { href: options.connectors, label: hint.label });
       return;
