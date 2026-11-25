@@ -35,6 +35,8 @@ jobs:
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: "0"
+      # Plain text, so the plan's verify can count the PASS lines in the log.
+      CARGO_TERM_COLOR: never
       SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
     services:
       postgres:
@@ -65,7 +67,7 @@ jobs:
             .
             tests
           cache-on-failure: true
-      - run: cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E "$(cat .github/dynbrain-focused.filter)"
+      - run: cargo nextest run --color never --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E "$(cat .github/dynbrain-focused.filter)"
         timeout-minutes: 90
 
   clippy:
