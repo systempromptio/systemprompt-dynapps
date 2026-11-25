@@ -102,8 +102,8 @@ pub(super) async fn the_frame_is_opaque_and_offline(
         "the runtime speaks the shell's protocol"
     );
     assert!(
-        body.contains(&stack.origin),
-        "the runtime knows the shell's origin"
+        body.contains(&format!("\"origins\":[\"{}\"", stack.origin)),
+        "the frame's runtime hears only the shell, at this site's origin"
     );
     assert!(
         !body.contains("/*HOST*/null"),

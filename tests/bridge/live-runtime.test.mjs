@@ -127,6 +127,22 @@ test('only the parent at a listed origin is heard', async () => {
   assert.notEqual(await page.window.governance.use('mcp'), null);
 });
 
+// A native client (`GET /api/v1/artifacts/{id}/page`) injects no origins: the
+// client's own window is the parent, at an origin that is never the site's.
+test('with no origins listed, the parent is heard at any origin and nobody else is', async () => {
+  const page = boot({ host: { origins: [], contract: '0.2.99' } });
+  const other = { postMessage: () => {} };
+  const welcome = { governance: PROTOCOL, type: 'welcome', served: SERVED };
+  page.deliver(welcome, other, 'oc://renderer');
+  page.deliver(welcome, other, ORIGIN);
+  let resolved = false;
+  page.window.governance.use('mcp').then(() => { resolved = true; });
+  await flush();
+  assert.equal(resolved, false, 'a welcome from any window but the parent is ignored, whatever its origin');
+  page.deliver(welcome, page.window.parent, 'oc://renderer');
+  assert.notEqual(await page.window.governance.use('mcp'), null, 'the parent is heard at its own origin');
+});
+
 test('callTool asks the shell and resolves the result with its payload', async () => {
   const page = boot({
     served: SERVED,

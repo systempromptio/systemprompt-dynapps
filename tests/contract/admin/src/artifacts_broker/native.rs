@@ -283,6 +283,10 @@ async fn the_page_with_its_runtime(stack: &Stack, ui: &str, page: &DocumentId, r
         body.contains("\"origins\":[]"),
         "a native client's runtime trusts its parent window, not this site's origin"
     );
+    assert!(
+        !body.contains(&format!("\"origins\":[\"{}\"", stack.origin)),
+        "a native client's runtime is not given the frame's origins"
+    );
 
     let pinned = native(
         stack,
