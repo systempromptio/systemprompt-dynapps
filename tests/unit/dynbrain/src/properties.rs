@@ -146,7 +146,7 @@ fn a_value_of_the_wrong_type_is_refused() {
     ];
     for (name, value) in cases {
         let error = schema()
-            .validate(&[(name.to_owned(), value)].into_iter().collect())
+            .validate(&std::iter::once((name.to_owned(), value)).collect())
             .expect_err("refused");
         assert!(
             matches!(&error, PropertyError::WrongType { property, .. } if property == name),

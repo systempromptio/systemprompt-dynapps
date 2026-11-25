@@ -149,7 +149,7 @@ async fn every_variant_write_bumps_the_revision_and_appends_it() {
         .expect("history");
     let bodies: Vec<(i32, String)> = revisions
         .iter()
-        .map(|revision| (revision.revision, revision.body.clone()))
+        .map(|revision| (revision.number, revision.body.clone()))
         .collect();
     assert_eq!(
         bodies,

@@ -96,9 +96,11 @@ jobs:
         timeout-minutes: 60
 
   # The committed `.sqlx/` entries of the plan's crates, against what the
-  # sqlx macros describe from a live schema: the crate compiles online (a
-  # crate-local `.env` gives it alone a DATABASE_URL and an output directory)
-  # and every query file it writes must equal the committed one.
+  # sqlx macros describe from a live schema. A crate-local `.env` gives the
+  # plan's crate alone a DATABASE_URL; with SQLX_OFFLINE=false it compiles
+  # online and rewrites its query files in the root `.sqlx/` (the cache
+  # directory .cargo/config.toml names), while every other crate, with no
+  # DATABASE_URL, keeps reading the cache. Any change to `.sqlx/` fails.
   sqlx-cache:
     name: sqlx cache (plan crates, live)
     runs-on: ubuntu-latest
@@ -140,30 +142,19 @@ jobs:
       - name: Describe the queries live
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/sqlx-live"
-          printf 'DATABASE_URL=postgres://test:test@localhost:5432/test\nSQLX_OFFLINE_DIR=%s\n' "$RUNNER_TEMP/sqlx-live" > extensions/dynbrain/.env
+          printf 'DATABASE_URL=postgres://test:test@localhost:5432/test\n' > extensions/dynbrain/.env
           touch extensions/dynbrain/src/lib.rs
-          env -u SQLX_OFFLINE cargo check -p dynbrain
+          SQLX_OFFLINE=false cargo check -p dynbrain
+          rm extensions/dynbrain/.env
         timeout-minutes: 60
       - name: Compare with the committed cache
         run: |
           set -euo pipefail
-          count=0
-          failed=0
-          for live in "$RUNNER_TEMP"/sqlx-live/query-*.json; do
-            count=$((count + 1))
-            committed=".sqlx/$(basename "$live")"
-            if [ ! -f "$committed" ]; then
-              echo "missing from .sqlx: $(basename "$live")"; failed=1; continue
-            fi
-            if ! diff <(jq -S . "$live") <(jq -S . "$committed"); then
-              echo "differs: $(basename "$live")"; failed=1
-            fi
-          done
-          echo "$count live query descriptions compared"
-          [ "$count" -gt 0 ] && [ "$failed" -eq 0 ]
+          git add -N .sqlx
+          git diff --stat --exit-code -- .sqlx
+          echo "the live descriptions equal the committed .sqlx/"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: ${{ failure() }}
         with:
           name: sqlx-live
-          path: ${{ runner.temp }}/sqlx-live
+          path: .sqlx

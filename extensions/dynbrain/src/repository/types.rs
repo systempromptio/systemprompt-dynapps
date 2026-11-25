@@ -167,7 +167,7 @@ impl TryFrom<RevisionRow> for Revision {
         Ok(Self {
             article: ArticleId(row.article_id),
             lang: row.lang,
-            revision: row.revision,
+            number: row.revision,
             title: row.title,
             description: row.description,
             body: row.body,

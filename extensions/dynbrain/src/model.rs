@@ -138,7 +138,7 @@ pub struct VariantWrite {
 pub struct Revision {
     pub article: ArticleId,
     pub lang: String,
-    pub revision: i32,
+    pub number: i32,
     pub title: String,
     pub description: String,
     pub body: String,
