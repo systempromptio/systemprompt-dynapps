@@ -61,12 +61,14 @@ fn artifacts(
     ctx: &dyn ExtensionContext,
     db: &DbHandles,
     documents: systemprompt_web_admin_platform::routes::drive_user::DriveDocuments,
+    session_service: &Arc<SessionCreationService>,
 ) -> Router {
     artifacts_router(ArtifactsBrokerParts {
         documents,
         services: ctx.services(),
         boot: db.boot.clone(),
         pool: Arc::clone(&db.write),
+        session_service: Arc::clone(session_service),
     })
     .unwrap_or_else(|error| {
         tracing::error!(%error, "the artifacts broker could not be built; live pages are not mounted");
@@ -112,7 +114,7 @@ pub(crate) fn build(ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
     let documents_on = documents_enabled(ctx);
     let drive = drive_documents(ctx);
     if let Some(documents) = drive.clone().filter(|_| documents_on) {
-        combined = combined.merge(artifacts(ctx, &db, documents));
+        combined = combined.merge(artifacts(ctx, &db, documents, &session_service));
     }
 
     match admin_ssr::build(

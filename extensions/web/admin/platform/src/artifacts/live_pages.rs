@@ -6,11 +6,16 @@
 //! and enabled here, the policy allows it and each tool, and the server lists
 //! each tool for the person declaring it (their agent's own bearer, through
 //! the proxy), so a page never declares a tool its author cannot see.
+//!
+//! Each declared server is shown to the viewer by its name (`names`): the
+//! `display_name` the live-pages policy gives it, else its connector's
+//! `display_name` in the instance's MCP config, else its id.
 
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::Arc;
 
+use serde::Serialize;
 use sqlx::PgPool;
 // JSON: the manifest is stored as JSONB; tool listings are MCP payloads.
 use serde_json::Value;
@@ -49,6 +54,12 @@ pub enum LivePagesError {
     Client(#[from] reqwest::Error),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct ServerName {
+    pub(crate) id: String,
+    pub(crate) name: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ServerStanding {
     Unknown,
@@ -83,6 +94,33 @@ impl LivePages {
 
     pub(crate) fn allows(&self, server: &str, tool: &str) -> bool {
         self.inner.policy.allows(server, tool)
+    }
+
+    pub(crate) fn names(&self, capabilities: Option<&Capabilities>) -> Vec<ServerName> {
+        let services = self.inner.services.get();
+        capabilities
+            .map_or(&[][..], Capabilities::servers)
+            .iter()
+            .map(|declared| {
+                let id = declared.server.as_str();
+                let connector = services
+                    .mcp_servers
+                    .get(id)
+                    .and_then(|deployment| deployment.connector.as_ref())
+                    .and_then(|connector| connector.display_name.as_deref());
+                let name = self
+                    .inner
+                    .policy
+                    .display_name(id)
+                    .or(connector)
+                    .filter(|name| !name.trim().is_empty())
+                    .unwrap_or(id);
+                ServerName {
+                    id: id.to_owned(),
+                    name: name.to_owned(),
+                }
+            })
+            .collect()
     }
 
     pub(crate) fn proxy(&self) -> &LoopbackProxy {

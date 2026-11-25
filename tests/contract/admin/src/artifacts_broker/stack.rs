@@ -40,10 +40,12 @@ const FAKE_SERVER_YAML: &str = include_str!("../../fixtures/artifacts_fake.yaml"
 const REMOTE_SERVER_YAML: &str = include_str!("../../fixtures/artifacts_remote.yaml");
 const FAKE_INCLUDE: &str = "  - ../mcp/artifacts_fake.yaml\n  - ../mcp/artifacts_remote.yaml\n";
 // The suite's operator policy: the fake's `off` tool and every other server
-// are left out, so a page may not ask for them.
-const LIVE_PAGES_POLICY: &str = "live_pages:\n  servers:\n    artifacts-fake:\n      tools:\n      \
-     - artifacts_fake_echo\n      - artifacts_fake_secret\n      - artifacts_fake_write\n    \
-     artifacts-remote:\n      tools:\n      - remote_search\n";
+// are left out, so a page may not ask for them. The fake has a display name
+// and the remote server none, so a viewer is shown one by name, one by id.
+const LIVE_PAGES_POLICY: &str = "live_pages:\n  servers:\n    artifacts-fake:\n      \
+     display_name: Artifacts Fake\n      tools:\n      - artifacts_fake_echo\n      - \
+     artifacts_fake_secret\n      - artifacts_fake_write\n    artifacts-remote:\n      tools:\n      \
+     - remote_search\n";
 
 pub(super) struct Stack {
     pub(super) ctx: Arc<AppContext>,

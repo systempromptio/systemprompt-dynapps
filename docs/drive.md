@@ -64,20 +64,32 @@ A Drive page may ask for an MCP tool's result; the page never holds a
 credential and never reaches a server itself. It asks the artifacts broker
 under `/api/v1/artifacts/{document_id}/`, and the broker runs the tool **as
 the person viewing the page**, through this instance's own MCP proxy at
-`/api/v1/mcp/{server}/mcp` on the API's internal URL, with that person's own
-session token as the bearer. So the proxy and the server decide exactly as
+`/api/v1/mcp/{server}/mcp` on the API's internal URL, with a web session of
+that person's as the bearer. So the proxy and the server decide exactly as
 they do for that person's agent: the server's scopes and access rules, the
 tool's `access:` block, and, for a connector, the person's own OAuth grant.
 The shape follows Anthropic's artifact runtime, contract 0.2.99. Code:
 `extensions/web/admin/platform/src/artifacts/`.
 
-- **Who may call.** Only the web login's session: the `access_token` cookie
-  with a token core signed `browser_session`, from this site's own pages
-  (`Origin` or `Sec-Fetch-Site`, as `/drive` checks them). A request with an
-  `Authorization` header is refused, so an agent's, the bridge's or a
-  person's `ui` bearer cannot run a page's tools or decide for the viewer;
-  core's MCP proxy does not take the `ui` audience either. A visitor without
-  a session (a public link, an invite not yet claimed) gets nothing.
+- **Who may call.** The person, never an agent, on every route. Either the
+  web login's session: the `access_token` cookie with a token core signed
+  `browser_session`, from this site's own pages (`Origin` or
+  `Sec-Fetch-Site`, as `/drive` checks them). Or the person's `ui` session as
+  `Authorization: Bearer`, for a native client (DynWork desktop) that draws
+  the page itself: checked as the session handoff checks it (core's signature
+  and expiry for the `ui` audience, the `ui_session` claim in the shape core
+  gives it, a session id and a sign-in time, `auth_time` above zero). A
+  bearer carries no ambient credential, so no Origin check applies to it.
+  Any other bearer (an agent's, the bridge's, an API key, a Device key, the
+  web session sent as a bearer) is `401 reauth`, cookie or not. A visitor
+  without a session (a public link, an invite not yet claimed) gets nothing.
+- **The proxy's credential.** Core's MCP proxy admits only the first-party
+  audiences, never `ui`. The cookie's token is presented as it came. For a
+  `ui` session the broker mints a web session for the same person with
+  core's `mint_browser_session`, as the session handoff does, carrying the
+  `ui` session's own sign-in time; it is kept per `ui` session until two
+  minutes before it expires, so a page's calls open one web session, not one
+  each. It is presented only to the proxy: never answered, logged or shown.
 
 ### The manifest
 
@@ -114,14 +126,24 @@ page, and so is everything when the file is missing. Read when the broker and
 the `documents` server start. Dynapps ships `dynapps-odoo`, `microsoft-365`
 and `dynbrain` whole and the Drive's read tools on `documents`.
 
+**Connectors' names.** A server is shown to the viewer (the consent prompt,
+the permissions panel, a native client's prompts) by its `display_name` in
+this file, else its connector's `display_name` in `services/mcp/`, else its
+id. Core keeps a display name only on a connector, and an internal server
+cannot have one, so the names of internal servers live here: Dynapps ships
+«Microsoft 365» for `microsoft-365` and «Drive» for `documents`;
+`dynapps-odoo` («Dynapps Odoo») and `dynbrain` («DynBrain») take their
+connector's.
+
 ### Consent and approvals
 
 - `GET permissions` answers `{capabilities, contract_version, revision,
-  writer, states}`: the manifest (`null` without one), the version the viewer
-  loaded (a publish's base), whether the viewer may edit, and the states the
-  runtime's `permissions.state()` reads: `mcp:<server>` per declared server
-  (`granted`, `denied` or `prompt`), `mcp` for all of them, and `artifact`
-  and `user` when declared.
+  writer, viewer, states, servers}`: the manifest (`null` without one), the
+  version the viewer loaded (a publish's base), whether the viewer may edit,
+  who views it, the states the runtime's `permissions.state()` reads:
+  `mcp:<server>` per declared server (`granted`, `denied` or `prompt`), `mcp`
+  for all of them, and `artifact` and `user` when declared, and each declared
+  server as `{id, name}` (its name, as above).
 - `POST permissions` `{scope, decision}` records `granted` or `denied` for
   `mcp:<server>`, or for every declared server with `mcp`; `DELETE
   permissions/{scope}` forgets it. Per viewer, document and scope, in
@@ -146,7 +168,7 @@ result as core shapes it (`content`, `structuredContent`, `isError`), or
 
 | `error_key` | Status | When |
 |---|---|---|
-| `reauth` | 401 | No web session, a token that is not a browser session, or one core's proxy refuses (revoked) |
+| `reauth` | 401 | No web session and no `ui` session, a token that is neither, any other bearer, or one core's proxy refuses (revoked) |
 | `cross_site` | 403 | The session comes from another site's page |
 | `not_found` | 404 | The document does not exist or the viewer cannot see it |
 | `bad_request` | 400 | Malformed body or names, an unknown server, bad arguments |
@@ -157,7 +179,7 @@ result as core shapes it (`content`, `structuredContent`, `isError`), or
 | `server_not_connected` | 409 | Core's proxy answered 409 for any other reason |
 | `server_unavailable` | 503 | The server is off, not running or did not answer, or the connector accessor failed (retry) |
 | `tool_error` | 422 | The tool answered with a JSON-RPC error, or a result larger than 8 MiB |
-| `internal` | 500 | The document or the page's state could not be read |
+| `internal` | 500 | The document or the page's state could not be read, or no web session could be minted for a `ui` session |
 
 - **Cache.** Only a read is cached, per viewer, document and call
   (`artifact_call_cache`). Without `cache` a read is stored for five minutes
@@ -249,6 +271,7 @@ of `/rendered`. Code: `storage/files/js/workspace/live/`,
   a first call on a connector (a `callTool` or a `watchTool`) it asks the
   viewer to allow it, records the answer with `POST permissions`, and keeps a
   decline for the rest of the load (`not_in_manifest`, never asked again).
+  Every prompt names a server by its name (`servers` of `GET permissions`).
   A call the broker answers `approval_required` once the connector is
   allowed is a write: the shell names the server, the tool and a summary of
   the input, and only on Allow posts `mcp/approve` and repeats the call with
@@ -277,25 +300,47 @@ of `/rendered`. Code: `storage/files/js/workspace/live/`,
   a client that holds the person's `ui` session opens one with the session
   handoff below instead.
 - **For clients**, `GET manifest` answers `{declared, capabilities,
-  contract, live_url}` (`declared: false` and the rest `null` for a document
-  with none) to the web session or the person's `ui` bearer, for a reader
-  who may see the document, so a client decides whether to open the shell.
+  contract, live_url, servers}` (`declared: false`, the rest `null` and no
+  servers for a document with none) to the web session or the person's `ui`
+  bearer, for a reader who may see the document, so a client decides whether
+  to open the page. `servers` is each declared server as `{id, name}`.
   `GET permissions` also answers `viewer: {id, name, email, owner}` for the
   shell.
 
+### Native clients
+
+A client that holds the person's `ui` session and draws the page itself
+(DynWork desktop) needs no web session and no shell. It calls every route
+above with `Authorization: Bearer <ui session>` and reads the page from the
+broker:
+
+- **The page.** `GET page[?revision=]` answers what the frame serves, built
+  by the same code: the stored HTML with the runtime inlined, as `text/html`,
+  the frame's policy in `Content-Security-Policy` and the revision it is in
+  `X-Revision` (`Cache-Control: no-store`). Who may read it is who may read
+  the frame: a person who sees the document, an HTML document, at a revision
+  of its own; anything else is `404 not_found`. Cookie or bearer.
+- **The client draws it** in a sandboxed `srcdoc` frame with that policy in a
+  `<meta http-equiv="Content-Security-Policy">`, as it does with
+  `/rendered`, and answers the runtime's requests itself through the broker.
+  The runtime is given no origins here (`"origins": []`): it reads answers
+  only from its parent window, which is the client, never this site.
+- **Names.** The manifest's `servers` gives the name to show for each server.
+
 ### The session handoff
 
-The broker and the shell take only the web login's cookie: core's MCP proxy
-admits the first-party audiences, never a person's `ui` session. A client
-that holds the `ui` session (DynWork desktop; Mobile later) turns it into a
-real web session for the view that shows the shell. Code:
+The web pages (the shell, the editor) take only the web login's cookie. A
+client that holds the `ui` session (DynWork desktop; Mobile later) and shows
+one of them in a view of its own turns the `ui` session into a real web
+session for that view. A client that draws a live page itself needs none of
+this (see «Native clients»). Code:
 `extensions/web/admin/platform/src/handoff/`, table `drive_handoffs`
 (migration `029_drive_handoffs.sql`).
 
 1. **Issue.** `POST /api/v1/drive/handoff` `{path}` with `Authorization:
-   Bearer <ui session>`, checked as `GET manifest` checks it (core's
-   signature and expiry for the `ui` audience, the `ui_session` claim, the
-   shape core gives it) and, in the statement that stores the code, that
+   Bearer <ui session>`, checked as the broker checks it (core's signature
+   and expiry for the `ui` audience, the `ui_session` claim, the shape core
+   gives it, a sign-in time) and, in the statement that stores the code, that
    its session row is live (not revoked, not expired) and its person active.
    Nothing else issues: no cookie is read, and a web session, an agent's
    bearer, an API key or a Device key is `401 reauth`. `path` must resolve,
@@ -332,7 +377,12 @@ goes as the shell sends it, so each call crosses core's real proxy, hop token
 and per-tool access. The same suite loads the shell and the frame as a
 browser does (the frame's policy, the runtime inlined before the page, the
 trip to sign in) and reads the manifest with the web and the `ui` session.
-It also hands a `ui` session to a web session the broker takes (`handoff`),
+As a native client (`native`), the `ui` session alone reads the manifest
+with each server's name (by display name and by id), allows a server, runs a
+read twice through one minted web session, lists, revokes, and reads the
+page with its runtime and policy header; a stranger gets no page, and an
+agent's bearer, an API key, a Device key and the web session as a bearer are
+`401 reauth` on every route. It also hands a `ui` session to a web session the broker takes (`handoff`),
 and calls an external server whose accessor answers 404 and then 503
 (`reconnect`); the accessor's own 404 for a refused refresh is
 `tests/integration/admin-config/src/portal_e2e.rs`, against the fake portal.

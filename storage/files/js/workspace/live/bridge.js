@@ -5,7 +5,8 @@
 // and every answer is reshaped into the codes of Anthropic's artifact runtime
 // contract 0.2.99. The shell asks the viewer once per connector before a
 // first call on it, and again for every call to a tool that is not a read,
-// while a watch asks for the connector but never approves a write.
+// while a watch asks for the connector but never approves a write. A server
+// is shown to the viewer by the name the broker gives it (`nameOf`).
 import { summaryOf } from './labels.js';
 import { createViewer } from './viewer.js';
 
@@ -32,7 +33,7 @@ const brokerError = (reply, server) => {
 const scopeOf = (server) => `mcp:${server}`;
 
 export const createBridge = ({ urls, transport, prompts, onPublished, onFailure }) => {
-  let snapshot = { capabilities: null, revision: null, writer: false, states: {}, viewer: null };
+  let snapshot = { capabilities: null, revision: null, writer: false, states: {}, viewer: null, servers: [] };
   const declined = new Set();
   let manageCount = 0;
 
@@ -53,6 +54,11 @@ export const createBridge = ({ urls, transport, prompts, onPublished, onFailure 
     if (reply.status !== 200) throw brokerError(reply);
     snapshot = reply.body;
     return snapshot;
+  };
+
+  const nameOf = (server) => {
+    const named = (snapshot.servers || []).find((item) => item.id === server);
+    return named && named.name ? named.name : server;
   };
 
   const declared = () => ((snapshot.capabilities && snapshot.capabilities.mcp && snapshot.capabilities.mcp.servers) || []).map((item) => item.server);
@@ -186,6 +192,7 @@ export const createBridge = ({ urls, transport, prompts, onPublished, onFailure 
   return {
     load,
     snapshot: () => snapshot,
+    nameOf,
     panel: () => prompts.panel({ servers: declared(), states: states(), decide }),
     served: () => ['permissions', 'user', 'artifact', ...(declared().length > 0 ? ['mcp'] : [])],
     declared,

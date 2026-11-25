@@ -168,8 +168,9 @@ async fn run(
             cached: true,
         });
     }
+    let bearer = broker.proxy_bearer(viewer).await?;
     let proxy = broker.inner.live.proxy();
-    let mut session = proxy.open(&target.server, viewer.credential()).await?;
+    let mut session = proxy.open(&target.server, bearer.as_str()).await?;
     let ran = in_session(broker, &mut session, target, &key, arguments).await;
     session.close().await;
     let (result, read) = match ran {
