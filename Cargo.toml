@@ -22,6 +22,7 @@ members = [
     "extensions/dynwork-relay",
     "extensions/dynwork-routines",
     "extensions/dynwork-chats",
+    "extensions/dynbrain",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
 # when these extension crates are consumed as dependencies. Run it explicitly:
@@ -77,6 +78,7 @@ systemprompt-secrets-onepassword = { path = "extensions/secrets/onepassword" }
 dynwork-relay = { path = "extensions/dynwork-relay" }
 dynwork-routines = { path = "extensions/dynwork-routines" }
 dynwork-chats = { path = "extensions/dynwork-chats" }
+dynbrain = { path = "extensions/dynbrain" }
 serde_jcs = "0.1"
 
 # Core runtime dependencies
@@ -274,6 +276,8 @@ systemprompt-web-extension = { workspace = true }
 dynwork-relay = { workspace = true }
 # DynWork cloud chats; linked for its `register_extension!` entry.
 dynwork-chats = { workspace = true }
+# The Brain's native store; linked for its `register_extension!` entry.
+dynbrain = { workspace = true }
 
 # Runtime
 tokio = { workspace = true }

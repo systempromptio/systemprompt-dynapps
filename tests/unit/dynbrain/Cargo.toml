@@ -1,0 +1,14 @@
+[package]
+name = "dynbrain-unit-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+dynbrain = { workspace = true }
+# UserId, the owner and the subjects of the access rule.
+systemprompt = { workspace = true }
+serde_json = { workspace = true }

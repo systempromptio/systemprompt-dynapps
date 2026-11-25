@@ -991,7 +991,7 @@ jobs:
     # release's database with rows in it, and a fresh named volume.
     services:
       postgres:
-        image: postgres:18
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test

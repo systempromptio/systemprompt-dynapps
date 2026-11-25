@@ -39,6 +39,7 @@ RULES = [
     (r"/extensions/web/Cargo\.toml$", "entry"),
     (r"/extensions/(cli|mcp)/", "entry"),
     (r"/extensions/dynwork-(relay|routines|chats)/", "entry"),
+    (r"/extensions/dynbrain/", "entry"),
 ]
 
 md = json.load(sys.stdin)

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT MAX(x.level) AS \"level\"\n                 FROM dynbrain_access x\n                 JOIN users u ON u.id = $2 AND u.status = 'active'\n                WHERE x.article_id = $1\n                  AND ((x.subject_kind = 'user' AND x.subject_id = u.id)\n                       OR (x.subject_kind = 'role' AND x.subject_id = ANY(u.roles))\n                       OR (x.subject_kind = 'group' AND x.subject_id IN\n                               (SELECT g.group_id FROM user_groups g WHERE g.user_id = u.id)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "level",
+        "type_info": "Int2",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4438732ee3e36f9a49c814603cd2828768e33e29f02697f6fc3385d2e692f11a"
+}

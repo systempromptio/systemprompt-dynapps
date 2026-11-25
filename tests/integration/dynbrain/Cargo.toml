@@ -1,0 +1,17 @@
+[package]
+name = "dynbrain-integration-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+dynbrain = { workspace = true }
+# The throwaway database with the full extension schema (db_or_skip!).
+dynapps-test-common = { workspace = true }
+systemprompt = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }

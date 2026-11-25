@@ -1,0 +1,30 @@
+//! The Brain's native store, a systemprompt extension.
+//!
+//! Documentation lives in spaces. A space holds a tree of articles; an
+//! article has one variant per language (title, description, Markdown body,
+//! free front matter and typed property values) and every write of a variant
+//! appends a revision. Permissions are grants of `read`, `write` or `manage`
+//! to a user, a role or a group, inherited down the tree until an article
+//! declares its own; the resolved result is kept in the access closure
+//! (`dynbrain_access`), the one permission source retrieval reads.
+//!
+//! This crate holds the schema (Postgres with pgvector, including the
+//! retrieval tables later phases fill) and [`BrainRepository`], the reads
+//! and writes over it. Inheritance itself is the pure [`access::closure`].
+
+pub mod access;
+pub mod content;
+pub mod error;
+pub mod extension;
+pub mod ids;
+pub mod language;
+pub mod model;
+pub mod properties;
+pub mod repository;
+pub mod schema;
+
+pub use error::BrainError;
+pub use extension::DynbrainExtension;
+pub use repository::BrainRepository;
+
+systemprompt::extension::register_extension!(DynbrainExtension);

@@ -16,6 +16,7 @@ members = [
     "unit/secrets",
     "unit/dynwork-relay",
     "unit/dynwork-chats",
+    "unit/dynbrain",
     "integration/admin-config",
     "integration/mcp",
     "integration/web",
@@ -27,6 +28,7 @@ members = [
     "integration/dynwork-relay",
     "integration/dynwork-routines",
     "integration/dynwork-chats",
+    "integration/dynbrain",
     "contract/admin",
 ]
 resolver = "2"
@@ -175,6 +177,7 @@ systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
 dynwork-relay = { path = "../extensions/dynwork-relay" }
 dynwork-routines = { path = "../extensions/dynwork-routines" }
 dynwork-chats = { path = "../extensions/dynwork-chats" }
+dynbrain = { path = "../extensions/dynbrain" }
 
 # Core facade — DbPool / Database / identifiers for the integration crate.
 # The contract crate additionally enables `full`, which links the core

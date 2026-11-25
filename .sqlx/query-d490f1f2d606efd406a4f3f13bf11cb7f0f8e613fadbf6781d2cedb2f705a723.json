@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dynbrain_access WHERE article_id = ANY($1::int8[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d490f1f2d606efd406a4f3f13bf11cb7f0f8e613fadbf6781d2cedb2f705a723"
+}

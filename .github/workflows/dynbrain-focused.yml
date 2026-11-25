@@ -1,0 +1,169 @@
+name: dynbrain focused
+
+# Temporary, for the `dynbrain` branch only: each push runs the Brain plan's
+# own test packages (.github/dynbrain-focused.filter), clippy on the plan's
+# crates and a live check of their sqlx offline cache, on Postgres with
+# pgvector. The full Gates run once, on the pull request into next, which
+# deletes this file and the filter first.
+
+on:
+  push:
+    branches: [dynbrain]
+
+concurrency:
+  group: dynbrain-focused-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: "10"
+  RUSTUP_MAX_RETRIES: "10"
+  SQLX_OFFLINE: "true"
+  CC: clang
+  CXX: clang++
+  BUILD_NO_COORD: "1"
+  NEXTEST_VERSION: "0.9.148"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (plan packages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/free-disk
+      - uses: ./.github/actions/core-checkout
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml
+      - run: rustup show
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: dynbrain-focused-test
+          workspaces: |
+            .
+            tests
+          cache-on-failure: true
+      - run: cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E "$(cat .github/dynbrain-focused.filter)"
+        timeout-minutes: 90
+
+  clippy:
+    name: Clippy (plan crates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/free-disk
+      - uses: ./.github/actions/core-checkout
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: dynbrain-focused-clippy
+          workspaces: |
+            .
+            tests
+          cache-on-failure: true
+      - name: Clippy, plan crates of the root workspace
+        run: cargo clippy -p dynbrain --all-targets -- -D warnings
+        timeout-minutes: 60
+      - name: Clippy, plan test crates
+        if: ${{ !cancelled() }}
+        run: cargo clippy --manifest-path tests/Cargo.toml -p dynbrain-unit-tests -p dynbrain-integration-tests --all-targets -- -D warnings
+        timeout-minutes: 60
+
+  # The committed `.sqlx/` entries of the plan's crates, against what the
+  # sqlx macros describe from a live schema: the crate compiles online (a
+  # crate-local `.env` gives it alone a DATABASE_URL and an output directory)
+  # and every query file it writes must equal the committed one.
+  sqlx-cache:
+    name: sqlx cache (plan crates, live)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/free-disk
+      - uses: ./.github/actions/core-checkout
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev postgresql-client jq
+      - run: rustup show
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: dynbrain-focused-sqlx
+          cache-on-failure: true
+      - name: Schema the plan's queries read
+        env:
+          PGPASSWORD: test
+        run: |
+          set -euo pipefail
+          users_sql=$(find .vendor/systemprompt-core -path '*users/schema/users.sql' | head -n 1)
+          test -n "$users_sql"
+          psql -h localhost -U test -d test -v ON_ERROR_STOP=1 -q \
+            -f "$users_sql" \
+            -f extensions/web/schema/23_groups_projects.sql \
+            -f extensions/dynbrain/schema/01_dynbrain.sql
+      - name: Describe the queries live
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sqlx-live"
+          printf 'DATABASE_URL=postgres://test:test@localhost:5432/test\nSQLX_OFFLINE_DIR=%s\n' "$RUNNER_TEMP/sqlx-live" > extensions/dynbrain/.env
+          touch extensions/dynbrain/src/lib.rs
+          env -u SQLX_OFFLINE cargo check -p dynbrain
+        timeout-minutes: 60
+      - name: Compare with the committed cache
+        run: |
+          set -euo pipefail
+          count=0
+          failed=0
+          for live in "$RUNNER_TEMP"/sqlx-live/query-*.json; do
+            count=$((count + 1))
+            committed=".sqlx/$(basename "$live")"
+            if [ ! -f "$committed" ]; then
+              echo "missing from .sqlx: $(basename "$live")"; failed=1; continue
+            fi
+            if ! diff <(jq -S . "$live") <(jq -S . "$committed"); then
+              echo "differs: $(basename "$live")"; failed=1
+            fi
+          done
+          echo "$count live query descriptions compared"
+          [ "$count" -gt 0 ] && [ "$failed" -eq 0 ]
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: ${{ failure() }}
+        with:
+          name: sqlx-live
+          path: ${{ runner.temp }}/sqlx-live

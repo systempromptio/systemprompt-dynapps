@@ -2362,6 +2362,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "dynbrain"
+version = "0.85.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension 0.86.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 2.0.21",
+ "url",
+]
+
+[[package]]
+name = "dynbrain-integration-tests"
+version = "0.0.0"
+dependencies = [
+ "dynapps-test-common",
+ "dynbrain",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "tokio",
+]
+
+[[package]]
+name = "dynbrain-unit-tests"
+version = "0.0.0"
+dependencies = [
+ "dynbrain",
+ "serde_json",
+ "systemprompt",
+]
+
+[[package]]
 name = "dynwork-chats"
 version = "0.85.0"
 dependencies = [
