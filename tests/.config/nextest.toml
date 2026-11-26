@@ -41,9 +41,10 @@ failure-output = "immediate-final"
 # slower; the contract suite's route sweep outlives the default 120s budget
 # there. The test-group overrides are per profile, so they are repeated.
 [profile.coverage]
-# The document-store smoke drives a prebuilt MCP binary and runs as its own
-# Gates job (`just docs-smoke`); the instrumented run does not build it.
-default-filter = "not test(docs_smoke)"
+# The document-store smoke and the Microsoft 365 simulation drive prebuilt MCP
+# binaries and run through their own recipes (`just docs-smoke`,
+# `just m365-sim`); the instrumented run does not build them.
+default-filter = "not test(docs_smoke) and not test(m365_sim)"
 slow-timeout = { period = "180s", terminate-after = 3 }
 failure-output = "immediate-final"
 
