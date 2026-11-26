@@ -4,6 +4,8 @@
 
 use axum::http::StatusCode;
 
+use systemprompt_web_admin_brain::read::Document;
+
 use crate::env::Env;
 
 #[tokio::test]
@@ -66,14 +68,15 @@ async fn in_proxy_reindex_is_refused() {
 
 #[test]
 fn a_source_document_outside_every_space_still_reads() {
-    let doc: systemprompt_web_admin_brain::read::Document = serde_json::from_value(serde_json::json!({
+    let answer = serde_json::json!({
         "id": 102,
         "found": true,
         "title": "Proxy",
         "space": false,
         "markdown": "body",
-    }))
-    .expect("a dynbrain answer reads as a document");
+    });
+    let doc: Document =
+        serde_json::from_value(answer).expect("a dynbrain answer reads as a document");
     assert!(doc.found);
     assert_eq!(doc.space, None, "`false` is no space");
     assert_eq!(doc.title, "Proxy");
