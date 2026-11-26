@@ -37,6 +37,11 @@ impl NativeBrain {
                 level: grant.level,
             })
             .collect();
+        if !wanted.iter().all(|grant| grant.subject.is_valid()) {
+            return Err(BrainFault::Invalid(
+                "every grant names its subject in 1 to 255 characters",
+            ));
+        }
         for grant in &wanted {
             self.repo.set_grant(grant, user).await?;
         }

@@ -107,6 +107,9 @@ pub(super) fn checked(space: &Space, lang: &str, write: &VariantWrite) -> Result
     if write.title.trim().is_empty() {
         return Err(BrainFault::Invalid("a document needs a title"));
     }
+    if write.title.chars().count() > 500 {
+        return Err(BrainFault::Invalid("a title has at most 500 characters"));
+    }
     if !space.langs.iter().any(|known| known == lang) {
         return Err(BrainFault::Refused(BrainError::LanguageNotInSpace {
             lang: lang.to_owned(),

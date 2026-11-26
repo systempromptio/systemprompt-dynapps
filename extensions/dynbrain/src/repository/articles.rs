@@ -144,7 +144,8 @@ impl BrainRepository {
             current.space.0
         )
         .fetch_one(&mut *tx)
-        .await?;
+        .await
+        .map_err(sibling_taken)?;
         let moved = Article::try_from(row)?;
         rewrite_access(&mut tx, current.space, owner.as_ref(), Some(article)).await?;
         tx.commit().await?;
@@ -209,4 +210,20 @@ async fn find_article_in(
     .await?
     .map(Article::try_from)
     .transpose()
+}
+
+// Why: two siblings cannot share a slug, and a move keeps the article's slug,
+// so the unique index refuses the move; that is the caller's input, not a
+// store failure.
+fn sibling_taken(error: sqlx::Error) -> BrainError {
+    match &error {
+        sqlx::Error::Database(db)
+            if db.constraint() == Some("idx_dynbrain_article_sibling_slug") =>
+        {
+            BrainError::Invalid(
+                "the new parent already has an article with this name; rename it first",
+            )
+        },
+        _ => BrainError::Database(error),
+    }
 }

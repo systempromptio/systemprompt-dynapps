@@ -243,3 +243,21 @@ async fn a_suspended_account_reaches_nothing_even_with_a_valid_token() {
     assert_eq!(article.status, StatusCode::NOT_FOUND);
     app.finish().await;
 }
+
+#[tokio::test]
+async fn a_replacement_with_one_bad_grant_changes_nothing() {
+    let db = dynapps_test_common::db_or_skip!();
+    let app = App::new(db).await;
+    let space = app.fixture.space("handbook").await;
+    let path = format!("/spaces/{}/grants", space.id);
+    let first = json!({"grants": [grant("group", "all", "read")]});
+    assert_eq!(app.put(&path, "alice", &first).await.status, StatusCode::OK);
+    let bad = json!({"grants": [grant("user", "bob", "read"), grant("user", "", "read")]});
+    let refused = app.put(&path, "alice", &bad).await;
+    assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{:?}", refused.body);
+    let listed = app.get(&path, "alice").await;
+    let grants = listed.body["grants"].as_array().expect("grants");
+    assert!(grants.contains(&grant("group", "all", "read")), "{grants:?}");
+    assert!(!grants.contains(&grant("user", "bob", "read")), "{grants:?}");
+    app.finish().await;
+}

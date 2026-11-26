@@ -347,3 +347,52 @@ async fn trash_takes_the_subtree_out_and_needs_write() {
     assert_eq!(article_count(&app, space.id).await, 0);
     app.finish().await;
 }
+
+#[tokio::test]
+async fn a_title_over_500_characters_is_refused_and_leaves_no_article() {
+    let db = dynapps_test_common::db_or_skip!();
+    let app = App::new(db).await;
+    let space = app.fixture.space("handbook").await;
+    let long = "a".repeat(501);
+    let refused = app
+        .post(
+            "/articles",
+            "alice",
+            &json!({"space": space.id.0, "title": long}),
+        )
+        .await;
+    assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{:?}", refused.body);
+    assert_eq!(refused.key(), "invalid");
+    assert_eq!(article_count(&app, space.id).await, 0, "no empty article is left");
+    app.finish().await;
+}
+
+#[tokio::test]
+async fn a_move_beside_a_sibling_with_the_same_name_is_refused_as_input() {
+    let db = dynapps_test_common::db_or_skip!();
+    let app = App::new(db).await;
+    let space = app.fixture.space("handbook").await;
+    let a = app.fixture.article(space.id, None, "a").await;
+    let b = app.fixture.article(space.id, None, "b").await;
+    let in_a = app.fixture.article(space.id, Some(a.id), "overview").await;
+    let in_b = app.fixture.article(space.id, Some(b.id), "overview").await;
+    for article in [&a, &b, &in_a, &in_b] {
+        app.fixture.write(article, "es", "Overview", "texto").await;
+    }
+    let refused = app
+        .post(
+            &format!("/articles/{}/move", in_b.id),
+            "alice",
+            &json!({"new_parent_id": a.id.0}),
+        )
+        .await;
+    assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{:?}", refused.body);
+    assert_eq!(refused.key(), "invalid");
+    let parent = app.get(&format!("/articles/{}", b.id), "alice").await;
+    assert_eq!(
+        parent.body["children"].as_array().map(Vec::len),
+        Some(1),
+        "the article stays where it was"
+    );
+    app.finish().await;
+}
