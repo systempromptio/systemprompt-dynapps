@@ -137,9 +137,16 @@ fn causes(error: &McpDomainError) -> Vec<&(dyn Error + 'static)> {
 }
 
 // Why: rmcp keeps the transport error of a failed handshake and the client
-// error of the HTTP layer in fields that are not `source()`, so the chain is
-// followed through them by hand.
+// error of the HTTP layer in fields that are not `source()`, and core's error
+// hands its rmcp causes over still boxed, so the chain is followed through
+// them by hand.
 fn next<'a>(error: &'a (dyn Error + 'static)) -> Option<&'a (dyn Error + 'static)> {
+    if let Some(boxed) = error.downcast_ref::<Box<ClientInitializeError>>() {
+        return Some(boxed.as_ref());
+    }
+    if let Some(boxed) = error.downcast_ref::<Box<ServiceError>>() {
+        return Some(boxed.as_ref());
+    }
     if let Some(ClientInitializeError::TransportError { error, .. }) =
         error.downcast_ref::<ClientInitializeError>()
     {
@@ -168,7 +175,10 @@ fn refusal(error: &(dyn Error + 'static)) -> Option<String> {
 }
 
 fn protocol_fault(error: &(dyn Error + 'static)) -> Option<SourceFault> {
-    let ServiceError::McpError(data) = error.downcast_ref::<ServiceError>()? else {
+    let service = error
+        .downcast_ref::<ServiceError>()
+        .or_else(|| error.downcast_ref::<Box<ServiceError>>().map(AsRef::as_ref))?;
+    let ServiceError::McpError(data) = service else {
         return None;
     };
     let message = data.message.clone().into_owned();
