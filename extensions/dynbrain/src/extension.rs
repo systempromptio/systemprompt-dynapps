@@ -208,8 +208,11 @@ impl Extension for DynbrainExtension {
         schema::migrations()
     }
 
+    // Why: only `users` is a foreign key of the schema. The grants read the
+    // web extension's `user_groups` at query time, but declaring `web` here
+    // stops the `brain` MCP binary, which does not register that extension.
     fn dependencies(&self) -> Vec<&'static str> {
-        vec!["users", "web"]
+        vec!["users"]
     }
 
     fn config_prefix(&self) -> Option<&str> {

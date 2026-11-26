@@ -56,7 +56,7 @@ fn the_content_hash_covers_title_description_and_body() {
 fn the_extension_owns_a_schema_that_requires_pgvector() {
     let extension = DynbrainExtension::default();
     assert_eq!(extension.metadata().id, "dynbrain");
-    assert_eq!(extension.dependencies(), ["users", "web"]);
+    assert_eq!(extension.dependencies(), ["users"]);
     let schemas = extension.schemas();
     assert_eq!(schemas.len(), 3);
     let files = &schemas[1].sql;

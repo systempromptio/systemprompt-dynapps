@@ -284,9 +284,12 @@ models:
     limits:
       context_window: 8191
       max_output_tokens: 0
+    # Core refuses to boot a deployed model whose input or output price is
+    # zero. An embedding produces no output tokens, so the output price
+    # mirrors the input one and never applies.
     pricing:
       input_per_million: 0.13
-      output_per_million: 0.0
+      output_per_million: 0.13
       cache_read_per_million: 0.0
       cache_write_per_million: 0.0
       per_image_cents: null
