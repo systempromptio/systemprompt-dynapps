@@ -8,7 +8,8 @@
 //! Each `bundle:<name>` is a source the profile pins; its digest, version,
 //! hash and fetch time come from the bundle cache's `state.json`, what it
 //! owns from its cached `bundle.json`, and its provenance from the active
-//! services root core installed at boot. Nothing here fetches.
+//! services root core installed at boot. A source core holds back on a previous
+//! bundle is listed from the cache's refusal record. Nothing here fetches.
 //!
 //! [`dir_owner`] names the pinned source whose active bundle owns a services
 //! directory (`ai`, `governance`, …): a file there is served from the
@@ -26,10 +27,10 @@ use systemprompt::manifest::services::bundle::{
 };
 use systemprompt::manifest::services::root::{ActiveServicesRoot, ServicesProvenance};
 
-use super::source_badges::{BadgeInputs, SourceBadge, source_badges};
+use super::source_badges::{BadgeInputs, SourceBadge, SourceHold, source_badges};
+use super::source_refusals::RefusalsView;
 use super::tree_hash::base_tree_hash;
 use crate::extension_boot::ExtensionBoot;
-
 
 #[derive(Debug, Clone, Serialize)]
 pub struct BaseSourceView {
@@ -72,6 +73,7 @@ pub struct BundleSourceView {
 pub struct SourcesView {
     pub base: BaseSourceView,
     pub bundles: Vec<BundleSourceView>,
+    pub refusals: RefusalsView,
     pub composed_hash: Option<String>,
     pub last_reconciled_hash: Option<String>,
     pub restart_pending: bool,
@@ -90,21 +92,20 @@ pub fn build_sources(boot: &ExtensionBoot, services: &ServicesConfig) -> Sources
     let restart_pending = !state.composed_hash.is_empty()
         && state.last_reconciled_hash.as_deref() != Some(state.composed_hash.as_str());
 
-    let composed_marketplaces_declaring_access = marketplaces_declaring_access(services);
-
+    let declaring_access = marketplaces_declaring_access(services);
+    let refusals = RefusalsView::read(&cache, profile);
+    let row = RowContext {
+        state: &state,
+        cache: &cache,
+        restart_pending,
+        declaring_access: &declaring_access,
+        refusals: &refusals,
+    };
     let bundles = profile
         .services
         .sources
         .iter()
-        .map(|source| {
-            bundle_view(
-                source,
-                &state,
-                &cache,
-                restart_pending,
-                &composed_marketplaces_declaring_access,
-            )
-        })
+        .map(|source| bundle_view(source, &row))
         .collect();
 
     SourcesView {
@@ -116,6 +117,7 @@ pub fn build_sources(boot: &ExtensionBoot, services: &ServicesConfig) -> Sources
             provenance_error,
         },
         bundles,
+        refusals,
         composed_hash: (!state.composed_hash.is_empty())
             .then(|| state.composed_hash.clone())
             .or(composed_hash),
@@ -164,13 +166,22 @@ fn provenance_of(active: &ActiveServicesRoot) -> (&'static str, Option<String>, 
     }
 }
 
-fn bundle_view(
-    source: &ServicesSource,
-    state: &ServicesBundleState,
-    cache: &BundleCache,
+struct RowContext<'a> {
+    state: &'a ServicesBundleState,
+    cache: &'a BundleCache,
     restart_pending: bool,
-    declaring_access: &[String],
-) -> BundleSourceView {
+    declaring_access: &'a [String],
+    refusals: &'a RefusalsView,
+}
+
+fn bundle_view(source: &ServicesSource, row: &RowContext<'_>) -> BundleSourceView {
+    let RowContext {
+        state,
+        cache,
+        restart_pending,
+        declaring_access,
+        refusals,
+    } = *row;
     let (transport, reference) = source.oci.as_ref().map_or_else(
         || {
             (
@@ -201,6 +212,7 @@ fn bundle_view(
         active_digest: active.map(|a| a.digest.as_str()),
         following_tag,
         restart_pending,
+        hold: SourceHold::for_source(refusals, &source.name),
         kit_access: owns
             .marketplaces
             .iter()

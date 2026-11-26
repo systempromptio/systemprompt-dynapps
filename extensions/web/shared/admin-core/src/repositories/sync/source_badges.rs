@@ -1,12 +1,15 @@
 //! The badges on a source row: the one-word state an operator scans for.
 //!
 //! `in step` is the absence of every warning: pinned digest equals active
-//! digest, the composition is reconciled, and the kit carries no access
-//! block of its own. A source that follows a channel tag says so as
-//! information, not a warning — that is how a kit whose CI publishes on
-//! release reaches the instance with one Import press and no re-pin.
+//! digest, the composition is reconciled, the source was not refused, and the
+//! kit carries no access block of its own. A source that follows a channel
+//! tag says so as information, not a warning — that is how a kit whose CI
+//! publishes on release reaches the instance with one Import press and no
+//! re-pin.
 
 use serde::Serialize;
+
+use super::source_refusals::RefusalsView;
 
 /// A badge on a source row; `tone` is a design-system tone token.
 #[derive(Debug, Clone, Serialize)]
@@ -16,12 +19,36 @@ pub struct SourceBadge {
     pub detail: String,
 }
 
+/// Whether core serves a source's newest bundle; `Unknown` is a refusal record
+/// that could not be read, which is never taken for served.
+#[derive(Debug, Clone, Copy)]
+pub enum SourceHold<'a> {
+    Served,
+    Refused(&'a str),
+    Unknown(&'a str),
+}
+
+impl<'a> SourceHold<'a> {
+    #[must_use]
+    pub fn for_source(refusals: &'a RefusalsView, name: &str) -> Self {
+        if let Some(reason) = &refusals.unreadable {
+            return Self::Unknown(reason);
+        }
+        refusals
+            .held
+            .iter()
+            .find(|held| held.name == name)
+            .map_or(Self::Served, |held| Self::Refused(&held.detail))
+    }
+}
+
 pub(super) struct BadgeInputs<'a> {
     pub name: &'a str,
     pub pinned_digest: Option<&'a str>,
     pub active_digest: Option<&'a str>,
     pub following_tag: bool,
     pub restart_pending: bool,
+    pub hold: SourceHold<'a>,
     pub kit_access: Vec<&'a str>,
 }
 
@@ -41,6 +68,7 @@ pub(super) fn source_badges(input: &BadgeInputs<'_>) -> Vec<SourceBadge> {
         }),
         _ => {},
     }
+    badges.extend(hold_badge(input.hold));
     if input.restart_pending && input.active_digest.is_some() {
         badges.push(SourceBadge {
             text: "reconcile pending",
@@ -83,4 +111,17 @@ pub(super) fn source_badges(input: &BadgeInputs<'_>) -> Vec<SourceBadge> {
         });
     }
     badges
+}
+
+fn hold_badge(hold: SourceHold<'_>) -> Option<SourceBadge> {
+    let (text, detail) = match hold {
+        SourceHold::Served => return None,
+        SourceHold::Refused(detail) => ("refused", detail),
+        SourceHold::Unknown(detail) => ("refusal unknown", detail),
+    };
+    Some(SourceBadge {
+        text,
+        tone: "err",
+        detail: detail.to_owned(),
+    })
 }

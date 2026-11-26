@@ -23,6 +23,7 @@ pub mod plane_ids;
 pub mod provenance;
 pub mod registry;
 pub mod source_badges;
+pub mod source_refusals;
 pub mod sources;
 pub mod sources_db;
 pub mod state;

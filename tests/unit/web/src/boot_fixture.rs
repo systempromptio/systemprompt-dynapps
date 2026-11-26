@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use systemprompt::config::{LoadedProfile, SecretsService};
 use systemprompt::loader::{BootContext, ServicesState};
+use systemprompt::manifest::profile::Profile;
 use systemprompt::manifest::services::ServicesView;
 use systemprompt::manifest::services::root::ActiveServicesRoot;
 use systemprompt::security::keys::{RsaSigningKey, SigningKeys};
@@ -74,6 +75,12 @@ impl Fixture {
     }
 
     pub(crate) fn extension_boot(&self) -> ExtensionBoot {
+        self.extension_boot_with(|_| {})
+    }
+
+    pub(crate) fn extension_boot_with(&self, adjust: impl FnOnce(&mut Profile)) -> ExtensionBoot {
+        let mut profile = self.boot.profile().clone();
+        adjust(&mut profile);
         let root = ActiveServicesRoot::baked(self.boot.profile());
         let config = Arc::clone(
             self.boot
@@ -87,7 +94,7 @@ impl Fixture {
             config.jwt_issuer.clone(),
         );
         ExtensionBoot::new(
-            Arc::new(self.boot.profile().clone()),
+            Arc::new(profile),
             config,
             root,
             Arc::new(authority),

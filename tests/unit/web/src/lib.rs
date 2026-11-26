@@ -327,6 +327,8 @@ mod sync_inventory;
 #[cfg(test)]
 mod sync_plane_urls;
 #[cfg(test)]
+mod sync_source_refusals;
+#[cfg(test)]
 mod sync_sources_hash;
 #[cfg(test)]
 mod sync_staging;
