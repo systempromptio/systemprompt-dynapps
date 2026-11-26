@@ -57,7 +57,7 @@ pub async fn embed_bisecting(embedder: &dyn Embedder, items: &[Candidate]) -> Em
         if slice.is_empty() {
             continue;
         }
-        let embedded = if known_failing {
+        let accepted = if known_failing {
             0
         } else {
             attempt(embedder, slice, &mut run).await
@@ -65,8 +65,8 @@ pub async fn embed_bisecting(embedder: &dyn Embedder, items: &[Candidate]) -> Em
         if run.stopped.is_some() {
             break;
         }
-        if embedded > 0 || slice.len() == 1 {
-            if embedded == 0 {
+        if accepted > 0 || slice.len() == 1 {
+            if accepted == 0 {
                 run.rejected.push(slice[0].id);
             }
             continue;

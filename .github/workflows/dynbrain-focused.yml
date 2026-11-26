@@ -161,3 +161,4 @@ jobs:
         with:
           name: sqlx-live
           path: .sqlx
+          include-hidden-files: true
