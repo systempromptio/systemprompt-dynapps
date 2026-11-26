@@ -167,7 +167,7 @@ pub struct CreatedNode {
     pub title: String,
     pub article_id: ArticleId,
     pub path: String,
-    pub children: Vec<CreatedNode>,
+    pub children: Vec<Self>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -181,7 +181,8 @@ pub struct TreeCreated {
 pub struct Updated {
     pub article_id: ArticleId,
     pub title: String,
-    pub updated: bool,
+    #[serde(rename = "updated")]
+    pub applied: bool,
     pub revision: i32,
     pub variant: VariantInfo,
 }
@@ -190,13 +191,15 @@ pub struct Updated {
 pub struct Moved {
     pub article_id: ArticleId,
     pub new_parent_id: Option<ArticleId>,
-    pub moved: bool,
+    #[serde(rename = "moved")]
+    pub applied: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Trashed {
     pub article_id: ArticleId,
-    pub trashed: bool,
+    #[serde(rename = "trashed")]
+    pub applied: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -228,7 +231,8 @@ impl From<AccessEntry> for GrantView {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Grants {
-    pub grants: Vec<GrantView>,
+    #[serde(rename = "grants")]
+    pub own: Vec<GrantView>,
     pub access: Vec<GrantView>,
     pub inherit_access: Option<bool>,
 }

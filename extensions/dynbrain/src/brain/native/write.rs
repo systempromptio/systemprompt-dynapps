@@ -146,7 +146,7 @@ impl NativeBrain {
             article_id: article.id,
             variant: variant_info(&variant, &space),
             title: variant.title,
-            updated: true,
+            applied: true,
             revision: variant.revision,
         })
     }
@@ -164,7 +164,7 @@ impl NativeBrain {
         Ok(Moved {
             article_id: article.id,
             new_parent_id: parent,
-            moved: true,
+            applied: true,
         })
     }
 
@@ -174,7 +174,7 @@ impl NativeBrain {
         self.repo.trash_article(found.id).await?;
         Ok(Trashed {
             article_id: found.id,
-            trashed: true,
+            applied: true,
         })
     }
 

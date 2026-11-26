@@ -1,4 +1,6 @@
-//! How a failure answers over HTTP: `{ "error": { "key", "message" } }`, with
+//! How a failure answers over HTTP.
+//!
+//! The body is `{ "error": { "key", "message" } }`, with
 //! a stable `key` and the status that goes with it. A server error is logged
 //! and answered with a fixed message, so nothing internal reaches the client.
 //! No answer is cached.
@@ -50,12 +52,13 @@ impl HttpFault {
             Self::Devices(_) | Self::Brain(BrainFault::Internal(_)) => {
                 StatusCode::INTERNAL_SERVER_ERROR
             },
-            Self::BadRequest(_) | Self::Body(_) => StatusCode::BAD_REQUEST,
-            Self::NotFound | Self::Brain(BrainFault::NotFound) => StatusCode::NOT_FOUND,
-            Self::Brain(BrainFault::Forbidden) => StatusCode::FORBIDDEN,
-            Self::Brain(
+            Self::BadRequest(_)
+            | Self::Body(_)
+            | Self::Brain(
                 BrainFault::Invalid(_) | BrainFault::Refused(_) | BrainFault::Property(_),
             ) => StatusCode::BAD_REQUEST,
+            Self::NotFound | Self::Brain(BrainFault::NotFound) => StatusCode::NOT_FOUND,
+            Self::Brain(BrainFault::Forbidden) => StatusCode::FORBIDDEN,
             Self::Brain(BrainFault::Unavailable(_)) => StatusCode::SERVICE_UNAVAILABLE,
         }
     }

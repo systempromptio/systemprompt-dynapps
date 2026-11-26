@@ -101,7 +101,7 @@ impl NativeBrain {
             .collect();
         let Some(id) = article else {
             return Ok(Grants {
-                grants,
+                own: grants,
                 access: Vec::new(),
                 inherit_access: None,
             });
@@ -119,7 +119,7 @@ impl NativeBrain {
             .await?
             .map(|found| found.inherit_access);
         Ok(Grants {
-            grants,
+            own: grants,
             access,
             inherit_access,
         })

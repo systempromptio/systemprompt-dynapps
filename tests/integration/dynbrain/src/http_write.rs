@@ -77,7 +77,7 @@ async fn create_refuses_what_the_space_does_not_accept_and_writes_nothing() {
             Method::POST,
             "/articles",
             Some(&crate::http_support::desktop_token("alice")),
-            Some(&json!([1, 2])),
+            Some(&json!("not an object")),
         )
         .await;
     assert_eq!(malformed.status, StatusCode::BAD_REQUEST);

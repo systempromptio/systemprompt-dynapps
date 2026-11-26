@@ -105,7 +105,7 @@ fn the_answers_use_the_field_names_of_the_docs_tools() {
     let moved = Moved {
         article_id: ArticleId(5),
         new_parent_id: None,
-        moved: true,
+        applied: true,
     };
     assert_eq!(
         serde_json::to_value(moved).expect("serialize"),
@@ -113,14 +113,14 @@ fn the_answers_use_the_field_names_of_the_docs_tools() {
     );
     let trashed = Trashed {
         article_id: ArticleId(5),
-        trashed: true,
+        applied: true,
     };
     assert_eq!(
         serde_json::to_value(trashed).expect("serialize"),
         json!({"article_id": 5, "trashed": true})
     );
     let grants = Grants {
-        grants: vec![GrantView {
+        own: vec![GrantView {
             kind: SubjectKind::Role,
             id: "editor".to_owned(),
             level: Level::NoAccess,

@@ -1,4 +1,6 @@
-//! What an operation takes. The field names are the ones of the `docs_*`
+//! What an operation takes.
+//!
+//! The field names are the ones of the `docs_*`
 //! tools, so the proxy can pass a request through unchanged and the MCP server
 //! can deserialize a tool call straight into these types.
 //!
@@ -130,7 +132,7 @@ pub struct NewNode {
     pub markdown: Option<String>,
     pub front_matter: Option<Object>,
     pub metadata: Option<Object>,
-    pub children: Vec<NewNode>,
+    pub children: Vec<Self>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
