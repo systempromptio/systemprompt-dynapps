@@ -16,7 +16,7 @@ use axum::extract::{Request, State};
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Redirect, Response};
 // JSON: an operation's reply, as the Brain answered it.
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use super::error::HttpFault;
 use super::extract::{Id, Params, Payload, Token};
@@ -25,9 +25,7 @@ use super::state::BrainState;
 use crate::assets::link::SignedLink;
 use crate::assets::sniff;
 use crate::auth::Caller;
-use crate::brain::assets::{
-    AssetFile, AssetLinkArgs, AssetListArgs, AssetUploadArgs, Received, RequestUploadArgs,
-};
+use crate::brain::assets::{AssetFile, AssetLinkArgs, AssetListArgs, Received, RequestUploadArgs};
 use crate::brain::fault::BrainFault;
 use crate::brain::operation::Operation;
 use crate::ids::{ArticleId, AssetId, UploadId};
@@ -80,10 +78,13 @@ pub async fn attach(
     caller: Caller,
     State(state): State<BrainState>,
     Id(id): Id,
-    Payload(mut args): Payload<AssetUploadArgs>,
+    // JSON: kept as it came, because a proxy source's upload id is a number
+    // that typing it as this instance's `UploadId` would turn into text; the
+    // Brain checks the shape when it runs the operation.
+    Payload(mut args): Payload<Map<String, Value>>,
 ) -> Result<(StatusCode, Json<Value>), HttpFault> {
-    args.article_id = Some(ArticleId(id));
-    args.path = None;
+    args.insert("article_id".to_owned(), Value::from(id));
+    args.remove("path");
     let attached = relay(&state, &caller, Operation::AssetUpload, &args).await?;
     Ok((StatusCode::CREATED, attached))
 }

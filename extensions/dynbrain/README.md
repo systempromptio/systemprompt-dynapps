@@ -279,6 +279,9 @@ dynbrain:
   `asset_list` gives an id for, becomes `asset://<source id>`, and `asset_urls` holds the source's `asset_link` for each
   one (at most 50). `GET assets/{id}` asks the source for that link as the person and answers `307` to it (`404` when
   the source refuses). No byte is kept here, and the upload and signed-download routes of this instance find nothing.
+  With dynbrain as the source, `request_upload` maps to `docs_asset_upload` (called with no file it answers the upload
+  URL) and `asset_upload` to `docs_asset_upload` with `args: { upload_id: attachment_id }`; the id the upload answers
+  is a number, and `POST articles/{id}/assets` passes it on as one.
 - **Startup.** An unknown mode or key, a proxy with no `server`, an empty `tool`, or a `server` that is not a declared,
   enabled MCP server leaves the Brain unmounted in the API (logged) and stops the `brain` server from starting.
 

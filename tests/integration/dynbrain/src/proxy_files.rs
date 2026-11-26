@@ -183,6 +183,29 @@ async fn file_writes_go_to_the_source_as_the_person() {
 }
 
 #[tokio::test]
+async fn a_numeric_upload_id_reaches_the_source_as_a_number() {
+    let source = Source::start().await;
+    let app = router(source.full());
+    let token = desktop_token("alice");
+    let attached = call(
+        &app,
+        Method::POST,
+        "/articles/7/assets",
+        &token,
+        Some(&json!({"upload_id": 886, "filename": "a.png", "path": "ignored.md"})),
+    )
+    .await;
+    assert_eq!(attached.status, StatusCode::CREATED);
+    let seen = source.journal.last();
+    assert_eq!(seen.tool, "docs_asset_upload");
+    assert_eq!(
+        seen.arguments,
+        json!({"article_id": 7, "upload_id": 886, "filename": "a.png"}),
+        "the number is kept and the path in the URL wins"
+    );
+}
+
+#[tokio::test]
 async fn no_byte_of_a_source_file_is_kept_here() {
     let source = Source::start().await;
     let brain = source.full();
