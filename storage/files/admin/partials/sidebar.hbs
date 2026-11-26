@@ -95,6 +95,38 @@
         </div>
         </section>
 
+        {{!-- BRAIN — the instance's whole Brain: its tree of spaces and articles, and what only an
+             admin needs (chunks, the ingest queue, a search laboratory and usage). Read-only
+             except Reindex, Retry and access. --}}
+        <section class="sp-nav-group sp-nav-group--brain" data-nav-group="brain">
+        <h2 class="sp-nav-label">
+            <button class="sp-nav-group__toggle" type="button" data-action="nav-group-toggle" aria-expanded="false" aria-controls="sp-nav-group-brain">
+                <span class="sp-nav-group__title">Brain</span>
+                <span class="sp-nav-group__count" data-nav-group-count aria-hidden="true"></span>
+                <svg class="sp-nav-group__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </h2>
+        <div class="sp-nav-group__items" id="sp-nav-group-brain">
+        <div class="sp-nav-group__inner">
+        {{#> nav-item href="/admin/brain" text="Overview" leaf="brain" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 2.5h4.5v5h-4.5zM9 2.5h4.5v3H9zM9 8.5h4.5v5H9zM2.5 9.5H7v4H2.5z" stroke-linejoin="round"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{#> nav-item href="/admin/brain/spaces" text="Spaces" leaf="brain-spaces" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h4l1.5 1.5h5.5v7.5h-11z" stroke-linejoin="round"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{#> nav-item href="/admin/brain/search" text="Search lab" leaf="brain-search" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 12A5 5 0 107 2a5 5 0 000 10zM14 14l-3.5-3.5" stroke-linejoin="round" stroke-linecap="round"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{#> nav-item href="/admin/brain/ingest" text="Ingest" leaf="brain-ingest" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v8M4.5 7L8 10.5 11.5 7M3 13.5h10" stroke-linejoin="round" stroke-linecap="round"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{#> nav-item href="/admin/brain/usage" text="Usage" leaf="brain-usage" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 13V8M6.5 13V4M10.5 13V7M14 13H2" stroke-linejoin="round" stroke-linecap="round"/></svg>{{/inline}}
+        {{/nav-item}}
+        </div>
+        </div>
+        </section>
+
         {{!-- PEOPLE & ACCESS — the accounts, the groups that carry their
              entitlement, and the rules that bind the two together. --}}
         <section class="sp-nav-group sp-nav-group--people" data-nav-group="people">

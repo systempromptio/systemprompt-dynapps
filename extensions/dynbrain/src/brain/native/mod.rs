@@ -71,6 +71,10 @@ impl NativeBrain {
         &self.search
     }
 
+    pub async fn context(&self, user: &UserId, args: &AnswerArgs) -> Reply<Answer> {
+        Ok(self.assemble(user, args).await?.0)
+    }
+
     pub fn with_files(self, files: Option<AssetFiles>) -> Self {
         Self { files, ..self }
     }
@@ -85,11 +89,18 @@ impl NativeBrain {
 #[async_trait]
 impl Brain for NativeBrain {
     async fn search(&self, caller: &UserId, args: &SearchArgs) -> Reply<SearchResults> {
-        self.find(caller, args).await
+        let found = self.find(caller, args).await?;
+        let articles: Vec<ArticleId> = found.results.iter().map(|hit| hit.article_id).collect();
+        self.record("search", &found.query, args.space, &articles)
+            .await?;
+        Ok(found)
     }
 
     async fn answer(&self, caller: &UserId, args: &AnswerArgs) -> Reply<Answer> {
-        self.assemble(caller, args).await
+        let (answer, articles) = self.assemble(caller, args).await?;
+        self.record("answer", args.question.trim(), args.space, &articles)
+            .await?;
+        Ok(answer)
     }
 
     async fn get(&self, caller: &UserId, args: &GetArgs) -> Reply<ArticleView> {

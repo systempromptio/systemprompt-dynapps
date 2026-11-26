@@ -72,7 +72,11 @@ impl NativeBrain {
         })
     }
 
-    pub(super) async fn assemble(&self, user: &UserId, args: &AnswerArgs) -> Reply<Answer> {
+    pub(super) async fn assemble(
+        &self,
+        user: &UserId,
+        args: &AnswerArgs,
+    ) -> Reply<(Answer, Vec<ArticleId>)> {
         let question = args.question.trim();
         let spaces = self.repo.list_spaces().await?;
         let scope = scope_of(
@@ -112,12 +116,28 @@ impl NativeBrain {
         }
         let top = found.passages.first().and_then(|passage| passage.score);
         let threshold = self.search.settings().weak_match_threshold;
-        Ok(Answer {
+        let cited = found.passages.iter().map(|passage| passage.article).collect();
+        let answer = Answer {
             context: blocks(&sources),
             citations,
             mode: AnswerMode::Context,
             verdict: verdict(top, found.trace.scoring, threshold),
-        })
+        };
+        Ok((answer, cited))
+    }
+
+    pub(super) async fn record(
+        &self,
+        kind: &str,
+        query: &str,
+        space: Option<SpaceId>,
+        articles: &[ArticleId],
+    ) -> Result<(), BrainFault> {
+        let ids: Vec<i64> = articles.iter().map(|article| article.0).collect();
+        self.repo
+            .record_search(kind, query, space.map(|space| space.0), &ids)
+            .await?;
+        Ok(())
     }
 
     async fn source_text(

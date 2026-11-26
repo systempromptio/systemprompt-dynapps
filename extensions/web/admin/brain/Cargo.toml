@@ -1,0 +1,23 @@
+[package]
+name = "systemprompt-web-admin-brain"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Brain domain of the admin dashboard: every space and article of the instance, and what only an administrator needs (chunks, synopses, embeddings, the ingest queue, a search laboratory and usage), for console admins, over the Brain's own repositories in the same process."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+systemprompt-web-admin-core = { workspace = true }
+systemprompt = { workspace = true }
+dynbrain = { workspace = true }
+
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

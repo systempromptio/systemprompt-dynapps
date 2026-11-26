@@ -72,6 +72,7 @@ pub fn admin_ssr_router(db: &DbPool, pool: Arc<PgPool>, deps: AdminSsrDeps) -> R
             Arc::clone(&pool),
             &boot,
         ))
+        .merge(systemprompt_web_admin_brain::routes::routes())
         .merge(api_routes())
         .merge(redirects::legacy_routes())
         .layer(Extension(engine.clone()))

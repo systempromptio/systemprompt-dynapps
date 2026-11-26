@@ -20,6 +20,7 @@ use crate::access::{self, Grant, TreeNode};
 use crate::error::BrainError;
 use crate::ids::{ArticleId, SpaceId};
 
+pub mod admin;
 pub mod articles;
 pub mod assets;
 pub mod chunks;
@@ -29,6 +30,7 @@ pub mod passages;
 pub mod retrieval;
 pub mod spaces;
 pub mod types;
+pub mod usage;
 pub mod variants;
 
 use types::{GrantRow, NodeRow, SpaceLockRow};

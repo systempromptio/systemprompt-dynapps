@@ -1,0 +1,116 @@
+{{!--
+  Brain › Article: the tree beside one article in one language, with its
+  tabs. Read-only except Reindex, Retry and the access form.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="One article of the Brain, as the index holds it."}}
+    {{#if unavailable}}
+    {{> components/empty-state heading="Brain unavailable" message=unavailable}}
+    {{else}}
+    <div class="sp-brain-split">
+      <nav class="sp-brain-side" aria-label="Spaces and articles"><ul class="sp-brain-tree">{{> brain-node children=tree}}</ul></nav>
+      <div class="sp-brain-main">
+        {{#if missing_lang}}{{> components/empty-state compact=true message="This article has no variant in that language; showing the default."}}{{/if}}
+        <p class="sp-toolbar__count">Language
+          {{#each languages}}{{#if active}}<strong>{{label}}</strong>{{else}}<a href="{{href}}">{{label}}</a>{{/if}} {{/each}}
+        </p>
+        <nav class="sp-brain-tabs" aria-label="Article tabs">
+          {{#each tabs}}{{#if active}}<strong aria-current="page">{{label}}</strong>{{else}}<a href="{{href}}">{{label}}</a>{{/if}} {{/each}}
+        </nav>
+        {{#if notice}}{{> components/empty-state heading="At the source" message=notice}}{{/if}}
+
+        {{#if show_content}}
+        <dl class="sp-brain-kv">
+          <dt>ID</dt><dd><code class="sp-code-inline">{{doc.article_id}}</code></dd>
+          <dt>Path</dt><dd>{{doc.path}}</dd>
+          <dt>Language</dt><dd>{{doc.lang}}</dd>
+          <dt>Revision</dt><dd>{{doc.revision}}</dd>
+          <dt>Description</dt><dd>{{doc.description}}</dd>
+        </dl>
+        <pre class="sp-brain-text" aria-label="Markdown">{{doc.markdown}}</pre>
+        <p class="sp-toolbar__count">Read-only here: content is edited in DynWork.</p>
+        {{/if}}
+
+        {{#if chunks}}
+        <p class="sp-toolbar__count">Document context used in every chunk's prefix: <code class="sp-code-inline">{{chunks.context}}</code></p>
+        {{#if chunks.has_rows}}
+        {{#> components/table caption="Chunks"}}
+          <thead><tr><th scope="col">#</th><th scope="col">heading_path</th><th scope="col">Words</th><th scope="col">fts_config</th><th scope="col">Code</th><th scope="col">Embedding</th><th scope="col">Fingerprint</th></tr></thead>
+          <tbody>
+          {{#each chunks.rows}}
+            <tr><td>{{n}}</td><td>{{path}}</td><td>{{words}}</td><td>{{fts}}</td><td>{{#if code}}Yes{{else}}No{{/if}}</td><td>{{> components/badge tone=tone text=embedding}}</td><td><code class="sp-code-inline">{{fingerprint}}</code></td></tr>
+            <tr><td colspan="7"><details><summary>Open chunk {{n}}</summary>
+              <p class="sp-toolbar__count">Contextual prefix</p><pre class="sp-brain-text">{{prefix}}</pre>
+              {{#if synopsis}}<p class="sp-toolbar__count">Synopsis (claude-haiku-5-5)</p><pre class="sp-brain-text">{{synopsis}}</pre>{{/if}}
+              <p class="sp-toolbar__count">Text{{#if embedded_at}} · embedded {{embedded_at}}{{/if}}</p><pre class="sp-brain-text">{{text}}</pre>
+            </details></td></tr>
+          {{/each}}
+          </tbody>
+        {{/components/table}}
+        {{else}}{{> components/empty-state heading="No chunks" message="This document is not indexed: eligibility is denied by default, and an article's mode or a rule has to include it."}}{{/if}}
+        {{/if}}
+
+        {{#if ingest}}
+        <ol class="sp-brain-steps">{{#each ingest.steps}}<li>{{> components/badge tone=tone text=state}} {{name}}</li>{{/each}}</ol>
+        <form method="post" action="/admin/brain/articles/{{ingest.article}}/reindex">
+          <input type="hidden" name="lang" value="{{ingest.lang}}">
+          <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Reindex</button>
+        </form>
+        {{#if ingest.has_jobs}}
+        {{#> components/table caption="Indexing jobs"}}
+          <thead><tr><th scope="col">When</th><th scope="col">State</th><th scope="col">Attempts</th><th scope="col">Last error</th><th scope="col"></th></tr></thead>
+          <tbody>{{#each ingest.jobs}}<tr><td>{{when}}</td><td>{{> components/badge tone=tone text=state}}</td><td>{{attempts}}</td><td>{{error}}</td>
+            <td>{{#if retryable}}<form method="post" action="/admin/brain/ingest/{{id}}/retry"><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Retry</button></form>{{/if}}</td></tr>{{/each}}</tbody>
+        {{/components/table}}
+        {{else}}{{> components/empty-state compact=true message="No indexing job for this language yet."}}{{/if}}
+        {{/if}}
+
+        {{#if show_files}}
+        {{#if files}}
+        {{#> components/table caption="Files"}}
+          <thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Size</th><th scope="col">Language</th></tr></thead>
+          <tbody>{{#each files}}<tr><td>{{name}}</td><td>{{kind}}</td><td>{{size}}</td><td>{{lang}}</td></tr>{{/each}}</tbody>
+        {{/components/table}}
+        {{else}}{{> components/empty-state compact=true message="This article has no files."}}{{/if}}
+        {{/if}}
+
+        {{#if access}}
+        {{#if access.notice}}{{> components/empty-state compact=true message=access.notice}}{{/if}}
+        {{#if access.editable}}
+        <p class="sp-toolbar__count">{{#if access.inherits}}Inherits access from its parent and space.{{else}}Own access, does not inherit.{{/if}} «No access» takes away what a person's own row inherits; it does not remove what they receive through a group or a role.</p>
+        {{#> components/table caption="Access this article ends up with"}}
+          <thead><tr><th scope="col">Who</th><th scope="col">Kind</th><th scope="col">Level</th></tr></thead>
+          <tbody>{{#each access.effective}}<tr><td>{{who}}</td><td>{{kind}}</td><td>{{level}}</td></tr>{{/each}}</tbody>
+        {{/components/table}}
+        {{#> components/table caption="Set on this article"}}
+          <thead><tr><th scope="col">Who</th><th scope="col">Kind</th><th scope="col">Level</th></tr></thead>
+          <tbody>{{#each access.own}}<tr><td>{{who}}</td><td>{{kind}}</td><td>{{level}}</td></tr>{{/each}}</tbody>
+        {{/components/table}}
+        <form method="post" action="/admin/brain/articles/{{access.article}}/access" class="sp-toolbar">
+          <input type="hidden" name="lang" value="{{access.lang}}">
+          <select name="kind" class="sp-search-input" aria-label="Kind"><option value="user">User</option><option value="role">Role</option><option value="group">Group</option></select>
+          <input name="subject" class="sp-search-input" aria-label="Who" placeholder="user id, role or group id" required>
+          <select name="level" class="sp-search-input" aria-label="Level"><option value="read">Can read</option><option value="write">Can edit</option><option value="manage">Can manage</option><option value="none">No access</option><option value="remove">Remove own row</option></select>
+          <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Save</button>
+        </form>
+        {{/if}}
+        {{/if}}
+
+        {{#if usage}}
+        <p>Retrieved in 30 days: <strong>{{usage.retrieved}}</strong> · Cited: <strong>{{usage.cited}}</strong></p>
+        <p class="sp-toolbar__count">Counts only, never who or where.</p>
+        {{/if}}
+
+        {{#if history}}
+        {{#> components/table caption="Revisions"}}
+          <thead><tr><th scope="col">Revision</th><th scope="col">Title</th><th scope="col">By</th><th scope="col">When</th></tr></thead>
+          <tbody>{{#each history}}<tr><td>{{number}}</td><td>{{title}}</td><td>{{author}}</td><td>{{when}}</td></tr>{{/each}}</tbody>
+        {{/components/table}}
+        {{/if}}
+      </div>
+    </div>
+    {{/if}}
+    {{/inline}}
+{{/layout}}

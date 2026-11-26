@@ -29,5 +29,6 @@ pub mod rerank;
 pub mod service;
 
 pub use service::{
-    Passage, Retrieval, RetrievalMode, RetrievalRequest, RetrievalSettings, Retriever, SearchScope,
+    ArmScore, ExplainRow, Explained, Outcome, Passage, Retrieval, RetrievalMode, RetrievalRequest,
+    RetrievalSettings, Retriever, SearchScope, Timings,
 };

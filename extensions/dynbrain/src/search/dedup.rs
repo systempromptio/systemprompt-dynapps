@@ -15,7 +15,25 @@ use crate::ids::ArticleId;
 pub const MAX_PER_DOCUMENT: usize = 1;
 pub const JACCARD_THRESHOLD: f64 = 0.85;
 
+/// Why a passage was left out of the results.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dropped {
+    SameDocument,
+    NearDuplicate,
+}
+
+/// The passages kept and the ones dropped, each with its reason.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Deduped {
+    pub kept: Vec<Passage>,
+    pub dropped: Vec<(Passage, Dropped)>,
+}
+
 pub fn dedup(passages: Vec<Passage>, prefer_lang: Option<&str>) -> Vec<Passage> {
+    dedup_explained(passages, prefer_lang).kept
+}
+
+pub fn dedup_explained(passages: Vec<Passage>, prefer_lang: Option<&str>) -> Deduped {
     let mut order: Vec<ArticleId> = Vec::new();
     let mut groups: HashMap<ArticleId, Vec<Passage>> = HashMap::new();
     for passage in passages {
@@ -29,6 +47,7 @@ pub fn dedup(passages: Vec<Passage>, prefer_lang: Option<&str>) -> Vec<Passage> 
             .push(passage);
     }
     let mut kept: Vec<Passage> = Vec::new();
+    let mut dropped: Vec<(Passage, Dropped)> = Vec::new();
     let mut kept_words: Vec<BTreeSet<String>> = Vec::new();
     for article in order {
         let Some(mut candidates) = groups.remove(&article) else {
@@ -40,10 +59,12 @@ pub fn dedup(passages: Vec<Passage>, prefer_lang: Option<&str>) -> Vec<Passage> 
         let mut taken = 0;
         for passage in candidates {
             if taken >= MAX_PER_DOCUMENT {
-                break;
+                dropped.push((passage, Dropped::SameDocument));
+                continue;
             }
             let words = words_of(&passage.content);
             if !words.is_empty() && kept_words.iter().any(|earlier| overlaps(&words, earlier)) {
+                dropped.push((passage, Dropped::NearDuplicate));
                 continue;
             }
             kept.push(passage);
@@ -51,7 +72,7 @@ pub fn dedup(passages: Vec<Passage>, prefer_lang: Option<&str>) -> Vec<Passage> 
             taken += 1;
         }
     }
-    kept
+    Deduped { kept, dropped }
 }
 
 fn words_of(text: &str) -> BTreeSet<String> {

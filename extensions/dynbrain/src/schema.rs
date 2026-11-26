@@ -7,6 +7,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
     vec![
         SchemaDefinition::sql_only(include_str!("../schema/01_dynbrain.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/02_dynbrain_assets.sql")),
+        SchemaDefinition::sql_only(include_str!("../schema/03_dynbrain_admin.sql")),
     ]
 }
 

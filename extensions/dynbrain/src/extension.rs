@@ -37,6 +37,7 @@ use crate::brain::native::NativeBrain;
 use crate::brain::proxy::ProxyBrain;
 use crate::brain::proxy::source::{McpSource, StoreSecrets};
 use crate::config::{BrainConfig, CONFIG_PREFIX, ConfigError, Mode, ProxyConfig, check_server};
+use crate::console::{self, Console, Native};
 use crate::repository::BrainRepository;
 use crate::router::state::BrainState;
 use crate::router::{EXTENSION_BASE_PATH, brain_router};
@@ -94,16 +95,33 @@ pub fn compose(
     // ingestion integration, to be evaluated) instead of using the proxy.
     // Decided by David, 24-11-2026.
     match (config.mode, config.proxy) {
-        (Mode::Proxy, Some(proxy)) => Ok(Arc::new(proxy_brain(ctx, proxy)?)),
+        (Mode::Proxy, Some(proxy)) => {
+            let brain: Arc<dyn Brain> = Arc::new(proxy_brain(ctx, proxy)?);
+            console::publish(Console {
+                mode: Mode::Proxy,
+                brain: Arc::clone(&brain),
+                native: None,
+            });
+            Ok(brain)
+        },
         (Mode::Proxy, None) => Err(ConfigError::NoSource),
-        (Mode::Native, _) => Ok(Arc::new(native_brain(ctx, embedder)?)),
+        (Mode::Native, _) => {
+            let (brain, native) = native_brain(ctx, embedder)?;
+            let shared: Arc<dyn Brain> = brain;
+            console::publish(Console {
+                mode: Mode::Native,
+                brain: Arc::clone(&shared),
+                native: Some(native),
+            });
+            Ok(shared)
+        },
     }
 }
 
 fn native_brain(
     ctx: &dyn ExtensionContext,
     embedder: EmbedderSlot,
-) -> Result<NativeBrain, ConfigError> {
+) -> Result<(Arc<NativeBrain>, Native), ConfigError> {
     let handle = ctx.database();
     let database = handle
         .as_any()
@@ -113,9 +131,17 @@ fn native_brain(
     let search = Retriever::new(repo.clone())
         .with_embedder(embedder)
         .with_reranker(reranker(ctx));
-    Ok(NativeBrain::new(repo)
-        .with_files(asset_files(ctx))
-        .with_search(search))
+    let brain = Arc::new(
+        NativeBrain::new(repo.clone())
+            .with_files(asset_files(ctx))
+            .with_search(search.clone()),
+    );
+    let native = Native {
+        brain: Arc::clone(&brain),
+        repo,
+        retriever: search,
+    };
+    Ok((brain, native))
 }
 
 fn proxy_brain(ctx: &dyn ExtensionContext, proxy: ProxyConfig) -> Result<ProxyBrain, ConfigError> {

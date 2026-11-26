@@ -1,0 +1,25 @@
+[package]
+name = "admin-brain-integration-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# The Brain section's routes, driven in process the way the admin mounts them.
+systemprompt-web-admin-brain = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+systemprompt-web-shared = { workspace = true }
+dynbrain = { workspace = true }
+# The throwaway database with the full extension schema (db_or_skip!).
+dynapps-test-common = { workspace = true }
+systemprompt = { workspace = true, features = ["storage"] }
+axum = { workspace = true }
+tower = { workspace = true }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+serde_json = { workspace = true }
+# The query embedder double the search runs against.
+async-trait = { workspace = true }

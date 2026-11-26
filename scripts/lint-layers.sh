@@ -34,6 +34,7 @@ ORDER = {"shared": 0, "domain": 1, "app": 2, "entry": 3, "facade": 4}
 RULES = [
     (r"/extensions/(web|mcp)/shared/", "shared"),
     (r"/extensions/secrets/", "shared"),
+    (r"/extensions/web/admin/brain/", "entry"),
     (r"/extensions/web/(admin|content)/", "domain"),
     (r"/extensions/web/(site|jobs)/", "app"),
     (r"/extensions/web/Cargo\.toml$", "entry"),

@@ -5,7 +5,6 @@
 //! [`ScoringTrace`] and the query vector, which the answer reuses to pick the
 //! chunks of each document without a second embedding call.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -16,9 +15,8 @@ use super::confidence::WEAK_MATCH_THRESHOLD;
 use super::context::QUOTA_CHARS;
 use super::dedup::dedup;
 use super::filter::PropertyFilter;
-use super::fusion::fuse;
 use super::query::{EmbedderSlot, QueryVector, cache_key, literal};
-use super::rerank::{FusionReason, RerankBreaker, Reranker, ScoringTrace, rerank};
+use super::rerank::{FusionReason, RerankBreaker, Reranker, ScoringTrace};
 use crate::error::BrainError;
 use crate::ids::{ArticleId, ChunkId, SpaceId};
 use crate::ingest::provider::{DIMENSIONS, Embedder};
@@ -100,6 +98,10 @@ pub struct Retrieval {
     pub vector: Option<QueryVector>,
 }
 
+mod explain;
+
+pub use explain::{ArmScore, ExplainRow, Explained, Outcome, Timings};
+
 /// The hybrid search over the native index.
 #[derive(Debug, Clone)]
 pub struct Retriever {
@@ -154,54 +156,13 @@ impl Retriever {
         fingerprint: &str,
         vector: QueryVector,
     ) -> Result<Retrieval, BrainError> {
-        let pool = self.settings.candidate_pool;
-        let near = if self.repo.get_foreign_vectors(fingerprint).await? {
-            tracing::error!(
-                fingerprint,
-                "vector search is off: chunks are embedded with another configuration"
-            );
-            Vec::new()
-        } else {
-            let effort = self.settings.ef_search.max(pool);
-            self.repo
-                .list_vector_matches(request.scope, &vector, pool, effort)
-                .await?
-        };
-        let words = self
-            .repo
-            .list_text_matches(request.scope, request.query, pool)
-            .await?;
-        let fused = fuse(&near, &words);
-        let ids: Vec<ChunkId> = fused.iter().map(|(chunk, _)| *chunk).collect();
-        let mut rows: HashMap<ChunkId, Passage> = self
-            .repo
-            .list_passages(&ids)
-            .await?
-            .into_iter()
-            .filter_map(|passage| passage.chunk.map(|chunk| (chunk, passage)))
-            .collect();
-        let passages: Vec<Passage> = fused
-            .into_iter()
-            .filter_map(|(chunk, score)| {
-                rows.remove(&chunk).map(|passage| Passage {
-                    score: Some(score),
-                    ..passage
-                })
-            })
-            .collect();
-        let (ranked, trace) = rerank(
-            self.reranker.as_deref(),
-            &self.breaker,
-            request.query,
-            passages,
-        )
-        .await;
-        let mut kept = dedup(ranked, request.prefer_lang);
+        let staged = self.stage(request, fingerprint, &vector, true).await?;
+        let mut kept = dedup(staged.ranked, request.prefer_lang);
         kept.truncate(request.limit);
         Ok(Retrieval {
             mode: RetrievalMode::Hybrid,
             passages: kept,
-            trace,
+            trace: staged.trace,
             vector: Some(vector),
         })
     }

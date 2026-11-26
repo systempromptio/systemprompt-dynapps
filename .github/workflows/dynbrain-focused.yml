@@ -164,7 +164,8 @@ jobs:
             -f "$users_sql" \
             -f extensions/web/schema/23_groups_projects.sql \
             -f extensions/dynbrain/schema/01_dynbrain.sql \
-            -f extensions/dynbrain/schema/02_dynbrain_assets.sql
+            -f extensions/dynbrain/schema/02_dynbrain_assets.sql \
+            -f extensions/dynbrain/schema/03_dynbrain_admin.sql
       - name: Describe the queries live
         run: |
           set -euo pipefail

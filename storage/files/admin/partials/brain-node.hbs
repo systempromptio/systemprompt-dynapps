@@ -1,0 +1,16 @@
+{{!--
+  The children of a node of the Brain tree, each a collapsible branch when it
+  has children of its own. Recursive: call it with `children=tree`.
+--}}
+{{#each children}}
+<li class="sp-brain-node{{#if selected}} is-selected{{/if}}">
+  {{#if children}}
+  <details{{#if open}} open{{/if}}>
+    <summary>{{#if href}}<a href="{{href}}">{{title}}</a>{{else}}<span class="sp-brain-space">{{title}}</span>{{/if}}</summary>
+    <ul class="sp-brain-tree">{{> brain-node}}</ul>
+  </details>
+  {{else}}
+  {{#if href}}<a href="{{href}}">{{title}}</a>{{else}}<span class="sp-brain-space">{{title}}</span>{{/if}}
+  {{/if}}
+</li>
+{{/each}}

@@ -32,6 +32,7 @@ pub mod assets;
 pub mod auth;
 pub mod brain;
 pub mod config;
+pub mod console;
 pub mod content;
 pub mod error;
 pub mod extension;
