@@ -1,7 +1,9 @@
-//! The extractors of the routes. Each turns a malformed path, query or body
-//! into the same `{ "error": { "key", "message" } }` answer as every other
-//! failure, instead of axum's plain-text rejection. [`Inference`] reads the
-//! AI service core layers onto extension routes; it never fails.
+//! The extractors of the routes.
+//!
+//! Each turns a malformed path, query or body into the same
+//! `{ "error": { "key", "message" } }` answer as every other failure, instead
+//! of axum's plain-text rejection. [`Inference`] reads the AI service core
+//! layers onto extension routes; it never fails.
 
 use std::fmt;
 use std::sync::Arc;

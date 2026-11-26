@@ -5,6 +5,8 @@
 //! runner-up, or there is none. It only picks which variant represents a
 //! document that exists in several languages; it never filters.
 
+use std::cmp::Reverse;
+
 const MIN_HITS: usize = 2;
 const MIN_RATIO: f64 = 1.3;
 
@@ -97,7 +99,7 @@ pub fn detect(text: &str, allowed: &[String]) -> Option<String> {
             (*code, hits)
         })
         .collect();
-    ranked.sort_by(|left, right| right.1.cmp(&left.1));
+    ranked.sort_by_key(|(_, hits)| Reverse(*hits));
     let (best_lang, best) = ranked.first().copied()?;
     if best < MIN_HITS {
         return None;
