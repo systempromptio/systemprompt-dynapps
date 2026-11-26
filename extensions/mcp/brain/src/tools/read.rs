@@ -3,7 +3,7 @@
 use super::fragments::{article_id, integer, lang, path, schema, text, where_filter};
 use super::{Json, ToolKind, ToolSpec};
 
-pub const SPECS: &[ToolSpec] = &[
+pub(super) const SPECS: &[ToolSpec] = &[
     ToolSpec {
         name: "search",
         title: "Search the Brain",

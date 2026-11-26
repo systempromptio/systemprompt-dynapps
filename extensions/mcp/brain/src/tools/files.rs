@@ -4,7 +4,7 @@
 use super::fragments::{article_id, integer, lang, path, schema, text};
 use super::{Json, ToolKind, ToolSpec};
 
-pub const SPECS: &[ToolSpec] = &[
+pub(super) const SPECS: &[ToolSpec] = &[
     ToolSpec {
         name: "request_upload",
         title: "Request a file upload URL",
@@ -66,7 +66,7 @@ const ASSET_UPLOAD: &str = "Add a FILE to an article - an image, a diagram, a PD
     spreadsheet - in two calls. First call it with `article_id` (or `path`) and `filename`: \
     you get back an `upload_url` and an `upload_id`, as from `request_upload`; send the \
     file to the URL as the RAW request body (`curl --data-binary @file \"<upload_url>\"`, \
-    never a multipart form). Then call this again with the same article, the same \
+    never as a multipart form). Then call this again with the same article, the same \
     `filename` and that `upload_id`, and the file is attached to the article. Executables are refused; the file \
     is stored exactly as uploaded (never re-encoded or resized). For it to be VISIBLE in \
     the article, reference it from the Markdown with the `ref` the answer gives (`![](asset://<id>)` \

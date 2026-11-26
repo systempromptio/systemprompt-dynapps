@@ -6,28 +6,28 @@ use systemprompt_mcp_brain::tools::fault::{tool_error, undeclared_filter};
 #[test]
 fn a_fault_becomes_the_tool_error_a_client_reads() {
     assert_eq!(
-        tool_error(BrainFault::NotFound).code,
+        tool_error(&BrainFault::NotFound).code,
         ErrorData::resource_not_found("x", None).code
     );
     assert_eq!(
-        tool_error(BrainFault::Invalid("pass an id")).code,
+        tool_error(&BrainFault::Invalid("pass an id")).code,
         ErrorData::invalid_params("x", None).code
     );
     assert_eq!(
-        tool_error(BrainFault::TooLarge(10)).code,
+        tool_error(&BrainFault::TooLarge(10)).code,
         ErrorData::invalid_params("x", None).code
     );
     assert_eq!(
-        tool_error(BrainFault::Unavailable("files are off")).code,
+        tool_error(&BrainFault::Unavailable("files are off")).code,
         ErrorData::internal_error("x", None).code
     );
-    let forbidden = tool_error(BrainFault::Forbidden);
+    let forbidden = tool_error(&BrainFault::Forbidden);
     assert!(forbidden.message.starts_with("Forbidden"), "{forbidden:?}");
 }
 
 #[test]
 fn a_not_found_does_not_say_whether_the_article_exists() {
-    let error = tool_error(BrainFault::NotFound);
+    let error = tool_error(&BrainFault::NotFound);
     assert_eq!(error.message, "not found");
 }
 

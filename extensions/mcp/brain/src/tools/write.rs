@@ -8,7 +8,7 @@ use super::fragments::{
 };
 use super::{Json, ToolKind, ToolSpec};
 
-pub const SPECS: &[ToolSpec] = &[
+pub(super) const SPECS: &[ToolSpec] = &[
     ToolSpec {
         name: "create",
         title: "Create an article",

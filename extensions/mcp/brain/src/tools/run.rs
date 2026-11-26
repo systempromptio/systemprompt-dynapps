@@ -3,7 +3,7 @@
 use dynbrain::brain::Brain;
 use dynbrain::brain::args::{
     AnswerArgs, CreateArgs, ExportArgs, GetArgs, ListArgs, ListSpacesArgs, MetadataArgs,
-    MetadataSchemaArgs, MoveArgs, OutlineArgs, SearchArgs, TreeArgs, UpdateArgs,
+    MetadataSchemaArgs, MoveArgs, OutlineArgs, TreeArgs, UpdateArgs,
 };
 use dynbrain::brain::assets::{AssetLinkArgs, AssetListArgs, AssetUploadArgs, RequestUploadArgs};
 use dynbrain::brain::fault::BrainFault;
@@ -140,7 +140,7 @@ fn parse<A: DeserializeOwned>(arguments: Json) -> Result<A, McpError> {
 }
 
 fn encode<T: Serialize>(outcome: Result<T, BrainFault>) -> Result<Json, McpError> {
-    let view = outcome.map_err(tool_error)?;
+    let view = outcome.map_err(|fault| tool_error(&fault))?;
     serde_json::to_value(view).map_err(|error| {
         tracing::error!(%error, "a Brain reply could not be encoded");
         reply::failure("the reply could not be encoded")

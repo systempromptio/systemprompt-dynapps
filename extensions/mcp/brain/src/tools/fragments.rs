@@ -5,9 +5,9 @@ use serde_json::json;
 
 use super::Json;
 
-pub const MAX_NODES: usize = 200;
+pub(super) const MAX_NODES: usize = 200;
 
-pub fn schema(properties: &[(&str, Json)], required: &[&str], any_of: &[&[&str]]) -> Json {
+pub(super) fn schema(properties: &[(&str, Json)], required: &[&str], any_of: &[&[&str]]) -> Json {
     let mut schema = json!({
         "type": "object",
         "properties": properties
@@ -27,30 +27,30 @@ pub fn schema(properties: &[(&str, Json)], required: &[&str], any_of: &[&[&str]]
     schema
 }
 
-pub fn text(description: &str) -> Json {
+pub(super) fn text(description: &str) -> Json {
     json!({"type": "string", "description": description})
 }
 
-pub fn integer(description: &str) -> Json {
+pub(super) fn integer(description: &str) -> Json {
     json!({"type": "integer", "description": description})
 }
 
-pub fn lang() -> Json {
+pub(super) fn lang() -> Json {
     text(
         "Optional ISO language code ('es' or 'en') selecting the language variant of the \
          article. Omit it to use the article's default variant.",
     )
 }
 
-pub fn article_id() -> Json {
+pub(super) fn article_id() -> Json {
     integer("Id of the article.")
 }
 
-pub fn path() -> Json {
+pub(super) fn path() -> Json {
     text("Path of the article, as the other tools return it, e.g. handbook/holidays.")
 }
 
-pub fn position() -> Json {
+pub(super) fn position() -> Json {
     json!({
         "type": "string",
         "enum": ["first", "last"],
@@ -58,7 +58,7 @@ pub fn position() -> Json {
     })
 }
 
-pub fn where_filter() -> Json {
+pub(super) fn where_filter() -> Json {
     json!({
         "type": "object",
         "description": "Optional metadata filter, as a mapping of declared field to value, \
@@ -68,17 +68,17 @@ pub fn where_filter() -> Json {
     })
 }
 
-pub fn object(description: &str) -> Json {
+pub(super) fn object(description: &str) -> Json {
     json!({"type": "object", "description": description})
 }
 
-pub const FRONT_MATTER_NEW: &str = "Header keys to set on the new article, as a mapping, e.g. \
+pub(super) const FRONT_MATTER_NEW: &str = "Header keys to set on the new article, as a mapping, e.g. \
     {\"description\": \"...\", \"icon\": \"x\"}. The same keys a pasted `.md` header carries, \
     merged the same way and reported back in `front_matter`; a key given here wins over the \
     same key in a pasted header. A key the space DECLARES as a typed field is written as \
     typed metadata, under the same rules as `metadata`.";
 
-pub const METADATA_NEW: &str = "Typed metadata to set, as a mapping of declared field to \
+pub(super) const METADATA_NEW: &str = "Typed metadata to set, as a mapping of declared field to \
     value, e.g. {\"status\": \"draft\", \"owner\": \"j.smith\"}. Call metadata_schema first: \
     it names the fields the space declares and gives an `expects` for each, which is what to \
     write - a selection takes one KEY from `options`, tags a list of keys, dates \

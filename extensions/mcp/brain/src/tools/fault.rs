@@ -10,7 +10,7 @@ use systemprompt_mcp_shared::reply;
 
 use super::Json;
 
-pub fn tool_error(fault: BrainFault) -> McpError {
+pub fn tool_error(fault: &BrainFault) -> McpError {
     match fault {
         BrainFault::NotFound => reply::not_found("not found"),
         BrainFault::Forbidden => reply::forbidden(fault.to_string()),
@@ -18,8 +18,8 @@ pub fn tool_error(fault: BrainFault) -> McpError {
         | BrainFault::Refused(_)
         | BrainFault::Property(_)
         | BrainFault::TooLarge(_) => reply::invalid(fault.to_string()),
-        BrainFault::Unavailable(message) => reply::failure(message),
-        BrainFault::Internal(ref source) => {
+        BrainFault::Unavailable(message) => reply::failure(*message),
+        BrainFault::Internal(source) => {
             tracing::error!(error = %source, "the Brain's store failed");
             reply::failure(fault.to_string())
         },
@@ -34,6 +34,6 @@ pub fn undeclared_filter(fault: BrainFault, rows: &str) -> Result<Json, McpError
         BrainFault::Property(error @ PropertyError::NotDeclared { .. }) => {
             Ok(json!({"error": error.to_string(), rows: [], "total": 0}))
         },
-        other => Err(tool_error(other)),
+        other => Err(tool_error(&other)),
     }
 }
