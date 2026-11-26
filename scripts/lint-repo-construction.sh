@@ -46,6 +46,12 @@ ALLOWED_FILES=(
   # root); UserRoles constructs core's user repository there, since core hands an
   # extension a Database, not a UserService.
   extensions/dynwork-chats/src/roles.rs
+  # dynbrain builds its router state once (extension.rs, its composition root),
+  # and its two scheduler job bodies build the repository once per tick, as
+  # **/jobs/** files do; they live with the ingest code they drive.
+  extensions/dynbrain/src/extension.rs
+  extensions/dynbrain/src/ingest/job.rs
+  extensions/dynbrain/src/ingest/purge.rs
   # pre-gate ad-hoc handler construction; shrink by injecting the repository
   # through the router state, then delete the entry.
   extensions/web/content/src/api/handlers/links.rs
