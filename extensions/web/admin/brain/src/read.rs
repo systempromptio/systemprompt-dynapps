@@ -5,8 +5,8 @@
 
 use dynbrain::brain::operation::Operation;
 use dynbrain::console::{self, Console};
-use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Deserializer, Serialize};
 use systemprompt::identifiers::{JwtToken, UserId};
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -33,7 +33,8 @@ pub struct Listed {
 pub struct Document {
     pub found: bool,
     pub article_id: i64,
-    pub space: i64,
+    #[serde(deserialize_with = "space_of")]
+    pub space: Option<i64>,
     pub path: String,
     pub title: String,
     pub description: String,
@@ -166,4 +167,10 @@ pub async fn read_files(
     let args = serde_json::json!({ "article_id": article });
     let listed: FileList = call(console, who, Operation::AssetList, args).await?;
     Ok(listed.files)
+}
+
+// JSON: a proxy source names an article outside every space `false`, not a
+// number, so anything that is not an id reads as no space.
+fn space_of<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<i64>, D::Error> {
+    Ok(serde_json::Value::deserialize(deserializer)?.as_i64())
 }

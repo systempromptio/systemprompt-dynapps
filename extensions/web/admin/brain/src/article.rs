@@ -114,7 +114,7 @@ pub async fn article_page(
     };
     let spaces = faults.take("Spaces", read::read_spaces(&console, reader.who()).await);
     let wanted = query.lang.as_deref().filter(|lang| !lang.is_empty());
-    let doc = match read::read_document(&console, reader.who(), id, wanted).await {
+    let mut doc = match read::read_document(&console, reader.who(), id, wanted).await {
         Ok(doc) if doc.found => doc,
         _ => {
             read::read_document(&console, reader.who(), id, None)
@@ -124,6 +124,9 @@ pub async fn article_page(
                 .ok_or_else(|| AdminError::NotFound(format!("article {id}")))?
         },
     };
+    // Why: a proxy source names the article `id`, not `article_id`; the one
+    // asked for is the one shown.
+    doc.article_id = id;
     page.missing_lang = wanted.is_some_and(|lang| lang != doc.lang);
     let tab = TABS
         .iter()
@@ -160,7 +163,7 @@ fn render(shell: &Page, page: &ArticlePage, faults: &Faults) -> Response {
 fn languages(spaces: &[Space], doc: &Document, id: i64, tab: &str) -> Vec<Choice> {
     spaces
         .iter()
-        .find(|space| space.item.space == doc.space)
+        .find(|space| Some(space.item.space) == doc.space)
         .map(|space| space.item.langs.as_slice())
         .unwrap_or_default()
         .iter()
