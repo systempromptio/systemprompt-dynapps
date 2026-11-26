@@ -209,11 +209,11 @@ struct Failing {
 
 #[async_trait]
 impl Reranker for Failing {
-    fn provider(&self) -> &str {
+    fn provider(&self) -> &'static str {
         "failing"
     }
 
-    fn endpoint(&self) -> &str {
+    fn endpoint(&self) -> &'static str {
         "test://failing"
     }
 

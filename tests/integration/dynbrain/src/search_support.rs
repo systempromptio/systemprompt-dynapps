@@ -105,11 +105,11 @@ impl ScriptedReranker {
 
 #[async_trait]
 impl Reranker for ScriptedReranker {
-    fn provider(&self) -> &str {
+    fn provider(&self) -> &'static str {
         "scripted"
     }
 
-    fn endpoint(&self) -> &str {
+    fn endpoint(&self) -> &'static str {
         "test://rerank"
     }
 
