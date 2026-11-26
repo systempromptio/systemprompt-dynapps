@@ -30,7 +30,10 @@ async fn opening_a_chunk_shows_its_prefix_and_its_whole_text() {
         .await;
     assert!(page.has("Open chunk 0"));
     assert!(page.has("Contextual prefix"));
-    assert!(page.has("Facturas"), "the prefix carries the document title");
+    assert!(
+        page.has("Facturas"),
+        "the prefix carries the document title"
+    );
     assert!(page.has("apple credit notes to correct an invoice"));
     env.finish().await;
 }

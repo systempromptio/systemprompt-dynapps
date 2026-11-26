@@ -1,8 +1,8 @@
 //! `/admin/brain/ingest`: the global indexing queue, with its errors.
 
+use axum::Extension;
 use axum::extract::Query;
 use axum::response::Response;
-use axum::Extension;
 use serde::{Deserialize, Serialize};
 use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::ssr::faults::Faults;

@@ -254,10 +254,21 @@ async fn a_replacement_with_one_bad_grant_changes_nothing() {
     assert_eq!(app.put(&path, "alice", &first).await.status, StatusCode::OK);
     let bad = json!({"grants": [grant("user", "bob", "read"), grant("user", "", "read")]});
     let refused = app.put(&path, "alice", &bad).await;
-    assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{:?}", refused.body);
+    assert_eq!(
+        refused.status,
+        StatusCode::BAD_REQUEST,
+        "{:?}",
+        refused.body
+    );
     let listed = app.get(&path, "alice").await;
     let grants = listed.body["grants"].as_array().expect("grants");
-    assert!(grants.contains(&grant("group", "all", "read")), "{grants:?}");
-    assert!(!grants.contains(&grant("user", "bob", "read")), "{grants:?}");
+    assert!(
+        grants.contains(&grant("group", "all", "read")),
+        "{grants:?}"
+    );
+    assert!(
+        !grants.contains(&grant("user", "bob", "read")),
+        "{grants:?}"
+    );
     app.finish().await;
 }

@@ -36,7 +36,9 @@ async fn in_proxy_the_tree_and_the_document_read_through_the_operations() {
     let tree = env.get("/brain/spaces", true).await;
     assert!(tree.has("Facturas") && tree.has("Weekend SLA"));
     let id = env.invoicing.id.0;
-    let doc = env.get(&format!("/brain/articles/{id}?lang=es"), true).await;
+    let doc = env
+        .get(&format!("/brain/articles/{id}?lang=es"), true)
+        .await;
     assert!(doc.has("Cómo emitir facturas."));
     assert!(!doc.has_fault_notice());
     env.finish().await;

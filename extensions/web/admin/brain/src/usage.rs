@@ -56,7 +56,11 @@ pub async fn usage_page(
             None => page.proxy_note = Some(AT_SOURCE),
             Some(native) => {
                 let since = Utc::now() - TimeDelta::days(30);
-                let used = keep(&mut faults, "Usage", native.repo.list_used_articles(since, SHOWN).await);
+                let used = keep(
+                    &mut faults,
+                    "Usage",
+                    native.repo.list_used_articles(since, SHOWN).await,
+                );
                 page.used = used
                     .unwrap_or_default()
                     .into_iter()
@@ -67,7 +71,11 @@ pub async fn usage_page(
                         cited: row.cited,
                     })
                     .collect();
-                let gaps = keep(&mut faults, "Searches", native.repo.list_empty_searches(since, SHOWN).await);
+                let gaps = keep(
+                    &mut faults,
+                    "Searches",
+                    native.repo.list_empty_searches(since, SHOWN).await,
+                );
                 page.gaps = gaps
                     .unwrap_or_default()
                     .into_iter()
@@ -77,7 +85,11 @@ pub async fn usage_page(
                         times: gap.times,
                     })
                     .collect();
-                let spend = keep(&mut faults, "Cost", native.repo.list_embedding_spend(since).await);
+                let spend = keep(
+                    &mut faults,
+                    "Cost",
+                    native.repo.list_embedding_spend(since).await,
+                );
                 page.spend = spend
                     .unwrap_or_default()
                     .into_iter()

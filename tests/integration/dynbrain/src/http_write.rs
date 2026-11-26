@@ -361,9 +361,18 @@ async fn a_title_over_500_characters_is_refused_and_leaves_no_article() {
             &json!({"space": space.id.0, "title": long}),
         )
         .await;
-    assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{:?}", refused.body);
+    assert_eq!(
+        refused.status,
+        StatusCode::BAD_REQUEST,
+        "{:?}",
+        refused.body
+    );
     assert_eq!(refused.key(), "invalid");
-    assert_eq!(article_count(&app, space.id).await, 0, "no empty article is left");
+    assert_eq!(
+        article_count(&app, space.id).await,
+        0,
+        "no empty article is left"
+    );
     app.finish().await;
 }
 
@@ -386,7 +395,12 @@ async fn a_move_beside_a_sibling_with_the_same_name_is_refused_as_input() {
             &json!({"new_parent_id": a.id.0}),
         )
         .await;
-    assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{:?}", refused.body);
+    assert_eq!(
+        refused.status,
+        StatusCode::BAD_REQUEST,
+        "{:?}",
+        refused.body
+    );
     assert_eq!(refused.key(), "invalid");
     let parent = app.get(&format!("/articles/{}", b.id), "alice").await;
     assert_eq!(

@@ -22,10 +22,7 @@ pub struct SpacesPage {
     pub tree: String,
 }
 
-pub async fn spaces_page(
-    shell: Page,
-    reach: Reach,
-) -> AdminHtmlResult<Response> {
+pub async fn spaces_page(shell: Page, reach: Reach) -> AdminHtmlResult<Response> {
     require_admin(&shell)?;
     let mut faults = Faults::new();
     let mut page = SpacesPage {

@@ -29,7 +29,13 @@ use systemprompt::models::providers::ClientFamily;
 use crate::support::committed_services;
 
 const SERVED: [&str; 3] = ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"];
-const LIVE_PROVIDERS: [&str; 4] = ["anthropic", "deepseek", "e2e-mock", "opencode-go"];
+const LIVE_PROVIDERS: [&str; 5] = [
+    "anthropic",
+    "deepseek",
+    "e2e-mock",
+    "openai",
+    "opencode-go",
+];
 
 // Why: rate cards are YAML decimal literals parsed to the same `f64`.
 fn same(actual: f64, expected: f64) -> bool {
@@ -177,7 +183,7 @@ fn every_deployment_goes_to_a_live_provider() {
         for hop in catalog.deployments(m.id.as_str()) {
             assert!(
                 LIVE_PROVIDERS.contains(&hop.provider.as_str()),
-                "{} reaches {}: only Anthropic, DeepSeek and OpenCode Go are live",
+                "{} reaches {}: only Anthropic, DeepSeek, OpenCode Go and OpenAI are live",
                 m.id.as_str(),
                 hop.provider.as_str()
             );
@@ -186,7 +192,7 @@ fn every_deployment_goes_to_a_live_provider() {
 }
 
 // Why: the customer requires their own Anthropic key; DeepSeek is the approved
-// comparison.
+// comparison; OpenAI serves only the Brain's embeddings.
 #[test]
 fn anthropic_and_deepseek_are_the_only_live_providers() {
     let catalog = catalog();
@@ -203,10 +209,10 @@ fn every_platform_hop_reads_a_secret_the_installation_holds() {
             .iter()
             .filter(|hop| !hop.credential.is_personal())
         {
-            let expected = if hop.provider.as_str() == "deepseek" {
-                "deepseek"
-            } else {
-                "anthropic"
+            let expected = match hop.provider.as_str() {
+                "deepseek" => "deepseek",
+                "openai" => "openai",
+                _ => "anthropic",
             };
             assert_eq!(
                 hop.credential.platform_secret().map(SecretName::as_str),

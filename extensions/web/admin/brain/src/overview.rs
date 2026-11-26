@@ -65,10 +65,7 @@ pub struct OverviewPage {
     pub spaces: Vec<SpaceRow>,
 }
 
-pub async fn overview_page(
-    shell: Page,
-    reach: Reach,
-) -> AdminHtmlResult<Response> {
+pub async fn overview_page(shell: Page, reach: Reach) -> AdminHtmlResult<Response> {
     require_admin(&shell)?;
     let mut faults = Faults::new();
     let mut page = OverviewPage {
@@ -131,15 +128,31 @@ async fn native_blocks(
             tile("Articles", articles, None),
             tile("Documents indexed", counts.documents, None),
             tile("Chunks", counts.chunks, None),
-            tile("Embeddings pending", counts.pending_embeddings, tone(counts.pending_embeddings, "warn")),
-            tile("Synopses pending", counts.pending_synopses, tone(counts.pending_synopses, "warn")),
-            tile("Errors", counts.chunk_errors + counts.failed_jobs, tone(counts.chunk_errors + counts.failed_jobs, "err")),
+            tile(
+                "Embeddings pending",
+                counts.pending_embeddings,
+                tone(counts.pending_embeddings, "warn"),
+            ),
+            tile(
+                "Synopses pending",
+                counts.pending_synopses,
+                tone(counts.pending_synopses, "warn"),
+            ),
+            tile(
+                "Errors",
+                counts.chunk_errors + counts.failed_jobs,
+                tone(counts.chunk_errors + counts.failed_jobs, "err"),
+            ),
         ];
     }
     if let Some(searches) = keep(faults, "Searches", native.repo.count_searches(week).await) {
         page.tiles.push(tile("Searches · 7 days", searches, None));
     }
-    let gaps = keep(faults, "Searches", native.repo.list_empty_searches(week, 8).await);
+    let gaps = keep(
+        faults,
+        "Searches",
+        native.repo.list_empty_searches(week, 8).await,
+    );
     page.gaps = gaps
         .unwrap_or_default()
         .into_iter()
@@ -149,7 +162,11 @@ async fn native_blocks(
             times: gap.times,
         })
         .collect();
-    let spend = keep(faults, "Cost", native.repo.list_embedding_spend(month).await);
+    let spend = keep(
+        faults,
+        "Cost",
+        native.repo.list_embedding_spend(month).await,
+    );
     page.spend = spend
         .unwrap_or_default()
         .into_iter()
@@ -171,7 +188,9 @@ fn providers() -> Vec<ProviderRow> {
         ProviderRow {
             step: "Synopsis",
             provider: "Anthropic",
-            detail: format!("claude-haiku-5-5 · up to {SYNOPSIS_MAX_WORDS} words over {SYNOPSIS_DOC_CHARS} characters"),
+            detail: format!(
+                "claude-haiku-5-5 · up to {SYNOPSIS_MAX_WORDS} words over {SYNOPSIS_DOC_CHARS} characters"
+            ),
         },
         ProviderRow {
             step: "Reranker",

@@ -33,7 +33,7 @@ pub async fn reindex(
         .repo
         .requeue_variant(ArticleId(article), &form.lang)
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     if queued == 0 {
         return Err(AdminError::NotFound(format!("article {article} in {}", form.lang)).into());
     }
@@ -46,7 +46,7 @@ pub async fn reindex(
             &form.lang,
         )
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     let lang: String = form
         .lang
         .chars()
@@ -68,7 +68,7 @@ pub async fn retry(
         .repo
         .retry_job(job)
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     if queued == 0 {
         return Err(AdminError::NotFound(format!("failed job {job}")).into());
     }
@@ -81,7 +81,7 @@ pub async fn retry(
             "",
         )
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     Ok(Redirect::to("/admin/brain/ingest"))
 }
 

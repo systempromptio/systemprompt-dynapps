@@ -116,13 +116,11 @@ pub async fn article_page(
     let wanted = query.lang.as_deref().filter(|lang| !lang.is_empty());
     let mut doc = match read::read_document(&console, reader.who(), id, wanted).await {
         Ok(doc) if doc.found => doc,
-        _ => {
-            read::read_document(&console, reader.who(), id, None)
-                .await
-                .ok()
-                .filter(|doc| doc.found)
-                .ok_or_else(|| AdminError::NotFound(format!("article {id}")))?
-        },
+        _ => read::read_document(&console, reader.who(), id, None)
+            .await
+            .ok()
+            .filter(|doc| doc.found)
+            .ok_or_else(|| AdminError::NotFound(format!("article {id}")))?,
     };
     // Why: a proxy source names the article `id`, not `article_id`; the one
     // asked for is the one shown.
@@ -191,7 +189,9 @@ async fn tab_body(
             page.files = files.iter().map(file_row).collect();
         },
         ("access", _) => page.access = Some(access::view(console, admin, id, &doc.lang).await),
-        ("chunks", Some(native)) => page.chunks = chunks::chunks_view(native, id, doc, faults).await,
+        ("chunks", Some(native)) => {
+            page.chunks = chunks::chunks_view(native, id, doc, faults).await
+        },
         ("ingest", Some(native)) => {
             page.ingest = chunks::ingest_view(native, id, &doc.lang, faults).await;
         },

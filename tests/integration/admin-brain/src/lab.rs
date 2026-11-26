@@ -13,7 +13,10 @@ async fn the_lab_shows_the_rank_and_score_of_each_arm_and_the_answer_context() {
     let env = Env::new(db).await;
     let page = env.get("/brain/search?q=apple&rerank=1", true).await;
     assert_eq!(page.status, StatusCode::OK);
-    assert!(page.has("· 1.00"), "the cosine of a chunk on the query's axis");
+    assert!(
+        page.has("· 1.00"),
+        "the cosine of a chunk on the query's axis"
+    );
     assert!(page.has("Keyword · rank · ts_rank"));
     assert!(page.has("RRF k=60"));
     assert!(page.has("[1]"), "a kept chunk is numbered");
@@ -45,7 +48,10 @@ async fn run_as_filters_by_the_permissions_of_that_person() {
     assert_eq!(bob.status, StatusCode::OK);
     assert!(!bob.has("[2]"), "bob reads the handbook only");
     assert!(bob.has("No access for bob (filtered in SQL)"));
-    assert!(bob.has("Weekend SLA"), "the struck row names what he cannot read");
+    assert!(
+        bob.has("Weekend SLA"),
+        "the struck row names what he cannot read"
+    );
     env.finish().await;
 }
 
@@ -102,7 +108,11 @@ async fn the_explain_order_is_the_order_of_search() {
         prefer_lang: None,
     };
     let found = env.retriever.retrieve(&request).await.expect("search");
-    let explained = env.retriever.explain(&request, true).await.expect("explain");
+    let explained = env
+        .retriever
+        .explain(&request, true)
+        .await
+        .expect("explain");
     let searched: Vec<_> = found.passages.iter().map(|passage| passage.chunk).collect();
     let kept: Vec<_> = explained.kept.iter().map(|passage| passage.chunk).collect();
     assert_eq!(kept, searched);
@@ -122,6 +132,9 @@ async fn the_explain_order_is_the_order_of_search() {
         "two chunks of one document: one is dropped"
     );
     let top = explained.rows.first().expect("a candidate");
-    assert!(top.vector.is_some() && top.text.is_some(), "both arms scored it");
+    assert!(
+        top.vector.is_some() && top.text.is_some(),
+        "both arms scored it"
+    );
     env.finish().await;
 }

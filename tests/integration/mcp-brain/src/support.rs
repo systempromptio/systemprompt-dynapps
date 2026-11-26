@@ -101,7 +101,12 @@ impl Brain {
         self.db.cleanup().await;
     }
 
-    pub(crate) async fn call(&self, who: &str, tool: &str, arguments: Value) -> Result<Value, ErrorData> {
+    pub(crate) async fn call(
+        &self,
+        who: &str,
+        tool: &str,
+        arguments: Value,
+    ) -> Result<Value, ErrorData> {
         run(&self.native, &person(who), tool, arguments).await
     }
 
@@ -162,7 +167,13 @@ impl Brain {
         article
     }
 
-    pub(crate) async fn give(&self, space: SpaceId, article: Option<ArticleId>, who: &str, level: Level) {
+    pub(crate) async fn give(
+        &self,
+        space: SpaceId,
+        article: Option<ArticleId>,
+        who: &str,
+        level: Level,
+    ) {
         self.repo
             .set_grant(
                 &Grant {

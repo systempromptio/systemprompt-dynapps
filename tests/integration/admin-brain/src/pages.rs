@@ -88,11 +88,18 @@ async fn an_article_opens_in_the_language_asked_for() {
     let db = dynapps_test_common::db_or_skip!();
     let env = Env::new(db).await;
     let id = env.invoicing.id.0;
-    let spanish = env.get(&format!("/brain/articles/{id}?lang=es"), true).await;
+    let spanish = env
+        .get(&format!("/brain/articles/{id}?lang=es"), true)
+        .await;
     assert!(spanish.has("Cómo emitir facturas."));
-    let english = env.get(&format!("/brain/articles/{id}?lang=en"), true).await;
+    let english = env
+        .get(&format!("/brain/articles/{id}?lang=en"), true)
+        .await;
     assert!(english.has("How to issue invoices."));
-    assert!(english.has("tab=content"), "the languages and tabs are links");
+    assert!(
+        english.has("tab=content"),
+        "the languages and tabs are links"
+    );
     env.finish().await;
 }
 
@@ -101,7 +108,9 @@ async fn a_language_the_article_lacks_shows_the_default_with_a_notice() {
     let db = dynapps_test_common::db_or_skip!();
     let env = Env::new(db).await;
     let id = env.invoicing.id.0;
-    let page = env.get(&format!("/brain/articles/{id}?lang=fr"), true).await;
+    let page = env
+        .get(&format!("/brain/articles/{id}?lang=fr"), true)
+        .await;
     assert_eq!(page.status, StatusCode::OK);
     assert!(page.has("no variant in that language"));
     assert!(page.has("Cómo emitir facturas."));

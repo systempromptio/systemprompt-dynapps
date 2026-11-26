@@ -58,7 +58,12 @@ async fn trash_is_soft_and_takes_the_article_out_of_sight() {
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
     let article = brain
-        .article(space.id, None, "leave", ("Vacaciones", "El destino zanzibar."))
+        .article(
+            space.id,
+            None,
+            "leave",
+            ("Vacaciones", "El destino zanzibar."),
+        )
         .await;
     brain.give(space.id, None, "bob", Level::Read).await;
 
@@ -116,9 +121,7 @@ async fn a_tree_is_created_and_outlined_as_the_person() {
         .await
         .expect("alice outlines");
     assert_eq!(outline["total"], 3, "{outline}");
-    let none = brain
-        .call("bob", "outline", json!({"node": root}))
-        .await;
+    let none = brain.call("bob", "outline", json!({"node": root})).await;
     assert!(none.is_err(), "bob reaches nothing of it: {none:?}");
 
     let schema = brain
@@ -147,11 +150,18 @@ async fn move_reorganises_and_metadata_says_who_can_write() {
         .expect("alice moves");
     assert_eq!(moved["moved"], true, "{moved}");
     let meta = brain
-        .call("alice", "metadata", json!({"article_ids": [first.id.0, second.id.0]}))
+        .call(
+            "alice",
+            "metadata",
+            json!({"article_ids": [first.id.0, second.id.0]}),
+        )
         .await
         .expect("metadata");
     let documents = meta["documents"].as_array().expect("documents");
     assert_eq!(documents.len(), 2);
-    assert!(documents.iter().all(|item| item["can_write"] == true), "{meta}");
+    assert!(
+        documents.iter().all(|item| item["can_write"] == true),
+        "{meta}"
+    );
     brain.finish().await;
 }

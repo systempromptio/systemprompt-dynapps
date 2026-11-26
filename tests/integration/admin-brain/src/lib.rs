@@ -2,8 +2,8 @@
 //! the full extension schema, driven in process through the routes the admin
 //! mounts and the real Handlebars templates:
 //!
-//! - access: every page answers `200` to an admin and `403` to anyone else,
-//!   and so do the three writes
+//! - access: every page answers `200` to an admin and `403` to anyone else, and
+//!   so do the three writes
 //! - the tree shows every space and article, an article opens in the language
 //!   asked for, and an unknown one is `404`
 //! - the technical tabs: chunks with their heading path, text-search
@@ -19,8 +19,8 @@
 //! - usage: the documents returned and cited, and the searches that found
 //!   nothing, as counts
 //! - a proxy instance: the tree and the document read through the operations,
-//!   and the technical pages say the index lives at the source while the
-//!   tables they would read are gone
+//!   and the technical pages say the index lives at the source while the tables
+//!   they would read are gone
 
 #[cfg(test)]
 mod access;

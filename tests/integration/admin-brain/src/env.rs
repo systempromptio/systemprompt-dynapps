@@ -133,20 +133,52 @@ impl Env {
         let credit = article(&repo, handbook.id, Some(&invoicing), "credit-notes").await;
         let sla = article(&repo, support.id, None, "sla").await;
         write(&repo, &invoicing, "es", "Facturas", "Cómo emitir facturas.").await;
-        write(&repo, &invoicing, "en", "Invoices", "How to issue invoices.").await;
-        write(&repo, &credit, "es", "Rectificativas", "Corregir una factura.").await;
+        write(
+            &repo,
+            &invoicing,
+            "en",
+            "Invoices",
+            "How to issue invoices.",
+        )
+        .await;
+        write(
+            &repo,
+            &credit,
+            "es",
+            "Rectificativas",
+            "Corregir una factura.",
+        )
+        .await;
         write(&repo, &sla, "es", "Weekend SLA", "Support at the weekend.").await;
         let rows = [
-            (&invoicing, 0, "Facturas › Rectificativas", "apple credit notes to correct an invoice", Some(0)),
-            (&invoicing, 1, "Facturas › Cierre", "apple closing the period", Some(1)),
+            (
+                &invoicing,
+                0,
+                "Facturas › Rectificativas",
+                "apple credit notes to correct an invoice",
+                Some(0),
+            ),
+            (
+                &invoicing,
+                1,
+                "Facturas › Cierre",
+                "apple closing the period",
+                Some(1),
+            ),
             (&sla, 0, "", "apple weekend support hours", Some(0)),
-            (&credit, 0, "Rectificativas", "pending credit note text", None),
+            (
+                &credit,
+                0,
+                "Rectificativas",
+                "pending credit note text",
+                None,
+            ),
         ];
         for (article, sequence, heading, content, hot) in rows {
             chunk(&db, article, (sequence, heading), content, hot).await;
         }
-        let retriever = Retriever::new(repo.clone())
-            .with_embedder(EmbedderSlot::ready(Arc::new(AxisEmbedder)));
+        let retriever =
+            Retriever::new(repo.clone()).with_embedder(EmbedderSlot::ready(Arc::new(AxisEmbedder)));
         let native = Arc::new(NativeBrain::new(repo.clone()).with_search(retriever.clone()));
         let shared = Arc::clone(&native);
         let brain: Arc<dyn Brain> = shared;
@@ -200,11 +232,7 @@ impl Env {
         self.send(request, admin).await
     }
 
-    async fn send(
-        &self,
-        request: Result<Request<Body>, axum::http::Error>,
-        admin: bool,
-    ) -> Reply {
+    async fn send(&self, request: Result<Request<Body>, axum::http::Error>, admin: bool) -> Reply {
         let app = routes_with::<()>(Source::Fixed(Box::new(self.console.clone())))
             .layer(Extension(engine()))
             .layer(Extension(viewer(admin)))
@@ -325,8 +353,8 @@ async fn chunk(
 }
 
 fn engine() -> AdminTemplateEngine {
-    let admin = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../storage/files/admin");
+    let admin =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../storage/files/admin");
     AdminTemplateEngine::new(&admin, &admin).expect("load the admin templates")
 }
 

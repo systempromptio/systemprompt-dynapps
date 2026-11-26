@@ -4,8 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
-pub const NOT_MOUNTED: &str =
-    "The Brain is not running on this instance: its configuration could not be used. The log says why.";
+pub const NOT_MOUNTED: &str = "The Brain is not running on this instance: its configuration could not be used. The log says why.";
 pub const AT_SOURCE: &str = "This instance is a proxy. Chunks, embeddings and the ingest queue live at the source, and this console only sees what the source's operations return.";
 pub const NONE: &str = "—";
 
@@ -39,7 +38,11 @@ pub fn when(time: DateTime<Utc>) -> String {
 }
 
 pub fn usd(micros: i64) -> String {
-    format!("{}.{:02}", micros / 1_000_000, (micros % 1_000_000) / 10_000)
+    format!(
+        "{}.{:02}",
+        micros / 1_000_000,
+        (micros % 1_000_000) / 10_000
+    )
 }
 
 pub fn words(text: &str) -> usize {

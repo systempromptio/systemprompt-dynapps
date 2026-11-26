@@ -13,8 +13,14 @@ async fn usage_counts_the_documents_searches_return_and_answers_cite() {
         query: "apple".to_owned(),
         ..SearchArgs::default()
     };
-    env.native.search(&user("root"), &ask).await.expect("search");
-    env.native.search(&user("root"), &ask).await.expect("search");
+    env.native
+        .search(&user("root"), &ask)
+        .await
+        .expect("search");
+    env.native
+        .search(&user("root"), &ask)
+        .await
+        .expect("search");
     let answer = AnswerArgs {
         question: "apple".to_owned(),
         ..AnswerArgs::default()
@@ -45,14 +51,19 @@ async fn a_search_that_finds_nothing_is_listed_with_its_count() {
         ..SearchArgs::default()
     };
     for _ in 0..2 {
-        env.native.search(&user("carol"), &ask).await.expect("search");
+        env.native
+            .search(&user("carol"), &ask)
+            .await
+            .expect("search");
     }
     let usage = env.get("/brain/usage", true).await;
     assert!(usage.has("nothing carol may read"));
     let overview = env.get("/brain", true).await;
     assert!(overview.has("nothing carol may read"));
     let times = env
-        .sql_text("SELECT count(*)::text FROM dynbrain_search_log WHERE cardinality(article_ids) = 0")
+        .sql_text(
+            "SELECT count(*)::text FROM dynbrain_search_log WHERE cardinality(article_ids) = 0",
+        )
         .await;
     assert_eq!(times, "2");
     env.finish().await;
@@ -66,13 +77,19 @@ async fn the_log_keeps_no_person_and_no_place() {
         query: "apple".to_owned(),
         ..SearchArgs::default()
     };
-    env.native.search(&user("root"), &ask).await.expect("search");
+    env.native
+        .search(&user("root"), &ask)
+        .await
+        .expect("search");
     let columns = env
         .sql_text(
             "SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns
               WHERE table_name = 'dynbrain_search_log'",
         )
         .await;
-    assert_eq!(columns, "article_ids,created_at,id,kind,query_text,space_id");
+    assert_eq!(
+        columns,
+        "article_ids,created_at,id,kind,query_text,space_id"
+    );
     env.finish().await;
 }

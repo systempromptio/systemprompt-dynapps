@@ -3,7 +3,9 @@
 
 use dynbrain::console::Native;
 use dynbrain::ids::ArticleId;
-use dynbrain::ingest::context::{ChunkContext, ContextStrategy, document_context, is_code_chunk, prefix};
+use dynbrain::ingest::context::{
+    ChunkContext, ContextStrategy, document_context, is_code_chunk, prefix,
+};
 use dynbrain::repository::admin::{ChunkInfo, JobInfo};
 use serde::Serialize;
 use systemprompt_web_admin_core::ssr::faults::Faults;
@@ -71,7 +73,10 @@ pub async fn chunks_view(
     let chunks = keep(
         faults,
         "Chunks",
-        native.repo.list_chunk_infos(ArticleId(article), &doc.lang).await,
+        native
+            .repo
+            .list_chunk_infos(ArticleId(article), &doc.lang)
+            .await,
     )?;
     let context = document_context(&doc.title, &doc.description);
     let rows: Vec<ChunkRowView> = chunks.iter().map(|chunk| row(chunk, &context)).collect();
@@ -130,7 +135,10 @@ pub async fn ingest_view(
     let jobs = keep(
         faults,
         "Ingest",
-        native.repo.list_document_jobs(ArticleId(article), lang).await,
+        native
+            .repo
+            .list_document_jobs(ArticleId(article), lang)
+            .await,
     )?;
     let steps = steps(&chunks, jobs.first());
     let rows: Vec<JobRowView> = jobs.iter().map(job_row).collect();

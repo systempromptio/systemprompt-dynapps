@@ -139,9 +139,14 @@ async fn run(
     let action = if acting { "run_as" } else { "search_lab" };
     native
         .repo
-        .record_admin_action(admin.as_str(), action, acting.then_some(reader.as_str()), query.q.trim())
+        .record_admin_action(
+            admin.as_str(),
+            action,
+            acting.then_some(reader.as_str()),
+            query.q.trim(),
+        )
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     let lang = Some(query.lang.trim().to_owned()).filter(|lang| !lang.is_empty());
     let space = query.space.trim().parse::<i64>().ok().map(SpaceId);
     let scope = SearchScope {
@@ -160,7 +165,7 @@ async fn run(
         .retriever
         .explain(&request, page.rerank)
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     page.ran = true;
     page.mode = match explained.mode {
         RetrievalMode::Hybrid => "hybrid",
@@ -174,7 +179,13 @@ async fn run(
     page.rows = explained
         .rows
         .iter()
-        .map(|row| lab_row(row, &explained, native.retriever.settings().weak_match_threshold))
+        .map(|row| {
+            lab_row(
+                row,
+                &explained,
+                native.retriever.settings().weak_match_threshold,
+            )
+        })
         .collect();
     if acting {
         page.run_as_name = reader.as_str().to_owned();
@@ -191,7 +202,7 @@ async fn run(
         .brain
         .context(&reader, &args)
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     page.context_chars = answer.context.chars().count();
     page.context = answer.context;
     Ok(())
@@ -207,7 +218,7 @@ async fn denied_rows(
         .repo
         .list_article_levels(reader, None)
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?
+        .map_err(AdminError::internal)?
         .into_iter()
         .map(|reached| reached.article.0)
         .collect();
@@ -223,7 +234,7 @@ async fn denied_rows(
         .retriever
         .explain(&wide, false)
         .await
-        .map_err(|error| AdminError::internal(error.to_string()))?;
+        .map_err(AdminError::internal)?;
     Ok(all
         .kept
         .iter()
@@ -261,7 +272,9 @@ fn lab_row(row: &ExplainRow, explained: &Explained, threshold: f64) -> LabRow {
         vector: arm(row.vector, 2),
         text: arm(row.text, 3),
         rrf: format!("{:.4}", row.fused),
-        rerank: row.rerank.map_or_else(|| NONE.to_owned(), |score| format!("{score:.2}")),
+        rerank: row
+            .rerank
+            .map_or_else(|| NONE.to_owned(), |score| format!("{score:.2}")),
         outcome: match row.outcome {
             Outcome::Kept => "Kept".to_owned(),
             Outcome::SameDocument => "Same document as a better chunk".to_owned(),
@@ -275,7 +288,11 @@ fn lab_row(row: &ExplainRow, explained: &Explained, threshold: f64) -> LabRow {
 
 fn timings(explained: &Explained) -> String {
     let at = explained.timings;
-    let cache = if explained.cached { "cache hit" } else { "embedded" };
+    let cache = if explained.cached {
+        "cache hit"
+    } else {
+        "embedded"
+    };
     format!(
         "query {cache} {} ms · arms {} ms · rerank {} ms · RRF k=60 · {} candidates, {} kept",
         at.embedding,

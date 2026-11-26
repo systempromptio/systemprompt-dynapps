@@ -7,7 +7,9 @@ async fn the_first_call_of_asset_upload_is_the_request_for_the_url() {
     let db = dynapps_test_common::db_or_skip!();
     let brain = Brain::new(db, true).await;
     let space = brain.space("handbook").await;
-    let article = brain.article(space.id, None, "leave", ("Vacaciones", "texto")).await;
+    let article = brain
+        .article(space.id, None, "leave", ("Vacaciones", "texto"))
+        .await;
 
     let ticket = brain
         .call(
@@ -18,7 +20,11 @@ async fn the_first_call_of_asset_upload_is_the_request_for_the_url() {
         .await
         .expect("the first call gives the ticket");
     assert_eq!(ticket["method"], "POST", "{ticket}");
-    assert!(ticket["upload_url"].as_str().is_some_and(|url| url.contains("/uploads/")));
+    assert!(
+        ticket["upload_url"]
+            .as_str()
+            .is_some_and(|url| url.contains("/uploads/"))
+    );
     assert!(ticket["upload_id"].is_string());
     let direct = brain
         .call(
@@ -37,8 +43,12 @@ async fn an_unknown_upload_id_is_refused_and_a_reader_gets_no_url() {
     let db = dynapps_test_common::db_or_skip!();
     let brain = Brain::new(db, true).await;
     let space = brain.space("handbook").await;
-    let article = brain.article(space.id, None, "leave", ("Vacaciones", "texto")).await;
-    brain.give(space.id, None, "bob", dynbrain::access::Level::Read).await;
+    let article = brain
+        .article(space.id, None, "leave", ("Vacaciones", "texto"))
+        .await;
+    brain
+        .give(space.id, None, "bob", dynbrain::access::Level::Read)
+        .await;
 
     let bogus = brain
         .call(
@@ -70,7 +80,9 @@ async fn without_file_storage_the_file_tools_say_so() {
     let db = dynapps_test_common::db_or_skip!();
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
-    let article = brain.article(space.id, None, "leave", ("Vacaciones", "texto")).await;
+    let article = brain
+        .article(space.id, None, "leave", ("Vacaciones", "texto"))
+        .await;
 
     let refused = brain
         .call(
@@ -80,6 +92,9 @@ async fn without_file_storage_the_file_tools_say_so() {
         )
         .await
         .expect_err("no file storage");
-    assert!(refused.message.contains("files are not available"), "{refused:?}");
+    assert!(
+        refused.message.contains("files are not available"),
+        "{refused:?}"
+    );
     brain.finish().await;
 }

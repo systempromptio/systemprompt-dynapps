@@ -108,7 +108,10 @@ pub async fn set_access(
         .brain
         .list_grants(admin, target)
         .await
-        .map_err(|fault| AdminError::Conflict(fault.to_string()))?;
+        .map_err(|fault| AdminError::ConflictingState {
+            context: "the Brain refused the access change",
+            source: fault.into(),
+        })?;
     let mut grants: Vec<GrantInput> = current
         .own
         .iter()
@@ -130,13 +133,16 @@ pub async fn set_access(
         .brain
         .set_grants(admin, target, &grants)
         .await
-        .map_err(|fault| AdminError::Conflict(fault.to_string()))?;
+        .map_err(|fault| AdminError::ConflictingState {
+            context: "the Brain refused the access change",
+            source: fault.into(),
+        })?;
     if let Some(native) = &console.native {
         native
             .repo
             .record_admin_action(admin.as_str(), "set_access", Some(&subject), &form.level)
             .await
-            .map_err(|error| AdminError::internal(error.to_string()))?;
+            .map_err(AdminError::internal)?;
     }
     let lang: String = form
         .lang
@@ -154,7 +160,9 @@ fn parse_kind(kind: &str) -> Result<SubjectKind, AdminError> {
         "user" => Ok(SubjectKind::User),
         "role" => Ok(SubjectKind::Role),
         "group" => Ok(SubjectKind::Group),
-        _ => Err(AdminError::BadRequest("Pick user, role or group.".to_owned())),
+        _ => Err(AdminError::BadRequest(
+            "Pick user, role or group.".to_owned(),
+        )),
     }
 }
 

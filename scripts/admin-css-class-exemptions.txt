@@ -38,3 +38,8 @@ column-resize-handle
 resize-cursor
 selectedCell
 tableWrapper
+
+# Brain tree nodes, rendered as escaped HTML by extensions/web/admin/brain/src/tree.rs
+# (a recursive Handlebars partial overflowed the stack), so no template names them.
+sp-brain-node
+sp-brain-space

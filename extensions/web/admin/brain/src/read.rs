@@ -1,8 +1,9 @@
 //! The Brain's operations as typed reads, run as the signed-in admin.
 //!
-//! Every read goes through [`Brain::run`], the way the transports run an
+//! Every read goes through `Brain::run`, the way the transports run an
 //! operation, so a native and a proxy instance answer in the same shape.
 
+use dynbrain::brain::fault::BrainFault;
 use dynbrain::brain::operation::Operation;
 use dynbrain::console::{self, Console};
 use serde::de::DeserializeOwned;
@@ -104,6 +105,16 @@ struct FileList {
     files: Vec<FileItem>,
 }
 
+/// Why a read of the Brain failed: the Brain refused it, or answered in a
+/// shape these reads do not know.
+#[derive(Debug, thiserror::Error)]
+pub enum ReadError {
+    #[error(transparent)]
+    Brain(#[from] BrainFault),
+    #[error("the Brain answered in an unexpected shape")]
+    Shape(#[from] serde_json::Error),
+}
+
 const PAGE: usize = 200;
 
 // JSON: the Brain's operations take and return JSON, which these reads type.
@@ -112,18 +123,15 @@ pub async fn call<T: DeserializeOwned>(
     who: Who<'_>,
     operation: Operation,
     args: serde_json::Value,
-) -> Result<T, String> {
-    let context = console::admin_context(who.id, who.token)?;
-    let reply = console
-        .brain
-        .run(who.id, &context, operation, args)
-        .await
-        .map_err(|fault| fault.to_string())?;
-    serde_json::from_value(reply).map_err(|error| error.to_string())
+) -> Result<T, ReadError> {
+    let context = console::admin_context(who.id, who.token);
+    let reply = console.brain.run(who.id, &context, operation, args).await?;
+    Ok(serde_json::from_value(reply)?)
 }
 
-pub async fn read_spaces(console: &Console, who: Who<'_>) -> Result<Vec<Space>, String> {
-    let listed: SpaceList = call(console, who, Operation::ListSpaces, serde_json::json!({})).await?;
+pub async fn read_spaces(console: &Console, who: Who<'_>) -> Result<Vec<Space>, ReadError> {
+    let listed: SpaceList =
+        call(console, who, Operation::ListSpaces, serde_json::json!({})).await?;
     let mut spaces = Vec::new();
     for item in listed.spaces {
         let articles = read_articles(console, who, item.space).await?;
@@ -136,7 +144,7 @@ async fn read_articles(
     console: &Console,
     who: Who<'_>,
     space: i64,
-) -> Result<Vec<Listed>, String> {
+) -> Result<Vec<Listed>, ReadError> {
     let mut all: Vec<Listed> = Vec::new();
     loop {
         let args = serde_json::json!({ "space": space, "limit": PAGE, "offset": all.len() });
@@ -154,7 +162,7 @@ pub async fn read_document(
     who: Who<'_>,
     article: i64,
     lang: Option<&str>,
-) -> Result<Document, String> {
+) -> Result<Document, ReadError> {
     let args = serde_json::json!({ "article_id": article, "lang": lang });
     call(console, who, Operation::Get, args).await
 }
@@ -163,7 +171,7 @@ pub async fn read_files(
     console: &Console,
     who: Who<'_>,
     article: i64,
-) -> Result<Vec<FileItem>, String> {
+) -> Result<Vec<FileItem>, ReadError> {
     let args = serde_json::json!({ "article_id": article });
     let listed: FileList = call(console, who, Operation::AssetList, args).await?;
     Ok(listed.files)

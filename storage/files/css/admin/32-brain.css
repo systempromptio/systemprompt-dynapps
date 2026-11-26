@@ -11,6 +11,10 @@
   align-items: start;
 }
 
+.sp-brain-main {
+  min-width: 0;
+}
+
 .sp-brain-side {
   border-inline-end: 1px solid var(--sp-border-subtle);
   padding-inline-end: 1rem;

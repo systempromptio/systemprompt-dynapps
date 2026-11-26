@@ -116,7 +116,11 @@ impl NativeBrain {
         }
         let top = found.passages.first().and_then(|passage| passage.score);
         let threshold = self.search.settings().weak_match_threshold;
-        let cited = found.passages.iter().map(|passage| passage.article).collect();
+        let cited = found
+            .passages
+            .iter()
+            .map(|passage| passage.article)
+            .collect();
         let answer = Answer {
             context: blocks(&sources),
             citations,
