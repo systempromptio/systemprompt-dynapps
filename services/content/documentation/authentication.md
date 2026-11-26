@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
-updated_at: "2026-10-15"
+updated_at: "2026-11-24"
 after_reading_this:
   - "Sign in as a Dynapps user with Dynapps SSO"
   - "Understand how Entra ID groups become platform roles and entitlements"
@@ -233,6 +233,25 @@ change between sign-ins.
 
 Linking a desktop bridge is not a second login: the device-link approval runs
 inside an SSO session and mints a *device* credential from it.
+
+The same approval can also open the person's UI session for a desktop app
+(DynWork), so one "Allow" gives the app both its device key and the person's
+documents session. The app asks for it by adding a `person_ui` client's PKCE
+request to the link (`client_id`, `redirect_uri`, `scope`, `code_challenge`,
+`code_challenge_method=S256`). `/bridge-auth/device-link` checks it the way
+core checks a UI session request — a declared `person_ui` client, a redirect
+registered for it, an S256 challenge, scopes the client declares — and refuses
+the link with a page that says why if any of it is wrong, or if only some of
+the five fields came; it never falls back to a plain device code. Only a
+browser sign-in can approve one, never a bearer token, and only one less than
+a day old: an older sign-in is first sent through Entra ID with `max_age`, then
+back to the same page. The UI session starts from that sign-in time, not from
+the click. Core's `POST /v1/auth/bridge/session-pat` then returns a `ui_code`
+next to the device key. A link may also name the device key it `replaces`,
+by its `key_prefix` (`sp-live-` and 12 hex characters, the part of the PAT
+before the dot; not secret, and all a device knows of its key): approval
+revokes it when it is an unrevoked `device` key of the same person and ignores
+any other prefix.
 
 ## Operator Recovery — CLI Only
 

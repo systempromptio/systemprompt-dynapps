@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM artifact_call_cache\n            WHERE user_id = $1 AND document_id = $2::text::uuid\n              AND ($3::text IS NULL OR server = $3)\n              AND ($4::text IS NULL OR tool = $4)\n              AND ($5::text IS NULL OR input_hash = $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e9b817fb565361139a64ad7dfa8602edd3fae502deb0d3762a19bb1f5d6e8fcd"
+}

@@ -7,6 +7,7 @@ mod configuration;
 mod devices;
 mod drive;
 mod ssr_bridge_device_link;
+mod ssr_bridge_device_link_ui;
 mod ssr_connect;
 mod ssr_connectors;
 pub(crate) mod ssr_connectors_cards;
@@ -18,7 +19,8 @@ pub(crate) use configuration::{configuration_page, secrets_reload};
 pub(crate) use devices::devices_page;
 pub use drive::{DriveDocuments, USER_BASE_URL};
 pub(crate) use drive::{
-    drive_caller, drive_document_page, drive_page, drive_people, drive_workspace_page,
+    drive_caller, drive_document_page, drive_live_frame, drive_live_page, drive_page, drive_people,
+    drive_workspace_page,
 };
 pub(crate) use ssr_bridge_device_link::{device_link_approve, device_link_deny, device_link_page};
 pub(crate) use ssr_connect::connect_page;

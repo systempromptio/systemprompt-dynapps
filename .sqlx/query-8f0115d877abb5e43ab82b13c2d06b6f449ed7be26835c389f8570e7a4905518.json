@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO artifact_capabilities\n                (document_id, capabilities, contract_version, declared_by)\n           VALUES ($1::text::uuid, $2, $3, $4)\n           ON CONFLICT (document_id) DO UPDATE\n              SET capabilities = EXCLUDED.capabilities,\n                  contract_version = EXCLUDED.contract_version,\n                  declared_by = EXCLUDED.declared_by,\n                  declared_at = CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8f0115d877abb5e43ab82b13c2d06b6f449ed7be26835c389f8570e7a4905518"
+}

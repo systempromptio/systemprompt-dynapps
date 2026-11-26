@@ -20,8 +20,8 @@ use systemprompt::analytics::SessionAnalyticsBuilder;
 use systemprompt::api::services::session_cookie::SessionCookie;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::sso::{
-    SsoCallback, SsoDriver, SsoReturn, SsoReturnBinding, binder_from_headers, into_response,
-    start_response,
+    SsoCallback, SsoDriver, SsoReauth, SsoReturn, SsoReturnBinding, binder_from_headers,
+    into_response, start_response,
 };
 
 use crate::sso::entra_oidc;
@@ -90,14 +90,31 @@ type SsoFlowResult = Result<Response, SsoFlowError>;
 #[derive(Debug, Deserialize)]
 pub(crate) struct StartParams {
     redirect: Option<String>,
+    prompt: Option<String>,
+    max_age: Option<i64>,
+}
+
+impl StartParams {
+    fn reauth(&self) -> SsoReauth {
+        let prompts_login = self
+            .prompt
+            .as_deref()
+            .is_some_and(|prompt| prompt.split_whitespace().any(|value| value == "login"));
+        let max_age = self.max_age.filter(|max_age| *max_age >= 0);
+        SsoReauth {
+            force: prompts_login || max_age == Some(0),
+            max_age,
+        }
+    }
 }
 
 async fn start(id: &'static str, deps: SsoDeps, params: Option<StartParams>) -> SsoFlowResult {
+    let reauth = params.as_ref().map(StartParams::reauth).unwrap_or_default();
     let redirect = params.and_then(|p| p.redirect);
     let Some(driver) = deps.driver.as_ref() else {
         return Err(SsoFlowError::Refused("unavailable"));
     };
-    match driver.start(id, redirect.as_deref()).await {
+    match driver.start(id, redirect.as_deref(), reauth).await {
         Ok(outcome) => Ok(start_response(&outcome)),
         Err(err) => {
             tracing::warn!(provider_id = id, error = %err, "SSO start failed");

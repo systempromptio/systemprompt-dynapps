@@ -160,6 +160,7 @@ impl SsoProvider for EntraOidcProvider {
             state: &state,
             nonce: &nonce,
             code_challenge: &pkce_challenge(&verifier),
+            reauth: input.reauth,
         });
         Ok(SsoRedirect {
             url,

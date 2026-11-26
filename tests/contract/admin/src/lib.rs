@@ -35,9 +35,13 @@ mod app;
 #[cfg(test)]
 mod approvals_contract;
 #[cfg(test)]
+mod artifacts_broker;
+#[cfg(test)]
 mod baseline;
 #[cfg(test)]
 mod bridge_device_link_contract;
+#[cfg(test)]
+mod bridge_device_link_person_contract;
 #[cfg(test)]
 mod bridge_whoami_contract;
 #[cfg(test)]

@@ -1,8 +1,9 @@
 //! The Drive pages, at `/drive` for every signed-in person: one listing of
 //! folders and documents, one document in the full-screen workspace with its
 //! revisions, grants, comments, proposals and live editors, and the block
-//! editor reached from its name menu. Administrators see the same pages with
-//! the controls only they may use.
+//! editor reached from its name menu, and a live page's viewer shell and its
+//! sandboxed frame. Administrators see the same pages with the controls only
+//! they may use.
 //!
 //! The handlers render the page shell and the core API paths it reads. The
 //! rows come from core's `/api/v1/documents` routes, fetched by the page
@@ -11,6 +12,8 @@
 
 mod detail;
 mod list;
+mod live;
+mod live_frame;
 mod people;
 mod templates;
 mod user;
@@ -18,6 +21,8 @@ mod workspace;
 
 pub(crate) use detail::drive_document_page;
 pub(crate) use list::drive_page;
+pub(crate) use live::drive_live_page;
+pub(crate) use live_frame::drive_live_frame;
 pub(crate) use people::drive_people;
 pub(crate) use user::caller as drive_caller;
 pub use user::{DriveDocuments, USER_BASE_URL};

@@ -1,0 +1,53 @@
+@layer components {
+
+.sp-doc-md__block {
+  margin: 0 0 var(--sp-space-1);
+}
+
+.sp-doc-md__block:last-child,
+.sp-doc-md__list:last-child,
+.sp-doc-md__pre:last-child {
+  margin-block-end: 0;
+}
+
+.sp-doc-md__list {
+  margin: 0 0 var(--sp-space-1);
+  padding-inline-start: var(--sp-space-4);
+}
+
+.sp-doc-md__code {
+  padding: 0 var(--sp-space-1);
+  font-family: var(--sp-font-mono);
+  font-size: var(--sp-text-sm);
+  background: var(--sp-bg-surface-alt);
+  border-radius: var(--sp-radius-sm);
+}
+
+.sp-doc-md__pre {
+  margin: 0 0 var(--sp-space-1);
+  padding: var(--sp-space-2);
+  overflow-x: auto;
+  font-family: var(--sp-font-mono);
+  font-size: var(--sp-text-sm);
+  background: var(--sp-bg-surface-alt);
+  border-radius: var(--sp-radius-sm);
+}
+
+.sp-doc-md__pre code {
+  padding: 0;
+  background: none;
+}
+
+.sp-doc-md__link {
+  color: var(--sp-accent-text);
+  text-decoration: underline;
+}
+
+.sp-doc-thread__system {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--sp-text-secondary);
+  font-size: var(--sp-text-xs);
+}
+
+}

@@ -303,7 +303,7 @@ impl Stack {
                 interaction: None,
                 browser_session: true,
                 ui_session: false,
-                auth_time: None,
+                auth_time: Some(chrono::Utc::now().timestamp()),
             })
             .expect("mint the session token")
     }

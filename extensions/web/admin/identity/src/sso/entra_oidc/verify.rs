@@ -126,6 +126,9 @@ pub fn identity_from_claims(
         tenant_id: claims.tid.clone().map(IdpTenantId::new),
         assertion_id: claims.jti.clone().map(SsoAssertionId::new),
         assertion_expires_at: DateTime::<Utc>::from_timestamp(claims.exp, 0),
+        authenticated_at: claims
+            .auth_time
+            .and_then(|auth_time| DateTime::<Utc>::from_timestamp(auth_time, 0)),
         raw_claims: raw,
     })
 }

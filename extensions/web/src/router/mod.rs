@@ -5,7 +5,10 @@
 //! crates' route fragments into the admin plane's routers, [`api`] mounts the
 //! JSON/webhook plane, and [`admin_ssr`] mounts the server-rendered dashboard
 //! plus the desktop-bridge sign-in flow, and [`sso`] discovers core's SSO
-//! driver. `build` composes them over the extension's loaded config; if
+//! driver. With the document store on, the artifacts broker's routes
+//! (`/api/v1/artifacts/{document_id}/...`) are merged beside them; the
+//! session handoff (`/api/v1/drive/handoff`, `/drive/handoff`) always is.
+//! `build` composes them over the extension's loaded config; if
 //! the admin template engine cannot initialise, the API plane still mounts at
 //! its normal prefix and only the SSR nests are skipped, so a misconfigured
 //! deploy degrades loudly instead of moving routes.
@@ -22,6 +25,9 @@ use std::sync::Arc;
 use axum::{Extension, Router};
 
 use systemprompt::extension::prelude::{ExtensionContext, ExtensionRouter};
+use systemprompt::oauth::SessionCreationService;
+use systemprompt_web_admin_platform::artifacts::{ArtifactsBrokerParts, artifacts_router};
+use systemprompt_web_admin_platform::handoff::{HandoffParts, handoff_router};
 use systemprompt_web_shared::config::BlogConfigValidated;
 use systemprompt_web_site::config_loader::SiteConfig;
 
@@ -51,6 +57,33 @@ fn drive_documents(
         .ok()
 }
 
+fn artifacts(
+    ctx: &dyn ExtensionContext,
+    db: &DbHandles,
+    documents: systemprompt_web_admin_platform::routes::drive_user::DriveDocuments,
+    session_service: &Arc<SessionCreationService>,
+) -> Router {
+    artifacts_router(ArtifactsBrokerParts {
+        documents,
+        services: ctx.services(),
+        boot: db.boot.clone(),
+        pool: Arc::clone(&db.write),
+        session_service: Arc::clone(session_service),
+    })
+    .unwrap_or_else(|error| {
+        tracing::error!(%error, "the artifacts broker could not be built; live pages are not mounted");
+        Router::new()
+    })
+}
+
+fn handoff(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> Router {
+    handoff_router(HandoffParts {
+        boot: db.boot.clone(),
+        pool: Arc::clone(&db.write),
+        session_service: Arc::clone(session_service),
+    })
+}
+
 pub(crate) fn build(ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
     let db = DbHandles::from_context(ctx)?;
     let session_service = pools::build_session_service(&db);
@@ -75,15 +108,22 @@ pub(crate) fn build(ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
 
     let mut combined = Router::new()
         .merge(share_api)
+        .merge(handoff(&db, &session_service))
         .nest("/api/public", api_router);
+
+    let documents_on = documents_enabled(ctx);
+    let drive = drive_documents(ctx);
+    if let Some(documents) = drive.clone().filter(|_| documents_on) {
+        combined = combined.merge(artifacts(ctx, &db, documents, &session_service));
+    }
 
     match admin_ssr::build(
         &db,
         sso_deps,
         site.branding.clone(),
         admin_ssr::DocumentsSurface {
-            enabled: documents_enabled(ctx),
-            service: drive_documents(ctx),
+            enabled: documents_on,
+            service: drive,
         },
     ) {
         Some(ssr) => {

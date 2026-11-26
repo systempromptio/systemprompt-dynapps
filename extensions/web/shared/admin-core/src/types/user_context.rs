@@ -21,6 +21,10 @@ pub struct UserContext {
     pub is_developer: bool,
     pub email_verified: bool,
     pub session_id: Option<SessionId>,
+    // Why: core's `/authorize` counts only its own web sign-in, read from the
+    // cookie, as the person at the browser; this is its `auth_time`, and
+    // `None` for any other session.
+    pub browser_sign_in_at: Option<i64>,
 }
 
 impl UserContext {

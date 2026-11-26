@@ -109,5 +109,7 @@ pub(crate) async fn pat_session(pool: &PgPool, pat: Option<PatRequest>) -> PatSe
         username: user.username,
         email,
         session_id: None,
+        auth_time: 0,
+        browser_sign_in: false,
     })
 }

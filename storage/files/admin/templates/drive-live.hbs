@@ -1,0 +1,19 @@
+{{#> workspace-layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    <div class="sp-live-page{{#if embed}} sp-live-page--embed{{/if}}" data-live-root data-title="{{title}}" data-embed="{{embed}}" data-document-id="{{document_id}}" data-frame-url="{{frame_url}}" data-api="{{api}}" data-people-api="{{people_api}}" data-search-api="{{search_api}}" data-sign-in="{{sign_in}}" data-connectors="{{connectors}}">
+    {{#unless embed}}
+    <header class="sp-live-page__bar">
+        <a class="sp-live-page__back" href="{{document_url}}" aria-label="Open in Drive" title="Open in Drive">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </a>
+        <h1 class="sp-live-page__title">{{title}}</h1>
+        <button class="sp-btn sp-btn--sm sp-btn--ghost" type="button" data-action="live-permissions">Permissions</button>
+    </header>
+    {{/unless}}
+    <main class="sp-live-page__main" id="main" data-slot="live-page"></main>
+    </div>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/workspace/live/page.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/workspace-layout}}

@@ -1,0 +1,34 @@
+# Contract-suite fixture: the MCP server the artifacts broker suite calls
+# through core's proxy. It is hosted in-process by core's toolset host with
+# the fake toolset `artifacts-fake` (tests/contract/admin/src/artifacts_broker),
+# so every call meets core's own hop-token check, server ACL and per-tool
+# access. `artifacts_fake_secret` is granted to admins only; a person with the
+# `user` role neither lists it nor runs it, which is the server's refusal, not
+# the broker's. The binary is
+# never spawned; it names one the extension index knows because core builds
+# every enabled internal server's config from that index, and a name it does
+# not know fails every proxied call, not only this server's.
+mcp_servers:
+  artifacts-fake:
+    server_type: internal
+    binary: systemprompt-mcp-documents
+    package: documents
+    port: __PORT__
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: Artifacts broker contract fixture
+    oauth:
+      required: true
+      scopes:
+      - user
+      audience: mcp
+      client_id: null
+    toolsets:
+    - id: artifacts-fake
+    tools:
+      artifacts_fake_secret:
+        access:
+          roles:
+          - admin

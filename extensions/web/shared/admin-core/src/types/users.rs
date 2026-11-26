@@ -93,6 +93,11 @@ pub struct CookieSession {
     pub username: String,
     pub email: Email,
     pub session_id: Option<SessionId>,
+    // Why: core's `/authorize` counts only its own web sign-in, read from the
+    // cookie, as the person at the browser; `auth_time` is when they signed
+    // in (0 when the token does not say).
+    pub auth_time: i64,
+    pub browser_sign_in: bool,
 }
 
 #[derive(Debug, Clone, Copy)]

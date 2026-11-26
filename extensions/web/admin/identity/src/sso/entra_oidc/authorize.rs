@@ -5,6 +5,7 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::RngCore;
 use sha2::{Digest, Sha256};
+use systemprompt::sso::SsoReauth;
 
 use super::verify::resolve_issuer_template;
 
@@ -18,12 +19,31 @@ pub struct AuthorizeRequest<'a> {
     pub state: &'a str,
     pub nonce: &'a str,
     pub code_challenge: &'a str,
+    pub reauth: SsoReauth,
 }
+
+// Why: Entra ID refuses a `max_age` outside 1..=86399 with AADSTS90023 ("must
+// be bigger than 0 and smaller than 86400"), and the person never reaches the
+// sign-in. A larger one, such as a step-up window of seven days, is lowered to
+// the largest Entra accepts: a sign-in that recent also satisfies the larger
+// age core asked for. A zero is dropped, because `prompt=login` already makes
+// Entra authenticate the person again.
+const ENTRA_MAX_AGE_LIMIT_SECS: i64 = 86_399;
 
 #[must_use]
 pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
     let scope = req.scopes.join(" ");
-    let params = [
+    let max_age = req
+        .reauth
+        .max_age
+        .filter(|max_age| *max_age > 0)
+        .map(|max_age| max_age.min(ENTRA_MAX_AGE_LIMIT_SECS).to_string());
+    let prompt = if req.reauth.force {
+        "login"
+    } else {
+        "select_account"
+    };
+    let mut params = vec![
         ("client_id", req.client_id),
         ("response_type", "code"),
         ("redirect_uri", req.redirect_uri),
@@ -33,8 +53,11 @@ pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
         ("nonce", req.nonce),
         ("code_challenge", req.code_challenge),
         ("code_challenge_method", "S256"),
-        ("prompt", "select_account"),
+        ("prompt", prompt),
     ];
+    if let Some(max_age) = max_age.as_deref() {
+        params.push(("max_age", max_age));
+    }
     let query = params
         .iter()
         .map(|(key, value)| format!("{key}={}", urlencoding::encode(value)))

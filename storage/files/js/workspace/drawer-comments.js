@@ -3,6 +3,8 @@
 // sheet tab or slide that was selected when it was written. Choosing an
 // anchor's Show reveals that node in the canvas. Hidden when comments are off.
 import { listComments, postComment, resolveComment } from '../documents/documents-api.js';
+import { isSystemLine } from './doc/markdown.js';
+import { mentionIds, renderBody } from './doc/mentions.js';
 import { permits, person, resolvePeople } from './people.js';
 import { alertLine, attempt, button, el, relativeTime } from './pane-dom.js';
 import { paneUnavailable, registerDrawerTab } from './registry.js';
@@ -76,8 +78,14 @@ const threadView = (thread, replies, ctx, state, reload) => {
   for (const c of [thread, ...replies]) {
     const entry = el('div', 'sp-doc-thread__entry');
     entry.dataset.commentId = c.id;
-    entry.append(el('span', 'sp-doc-thread__author', person(c.author_user_id)), el('span', 'sp-ws__muted', relativeTime(c.created_at)), el('p', 'sp-doc-thread__body', c.body));
     item.append(entry);
+    if (c !== thread && isSystemLine(c.body)) {
+      entry.append(el('p', 'sp-doc-thread__system', `${c.body.trim()} · ${relativeTime(c.created_at)}`));
+      continue;
+    }
+    const body = el('div', 'sp-doc-thread__body');
+    body.append(renderBody(c.body));
+    entry.append(el('span', 'sp-doc-thread__author', person(c.author_user_id)), el('span', 'sp-ws__muted', relativeTime(c.created_at)), body);
   }
   if (thread.resolved_at) item.append(el('p', 'sp-ws__muted', 'Resolved'));
   else if (state.canComment) {
@@ -130,7 +138,7 @@ const load = async (pane, ctx) => {
     else state.alert.show(err);
     return;
   }
-  await resolvePeople(ctx.peopleApi, comments.map((c) => c.author_user_id));
+  await resolvePeople(ctx.peopleApi, comments.flatMap((c) => [c.author_user_id, ...mentionIds(c.body)]));
   const roots = comments.filter((c) => !c.parent_id)
     .sort((a, b) => Boolean(a.resolved_at) - Boolean(b.resolved_at));
   state.body.replaceChildren(...(roots.length

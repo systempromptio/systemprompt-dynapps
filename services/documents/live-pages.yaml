@@ -1,0 +1,38 @@
+# Live pages: the MCP servers, and on each the tools, a Drive page may ask
+# the artifacts broker to run as the person viewing it.
+#
+# A page also has to declare each server and tool in its manifest (the agent
+# does, with `capabilities` on the documents tools), and each viewer allows
+# each server for the page before its first call; a tool that does not
+# declare `readOnlyHint: true` asks the viewer to approve every call. This
+# file is the operator's ceiling over all of that: a server it does not name
+# is closed to every page, and so is everything when the file is missing.
+#
+# `tools: all` opens every tool the server lists for the viewer; a list opens
+# only those. `display_name` is the name the viewer is shown for the server
+# (the consent prompt, the permissions panel, a native client's prompts); a
+# server without one shows its connector's `display_name` from services/mcp/,
+# and its id when that has none. Read by systemprompt-web-admin-platform
+# (artifacts::policy) when the broker and the documents server start, so a
+# change needs a restart.
+#
+# Dynapps defaults: the connectors people use for their own work (Odoo,
+# Microsoft 365, dynbrain) and the Drive's reads. The control plane
+# (`systemprompt`) and the Farm are not for pages.
+live_pages:
+  servers:
+    dynapps-odoo:
+      tools: all
+    microsoft-365:
+      display_name: Microsoft 365
+      tools: all
+    dynbrain:
+      tools: all
+    documents:
+      display_name: Drive
+      tools:
+      - documents_list
+      - documents_search
+      - documents_read
+      - documents_history
+      - documents_people

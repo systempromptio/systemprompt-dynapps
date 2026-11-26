@@ -343,6 +343,7 @@ fn user(is_console: bool) -> Result<UserContext, Box<dyn Error>> {
         is_developer: false,
         email_verified: true,
         session_id: None,
+        browser_sign_in_at: None,
     })
 }
 

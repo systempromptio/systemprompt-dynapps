@@ -64,6 +64,9 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::sql_only(include_str!("../schema/54_connector_credential_audit.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/55_content_ingestion_stamp.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/56_document_classes.sql")),
+        SchemaDefinition::sql_only(include_str!("../schema/57_artifact_tool_calls.sql")),
+        SchemaDefinition::sql_only(include_str!("../schema/58_artifact_manifests.sql")),
+        SchemaDefinition::sql_only(include_str!("../schema/59_drive_handoffs.sql")),
     ]
 }
 

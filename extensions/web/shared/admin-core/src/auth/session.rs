@@ -5,8 +5,14 @@
 //! here rather than beside any one handler. The cookie path accepts only the
 //! `Api` audience; [`extract_mcp_accessor_user`] widens that for the tokens
 //! core's accessors forward from the desktop bridge.
+//!
+//! A session also says when the person signed in and whether it is a browser
+//! sign-in: the token came from the `access_token` cookie and has the shape
+//! core's `/authorize` accepts as one. Only such a session may approve a
+//! person's UI session.
 
 use axum::http::HeaderMap;
+use systemprompt::api::routes::oauth::endpoints::authorize::session::session_subject;
 use systemprompt::identifiers::{Email, UserId};
 use systemprompt::models::auth::{JwtAudience, TokenAuthority};
 use systemprompt::oauth::validate_jwt_token;
@@ -45,25 +51,21 @@ fn extract_user_with_audiences(
     let claims = validate_jwt_token(authority, &token, audiences)?;
 
     let email = Email::try_new(claims.custom.email.clone()).map_err(AdminError::unauthenticated)?;
+    let browser_sign_in = bearer_token(headers).is_none() && session_subject(&claims).is_some();
 
     Ok(CookieSession {
         user_id: UserId::new(claims.registered.sub),
         username: claims.custom.username,
         email,
         session_id: claims.custom.session_id,
+        auth_time: claims.custom.auth_time,
+        browser_sign_in,
     })
 }
 
 pub fn extract_token_from_headers(headers: &HeaderMap) -> Result<String, AdminError> {
-    if let Some(auth) = headers.get("authorization").and_then(|v| v.to_str().ok())
-        && let Some(token) = auth
-            .strip_prefix("Bearer ")
-            .or_else(|| auth.strip_prefix("bearer "))
-    {
-        let t = token.trim();
-        if !t.is_empty() {
-            return Ok(t.to_owned());
-        }
+    if let Some(token) = bearer_token(headers) {
+        return Ok(token.to_owned());
     }
 
     let cookie_header = headers
@@ -85,6 +87,15 @@ pub fn extract_token_from_headers(headers: &HeaderMap) -> Result<String, AdminEr
         ));
     }
     Ok(token.to_owned())
+}
+
+fn bearer_token(headers: &HeaderMap) -> Option<&str> {
+    let auth = headers.get("authorization")?.to_str().ok()?;
+    let token = auth
+        .strip_prefix("Bearer ")
+        .or_else(|| auth.strip_prefix("bearer "))?
+        .trim();
+    (!token.is_empty()).then_some(token)
 }
 
 pub fn resolve_principal(

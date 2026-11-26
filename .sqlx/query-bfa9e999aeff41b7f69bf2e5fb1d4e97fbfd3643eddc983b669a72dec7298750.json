@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO artifact_tool_calls\n                (user_id, document_id, server, tool, outcome, duration_ms)\n           VALUES ($1, $2::text::uuid, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bfa9e999aeff41b7f69bf2e5fb1d4e97fbfd3643eddc983b669a72dec7298750"
+}

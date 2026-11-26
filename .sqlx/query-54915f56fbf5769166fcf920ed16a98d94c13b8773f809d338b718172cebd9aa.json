@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM artifact_approvals\n            WHERE id = $1 AND user_id = $2 AND document_id = $3::text::uuid\n              AND server = $4 AND tool = $5 AND input_hash = $6\n              AND expires_at > CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "54915f56fbf5769166fcf920ed16a98d94c13b8773f809d338b718172cebd9aa"
+}

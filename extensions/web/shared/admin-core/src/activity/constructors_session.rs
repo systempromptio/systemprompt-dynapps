@@ -26,6 +26,18 @@ impl NewActivity {
     }
 
     #[must_use]
+    pub fn dynwork_handoff_login(user_id: &UserId, display_name: &str) -> Self {
+        Self {
+            user_id: user_id.clone(),
+            category: ActivityCategory::Login,
+            action: ActivityAction::LoggedIn,
+            entity: None,
+            description: format!("{display_name} logged in from DynWork"),
+            metadata: serde_json::json!({ "via": "dynwork_handoff" }),
+        }
+    }
+
+    #[must_use]
     pub fn agent_response(
         user_id: &UserId,
         session_id: &SessionId,

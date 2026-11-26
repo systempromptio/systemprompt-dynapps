@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO artifact_consents (user_id, document_id, scope, granted)\n           VALUES ($1, $2::text::uuid, $3, $4)\n           ON CONFLICT (user_id, document_id, scope) DO UPDATE\n              SET granted = EXCLUDED.granted,\n                  decided_at = CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6f679090fe5c33a0a06f2d544578828fbdce464588e1e7d159ae09bae632c9b3"
+}
