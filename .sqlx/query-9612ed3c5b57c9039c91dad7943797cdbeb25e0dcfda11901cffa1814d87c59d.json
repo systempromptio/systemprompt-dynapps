@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT scope, space_id, article_id, mode\n               FROM dynbrain_rag_rule WHERE active ORDER BY sequence, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "scope",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_rag_rule",
+            "name": "scope"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "space_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_rag_rule",
+            "name": "space_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "article_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_rag_rule",
+            "name": "article_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_rag_rule",
+            "name": "mode"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "9612ed3c5b57c9039c91dad7943797cdbeb25e0dcfda11901cffa1814d87c59d"
+}

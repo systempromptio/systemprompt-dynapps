@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_embedding_usage (fingerprint, inputs, input_tokens, cost_microdollars)\n             VALUES ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b3483efbe510338efa4b495bb9d3ccb5831ff8d273e9ebfe3d262f5853269d25"
+}

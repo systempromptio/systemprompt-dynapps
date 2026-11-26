@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dynbrain_chunk WHERE article_id = $1 AND lang = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "94ef7067dcc6a00bc2b03e05f2160dc5bb7ddde0858ae3b843e7eadabfdf6a6f"
+}

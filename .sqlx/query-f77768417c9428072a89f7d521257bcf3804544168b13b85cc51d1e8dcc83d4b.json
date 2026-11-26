@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id, c.content, c.heading_path, c.synopsis, v.title, v.description\n               FROM dynbrain_chunk c\n               JOIN dynbrain_article_variant v ON v.article_id = c.article_id AND v.lang = c.lang\n               JOIN dynbrain_article a ON a.id = c.article_id\n              WHERE c.embedded_at IS NULL AND NOT c.has_error AND a.trashed_at IS NULL\n                AND NOT (($2::bool OR ($3::bool AND c.heading_path = ''))\n                         AND c.synopsis IS NULL AND NOT c.synopsis_error)\n              ORDER BY c.id\n              LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "content",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "heading_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "heading_path"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "synopsis",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "synopsis"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "description"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "f77768417c9428072a89f7d521257bcf3804544168b13b85cc51d1e8dcc83d4b"
+}

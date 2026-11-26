@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT content_hash, synopsis AS \"synopsis!\"\n                 FROM dynbrain_chunk\n                WHERE article_id = $1 AND lang = $2\n                  AND synopsis IS NOT NULL AND synopsis_hash = content_hash",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "content_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "synopsis!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "synopsis"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "b95449c79d5764021fb343783c6ac1fa86277458ac17594b1dd03479c0440fdf"
+}

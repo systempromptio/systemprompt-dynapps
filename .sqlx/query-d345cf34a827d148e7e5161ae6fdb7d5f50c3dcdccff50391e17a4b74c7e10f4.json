@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynbrain_chunk c\n                SET synopsis = u.synopsis, synopsis_hash = u.content_hash, embedded_at = NULL\n               FROM UNNEST($1::int8[], $2::text[], $3::text[]) AS u(id, synopsis, content_hash)\n              WHERE c.id = u.id AND c.content_hash = u.content_hash",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d345cf34a827d148e7e5161ae6fdb7d5f50c3dcdccff50391e17a4b74c7e10f4"
+}

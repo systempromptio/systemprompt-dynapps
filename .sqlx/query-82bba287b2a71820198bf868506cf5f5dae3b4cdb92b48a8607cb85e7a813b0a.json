@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id, c.lang, c.content, c.content_hash, v.body\n               FROM dynbrain_chunk c\n               JOIN dynbrain_article_variant v ON v.article_id = c.article_id AND v.lang = c.lang\n               JOIN dynbrain_article a ON a.id = c.article_id\n              WHERE c.synopsis_hash IS DISTINCT FROM c.content_hash\n                AND NOT c.synopsis_error AND a.trashed_at IS NULL\n                AND ($2::bool OR c.heading_path = '')\n              ORDER BY c.article_id, c.lang, c.sequence\n              LIMIT $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "lang",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "lang"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "content",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "body",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "body"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "82bba287b2a71820198bf868506cf5f5dae3b4cdb92b48a8607cb85e7a813b0a"
+}

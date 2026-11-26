@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM dynbrain_index_job\n                               WHERE article_id = $1 AND lang = $2 AND content_hash = $3\n                                 AND state = 'done') AS \"indexed!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "indexed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1d2b81e26d2727652dc1d8612e46ed5c0636b16cd1070f79fc02fb4af7cb06e7"
+}

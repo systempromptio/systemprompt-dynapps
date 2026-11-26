@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynbrain_index_job\n                SET state = CASE WHEN attempts >= $3 THEN 'failed' ELSE 'pending' END,\n                    last_error = $2, updated_at = CURRENT_TIMESTAMP\n              WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b38889e190c3e2686a931e5d5ce145eea883acf0e34f37fb0c75ef14a7014dba"
+}
