@@ -113,7 +113,6 @@ pub async fn article_page(
     let doc = match read::read_document(&console, admin, id, wanted).await {
         Ok(doc) if doc.found => doc,
         _ => {
-            page.missing_lang = wanted.is_some();
             read::read_document(&console, admin, id, None)
                 .await
                 .ok()
@@ -121,6 +120,7 @@ pub async fn article_page(
                 .ok_or_else(|| AdminError::NotFound(format!("article {id}")))?
         },
     };
+    page.missing_lang = wanted.is_some_and(|lang| lang != doc.lang);
     let tab = TABS
         .iter()
         .find(|(key, _)| Some(*key) == query.tab.as_deref())
