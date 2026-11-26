@@ -86,13 +86,11 @@ impl Reply {
 
 pub(crate) struct Env {
     pub(crate) db: TempDb,
-    pub(crate) repo: BrainRepository,
     pub(crate) native: Arc<NativeBrain>,
     pub(crate) retriever: Retriever,
     pub(crate) console: Console,
     pub(crate) invoicing: Article,
     pub(crate) credit: Article,
-    pub(crate) sla: Article,
 }
 
 impl Env {
@@ -187,19 +185,17 @@ impl Env {
             brain,
             native: Some(Native {
                 brain: Arc::clone(&native),
-                repo: repo.clone(),
+                repo,
                 retriever: retriever.clone(),
             }),
         };
         Self {
             db,
-            repo,
             native,
             retriever,
             console,
             invoicing,
             credit,
-            sla,
         }
     }
 

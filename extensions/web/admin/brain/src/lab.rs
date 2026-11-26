@@ -166,7 +166,11 @@ async fn run(
         .explain(&request, page.rerank)
         .await
         .map_err(AdminError::internal)?;
-    show(page, &explained, native.retriever.settings().weak_match_threshold);
+    show(
+        page,
+        &explained,
+        native.retriever.settings().weak_match_threshold,
+    );
     if acting {
         reader.as_str().clone_into(&mut page.run_as_name);
         let denied = denied_rows(native, admin, &reader, &request).await?;
