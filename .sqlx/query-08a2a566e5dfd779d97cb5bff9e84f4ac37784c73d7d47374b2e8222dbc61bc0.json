@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FILTER (WHERE kind = 'search') AS \"retrieved!\",\n                      count(*) FILTER (WHERE kind = 'answer') AS \"cited!\"\n                 FROM dynbrain_search_log\n                WHERE created_at >= $1 AND $2 = ANY(article_ids)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "retrieved!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "cited!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "08a2a566e5dfd779d97cb5bff9e84f4ac37784c73d7d47374b2e8222dbc61bc0"
+}

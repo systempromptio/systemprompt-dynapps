@@ -119,7 +119,7 @@ impl Retriever {
                 })
             })
             .collect();
-        let reranked = Instant::now();
+        let rank_started = Instant::now();
         let reranker = self.reranker.as_deref().filter(|_| rerank_wanted);
         let (ranked, trace) = rerank(reranker, &self.breaker, request.query, passages).await;
         Ok(Staged {
@@ -129,7 +129,7 @@ impl Retriever {
             ranked,
             trace,
             arms,
-            reranking: reranked.elapsed(),
+            reranking: rank_started.elapsed(),
         })
     }
 

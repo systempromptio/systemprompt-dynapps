@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.article_id AS \"article_id!\",\n                      COALESCE((SELECT v.title FROM dynbrain_article_variant v\n                                 WHERE v.article_id = t.article_id ORDER BY v.lang LIMIT 1), '') AS \"title!\",\n                      count(*) FILTER (WHERE t.kind = 'search') AS \"retrieved!\",\n                      count(*) FILTER (WHERE t.kind = 'answer') AS \"cited!\"\n                 FROM (SELECT l.kind, unnest(l.article_ids) AS article_id\n                         FROM dynbrain_search_log l WHERE l.created_at >= $1) t\n                GROUP BY t.article_id\n                ORDER BY count(*) DESC, t.article_id\n                LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "article_id!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "retrieved!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "cited!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "b6f8e2b465eb8a4f206a8f95d1d37aec91853e0bfb56c50bc07a575b13be73ae"
+}

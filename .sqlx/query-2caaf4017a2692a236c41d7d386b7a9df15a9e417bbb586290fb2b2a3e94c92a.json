@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT fingerprint, count(*) AS \"calls!\",\n                      COALESCE(sum(cost_microdollars), 0)::bigint AS \"micros!\"\n                 FROM dynbrain_embedding_usage\n                WHERE created_at >= $1\n                GROUP BY fingerprint\n                ORDER BY 3 DESC, fingerprint",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fingerprint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_embedding_usage",
+            "name": "fingerprint"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "calls!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "micros!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "2caaf4017a2692a236c41d7d386b7a9df15a9e417bbb586290fb2b2a3e94c92a"
+}

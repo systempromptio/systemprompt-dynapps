@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id AS \"id!\",\n                      (1 - (c.embedding <=> $2::text::vector))::float8 AS \"cosine?\",\n                      ts_rank(c.search_vector, plainto_tsquery(c.fts_config, $3::text))::float8 AS \"ts_rank!\"\n                 FROM dynbrain_chunk c\n                WHERE c.id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "cosine?",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "ts_rank!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "0a96de87c36362af1a9fe82f2dcb24eadd775cef09120bc100d1226524b7e2cc"
+}
