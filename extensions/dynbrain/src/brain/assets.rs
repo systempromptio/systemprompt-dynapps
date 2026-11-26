@@ -27,7 +27,6 @@ pub struct AssetUploadArgs {
     pub article_id: Option<ArticleId>,
     pub path: Option<String>,
     pub upload_id: Option<UploadId>,
-    #[serde(alias = "name")]
     pub filename: Option<String>,
     pub lang: Option<String>,
 }
