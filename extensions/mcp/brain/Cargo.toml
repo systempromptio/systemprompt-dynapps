@@ -1,0 +1,40 @@
+[package]
+name = "systemprompt-mcp-brain"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Brain MCP server for the Dynapps instance: search, read and author documentation in the Brain's own store, served to signed-in users as themselves."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[[bin]]
+name = "systemprompt-mcp-brain"
+path = "src/main.rs"
+
+[dependencies]
+# Audit: uses the host context, the agent host (the AI service of the query embedder), mcp (executor, router), models (request context) and extension (the context the Brain is composed from) — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+
+anyhow.workspace = true
+rustls.workspace = true
+tokio.workspace = true
+
+rmcp.workspace = true
+axum.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+tracing.workspace = true
+
+dynbrain.workspace = true
+systemprompt-mcp-shared.workspace = true
+systemprompt-secrets-onepassword.workspace = true
+systemprompt-web-admin-governance.workspace = true
+systemprompt-web-admin-identity.workspace = true
+systemprompt-web-admin-platform.workspace = true
+systemprompt-web-shared.workspace = true
+
+[lints]
+workspace = true

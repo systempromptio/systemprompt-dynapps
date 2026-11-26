@@ -1,0 +1,22 @@
+[package]
+name = "mcp-brain-integration-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# The tool layer of the `brain` server and the Brain it runs the operations of.
+systemprompt-mcp-brain = { workspace = true }
+dynbrain = { workspace = true }
+# The throwaway database with the full extension schema (db_or_skip!).
+dynapps-test-common = { workspace = true }
+# `storage`: core's local-disk file storage, the store the files are kept in
+# during the suite.
+systemprompt = { workspace = true, features = ["storage"] }
+rmcp = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }

@@ -57,22 +57,40 @@ impl DynbrainExtension {
 }
 
 fn build_state(ctx: &dyn ExtensionContext, database: &Database) -> BrainState {
-    let pool = database.write_pool();
-    let repo = BrainRepository::new(Arc::clone(&pool));
     let embedder = EmbedderSlot::default();
-    let search = Retriever::new(repo.clone())
-        .with_embedder(embedder.clone())
-        .with_reranker(reranker(ctx));
     BrainState {
-        brain: Arc::new(
-            NativeBrain::new(repo)
-                .with_files(asset_files(ctx))
-                .with_search(search),
-        ),
+        brain: Arc::new(compose_brain(ctx, database, embedder.clone())),
         authority: ctx.token_authority(),
-        devices: Arc::new(PgRelayStore::new(pool)),
+        devices: Arc::new(PgRelayStore::new(database.write_pool())),
         embedder,
     }
+}
+
+// Why: the `brain` MCP server is a process of its own on a host context that
+// holds no AI service, so it composes the same Brain here and fills the
+// embedder slot itself; the routes fill theirs from the service core layers
+// onto them.
+pub fn native_brain(ctx: &dyn ExtensionContext, embedder: EmbedderSlot) -> Option<NativeBrain> {
+    let handle = ctx.database();
+    let Some(database) = handle.as_any().downcast_ref::<Database>() else {
+        tracing::error!("Database handle is not Postgres; the Brain is not composed");
+        return None;
+    };
+    Some(compose_brain(ctx, database, embedder))
+}
+
+fn compose_brain(
+    ctx: &dyn ExtensionContext,
+    database: &Database,
+    embedder: EmbedderSlot,
+) -> NativeBrain {
+    let repo = BrainRepository::new(database.write_pool());
+    let search = Retriever::new(repo.clone())
+        .with_embedder(embedder)
+        .with_reranker(reranker(ctx));
+    NativeBrain::new(repo)
+        .with_files(asset_files(ctx))
+        .with_search(search)
 }
 
 fn reranker(ctx: &dyn ExtensionContext) -> Option<Arc<dyn Reranker>> {

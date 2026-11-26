@@ -17,6 +17,7 @@ members = [
     "unit/dynwork-relay",
     "unit/dynwork-chats",
     "unit/dynbrain",
+    "unit/mcp-brain",
     "integration/admin-config",
     "integration/mcp",
     "integration/web",
@@ -29,6 +30,7 @@ members = [
     "integration/dynwork-routines",
     "integration/dynwork-chats",
     "integration/dynbrain",
+    "integration/mcp-brain",
     "contract/admin",
 ]
 resolver = "2"
@@ -158,6 +160,7 @@ dynapps-test-common = { path = "common" }
 # Local extension crates under test (paths relative to tests/).
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
+systemprompt-mcp-brain = { path = "../extensions/mcp/brain" }
 systemprompt-mcp-documents = { path = "../extensions/mcp/documents" }
 systemprompt-mcp-microsoft-365 = { path = "../extensions/mcp/microsoft-365" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }

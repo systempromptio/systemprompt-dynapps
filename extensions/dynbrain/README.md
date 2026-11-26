@@ -18,6 +18,8 @@ files of articles, the indexing and the search. The `brain` MCP server comes in 
 - `assets`: the files of articles: link signing, `asset://` references, the type read from the bytes.
 - `ingest`: the indexing (see Indexing).
 
+The tools of the Brain are served by the MCP server `extensions/mcp/brain` (see its `README.md`).
+
 ## Data model
 
 | Table | What it holds |

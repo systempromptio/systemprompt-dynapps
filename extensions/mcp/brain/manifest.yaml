@@ -1,0 +1,8 @@
+extension:
+  type: mcp
+  name: brain
+  binary: systemprompt-mcp-brain
+  description: The Brain — search, read and author the instance's documentation as the signed-in person
+  port: 5014
+  build_type: workspace
+  enabled: true

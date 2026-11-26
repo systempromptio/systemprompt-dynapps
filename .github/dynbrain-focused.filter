@@ -1,1 +1,1 @@
-package(dynbrain-unit-tests) | package(dynbrain-integration-tests)
+package(dynbrain-unit-tests) | package(dynbrain-integration-tests) | package(mcp-brain-unit-tests) | package(mcp-brain-integration-tests)

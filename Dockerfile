@@ -49,6 +49,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && mkdir -p /out/bin \
     && cp target/release/systemprompt /out/bin/ \
     && cp target/release/systemprompt-mcp-agent /out/bin/ \
+    && cp target/release/systemprompt-mcp-brain /out/bin/ \
     && cp target/release/systemprompt-mcp-documents /out/bin/ \
     && cp target/release/systemprompt-mcp-microsoft-365 /out/bin/
 

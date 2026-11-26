@@ -16,6 +16,7 @@ includes:
   - ../mcp/systemprompt.yaml
   - ../mcp/dynapps-farm.yaml
   - ../mcp/documents.yaml
+  - ../mcp/brain.yaml
   - ../mcp/microsoft-365.yaml
   - ../mcp/dynapps-odoo.yaml
   - ../mcp/dynbrain.yaml

@@ -7667,6 +7667,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-mcp-brain"
+version = "0.85.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "dynbrain",
+ "rmcp",
+ "rustls",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "systemprompt-mcp-documents"
 version = "0.85.0"
 dependencies = [

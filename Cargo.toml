@@ -13,6 +13,7 @@ members = [
     "extensions/web/site",
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
+    "extensions/mcp/brain",
     "extensions/mcp/documents",
     "extensions/mcp/microsoft-365",
     "extensions/mcp/shared",

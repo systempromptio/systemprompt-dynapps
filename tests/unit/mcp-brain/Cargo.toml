@@ -1,0 +1,18 @@
+[package]
+name = "mcp-brain-unit-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+systemprompt-mcp-brain = { workspace = true }
+systemprompt-mcp-shared = { workspace = true }
+# The faults the tools map and the arguments they take.
+dynbrain = { workspace = true }
+# The governance rules the tool names are checked against.
+dynapps-test-common = { workspace = true }
+rmcp = { workspace = true }
+serde_json = { workspace = true }

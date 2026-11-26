@@ -90,12 +90,35 @@ jobs:
             tests
           cache-on-failure: true
       - name: Clippy, plan crates of the root workspace
-        run: cargo clippy -p dynbrain --all-targets -- -D warnings
+        run: cargo clippy -p dynbrain -p systemprompt-mcp-brain --all-targets -- -D warnings
         timeout-minutes: 60
       - name: Clippy, plan test crates
         if: ${{ !cancelled() }}
-        run: cargo clippy --manifest-path tests/Cargo.toml -p dynbrain-unit-tests -p dynbrain-integration-tests --all-targets -- -D warnings
+        run: cargo clippy --manifest-path tests/Cargo.toml -p dynbrain-unit-tests -p dynbrain-integration-tests -p mcp-brain-unit-tests -p mcp-brain-integration-tests --all-targets -- -D warnings
         timeout-minutes: 60
+
+  # The source gates that need no compile, run on the plan's code with the
+  # core the checkout pins, so their findings show on every push instead of
+  # at the pull request.
+  source-gates:
+    name: Source gates (plan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/core-checkout
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep python3 python3-yaml clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev
+      - run: rustup show
+      - name: Run the gates
+        run: |
+          set -uo pipefail
+          status=0
+          for gate in check-discarded-results check-fail-open check-swallowed-errors check-tracing-messages lint-layers lint-repo-construction lint-serde-aliases check-json-value lint-inline-comments check-file-size check-dockerfile-paths; do
+            echo "::group::$gate"
+            bash "scripts/$gate.sh" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
 
   # The committed `.sqlx/` entries of the plan's crates, against what the
   # sqlx macros describe from a live schema. A crate-local `.env` gives the
