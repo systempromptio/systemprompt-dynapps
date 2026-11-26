@@ -5,7 +5,9 @@
 //! the `documents` server are built; Dynapps ships its defaults there. A
 //! server the file does not name is closed to every page, and so is every
 //! server when the file is missing. A tool outside the list is answered
-//! `blocked_by_policy` at call time and refused at declaration time.
+//! `blocked_by_policy` at call time and refused at declaration time. A
+//! server's optional `display_name` is the name the viewer is shown for it,
+//! ahead of its connector's (`LivePages::names`).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -18,6 +20,7 @@ const POLICY_FILE: &str = "live-pages.yaml";
 #[derive(Debug, Clone, Default)]
 pub struct LivePagesPolicy {
     servers: BTreeMap<String, Allowed>,
+    names: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +54,8 @@ struct Section {
 #[serde(deny_unknown_fields)]
 struct ServerRule {
     tools: ToolRule,
+    #[serde(default)]
+    display_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,6 +85,15 @@ impl LivePagesPolicy {
         };
         let file: PolicyFile = serde_yaml::from_str(&text)
             .map_err(|error| LivePagesPolicyError::Parse(shown, error))?;
+        let names = file
+            .live_pages
+            .servers
+            .iter()
+            .filter_map(|(server, rule)| {
+                let name = rule.display_name.as_deref()?.trim();
+                (!name.is_empty()).then(|| (server.clone(), name.to_owned()))
+            })
+            .collect();
         let servers = file
             .live_pages
             .servers
@@ -92,12 +106,17 @@ impl LivePagesPolicy {
                 (server, allowed)
             })
             .collect();
-        Ok(Self { servers })
+        Ok(Self { servers, names })
     }
 
     #[must_use]
     pub fn allows_server(&self, server: &str) -> bool {
         self.servers.contains_key(server)
+    }
+
+    #[must_use]
+    pub fn display_name(&self, server: &str) -> Option<&str> {
+        self.names.get(server).map(String::as_str)
     }
 
     #[must_use]

@@ -7,6 +7,7 @@
 pub mod api;
 pub(crate) mod drive_actor;
 pub mod drive_user;
+pub(crate) mod person_session;
 pub mod platform_ssr;
 pub mod public;
 pub mod ssr_bridge;

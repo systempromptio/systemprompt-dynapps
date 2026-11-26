@@ -9,8 +9,12 @@
 # is closed to every page, and so is everything when the file is missing.
 #
 # `tools: all` opens every tool the server lists for the viewer; a list opens
-# only those. Read by systemprompt-web-admin-platform (artifacts::policy) when
-# the broker and the documents server start, so a change needs a restart.
+# only those. `display_name` is the name the viewer is shown for the server
+# (the consent prompt, the permissions panel, a native client's prompts); a
+# server without one shows its connector's `display_name` from services/mcp/,
+# and its id when that has none. Read by systemprompt-web-admin-platform
+# (artifacts::policy) when the broker and the documents server start, so a
+# change needs a restart.
 #
 # Dynapps defaults: the connectors people use for their own work (Odoo,
 # Microsoft 365, dynbrain) and the Drive's reads. The control plane
@@ -20,10 +24,12 @@ live_pages:
     dynapps-odoo:
       tools: all
     microsoft-365:
+      display_name: Microsoft 365
       tools: all
     dynbrain:
       tools: all
     documents:
+      display_name: Drive
       tools:
       - documents_list
       - documents_search

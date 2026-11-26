@@ -173,11 +173,12 @@ async fn listing(
     viewer: &ArtifactViewer,
     server: &str,
 ) -> Result<Vec<Value>, ArtifactCallError> {
+    let bearer = broker.proxy_bearer(viewer).await?;
     let mut session = broker
         .inner
         .live
         .proxy()
-        .open(&McpServerId::new(server), viewer.credential())
+        .open(&McpServerId::new(server), bearer.as_str())
         .await?;
     let tools = session.tools().await;
     session.close().await;

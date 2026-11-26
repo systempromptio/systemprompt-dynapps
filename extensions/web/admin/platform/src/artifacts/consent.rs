@@ -1,20 +1,21 @@
 //! `/api/v1/artifacts/{document_id}/permissions`: what a page declares and
-//! what its viewer decided, read and changed only by that viewer's web
-//! session.
+//! what its viewer decided, read and changed only by that viewer (`viewer`:
+//! the web session, or the person's `ui` session as the bearer).
 //!
 //! `GET` answers `{capabilities, contract_version, revision, writer, viewer,
-//! states}`: the manifest (`null` when none), the version the viewer loaded
-//! (a publish's base), whether the viewer may edit, who the viewer is
-//! (`{id, name, email, owner}`, for the shell's `user` capability, which
-//! hands the page only what the manifest's `user` scopes allow), and a state
-//! per name in
-//! the shape of the runtime's `permissions.state()`: `mcp:<server>` for each
-//! declared server (`granted`, `denied` or `prompt`), `mcp` for all of them
-//! together, and `artifact` and `user` when declared (they need no standing
-//! grant). `POST {scope, decision}` records `granted` or `denied` for
-//! `mcp:<server>` or for every declared server with `mcp`; `DELETE
-//! .../permissions/{scope}` forgets it, so the next call asks again. Denying
-//! or forgetting drops the viewer's cached results from those servers.
+//! states, servers}`: the manifest (`null` when none), the version the
+//! viewer loaded (a publish's base), whether the viewer may edit, who the
+//! viewer is (`{id, name, email, owner}`, for the shell's `user` capability,
+//! which hands the page only what the manifest's `user` scopes allow), a
+//! state per name in the shape of the runtime's `permissions.state()`:
+//! `mcp:<server>` for each declared server (`granted`, `denied` or
+//! `prompt`), `mcp` for all of them together, and `artifact` and `user` when
+//! declared (they need no standing grant), and each declared server as `{id,
+//! name}`, the name the viewer's prompts show (`LivePages::names`). `POST
+//! {scope, decision}` records `granted` or `denied` for `mcp:<server>` or for
+//! every declared server with `mcp`; `DELETE .../permissions/{scope}`
+//! forgets it, so the next call asks again. Denying or forgetting drops the
+//! viewer's cached results from those servers.
 
 use std::collections::BTreeMap;
 
@@ -186,6 +187,7 @@ async fn answer(
             "owner": page.view.document.owner_user_id == viewer.user.id,
         },
         "states": states(&page, &consents),
+        "servers": broker.inner.live.names(page.manifest.as_ref()),
     }))
     .into_response())
 }

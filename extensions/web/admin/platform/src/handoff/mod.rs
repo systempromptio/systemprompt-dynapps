@@ -1,21 +1,20 @@
 //! The session handoff: a person's `ui` session opens a web session in the
 //! view of a client that embeds the viewer shell.
 //!
-//! `DynWork` desktop holds the person's `ui` session, the one credential the
-//! artifacts broker never takes (core's MCP proxy admits the first-party
-//! audiences only), and shows the shell in a view of its own. It asks
-//! `POST /api/v1/drive/handoff {path}` (`issue`) with that session as the
-//! bearer, and nothing else: a web cookie, an API key, a Device key or an
-//! agent's bearer is refused. The answer is a URL with a one-shot code: 32
-//! random bytes, stored only as their SHA-256, bound to the person, the
-//! `/drive/` path and the `ui` session's own sign-in time, good for 60 s and
-//! one redeem. The view loads it (`redeem`): the code is spent, core's
-//! `mint_browser_session` mints a web session for the person carrying that
-//! sign-in time (so the web's freshness and step-up rules see the real sign-in,
-//! never the redeem), the web login's cookie is set as core's SSO callback
-//! sets it, the login is recorded as a `DynWork` handoff, and the view goes on
-//! to the path. Every failure is the same trip to the web login, which comes
-//! back to the path. [`handoff_router`] mounts both on every profile.
+//! `DynWork` desktop holds the person's `ui` session, which the web pages
+//! never take, and shows a web page (the shell, the editor) in a view of its
+//! own. It asks `POST /api/v1/drive/handoff {path}` (`issue`) with that
+//! session as the bearer, and nothing else: a web cookie, an API key, a
+//! Device key or an agent's bearer is refused. The answer is a URL with a
+//! one-shot code: 32 random bytes, stored only as their SHA-256, bound to
+//! the person, the `/drive/` path and the `ui` session's own sign-in time,
+//! good for 60 s and one redeem. The view loads it (`redeem`): the code is
+//! spent, core's `mint_browser_session` mints a web session for the person
+//! carrying that sign-in time (so the web's freshness and step-up rules see the
+//! real sign-in, never the redeem), the web login's cookie is set as core's SSO
+//! callback sets it, the login is recorded as a `DynWork` handoff, and the view
+//! goes on to the path. Every failure is the same trip to the web login, which
+//! comes back to the path. [`handoff_router`] mounts both on every profile.
 
 mod issue;
 mod redeem;
