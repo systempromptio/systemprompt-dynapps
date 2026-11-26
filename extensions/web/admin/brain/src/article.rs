@@ -190,7 +190,7 @@ async fn tab_body(
         },
         ("access", _) => page.access = Some(access::view(console, admin, id, &doc.lang).await),
         ("chunks", Some(native)) => {
-            page.chunks = chunks::chunks_view(native, id, doc, faults).await
+            page.chunks = chunks::chunks_view(native, id, doc, faults).await;
         },
         ("ingest", Some(native)) => {
             page.ingest = chunks::ingest_view(native, id, &doc.lang, faults).await;

@@ -14,7 +14,7 @@ pub struct Node {
     pub href: Option<String>,
     pub selected: bool,
     pub open: bool,
-    pub children: Vec<Node>,
+    pub children: Vec<Self>,
 }
 
 pub fn build(spaces: &[Space], selected: Option<i64>) -> Vec<Node> {
@@ -67,10 +67,10 @@ fn item(node: &Node) -> String {
 
 fn label(node: &Node) -> String {
     let title = escape(&node.title);
-    match &node.href {
-        Some(href) => format!("<a href=\"{}\">{title}</a>", escape(href)),
-        None => format!("<span class=\"sp-brain-space\">{title}</span>"),
-    }
+    node.href.as_ref().map_or_else(
+        || format!("<span class=\"sp-brain-space\">{title}</span>"),
+        |href| format!("<a href=\"{}\">{title}</a>", escape(href)),
+    )
 }
 
 fn escape(text: &str) -> String {

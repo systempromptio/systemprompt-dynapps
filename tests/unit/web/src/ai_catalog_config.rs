@@ -29,13 +29,7 @@ use systemprompt::models::providers::ClientFamily;
 use crate::support::committed_services;
 
 const SERVED: [&str; 3] = ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"];
-const LIVE_PROVIDERS: [&str; 5] = [
-    "anthropic",
-    "deepseek",
-    "e2e-mock",
-    "openai",
-    "opencode-go",
-];
+const LIVE_PROVIDERS: [&str; 5] = ["anthropic", "deepseek", "e2e-mock", "openai", "opencode-go"];
 
 // Why: rate cards are YAML decimal literals parsed to the same `f64`.
 fn same(actual: f64, expected: f64) -> bool {

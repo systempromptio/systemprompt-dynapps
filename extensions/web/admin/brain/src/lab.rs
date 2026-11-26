@@ -166,29 +166,9 @@ async fn run(
         .explain(&request, page.rerank)
         .await
         .map_err(AdminError::internal)?;
-    page.ran = true;
-    page.mode = match explained.mode {
-        RetrievalMode::Hybrid => "hybrid",
-        RetrievalMode::Keyword => "keyword",
-    };
-    page.scoring = match explained.trace.scoring {
-        ScoreSource::Fusion => "fusion".to_owned(),
-        ScoreSource::CrossEncoder => "cross-encoder".to_owned(),
-    };
-    page.timings = timings(&explained);
-    page.rows = explained
-        .rows
-        .iter()
-        .map(|row| {
-            lab_row(
-                row,
-                &explained,
-                native.retriever.settings().weak_match_threshold,
-            )
-        })
-        .collect();
+    show(page, &explained, native.retriever.settings().weak_match_threshold);
     if acting {
-        page.run_as_name = reader.as_str().to_owned();
+        reader.as_str().clone_into(&mut page.run_as_name);
         let denied = denied_rows(native, admin, &reader, &request).await?;
         page.rows.extend(denied);
     }
@@ -206,6 +186,24 @@ async fn run(
     page.context_chars = answer.context.chars().count();
     page.context = answer.context;
     Ok(())
+}
+
+fn show(page: &mut LabPage, explained: &Explained, threshold: f64) {
+    page.ran = true;
+    page.mode = match explained.mode {
+        RetrievalMode::Hybrid => "hybrid",
+        RetrievalMode::Keyword => "keyword",
+    };
+    page.scoring = match explained.trace.scoring {
+        ScoreSource::Fusion => "fusion".to_owned(),
+        ScoreSource::CrossEncoder => "cross-encoder".to_owned(),
+    };
+    page.timings = timings(explained);
+    page.rows = explained
+        .rows
+        .iter()
+        .map(|row| lab_row(row, explained, threshold))
+        .collect();
 }
 
 async fn denied_rows(

@@ -17,7 +17,7 @@ pub struct Tile {
     pub tone: Option<&'static str>,
 }
 
-pub fn tile(label: &str, value: impl ToString, tone: Option<&'static str>) -> Tile {
+pub fn tile(label: &str, value: &dyn std::fmt::Display, tone: Option<&'static str>) -> Tile {
     Tile {
         label: label.to_owned(),
         value: value.to_string(),

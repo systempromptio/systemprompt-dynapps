@@ -95,22 +95,19 @@ async fn fill(page: &mut OverviewPage, console: &Console, who: Who<'_>, faults: 
     let spaces = faults.take("Spaces", read::read_spaces(console, who).await);
     let articles: usize = spaces.iter().map(|space| space.articles.len()).sum();
     page.spaces = space_rows(&spaces);
-    match (&console.mode, &console.native) {
-        (Mode::Native, Some(native)) => {
-            page.mode = "Native";
-            page.providers = providers();
-            page.threshold = format!("{:.2}", native.retriever.settings().weak_match_threshold);
-            native_blocks(page, native, articles, faults).await;
-        },
-        _ => {
-            page.mode = "Proxy";
-            page.proxy_note = Some(AT_SOURCE);
-            page.tiles = vec![
-                tile("Articles", articles, None),
-                tile("Chunks", NONE, None),
-                tile("Errors", NONE, None),
-            ];
-        },
+    if let (Mode::Native, Some(native)) = (&console.mode, &console.native) {
+        page.mode = "Native";
+        page.providers = providers();
+        page.threshold = format!("{:.2}", native.retriever.settings().weak_match_threshold);
+        native_blocks(page, native, articles, faults).await;
+    } else {
+        page.mode = "Proxy";
+        page.proxy_note = Some(AT_SOURCE);
+        page.tiles = vec![
+            tile("Articles", &articles, None),
+            tile("Chunks", &NONE, None),
+            tile("Errors", &NONE, None),
+        ];
     }
 }
 
@@ -125,28 +122,28 @@ async fn native_blocks(
     if let Some(counts) = keep(faults, "Index", native.repo.count_index().await) {
         let tone = |n: i64, tone: &'static str| (n > 0).then_some(tone);
         page.tiles = vec![
-            tile("Articles", articles, None),
-            tile("Documents indexed", counts.documents, None),
-            tile("Chunks", counts.chunks, None),
+            tile("Articles", &articles, None),
+            tile("Documents indexed", &counts.documents, None),
+            tile("Chunks", &counts.chunks, None),
             tile(
                 "Embeddings pending",
-                counts.pending_embeddings,
+                &counts.pending_embeddings,
                 tone(counts.pending_embeddings, "warn"),
             ),
             tile(
                 "Synopses pending",
-                counts.pending_synopses,
+                &counts.pending_synopses,
                 tone(counts.pending_synopses, "warn"),
             ),
             tile(
                 "Errors",
-                counts.chunk_errors + counts.failed_jobs,
+                &(counts.chunk_errors + counts.failed_jobs),
                 tone(counts.chunk_errors + counts.failed_jobs, "err"),
             ),
         ];
     }
     if let Some(searches) = keep(faults, "Searches", native.repo.count_searches(week).await) {
-        page.tiles.push(tile("Searches · 7 days", searches, None));
+        page.tiles.push(tile("Searches · 7 days", &searches, None));
     }
     let gaps = keep(
         faults,

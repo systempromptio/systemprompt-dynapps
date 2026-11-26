@@ -111,7 +111,7 @@ fn row(chunk: &ChunkInfo, context: &str) -> ChunkRowView {
     }
 }
 
-fn embedding_state(chunk: &ChunkInfo) -> (&'static str, &'static str) {
+const fn embedding_state(chunk: &ChunkInfo) -> (&'static str, &'static str) {
     if chunk.has_error {
         ("error", "err")
     } else if chunk.embedded {
