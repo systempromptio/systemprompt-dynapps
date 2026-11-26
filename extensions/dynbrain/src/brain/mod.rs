@@ -43,6 +43,8 @@ use views::{
 
 pub type Reply<T> = Result<T, BrainFault>;
 
+/// The Brain's operations. Held as `Arc<dyn Brain>` by the transports, hence
+/// `#[async_trait]`.
 #[async_trait]
 pub trait Brain: Send + Sync + Debug {
     async fn search(&self, caller: &UserId, args: &SearchArgs) -> Reply<SearchResults>;

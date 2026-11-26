@@ -33,3 +33,5 @@ deployments:
   - opencode-go/messages
   go-qwen3.8-max:
   - opencode-go/messages
+  text-embedding-3-large:
+  - openai/api

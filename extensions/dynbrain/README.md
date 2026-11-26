@@ -6,8 +6,8 @@ tables, `/api/v1/brain` and `brain` toolset are the core's organisational memory
 
 ## What exists
 
-The schema, the repository, the `Brain` trait with its native implementation, the HTTP API (`/api/dynbrain/v1`) and
-the files of articles. The ingestion, the search and the `brain` MCP server come in later phases.
+The schema, the repository, the `Brain` trait with its native implementation, the HTTP API (`/api/dynbrain/v1`), the
+files of articles and the indexing. The search and the `brain` MCP server come in later phases.
 
 - `DynbrainExtension` (`dynbrain`, "Brain"), depends on `users` and `web`; registers the schema and its migrations.
 - `BrainRepository` (`repository/`): spaces, articles, variants, revisions, grants and the access closure.
@@ -16,6 +16,7 @@ the files of articles. The ingestion, the search and the `brain` MCP server come
 - `language`: language codes and the text-search configuration of each (`fts_config`, the map dynbrain uses).
 - `content`: the content hash of a variant.
 - `assets`: the files of articles: link signing, `asset://` references, the type read from the bytes.
+- `ingest`: the indexing (see Indexing).
 
 ## Data model
 
@@ -149,3 +150,33 @@ in either direction.
 | `GET /assets/{id}/link?article_id=` | A signed download URL; `not_found` when the file does not exist or the person cannot read it. | `{"found":true,"attachment_id":12,"article_id":7,"name":"diagram.png","mimetype":"image/png","size_bytes":5120,"download_url":"https://…/api/dynbrain/v1/assets/12/raw?exp=…&sig=…","expires_at":"…","expires_minutes":10}` |
 | `GET /assets/{id}` | The file, to its reader (JWT). | the bytes |
 | `GET /assets/{id}/raw?exp=&sig=` | The file, to the holder of a signed URL, no bearer. | the bytes |
+
+## Indexing
+
+Writing a variant queues it (`dynbrain_index_job`, one row per article, language and content hash); nothing is indexed
+inside the request. The scheduler job `dynbrain_index` (every two minutes, under a lease so one replica works at a
+time) does the rest, with dynbrain's numbers, which are the specification:
+
+1. **Eligibility, denied by default.** An article's own mode (`always` or `never`) decides first; with `default`, the
+   first active `dynbrain_rag_rule` that matches (all articles, a space, or an article and everything below it) decides;
+   with none, the article is not indexed and its chunks are removed.
+2. **Chunking.** The Markdown, with each `asset://<id>` reference replaced by its alt text (no URL reaches a chunk, a
+   synopsis or an embedding), is cut by a port of dynbrain's `chunk_document`: 300 words of new text, 50 of overlap,
+   6,000 characters at most, the heading path each chunk sits under. The unit tests compare the chunks with those
+   Python produces from three dynbrain documents and an edge-case text.
+3. **Synopsis.** A chunk with no heading gets one sentence of at most 30 words from `claude-haiku-5-5`, eight at a
+   time, audited as the job's actor; a chunk whose text did not change keeps its synopsis.
+4. **Embedding.** The text embedded is the prefix (title, description, heading path or synopsis; none for code) plus the
+   chunk; the stored chunk stays clean. `text-embedding-3-large` at 1536 dimensions, in batches of 50 that are split in
+   half when one is refused, so one bad text costs a few requests and a refused key costs three. Each vector carries
+   its fingerprint (`provider:model:dims`); the cost of every request is recorded in `dynbrain_embedding_usage`.
+
+Trashing an article keeps its chunks and holds back its indexing. `requeue_index` sends every settled job back, for
+when the rules change. The `context_strategy` parameter of the scheduler entry is `auto` (default), `heading`, `llm`,
+`heading_llm`, `document` or `off`.
+
+**Secrets.** An instance needs `openai` (the platform credential of the `openai` provider in `services/ai`) to embed,
+and the `anthropic` key it already has for the synopses. Without the OpenAI key the endpoint is withheld, the chunks wait
+unembedded and the search will use only its text arm; without the Anthropic key chunks are embedded with the context
+they have. The job `dynbrain_upload_purge` (04:15 UTC) deletes uploads whose link expired a day ago and that no article
+adopted, with their bytes.

@@ -36,6 +36,27 @@
 //!   `none` is written and listed as a grant, never as access
 //! - search and answer answer `503 unavailable` until the retrieval phases
 //!
+//! The indexing, with the embedding and synopsis models replaced by
+//! deterministic doubles:
+//!
+//! - a write queues its content once; the same content twice, or content that
+//!   goes back to what the chunks already match, is not indexed or embedded
+//!   again
+//! - nothing is indexed unless a rule or the article's mode says so, and the
+//!   mode beats the rules; a rule added later applies when the index is
+//!   requeued
+//! - an indexed variant leaves chunks with their heading path, a text-search
+//!   vector in the variant's language and an embedding with its fingerprint;
+//!   the context prefix goes only into the embedding
+//! - synopses only for chunks with no heading, kept for chunks whose text did
+//!   not change
+//! - no `asset://` reference reaches a chunk, a synopsis prompt or an embedding
+//! - without a key the chunks wait with their text search and embed later; a
+//!   different fingerprint is detected; the cost of each batch is recorded; the
+//!   trash keeps chunks and holds back indexing
+//! - the upload purge job deletes expired uploads that no article adopted, with
+//!   their bytes, and nothing else
+//!
 //! The files of articles, over core's local-disk file storage:
 //!
 //! - the full cycle: a one-time upload URL, the POST of the bytes, adopting
@@ -66,6 +87,10 @@ mod http_support;
 #[cfg(test)]
 mod http_write;
 #[cfg(test)]
+mod ingest;
+#[cfg(test)]
+mod ingest_support;
+#[cfg(test)]
 mod moves;
 #[cfg(test)]
 mod permissions;
@@ -73,3 +98,5 @@ mod permissions;
 mod space_level;
 #[cfg(test)]
 mod store;
+#[cfg(test)]
+mod upload_purge;

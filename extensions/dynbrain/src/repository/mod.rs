@@ -22,7 +22,9 @@ use crate::ids::{ArticleId, SpaceId};
 
 pub mod articles;
 pub mod assets;
+pub mod chunks;
 pub mod grants;
+pub mod ingest;
 pub mod spaces;
 pub mod types;
 pub mod variants;

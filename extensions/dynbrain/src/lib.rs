@@ -18,7 +18,9 @@
 //! the extension mounts `/api/dynbrain/v1` (see [`router`]) for the desktop
 //! and mobile JWTs. Articles carry files ([`assets`]): the bytes live in
 //! core's file storage, Markdown names them `asset://<id>`, and readers get
-//! short-lived signed URLs.
+//! short-lived signed URLs. Writing a variant queues it for indexing, and a
+//! scheduler job ([`ingest`]) cuts it into chunks, situates each one and
+//! embeds it, the way dynbrain does.
 
 pub mod access;
 pub mod assets;
@@ -28,6 +30,7 @@ pub mod content;
 pub mod error;
 pub mod extension;
 pub mod ids;
+pub mod ingest;
 pub mod language;
 pub mod model;
 pub mod properties;

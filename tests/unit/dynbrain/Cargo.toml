@@ -14,3 +14,6 @@ systemprompt = { workspace = true }
 serde_json = { workspace = true }
 # The expiry of a signed link.
 chrono = { workspace = true }
+# The embedding provider doubles of the batch-splitting tests.
+async-trait = { workspace = true }
+tokio = { workspace = true }

@@ -12,6 +12,11 @@
 //! - files: the type read from the bytes, which types are shown inline, the
 //!   `asset://` references of a body and the indexed text without them (no
 //!   URL), and signed links that hold for one purpose, target and time
+//! - the ingestion: the chunker against chunks Python produced from documents
+//!   of dynbrain (three of its docs and an edge-case text), a file reference
+//!   becoming its alt text, eligibility denied by default, the context prefix
+//!   by strategy (none for code), the synopsis prompt, and a batch that the
+//!   provider refuses in part, all or with a rate limit
 //! - the extension registration, its schema, and the vocabulary rule: no file
 //!   of the crate names the source system the proxy mode talks to
 //!
@@ -24,6 +29,12 @@ mod assets;
 #[cfg(test)]
 mod basics;
 #[cfg(test)]
+mod bisect;
+#[cfg(test)]
 mod brain;
+#[cfg(test)]
+mod chunker;
+#[cfg(test)]
+mod ingest;
 #[cfg(test)]
 mod properties;

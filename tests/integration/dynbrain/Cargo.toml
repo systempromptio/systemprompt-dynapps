@@ -23,5 +23,7 @@ dynapps-test-common = { workspace = true }
 # are kept in during the suite.
 systemprompt = { workspace = true, features = ["storage"] }
 tokio = { workspace = true }
+# The embedding and synopsis provider doubles the indexer runs against.
+async-trait = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }

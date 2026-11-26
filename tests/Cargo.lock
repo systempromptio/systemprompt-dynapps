@@ -2369,6 +2369,7 @@ dependencies = [
  "axum",
  "chrono",
  "dynwork-relay",
+ "futures-util",
  "hex",
  "serde",
  "serde_json",
@@ -2377,6 +2378,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension 0.86.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.21",
+ "tokio",
  "tracing",
  "url",
  "uuid",
@@ -2386,6 +2388,7 @@ dependencies = [
 name = "dynbrain-integration-tests"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "axum",
  "chrono",
  "dynapps-test-common",
@@ -2404,10 +2407,12 @@ dependencies = [
 name = "dynbrain-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "dynbrain",
  "serde_json",
  "systemprompt",
+ "tokio",
 ]
 
 [[package]]

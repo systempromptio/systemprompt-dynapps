@@ -2,13 +2,15 @@
 //!
 //! A write replaces the variant's whole content, checks the property values
 //! against the space's schema, bumps the variant's revision and appends the
-//! written content to `dynbrain_article_revision`, all in one transaction.
+//! written content to `dynbrain_article_revision` and queues the content for
+//! indexing (`dynbrain_index_job`), all in one transaction.
 
 // JSON: the front matter and the property values are written as JSON objects.
 use serde_json::Value;
 use systemprompt::identifiers::UserId;
 
 use super::BrainRepository;
+use super::ingest::enqueue_in;
 use super::types::{RevisionRow, VariantRow, VariantTargetRow};
 use crate::content::content_hash;
 use crate::error::BrainError;
@@ -94,6 +96,7 @@ impl BrainRepository {
         )
         .execute(&mut *tx)
         .await?;
+        enqueue_in(&mut *tx, article, lang, &hash).await?;
         let variant = Variant::try_from(row)?;
         tx.commit().await?;
         Ok(variant)

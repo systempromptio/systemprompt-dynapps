@@ -165,6 +165,7 @@ CREATE TABLE IF NOT EXISTS dynbrain_chunk (
     embedding_fingerprint TEXT,
     embedded_at           TIMESTAMPTZ,
     has_error             BOOLEAN NOT NULL DEFAULT false,
+    synopsis_error        BOOLEAN NOT NULL DEFAULT false,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (article_id, lang, sequence),
     FOREIGN KEY (article_id, lang) REFERENCES dynbrain_article_variant(article_id, lang) ON DELETE CASCADE
@@ -178,6 +179,20 @@ CREATE INDEX IF NOT EXISTS idx_dynbrain_chunk_search_vector
 
 CREATE INDEX IF NOT EXISTS idx_dynbrain_chunk_pending
     ON dynbrain_chunk(id) WHERE embedding IS NULL;
+
+-- What each embedding request cost, since core's `AiService::embed` leaves no
+-- audit row of its own. One row per billed request.
+CREATE TABLE IF NOT EXISTS dynbrain_embedding_usage (
+    id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    fingerprint       TEXT NOT NULL,
+    inputs            INTEGER NOT NULL,
+    input_tokens      BIGINT NOT NULL,
+    cost_microdollars BIGINT NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dynbrain_embedding_usage_created
+    ON dynbrain_embedding_usage(created_at);
 
 -- Eligibility for the retrieval index, denied by default: an article whose
 -- `rag_mode` is `default` is indexed only when the first active rule that

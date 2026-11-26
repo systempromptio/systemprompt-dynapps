@@ -299,6 +299,26 @@ scheduler:
       owner: admin
       enabled: true
 
+    # The Brain's indexing (dynbrain extension): every two minutes it cuts the
+    # variants written since into chunks, writes the synopses the chunks
+    # without a heading need (Claude Haiku, audited as `owner`) and embeds
+    # them (OpenAI text-embedding-3-large at 1536 dimensions; its key is the
+    # `openai` secret). Without that key the chunks wait and the search uses
+    # only its text arm. Parameters: `context_strategy` (auto, heading, llm,
+    # heading_llm, document, off), `embedding_provider`, `embedding_model`,
+    # `synopsis_provider`, `synopsis_model`.
+    - name: dynbrain_index
+      extension: dynbrain
+      owner: admin
+      enabled: true
+
+    # Deletes the Brain's uploads whose link expired a day ago and that no
+    # article adopted, with their bytes, at 04:15 UTC (dynbrain extension).
+    - name: dynbrain_upload_purge
+      extension: dynbrain
+      owner: admin
+      enabled: true
+
     # Data lifecycle: measure daily, archive raw weeks before they expire,
     # archive the rollups monthly (kept forever) and run the health check.
     # Archives land under storage/exports/{weekly,monthly}/ and are listed on

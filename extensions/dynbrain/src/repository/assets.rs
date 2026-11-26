@@ -9,7 +9,9 @@
 //! already used; `attach_upload` answers `None`, and changes nothing, for a
 //! slot that is not the owner's, was used, or holds no bytes. `list_assets`
 //! includes trashed files, and `delete_assets` answers the storage references
-//! whose bytes the caller deletes next.
+//! whose bytes the caller deletes next. `purge_expired_uploads` deletes the
+//! slots whose link expired before a given time and that no article adopted,
+//! and answers their storage references.
 
 use chrono::{DateTime, Utc};
 use systemprompt::identifiers::UserId;
@@ -163,6 +165,19 @@ impl BrainRepository {
         let rows = sqlx::query!(
             "DELETE FROM dynbrain_asset WHERE article_id = $1 RETURNING storage_ref",
             article.0
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|row| row.storage_ref).collect())
+    }
+
+    pub async fn purge_expired_uploads(
+        &self,
+        before: DateTime<Utc>,
+    ) -> Result<Vec<Option<String>>, BrainError> {
+        let rows = sqlx::query!(
+            "DELETE FROM dynbrain_upload WHERE consumed_at IS NULL AND expires_at < $1 RETURNING storage_ref",
+            before
         )
         .fetch_all(&*self.pool)
         .await?;
