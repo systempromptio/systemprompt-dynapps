@@ -58,7 +58,7 @@ fn the_extension_owns_a_schema_that_requires_pgvector() {
     assert_eq!(extension.metadata().id, "dynbrain");
     assert_eq!(extension.dependencies(), ["users", "web"]);
     let schemas = extension.schemas();
-    assert_eq!(schemas.len(), 2);
+    assert_eq!(schemas.len(), 3);
     let files = &schemas[1].sql;
     for table in ["dynbrain_upload", "dynbrain_asset"] {
         assert!(

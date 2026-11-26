@@ -10,7 +10,7 @@
     {{> components/empty-state heading="Brain unavailable" message=unavailable}}
     {{else}}
     <div class="sp-brain-split">
-      <nav class="sp-brain-side" aria-label="Spaces and articles"><ul class="sp-brain-tree">{{> brain-node children=tree}}</ul></nav>
+      <nav class="sp-brain-side" aria-label="Spaces and articles"><ul class="sp-brain-tree">{{{tree}}}</ul></nav>
       <div class="sp-brain-main">
         {{#if missing_lang}}{{> components/empty-state compact=true message="This article has no variant in that language; showing the default."}}{{/if}}
         <p class="sp-toolbar__count">Language

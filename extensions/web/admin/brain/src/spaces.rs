@@ -11,7 +11,7 @@ use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 use crate::read;
 use crate::source::{Source, require_admin};
-use crate::tree::{self, Node};
+use crate::tree;
 use crate::views::{NOT_MOUNTED, crumbs};
 
 #[derive(Debug, Serialize)]
@@ -20,7 +20,7 @@ pub struct SpacesPage {
     pub title: &'static str,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub unavailable: Option<&'static str>,
-    pub tree: Vec<Node>,
+    pub tree: String,
 }
 
 pub async fn spaces_page(
@@ -34,7 +34,7 @@ pub async fn spaces_page(
         title: "Spaces",
         breadcrumbs: crumbs("Spaces"),
         unavailable: None,
-        tree: Vec::new(),
+        tree: String::new(),
     };
     match source.console() {
         Some(console) => {
@@ -42,7 +42,7 @@ pub async fn spaces_page(
                 "Spaces",
                 read::read_spaces(&console, &shell.user.user_id).await,
             );
-            page.tree = tree::build(&spaces, None);
+            page.tree = tree::render(&tree::build(&spaces, None));
         },
         None => page.unavailable = Some(NOT_MOUNTED),
     }

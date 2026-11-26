@@ -24,7 +24,7 @@ async fn usage_counts_the_documents_searches_return_and_answers_cite() {
         .await
         .expect("answer");
     let page = env.get("/brain/usage", true).await;
-    assert!(page.has("Facturas"), "the article most returned");
+    assert!(page.has("Invoices"), "the article most returned");
     let counts = env
         .sql_for(
             "SELECT count(*) FILTER (WHERE kind = 'search') || ':' || count(*) FILTER (WHERE kind = 'answer')

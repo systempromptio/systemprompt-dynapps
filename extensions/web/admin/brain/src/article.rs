@@ -18,7 +18,7 @@ use crate::access::{self, AccessView};
 use crate::chunks::{self, ChunksView, IngestView};
 use crate::read::{self, Document, FileItem, Reader, Space};
 use crate::source::{Source, require_admin};
-use crate::tree::{self, Node};
+use crate::tree;
 use crate::views::{AT_SOURCE, NOT_MOUNTED, crumbs, keep, when};
 
 const TABS: [(&str, &str); 7] = [
@@ -74,7 +74,7 @@ pub struct ArticlePage {
     pub title: String,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub unavailable: Option<&'static str>,
-    pub tree: Vec<Node>,
+    pub tree: String,
     pub doc: Option<Document>,
     pub missing_lang: bool,
     pub languages: Vec<Choice>,
@@ -125,7 +125,7 @@ pub async fn article_page(
         .iter()
         .find(|(key, _)| Some(*key) == query.tab.as_deref())
         .map_or("content", |(key, _)| *key);
-    page.tree = tree::build(&spaces, Some(id));
+    page.tree = tree::render(&tree::build(&spaces, Some(id)));
     page.title.clone_from(&doc.title);
     page.breadcrumbs = crumbs(&doc.title);
     page.languages = languages(&spaces, &doc, id, tab);

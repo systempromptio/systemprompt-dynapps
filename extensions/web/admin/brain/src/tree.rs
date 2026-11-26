@@ -1,4 +1,7 @@
 //! The collapsible tree of spaces and articles.
+//!
+//! It is drawn here as HTML, with every title and link escaped, because a
+//! recursive Handlebars partial overflowed the stack in the renderer.
 
 use serde::Serialize;
 
@@ -43,4 +46,37 @@ fn branch(articles: &[Listed], parent: Option<i64>, selected: Option<i64>) -> Ve
             }
         })
         .collect()
+}
+
+pub fn render(nodes: &[Node]) -> String {
+    nodes.iter().map(item).collect()
+}
+
+fn item(node: &Node) -> String {
+    let class = if node.selected { " is-selected" } else { "" };
+    let label = label(node);
+    if node.children.is_empty() {
+        return format!("<li class=\"sp-brain-node{class}\">{label}</li>");
+    }
+    let open = if node.open { " open" } else { "" };
+    let children = render(&node.children);
+    format!(
+        "<li class=\"sp-brain-node{class}\"><details{open}><summary>{label}</summary><ul class=\"sp-brain-tree\">{children}</ul></details></li>"
+    )
+}
+
+fn label(node: &Node) -> String {
+    let title = escape(&node.title);
+    match &node.href {
+        Some(href) => format!("<a href=\"{}\">{title}</a>", escape(href)),
+        None => format!("<span class=\"sp-brain-space\">{title}</span>"),
+    }
+}
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
