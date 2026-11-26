@@ -50,8 +50,6 @@ impl BrainRepository {
         }
         PropertySchema::parse(&target.property_schema)?.validate(&content.properties)?;
         let hash = content_hash(&content.title, &content.description, &content.body);
-        let front_matter = Value::Object(content.front_matter.clone());
-        let properties = Value::Object(content.properties.clone());
         let row = sqlx::query_as!(
             VariantRow,
             "INSERT INTO dynbrain_article_variant
@@ -75,8 +73,8 @@ impl BrainRepository {
             content.title,
             content.description,
             content.body,
-            front_matter,
-            properties,
+            Value::Object(content.front_matter.clone()),
+            Value::Object(content.properties.clone()),
             hash,
             author.as_str()
         )
@@ -96,7 +94,7 @@ impl BrainRepository {
         )
         .execute(&mut *tx)
         .await?;
-        enqueue_in(&mut *tx, article, lang, &hash).await?;
+        enqueue_in(&mut tx, article, lang, &hash).await?;
         let variant = Variant::try_from(row)?;
         tx.commit().await?;
         Ok(variant)

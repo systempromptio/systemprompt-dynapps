@@ -8,7 +8,7 @@ use dynbrain::model::{NewArticle, RagMode};
 
 use crate::fixture::{Fixture, user};
 use crate::ingest_support::{
-    FakeEmbedder, FakeSummarizer, count, include_everything, indexer, plain_body, run,
+    FakeEmbedder, FakeSummarizer, chunks_of, count, include_everything, indexer, plain_body, run,
 };
 
 const JOBS: &str = "SELECT COUNT(*) FROM dynbrain_index_job";
@@ -100,9 +100,8 @@ async fn the_mode_of_an_article_beats_the_rules_and_a_rule_decides_the_rest() {
     let normal = article_with(&f, "normal", RagMode::Default, &plain_body(5)).await;
     let (embedder, summarizer) = (FakeEmbedder::named("test:model"), FakeSummarizer::shared());
     run(&indexer(&f.repo, &embedder, &summarizer)).await;
-    let of = |id: ArticleId| format!("SELECT COUNT(*) FROM dynbrain_chunk WHERE article_id = {id}");
-    assert_eq!(count(&f, &of(never)).await, 0);
-    assert_eq!(count(&f, &of(normal)).await, 1);
+    assert_eq!(chunks_of(&f, never).await, 0);
+    assert_eq!(chunks_of(&f, normal).await, 1);
     f.finish().await;
 }
 

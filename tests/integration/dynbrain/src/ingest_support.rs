@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use dynbrain::BrainRepository;
+use dynbrain::ids::ArticleId;
 use dynbrain::ingest::context::SynopsisPrompt;
 use dynbrain::ingest::index::Indexer;
 use dynbrain::ingest::provider::{DIMENSIONS, Embedder, Embedding, Failure, Summarizer};
@@ -124,7 +125,7 @@ pub(crate) async fn include_everything(f: &Fixture) {
     .expect("add a rule");
 }
 
-pub(crate) async fn count(f: &Fixture, sql: &str) -> i64 {
+pub(crate) async fn count(f: &Fixture, sql: &'static str) -> i64 {
     sqlx::query_scalar(sql)
         .fetch_one(f.pool())
         .await
@@ -140,4 +141,12 @@ pub(crate) fn plain_body(sentences: usize) -> String {
         .map(|n| format!("w{n}a w{n}b w{n}c w{n}d w{n}e w{n}f w{n}g w{n}h w{n}i end{n}."))
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+pub(crate) async fn chunks_of(f: &Fixture, article: ArticleId) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM dynbrain_chunk WHERE article_id = $1")
+        .bind(article.0)
+        .fetch_one(f.pool())
+        .await
+        .expect("count the chunks")
 }

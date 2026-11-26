@@ -1,6 +1,6 @@
 //! The indexer's models through core's `AiService`.
 //!
-//! Embeddings go to `text-embedding-3-large` on OpenAI at 1536 dimensions,
+//! Embeddings go to `text-embedding-3-large` on `OpenAI` at 1536 dimensions,
 //! priced from the catalog (`embed` leaves no audit row, so the caller
 //! records the cost). The synopsis goes to Claude Haiku as the job's actor,
 //! so it is audited like any other request. The provider and the models are
@@ -24,7 +24,7 @@ pub const AGENT_NAME: &str = "dynbrain-index";
 const SYNOPSIS_MAX_TOKENS: u32 = 120;
 const JOB_CONTEXT: u128 = 0x0d79_6272_6169_6e5f_696e_6465_7800_0001;
 
-/// OpenAI embeddings through `AiService::embed`.
+/// `OpenAI` embeddings through `AiService::embed`.
 pub struct CoreEmbedder {
     ai: Arc<AiService>,
     provider: String,

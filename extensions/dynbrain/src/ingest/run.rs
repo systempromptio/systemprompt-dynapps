@@ -5,7 +5,9 @@ use std::time::Duration;
 use super::context::ContextStrategy;
 use super::provider::Failure;
 
-/// The numbers of dynbrain's indexing, which are the specification: jobs in
+/// The knobs of an indexing run.
+///
+/// The numbers are dynbrain's indexing, which is the specification: jobs in
 /// batches of 200 (five rounds a run), synopses 20 at a time with 8 in
 /// flight, retried twice after 1 s and 2 s, and embeddings in batches of 50.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

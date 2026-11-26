@@ -6,7 +6,7 @@
 //! not get the lease reports it and leaves the queue to the one that has it.
 //!
 //! The models are the catalog's: `embedding_provider` / `embedding_model`
-//! (OpenAI `text-embedding-3-large`, 1536 dimensions) and `synopsis_provider`
+//! (`OpenAI` `text-embedding-3-large`, 1536 dimensions) and `synopsis_provider`
 //! / `synopsis_model` (Anthropic `claude-haiku-5-5`), and `context_strategy`
 //! picks how chunks are situated. All can be set as parameters of the
 //! scheduler entry. The synopsis requests are audited as this job's actor,
@@ -33,7 +33,7 @@ use crate::error::BrainError;
 use crate::repository::BrainRepository;
 
 pub const JOB_NAME: &str = "dynbrain_index";
-const LEASE_TTL: Duration = Duration::from_secs(15 * 60);
+const LEASE_TTL: Duration = Duration::from_mins(15);
 
 #[derive(Debug, thiserror::Error)]
 pub enum IndexJobError {

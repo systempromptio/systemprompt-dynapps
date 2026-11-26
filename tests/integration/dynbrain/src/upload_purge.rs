@@ -80,11 +80,11 @@ async fn an_expired_upload_nobody_adopted_is_deleted_with_its_bytes_and_nothing_
     assert!(on_disk(&just_expired) && on_disk(&live) && on_disk(&adopted));
     let left = count(&f, "SELECT COUNT(*) FROM dynbrain_upload").await;
     assert_eq!(left, 3);
-    let gone = count(
-        &f,
-        &format!("SELECT COUNT(*) FROM dynbrain_upload WHERE id = '{never_filled}'"),
-    )
-    .await;
+    let gone: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM dynbrain_upload WHERE id = $1")
+        .bind(never_filled.as_str())
+        .fetch_one(f.pool())
+        .await
+        .expect("count");
     assert_eq!(gone, 0);
     std::fs::remove_dir_all(&root).ok();
     f.finish().await;

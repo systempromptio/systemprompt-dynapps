@@ -7,7 +7,7 @@
 //! whitespace that follows `.`, `!`, `?` or their full-width forms. Lengths
 //! are in characters, not bytes.
 
-pub fn is_space(c: char) -> bool {
+pub const fn is_space(c: char) -> bool {
     c.is_whitespace() || matches!(c, '\u{1c}'..='\u{1f}')
 }
 
