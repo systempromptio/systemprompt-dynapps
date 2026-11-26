@@ -54,7 +54,7 @@ pub struct FileRow {
     pub lang: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct UsageView {
     pub retrieved: i64,
     pub cited: i64,

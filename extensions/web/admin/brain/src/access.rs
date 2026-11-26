@@ -9,7 +9,6 @@ use axum::extract::Path;
 use axum::response::Redirect;
 use axum::{Extension, Form};
 use dynbrain::access::{Level, SubjectKind};
-use dynbrain::brain::Brain;
 use dynbrain::brain::args::{GrantInput, GrantTarget};
 use dynbrain::brain::views::GrantView;
 use dynbrain::console::Console;

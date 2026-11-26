@@ -3,7 +3,6 @@
 //! Every read goes through [`Brain::run`], the way the transports run an
 //! operation, so a native and a proxy instance answer in the same shape.
 
-use dynbrain::brain::Brain;
 use dynbrain::brain::operation::Operation;
 use dynbrain::console::{self, Console};
 use serde::{Deserialize, Serialize};

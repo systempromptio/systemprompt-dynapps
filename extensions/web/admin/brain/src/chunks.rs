@@ -34,7 +34,7 @@ pub struct ChunksView {
     pub has_rows: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct StepView {
     pub name: &'static str,
     pub state: &'static str,

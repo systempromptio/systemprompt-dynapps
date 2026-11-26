@@ -36,7 +36,7 @@ pub struct QueueRow {
     pub retryable: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct StateChoice {
     pub label: &'static str,
     pub selected: bool,
