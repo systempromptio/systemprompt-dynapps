@@ -35,11 +35,28 @@
 //! - grants: space and article grants and `inherit_access` need `manage`;
 //!   `none` is written and listed as a grant, never as access
 //! - search and answer answer `503 unavailable` until the retrieval phases
+//!
+//! The files of articles, over core's local-disk file storage:
+//!
+//! - the full cycle: a one-time upload URL, the POST of the bytes, adopting
+//!   them as a file, `get` and `export` with signed URLs, and downloading the
+//!   same bytes; the bytes are written and read through core's file storage,
+//!   and purging an article deletes them
+//! - denials: uploading without `write`, an upload id used twice or by another
+//!   person, an expired upload link, a file over the limit, a link to a file of
+//!   an unreadable article, a tampered or expired download link, a file in the
+//!   trash; SVG and HTML are served as downloads, never as pages
 
+#[cfg(test)]
+mod asset_support;
 #[cfg(test)]
 mod fixture;
 #[cfg(test)]
 mod http_access;
+#[cfg(test)]
+mod http_asset_denials;
+#[cfg(test)]
+mod http_assets;
 #[cfg(test)]
 mod http_auth;
 #[cfg(test)]

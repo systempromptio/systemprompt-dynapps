@@ -5,10 +5,16 @@
 //! operations, which are not MCP tools. Each takes the person it runs as:
 //! nothing here reads a token. [`native::NativeBrain`] implements all of it
 //! over the repository except `search` and `answer`, which answer
-//! `unavailable` until the retrieval phases. Files of an article are a later
-//! phase's operations and are not in the trait yet.
+//! `unavailable` until the retrieval phases.
+//!
+//! The file operations are the `docs_*` four (`request_upload`,
+//! `asset_upload`, `asset_list`, `asset_link`) plus what the routes need to
+//! take the bytes of an upload and to serve a file, to its reader or to the
+//! holder of a signed link. No operation moves file bytes through a tool
+//! call or through `get`.
 
 pub mod args;
+pub mod assets;
 pub mod fault;
 pub mod native;
 pub mod views;
@@ -18,11 +24,16 @@ use std::fmt::Debug;
 use async_trait::async_trait;
 use systemprompt::identifiers::UserId;
 
-use crate::ids::ArticleId;
+use crate::assets::link::SignedLink;
+use crate::ids::{ArticleId, AssetId, UploadId};
 use args::{
     AnswerArgs, CreateArgs, ExportArgs, GetArgs, GrantInput, GrantTarget, InheritArgs, ListArgs,
     ListSpacesArgs, MetadataArgs, MetadataSchemaArgs, MoveArgs, OutlineArgs, SearchArgs, TreeArgs,
     UpdateArgs,
+};
+use assets::{
+    AssetAttached, AssetFile, AssetLink, AssetLinkArgs, AssetList, AssetListArgs, AssetUploadArgs,
+    Received, RequestUploadArgs, UploadTicket,
 };
 use fault::BrainFault;
 use views::{
@@ -65,4 +76,21 @@ pub trait Brain: Send + Sync + Debug {
         article: ArticleId,
         args: InheritArgs,
     ) -> Reply<InheritChanged>;
+    async fn request_upload(
+        &self,
+        caller: &UserId,
+        args: &RequestUploadArgs,
+    ) -> Reply<UploadTicket>;
+    async fn receive_upload(
+        &self,
+        upload: &UploadId,
+        link: &SignedLink,
+        bytes: &[u8],
+    ) -> Reply<Received>;
+    async fn asset_upload(&self, caller: &UserId, args: &AssetUploadArgs) -> Reply<AssetAttached>;
+    async fn asset_list(&self, caller: &UserId, args: &AssetListArgs) -> Reply<AssetList>;
+    async fn asset_link(&self, caller: &UserId, args: &AssetLinkArgs) -> Reply<AssetLink>;
+    async fn open_asset(&self, caller: &UserId, asset: AssetId) -> Reply<AssetFile>;
+    async fn open_signed(&self, asset: AssetId, link: &SignedLink) -> Reply<AssetFile>;
+    fn upload_limit(&self) -> u64;
 }

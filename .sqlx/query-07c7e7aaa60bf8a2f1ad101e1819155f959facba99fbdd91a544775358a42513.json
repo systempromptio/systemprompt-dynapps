@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynbrain_upload SET received_at = CURRENT_TIMESTAMP WHERE id = $1 AND received_at IS NULL AND expires_at > CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "07c7e7aaa60bf8a2f1ad101e1819155f959facba99fbdd91a544775358a42513"
+}

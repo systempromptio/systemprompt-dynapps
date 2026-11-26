@@ -1,6 +1,10 @@
 //! What an operation answers. The field names are the ones the `docs_*` tools
-//! answer with; what Governance adds (`slug`, `inherit_access`, `level`) is a
-//! new field, never a renamed one.
+//! answer with; what Governance adds (`slug`, `inherit_access`, `level`,
+//! `asset_urls`) is a new field, never a renamed one. `asset_urls` maps each
+//! `asset://<id>` the Markdown names, and the person may read, to a signed
+//! download URL.
+
+use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -60,6 +64,7 @@ pub struct ArticleView {
     pub inherit_access: bool,
     pub can_write: bool,
     pub children: Vec<ChildSummary>,
+    pub asset_urls: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -116,6 +121,7 @@ pub struct Export {
     pub markdown: String,
     pub size_bytes: usize,
     pub article_count: usize,
+    pub asset_urls: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

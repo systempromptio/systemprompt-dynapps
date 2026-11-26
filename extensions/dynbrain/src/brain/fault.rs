@@ -24,6 +24,8 @@ pub enum BrainFault {
     Property(PropertyError),
     #[error("{0}")]
     Unavailable(&'static str),
+    #[error("the file is larger than the {0} bytes allowed")]
+    TooLarge(u64),
     #[error("brain store failure")]
     Internal(#[source] BrainError),
 }
@@ -32,7 +34,7 @@ impl From<BrainError> for BrainFault {
     fn from(error: BrainError) -> Self {
         match error {
             BrainError::SpaceNotFound(_) | BrainError::ArticleNotFound(_) => Self::NotFound,
-            BrainError::Database(_) => Self::Internal(error),
+            BrainError::Database(_) | BrainError::Storage(_) => Self::Internal(error),
             BrainError::Property(source) => Self::Property(source),
             other => Self::Refused(other),
         }

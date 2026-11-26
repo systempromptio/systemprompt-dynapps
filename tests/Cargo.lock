@@ -2379,6 +2379,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -2403,6 +2404,7 @@ dependencies = [
 name = "dynbrain-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "chrono",
  "dynbrain",
  "serde_json",
  "systemprompt",

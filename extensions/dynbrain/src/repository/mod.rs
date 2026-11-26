@@ -21,6 +21,7 @@ use crate::error::BrainError;
 use crate::ids::{ArticleId, SpaceId};
 
 pub mod articles;
+pub mod assets;
 pub mod grants;
 pub mod spaces;
 pub mod types;

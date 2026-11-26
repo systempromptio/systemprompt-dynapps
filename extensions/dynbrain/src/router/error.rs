@@ -43,6 +43,7 @@ impl HttpFault {
                 BrainFault::Invalid(_) | BrainFault::Refused(_) | BrainFault::Property(_),
             ) => "invalid",
             Self::Brain(BrainFault::Unavailable(_)) => "unavailable",
+            Self::Brain(BrainFault::TooLarge(_)) => "too_large",
         }
     }
 
@@ -60,6 +61,7 @@ impl HttpFault {
             Self::NotFound | Self::Brain(BrainFault::NotFound) => StatusCode::NOT_FOUND,
             Self::Brain(BrainFault::Forbidden) => StatusCode::FORBIDDEN,
             Self::Brain(BrainFault::Unavailable(_)) => StatusCode::SERVICE_UNAVAILABLE,
+            Self::Brain(BrainFault::TooLarge(_)) => StatusCode::PAYLOAD_TOO_LARGE,
         }
     }
 }

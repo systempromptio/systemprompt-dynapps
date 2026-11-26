@@ -7,7 +7,12 @@
 //!
 //! The routes know nothing about where the documentation lives: each one
 //! calls the [`crate::brain::Brain`] in the state and returns what it answers.
+//!
+//! Two routes take no bearer token, because their URL is the permission:
+//! `POST uploads/{id}` (the one-time upload URL) and `GET assets/{id}/raw`
+//! (the signed download URL). Both check the signature before anything else.
 
+pub mod assets;
 pub mod error;
 pub mod extract;
 pub mod read;
@@ -46,6 +51,15 @@ pub fn brain_router(state: BrainState) -> Router {
             get(read::article_grants).put(write::set_article_grants),
         )
         .route("/articles/{id}/inherit", put(write::set_inherit))
+        .route(
+            "/articles/{id}/assets",
+            get(assets::list).post(assets::attach),
+        )
+        .route("/articles/{id}/assets/upload-url", post(assets::upload_url))
+        .route("/uploads/{id}", post(assets::receive))
+        .route("/assets/{id}", get(assets::content))
+        .route("/assets/{id}/link", get(assets::link))
+        .route("/assets/{id}/raw", get(assets::raw))
         .route("/search", post(read::search))
         .route("/answer", post(read::answer))
         .fallback(|| async { HttpFault::NotFound })

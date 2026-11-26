@@ -4,6 +4,10 @@
 //! Core asks an extension for its router more than once (to validate the
 //! path, then to mount it), so the state is built on the first call and kept
 //! in the extension value: one repository and one device check per process.
+//!
+//! The files of articles use core's file storage and a link key derived from
+//! the instance's manifest signing seed; without that seed the Brain still
+//! runs and its file operations answer `unavailable`.
 
 use std::sync::{Arc, OnceLock};
 
@@ -13,6 +17,8 @@ use systemprompt::extension::prelude::{
     Extension, ExtensionContext, ExtensionMetadata, ExtensionRouter, Migration, SchemaDefinition,
 };
 
+use crate::assets::AssetFiles;
+use crate::assets::link::LinkSigner;
 use crate::brain::native::NativeBrain;
 use crate::repository::BrainRepository;
 use crate::router::state::BrainState;
@@ -47,10 +53,28 @@ impl DynbrainExtension {
 fn build_state(ctx: &dyn ExtensionContext, database: &Database) -> BrainState {
     let pool = database.write_pool();
     BrainState {
-        brain: Arc::new(NativeBrain::new(BrainRepository::new(Arc::clone(&pool)))),
+        brain: Arc::new(
+            NativeBrain::new(BrainRepository::new(Arc::clone(&pool))).with_files(asset_files(ctx)),
+        ),
         authority: ctx.token_authority(),
         devices: Arc::new(PgRelayStore::new(pool)),
     }
+}
+
+fn asset_files(ctx: &dyn ExtensionContext) -> Option<AssetFiles> {
+    let seed = ctx
+        .secrets()
+        .manifest_signing_secret_seed()
+        .inspect_err(|error| {
+            tracing::error!(%error, "no manifest signing seed; the Brain's files are off");
+        })
+        .ok()?;
+    let signer = LinkSigner::new(&seed)?;
+    Some(AssetFiles::new(
+        ctx.file_storage(),
+        signer,
+        ctx.app_config().api_external_url.clone(),
+    ))
 }
 
 impl Extension for DynbrainExtension {

@@ -1,6 +1,8 @@
 //! The extension's error. Repository calls propagate with `?`; the HTTP and
 //! MCP layers of later phases map each variant to their own answer.
 
+use systemprompt::traits::FileStorageError;
+
 use crate::ids::{ArticleId, SpaceId};
 use crate::properties::PropertyError;
 
@@ -8,6 +10,8 @@ use crate::properties::PropertyError;
 pub enum BrainError {
     #[error("brain store failure")]
     Database(#[from] sqlx::Error),
+    #[error("file storage failure")]
+    Storage(#[from] FileStorageError),
     #[error("invalid properties")]
     Property(#[from] PropertyError),
     #[error("space {0} not found")]

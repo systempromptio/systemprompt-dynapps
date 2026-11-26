@@ -6,8 +6,8 @@ tables, `/api/v1/brain` and `brain` toolset are the core's organisational memory
 
 ## What exists
 
-The schema and the repository. The HTTP API (`/api/dynbrain/v1`), the ingestion, the search and the `brain` MCP server
-come in later phases.
+The schema, the repository, the `Brain` trait with its native implementation, the HTTP API (`/api/dynbrain/v1`) and
+the files of articles. The ingestion, the search and the `brain` MCP server come in later phases.
 
 - `DynbrainExtension` (`dynbrain`, "Brain"), depends on `users` and `web`; registers the schema and its migrations.
 - `BrainRepository` (`repository/`): spaces, articles, variants, revisions, grants and the access closure.
@@ -15,6 +15,7 @@ come in later phases.
 - `properties`: the typed property schema of a space and the check of a variant's values.
 - `language`: language codes and the text-search configuration of each (`fts_config`, the map dynbrain uses).
 - `content`: the content hash of a variant.
+- `assets`: the files of articles: link signing, `asset://` references, the type read from the bytes.
 
 ## Data model
 
@@ -68,13 +69,13 @@ written.
 
 `brain::Brain` is the contract of the operations. It takes the person it runs as and reads no token. `NativeBrain`
 implements it over this store; `search` and `answer` answer `unavailable` until the retrieval phases. The files of an
-article are a later phase's operations and are not in the trait yet. Input and output types use the field names of the
-`docs_*` tools, and what Governance adds (`slug`, `inherit_access`, `level`, `article_count`) is a new field.
+article are in the trait too (see [Files](#files)). Input and output types use the field names of the `docs_*` tools,
+and what Governance adds (`slug`, `inherit_access`, `level`, `article_count`, `asset_urls`) is a new field.
 
 `/api/dynbrain/v1` is mounted as a public router: it authenticates itself. The bearer is the DynWork desktop JWT
 (audience `bridge` or `api`) or the JWT of a live phone; any other credential is `401` before a path, a query or a body
 is read. Errors are `{"error": {"key", "message"}}` with the keys `unauthorized` (401), `not_found` (404), `forbidden`
-(403), `invalid` and `bad_request` (400), `unavailable` (503) and `internal` (500).
+(403), `invalid` and `bad_request` (400), `too_large` (413), `unavailable` (503) and `internal` (500).
 
 A path's id overwrites the same field of the body. `limit` and `offset` page the lists as the `docs_*` tools do.
 
@@ -105,3 +106,46 @@ Who may do what: reading needs `read` on the article (or on its space); `create`
 `write` on the article or its parent, and a top-level article needs `write` on the space; grants and the inheritance
 switch need `manage`. A space's level is its owner and the `admin` role (always `manage`), or the space-level grants
 for the person, their roles or their groups; an empty space is listed for them and no one else.
+
+## Files
+
+An article carries files: images, PDFs, spreadsheets. Their bytes never travel through a tool call or through `get`,
+in either direction.
+
+- **Where the bytes live.** In core's file storage (`ctx.file_storage()`), under `dynbrain/uploads/<upload id>`. In
+  production that is S3, the same bucket as chat uploads, the Drive and generated images; there is no bucket, client,
+  credential or disk path of the Brain's own, and nothing to configure. `dynbrain_asset` keeps the storage reference,
+  the name, the size, the SHA-256 and the type; `dynbrain_upload` keeps the upload slots.
+- **Uploading, in two steps.** `request_upload` (`POST articles/{id}/assets/upload-url`, needs `write`) answers a
+  one-time `upload_url`, bound to the person, valid 15 minutes, with `max_bytes` (25 MB by default). The file is POSTed
+  to it as the raw body, with no bearer token (`curl --data-binary @diagram.png "$upload_url"`); the answer has the
+  `upload_id`. `asset_upload` (`POST articles/{id}/assets` `{"upload_id","filename","lang"}`, needs `write`) adopts it
+  as a file of the article. An upload id works once, and only for the person it was issued to.
+- **Referencing a file.** Markdown names a file `asset://<id>`, as an image (`![Backup diagram](asset://12)`) or as a
+  link (`[Template](asset://13)`). The reference never expires, and the stored text never holds a URL. When the
+  indexer reads a body, each reference becomes its alternative text (`assets::markdown::index_text`), so no URL reaches
+  a chunk or an embedding.
+- **Downloading.** `get` and `export` add `asset_urls`, `{"asset://12": "<signed URL>"}` for each file the text names
+  and the person may read. `asset_link` (`GET assets/{id}/link`) gives one `download_url`. A signed URL lasts 10
+  minutes, carries nothing about the person, and is checked again on use: the file and its article must still exist
+  and be out of the trash. `GET assets/{id}` serves the file to its reader with their JWT, for `DynWork` to draw images.
+- **Signing.** An HMAC-SHA256 (core's `hmac_sha256`) under a key derived from the instance's manifest signing seed, over
+  the purpose (`upload` or `download`), the target and the expiry. Core's own signed upload and download links open
+  only core's document store and check access to a core document, so they cannot serve a Brain file; and an
+  extension's token authority can only verify. Without the seed the file operations answer `unavailable`.
+- **Serving.** The type comes from the bytes, never from the client; the name only narrows it within its family (a ZIP
+  named `.xlsx` is a spreadsheet). Only PNG, JPEG, GIF and WebP are served `inline`. Everything else, SVG and HTML
+  included, is an `attachment`. Every file goes out with `X-Content-Type-Options: nosniff` and
+  `Content-Security-Policy: sandbox`. Issuing a link and every signed download are logged.
+- **Trash.** Files follow their article: a trashed article's files are not listed, linked or served.
+  `NativeBrain::purge_assets` deletes an article's file rows and their bytes, for when an article is purged.
+
+| Route | What it does | Example |
+|---|---|---|
+| `POST /articles/{id}/assets/upload-url` | A one-time upload URL (`201`); needs `write`. | `{"upload_id":"9f…","upload_url":"https://…/api/dynbrain/v1/uploads/9f…?exp=…&sig=…","method":"POST","max_bytes":26214400,"expires_at":"…","expires_minutes":15,"article_id":7,"filename":null,"instructions":"…"}` |
+| `POST /uploads/{upload_id}?exp=&sig=` | The file as the raw body, no bearer (`201`). A form is `400`, an empty body `400`, over the limit `413`, a bad, used or expired link `404`. | `{"upload_id":"9f…","size_bytes":5120,"mimetype":"image/png","sha256":"…"}` |
+| `POST /articles/{id}/assets` | Adopts an upload as a file of the article (`201`); needs `write`. | `{"attached":true,"article_id":7,"attachment_id":12,"name":"diagram.png","mimetype":"image/png","size_bytes":5120,"lang":null,"ref":"asset://12","markdown":"![diagram.png](asset://12)"}` |
+| `GET /articles/{id}/assets?lang=&offset=&limit=` | The article's files; with `lang`, that language's and the ones for every language. | `{"article_id":7,"files":[{"attachment_id":12,"name":"diagram.png","mimetype":"image/png","size_bytes":5120,"lang":null,"ref":"asset://12","markdown":"![diagram.png](asset://12)"}],"total":1,"shown":1,"offset":0}` |
+| `GET /assets/{id}/link?article_id=` | A signed download URL; `not_found` when the file does not exist or the person cannot read it. | `{"found":true,"attachment_id":12,"article_id":7,"name":"diagram.png","mimetype":"image/png","size_bytes":5120,"download_url":"https://…/api/dynbrain/v1/assets/12/raw?exp=…&sig=…","expires_at":"…","expires_minutes":10}` |
+| `GET /assets/{id}` | The file, to its reader (JWT). | the bytes |
+| `GET /assets/{id}/raw?exp=&sig=` | The file, to the holder of a signed URL, no bearer. | the bytes |

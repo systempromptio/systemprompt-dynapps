@@ -17,8 +17,10 @@ ignored = ["systemprompt-extension"]
 workspace = true
 
 [dependencies]
-# Audit: uses extension (Extension, SchemaDefinition) and identifiers (UserId).
-systemprompt = { workspace = true }
+# Audit: uses extension (Extension, SchemaDefinition), identifiers (UserId),
+# traits (FileStorage, the bytes of article files) and security (hmac_sha256,
+# the signature of file links).
+systemprompt = { workspace = true, features = ["security"] }
 # Direct dep so the `extension_migrations!()` expansion resolves.
 systemprompt-extension = { workspace = true }
 
@@ -32,6 +34,8 @@ sha2 = { workspace = true }
 hex = { workspace = true }
 # A `link` property must be an absolute http(s) URL.
 url = { workspace = true }
+# The random id of an upload slot.
+uuid = { workspace = true }
 
 # The desktop and mobile JWT checks and the phone's device row, used as the
 # relay defines them rather than copied.

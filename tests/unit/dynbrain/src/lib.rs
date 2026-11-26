@@ -9,6 +9,9 @@
 //! - language codes, their text-search configuration and the content hash
 //! - the Brain's contract: how a fault answers over HTTP, how a store error
 //!   becomes a fault, and the field names the operations take and return
+//! - files: the type read from the bytes, which types are shown inline, the
+//!   `asset://` references of a body and the indexed text without them (no
+//!   URL), and signed links that hold for one purpose, target and time
 //! - the extension registration, its schema, and the vocabulary rule: no file
 //!   of the crate names the source system the proxy mode talks to
 //!
@@ -16,6 +19,8 @@
 
 #[cfg(test)]
 mod access;
+#[cfg(test)]
+mod assets;
 #[cfg(test)]
 mod basics;
 #[cfg(test)]

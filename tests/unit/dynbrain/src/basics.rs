@@ -58,7 +58,18 @@ fn the_extension_owns_a_schema_that_requires_pgvector() {
     assert_eq!(extension.metadata().id, "dynbrain");
     assert_eq!(extension.dependencies(), ["users", "web"]);
     let schemas = extension.schemas();
-    assert_eq!(schemas.len(), 1);
+    assert_eq!(schemas.len(), 2);
+    let files = &schemas[1].sql;
+    for table in ["dynbrain_upload", "dynbrain_asset"] {
+        assert!(
+            files.contains(&format!("CREATE TABLE IF NOT EXISTS {table} (")),
+            "{table}"
+        );
+    }
+    assert!(
+        !files.contains("BYTEA"),
+        "the bytes live in core's file storage"
+    );
     let sql = &schemas[0].sql;
     assert!(sql.contains("CREATE EXTENSION IF NOT EXISTS vector"));
     for table in [

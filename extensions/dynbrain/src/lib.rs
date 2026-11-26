@@ -16,9 +16,12 @@
 //! On top of it, [`brain::Brain`] is the trait of the operations, with
 //! [`brain::native::NativeBrain`] as its implementation over this store, and
 //! the extension mounts `/api/dynbrain/v1` (see [`router`]) for the desktop
-//! and mobile JWTs.
+//! and mobile JWTs. Articles carry files ([`assets`]): the bytes live in
+//! core's file storage, Markdown names them `asset://<id>`, and readers get
+//! short-lived signed URLs.
 
 pub mod access;
+pub mod assets;
 pub mod auth;
 pub mod brain;
 pub mod content;

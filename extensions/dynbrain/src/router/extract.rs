@@ -13,6 +13,9 @@ use super::state::BrainState;
 #[derive(Debug, Clone, Copy)]
 pub struct Id(pub i64);
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Token(pub String);
+
 #[derive(Debug, Clone)]
 pub struct Params<T>(pub T);
 
@@ -25,6 +28,15 @@ impl FromRequestParts<BrainState> for Id {
     async fn from_request_parts(parts: &mut Parts, state: &BrainState) -> Result<Self, HttpFault> {
         let Path(id) = Path::<i64>::from_request_parts(parts, state).await?;
         Ok(Self(id))
+    }
+}
+
+impl FromRequestParts<BrainState> for Token {
+    type Rejection = HttpFault;
+
+    async fn from_request_parts(parts: &mut Parts, state: &BrainState) -> Result<Self, HttpFault> {
+        let Path(token) = Path::<String>::from_request_parts(parts, state).await?;
+        Ok(Self(token))
     }
 }
 

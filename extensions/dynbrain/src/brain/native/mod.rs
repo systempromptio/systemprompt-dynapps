@@ -5,11 +5,17 @@
 //! for anything it changes and `manage` for grants. The checks live in
 //! `guard`; reading operations are in `read` and writing ones in `write`.
 //! `search` and `answer` answer `unavailable` until the retrieval phases.
+//!
+//! Files (`files` and `serve`) need [`AssetFiles`]: core's file storage and
+//! the link signer. Without them the file operations answer `unavailable`
+//! and `get` and `export` give no `asset_urls`.
 
+mod files;
 mod grants;
 mod guard;
 mod outline;
 mod read;
+mod serve;
 mod shape;
 mod tree;
 mod write;
@@ -22,23 +28,40 @@ use super::args::{
     ListSpacesArgs, MetadataArgs, MetadataSchemaArgs, MoveArgs, OutlineArgs, SearchArgs, TreeArgs,
     UpdateArgs,
 };
+use super::assets::{
+    AssetAttached, AssetFile, AssetLink, AssetLinkArgs, AssetList, AssetListArgs, AssetUploadArgs,
+    Received, RequestUploadArgs, UploadTicket,
+};
 use super::fault::BrainFault;
 use super::views::{
     Answer, ArticleList, ArticleView, Created, Export, Grants, InheritChanged, MetadataList,
     MetadataSchema, Moved, Outline, SearchResults, SpaceList, Trashed, TreeCreated, Updated,
 };
 use super::{Brain, Reply};
-use crate::ids::ArticleId;
+use crate::assets::AssetFiles;
+use crate::assets::link::SignedLink;
+use crate::ids::{ArticleId, AssetId, UploadId};
 use crate::repository::BrainRepository;
 
 #[derive(Debug, Clone)]
 pub struct NativeBrain {
     repo: BrainRepository,
+    files: Option<AssetFiles>,
 }
 
 impl NativeBrain {
     pub const fn new(repo: BrainRepository) -> Self {
-        Self { repo }
+        Self { repo, files: None }
+    }
+
+    pub fn with_files(self, files: Option<AssetFiles>) -> Self {
+        Self { files, ..self }
+    }
+
+    fn files(&self) -> Result<&AssetFiles, BrainFault> {
+        self.files.as_ref().ok_or(BrainFault::Unavailable(
+            "files are not available on this instance",
+        ))
     }
 }
 
@@ -128,5 +151,48 @@ impl Brain for NativeBrain {
         args: InheritArgs,
     ) -> Reply<InheritChanged> {
         self.switch_inherit(caller, article, args).await
+    }
+
+    async fn request_upload(
+        &self,
+        caller: &UserId,
+        args: &RequestUploadArgs,
+    ) -> Reply<UploadTicket> {
+        self.issue_upload(caller, args).await
+    }
+
+    async fn receive_upload(
+        &self,
+        upload: &UploadId,
+        link: &SignedLink,
+        bytes: &[u8],
+    ) -> Reply<Received> {
+        self.take_upload(upload, link, bytes).await
+    }
+
+    async fn asset_upload(&self, caller: &UserId, args: &AssetUploadArgs) -> Reply<AssetAttached> {
+        self.adopt_upload(caller, args).await
+    }
+
+    async fn asset_list(&self, caller: &UserId, args: &AssetListArgs) -> Reply<AssetList> {
+        self.files_of(caller, args).await
+    }
+
+    async fn asset_link(&self, caller: &UserId, args: &AssetLinkArgs) -> Reply<AssetLink> {
+        self.link_for(caller, args).await
+    }
+
+    async fn open_asset(&self, caller: &UserId, asset: AssetId) -> Reply<AssetFile> {
+        self.open_readable(caller, asset).await
+    }
+
+    async fn open_signed(&self, asset: AssetId, link: &SignedLink) -> Reply<AssetFile> {
+        self.open_linked(asset, link).await
+    }
+
+    fn upload_limit(&self) -> u64 {
+        self.files
+            .as_ref()
+            .map_or(0, |files| files.max_upload_bytes)
     }
 }

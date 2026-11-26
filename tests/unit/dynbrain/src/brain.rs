@@ -12,6 +12,7 @@ use dynbrain::brain::views::{GrantView, Grants, Moved, Trashed};
 use dynbrain::ids::{ArticleId, SpaceId};
 use dynbrain::router::error::HttpFault;
 use serde_json::json;
+use systemprompt::traits::FileStorageError;
 
 #[test]
 fn a_fault_answers_with_its_status_and_a_stable_key() {
@@ -25,6 +26,7 @@ fn a_fault_answers_with_its_status_and_a_stable_key() {
             "invalid",
         ),
         (BrainFault::Unavailable("later"), 503, "unavailable"),
+        (BrainFault::TooLarge(10), 413, "too_large"),
         (
             BrainFault::Internal(BrainError::Invalid("boom")),
             500,
@@ -51,6 +53,10 @@ fn a_store_error_becomes_the_fault_a_caller_can_act_on() {
     let trashed = BrainFault::from(BrainError::Trashed(ArticleId(1)));
     assert!(matches!(trashed, BrainFault::Refused(_)));
     assert_eq!(trashed.to_string(), "article 1 is in the trash");
+    let storage = BrainFault::from(BrainError::Storage(FileStorageError::NotFound(
+        "dynbrain/uploads/x".to_owned(),
+    )));
+    assert!(matches!(storage, BrainFault::Internal(_)));
 }
 
 #[test]

@@ -44,6 +44,7 @@ impl NativeBrain {
             });
         }
         let info = variant_info(&variant, &space);
+        let asset_urls = self.asset_urls(user, &[variant.body.as_str()]).await?;
         Ok(ArticleView {
             found: true,
             article_id: id,
@@ -60,6 +61,7 @@ impl NativeBrain {
             inherit_access: article.inherit_access,
             can_write: level >= Level::Write,
             children,
+            asset_urls,
         })
     }
 
@@ -226,7 +228,7 @@ impl NativeBrain {
     }
 }
 
-fn page<T>(
+pub(super) fn page<T>(
     items: Vec<T>,
     offset: Option<u32>,
     limit: Option<u32>,

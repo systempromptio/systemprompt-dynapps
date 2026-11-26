@@ -106,6 +106,7 @@ impl NativeBrain {
         let all = self.repo.list_articles(space.id).await?;
         let walked = Tree::new(&reached, None).descend(None, 0);
         let mut markdown = String::new();
+        let mut bodies = Vec::new();
         for (article, depth) in &walked {
             let variant = self
                 .variant_of(article, &space, args.lang.as_deref())
@@ -120,8 +121,11 @@ impl NativeBrain {
                     "{marks} {}\n\n{}\n\n",
                     variant.title, variant.body
                 ));
+                bodies.push(variant.body);
             }
         }
+        let texts: Vec<&str> = bodies.iter().map(String::as_str).collect();
+        let asset_urls = self.asset_urls(user, &texts).await?;
         Ok(Export {
             space: space.id,
             format: format.to_owned(),
@@ -129,6 +133,7 @@ impl NativeBrain {
             size_bytes: markdown.len(),
             markdown,
             article_count: walked.len(),
+            asset_urls,
         })
     }
 }

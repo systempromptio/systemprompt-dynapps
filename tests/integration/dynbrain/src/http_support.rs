@@ -1,13 +1,18 @@
 //! The Brain router as core mounts it, over a throwaway database with the
-//! full extension schema, a real RS256 token authority and the relay's own
-//! device table for phones.
+//! full extension schema, a real RS256 token authority, the relay's own
+//! device table for phones, and core's local-disk file storage in a
+//! throwaway directory for the files of articles.
 
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock};
 
 use axum::Router;
 use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
+use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use dynapps_test_common::TempDb;
+use dynbrain::assets::AssetFiles;
+use dynbrain::assets::link::LinkSigner;
 use dynbrain::brain::native::NativeBrain;
 use dynbrain::router::state::BrainState;
 use dynbrain::router::{EXTENSION_BASE_PATH, brain_router};
@@ -21,6 +26,7 @@ use systemprompt::identifiers::{AccessTokenId, SessionId, UserId};
 use systemprompt::models::auth::{
     AuthenticatedUser, JwtAudience, Permission, TokenAuthority, UserJwtRequest,
 };
+use systemprompt::storage::LocalFileStorage;
 use systemprompt_security::jwt::DeploymentTokenAuthority;
 use systemprompt_security::keys::{RsaSigningKey, SigningKeys};
 use tower::ServiceExt;
@@ -28,6 +34,20 @@ use tower::ServiceExt;
 use crate::fixture::Fixture;
 
 const ISSUER: &str = "https://brain.test";
+pub(crate) const BASE_URL: &str = "https://brain.test";
+pub(crate) const MAX_UPLOAD: u64 = 64 * 1024;
+const LINK_SEED: [u8; 32] = [9; 32];
+static ROOTS: AtomicU64 = AtomicU64::new(0);
+
+// The signer of the suite's links, the one the app under test holds.
+pub(crate) fn signer() -> LinkSigner {
+    LinkSigner::new(&LINK_SEED).expect("a link signer")
+}
+
+// The path a signed URL names, for the in-process router.
+pub(crate) fn local(url: &str) -> &str {
+    url.strip_prefix(BASE_URL).expect("a URL of this instance")
+}
 
 fn authority_with_seed(seed: u8) -> Arc<DeploymentTokenAuthority> {
     let key = RsaSigningKey::generate().expect("generate an RSA key");
@@ -126,26 +146,119 @@ impl Answer {
     }
 }
 
+// A raw answer: status, headers and the body's bytes.
+pub(crate) struct Raw {
+    pub(crate) status: StatusCode,
+    pub(crate) headers: HeaderMap,
+    pub(crate) bytes: Vec<u8>,
+}
+
+impl Raw {
+    pub(crate) fn header(&self, name: header::HeaderName) -> &str {
+        self.headers
+            .get(name)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("")
+    }
+
+    pub(crate) fn json(&self) -> Value {
+        serde_json::from_slice(&self.bytes).unwrap_or(Value::Null)
+    }
+}
+
 pub(crate) struct App {
     router: Router,
+    pub(crate) brain: NativeBrain,
+    // The file storage's directory: what core's storage wrote, on disk.
+    pub(crate) root: PathBuf,
     pub(crate) fixture: Fixture,
 }
 
 impl App {
     pub(crate) async fn new(db: TempDb) -> Self {
         let fixture = Fixture::new(db).await;
+        let root = std::env::temp_dir().join(format!(
+            "dynbrain-files-{}-{}",
+            std::process::id(),
+            ROOTS.fetch_add(1, Ordering::Relaxed)
+        ));
+        let files = AssetFiles {
+            max_upload_bytes: MAX_UPLOAD,
+            ..AssetFiles::new(
+                Arc::new(LocalFileStorage::new(root.clone())),
+                signer(),
+                BASE_URL.to_owned(),
+            )
+        };
+        let brain = NativeBrain::new(fixture.repo.clone()).with_files(Some(files));
         let authority: Arc<dyn TokenAuthority> = Arc::<DeploymentTokenAuthority>::clone(&AUTHORITY);
         let state = BrainState {
-            brain: Arc::new(NativeBrain::new(fixture.repo.clone())),
+            brain: Arc::new(brain.clone()),
             authority,
             devices: Arc::new(PgRelayStore::new(fixture.shared_pool())),
         };
         let router = Router::new().nest(EXTENSION_BASE_PATH, brain_router(state));
-        Self { router, fixture }
+        Self {
+            router,
+            brain,
+            root,
+            fixture,
+        }
     }
 
     pub(crate) async fn finish(self) {
+        std::fs::remove_dir_all(&self.root).ok();
         self.fixture.finish().await;
+    }
+
+    // Sends any request, `path` being the whole path after the host.
+    pub(crate) async fn send(&self, request: Request<Body>) -> Raw {
+        let response = self
+            .router
+            .clone()
+            .oneshot(request)
+            .await
+            .expect("the router answers");
+        let status = response.status();
+        let headers = response.headers().clone();
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("read the body")
+            .to_bytes()
+            .to_vec();
+        Raw {
+            status,
+            headers,
+            bytes,
+        }
+    }
+
+    // Bytes POSTed to an upload URL, with no bearer token: the URL is the
+    // permission.
+    pub(crate) async fn post_bytes(&self, url: &str, content_type: &str, bytes: &[u8]) -> Raw {
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri(local(url))
+            .header(header::CONTENT_TYPE, content_type)
+            .body(Body::from(bytes.to_vec()))
+            .expect("build an upload");
+        self.send(request).await
+    }
+
+    // A GET of `path` (the whole path after the host), with or without the
+    // desktop token of `who`.
+    pub(crate) async fn fetch(&self, path: &str, who: Option<&str>) -> Raw {
+        let mut request = Request::builder().method(Method::GET).uri(path);
+        if let Some(name) = who {
+            request = request.header(
+                header::AUTHORIZATION,
+                format!("Bearer {}", desktop_token(name)),
+            );
+        }
+        self.send(request.body(Body::empty()).expect("build a GET"))
+            .await
     }
 
     pub(crate) async fn request(

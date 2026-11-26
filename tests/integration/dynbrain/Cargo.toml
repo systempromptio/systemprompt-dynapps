@@ -19,7 +19,9 @@ http-body-util = { workspace = true }
 chrono = { workspace = true }
 # The throwaway database with the full extension schema (db_or_skip!).
 dynapps-test-common = { workspace = true }
-systemprompt = { workspace = true }
+# `storage`: core's local-disk file storage, the store the files of articles
+# are kept in during the suite.
+systemprompt = { workspace = true, features = ["storage"] }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
