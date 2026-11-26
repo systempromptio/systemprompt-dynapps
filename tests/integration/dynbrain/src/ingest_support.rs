@@ -52,7 +52,8 @@ impl Embedder for FakeEmbedder {
 
     async fn embed(&self, texts: &[String]) -> Result<Embedding, Failure> {
         *self.requests.lock().expect("the request count") += 1;
-        if let Some(failure) = self.failure.lock().expect("the failure").clone() {
+        let failure = self.failure.lock().expect("the failure").clone();
+        if let Some(failure) = failure {
             return Err(failure);
         }
         self.texts
