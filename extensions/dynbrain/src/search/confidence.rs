@@ -63,6 +63,6 @@ pub fn low_note(score: f64, threshold: f64) -> String {
 }
 
 pub fn round_to(value: f64, places: i32) -> f64 {
-    let scale = 10_f64.powi(places);
+    let scale = 10f64.powi(places);
     (value * scale).round() / scale
 }

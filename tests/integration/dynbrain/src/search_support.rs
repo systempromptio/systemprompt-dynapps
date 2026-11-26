@@ -1,5 +1,7 @@
-//! A corpus written straight into the index, and deterministic stand-ins for
-//! the query embedder and the reranker. Nothing here reaches a provider.
+//! A corpus written straight into the index, and doubles of the models.
+//!
+//! The query embedder and the reranker are deterministic stand-ins; nothing
+//! here reaches a provider.
 //!
 //! Vectors are one-hot over the 1536 dimensions, so cosine distance orders
 //! chunks exactly: a chunk on the query's axis is nearest.
@@ -120,7 +122,7 @@ impl Reranker for ScriptedReranker {
         if let Some(status) = self.failure {
             return Err(RerankFailure::Status(status));
         }
-        let mut scored: Vec<(usize, f64)> = documents
+        let mut ranked: Vec<(usize, f64)> = documents
             .iter()
             .enumerate()
             .map(|(index, text)| {
@@ -132,8 +134,8 @@ impl Reranker for ScriptedReranker {
                 (index, score)
             })
             .collect();
-        scored.sort_by(|left, right| right.1.total_cmp(&left.1));
-        Ok(scored)
+        ranked.sort_by(|left, right| right.1.total_cmp(&left.1));
+        Ok(ranked)
     }
 }
 

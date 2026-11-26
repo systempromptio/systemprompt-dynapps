@@ -1,5 +1,7 @@
-//! What every route shares, built once per process by the extension, or by a
-//! suite with its own authority.
+//! What every route shares.
+//!
+//! It is built once per process by the extension, or by a suite with its own
+//! authority.
 //!
 //! `embedder` is the query embedder of the search: core hands its AI service
 //! to the routes with each request, and the first search fills the slot with

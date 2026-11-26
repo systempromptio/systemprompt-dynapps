@@ -1,6 +1,8 @@
-//! The pure helpers of the operations: the access comparison, choosing the
-//! variant to show, paths and slugs, validating a write against its space
-//! and merging a change into a variant.
+//! The pure helpers of the operations.
+//!
+//! They cover the access comparison, choosing the variant to show, paths and
+//! slugs, validating a write against its space and merging a change into a
+//! variant.
 //!
 //! A path names the ancestors the reader can read; each run of ancestors they
 //! cannot read is shown as one `…`, so a path never reveals a title or a slug

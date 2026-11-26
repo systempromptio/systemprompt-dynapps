@@ -87,11 +87,11 @@ impl BrainRepository {
         effort: i64,
     ) -> Result<Vec<ChunkId>, BrainError> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query!(
+        sqlx::query_scalar!(
             "SELECT set_config('hnsw.ef_search', $1, true)",
             effort.to_string()
         )
-        .execute(&mut *tx)
+        .fetch_one(&mut *tx)
         .await?;
         let ids = sqlx::query_scalar!(
             r#"WITH readable AS (

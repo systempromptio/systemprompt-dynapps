@@ -1,6 +1,7 @@
-//! The access checks and the small helpers every operation shares: reaching
-//! an article or a space as a person, choosing the variant to show, building
-//! a path and a slug, and merging a change into a variant.
+//! The access checks and the small helpers every operation shares.
+//!
+//! They reach an article or a space as a person, choose the variant to show,
+//! build a path and a slug, and merge a change into a variant.
 //!
 //! What a person reads in a space is one query (`list_article_levels`), not
 //! one per article, so lists, the outline and the export cost the same

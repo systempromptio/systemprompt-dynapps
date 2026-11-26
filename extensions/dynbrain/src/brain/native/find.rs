@@ -1,5 +1,7 @@
-//! `search` and `answer`: the retriever's passages as `docs_search` and
-//! `docs_answer` with `synthesize: false` answer them.
+//! `search` and `answer` over the retriever.
+//!
+//! They answer the retriever's passages as `docs_search` and `docs_answer`
+//! with `synthesize: false` do.
 //!
 //! `where` must name properties some space declares. `lang`, when given,
 //! keeps the search to the spaces in that language and is the preferred

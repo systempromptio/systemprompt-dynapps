@@ -77,6 +77,6 @@ impl fmt::Debug for EmbedderSlot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EmbedderSlot")
             .field("filled", &self.0.get().is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }

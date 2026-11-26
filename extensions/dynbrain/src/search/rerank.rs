@@ -196,7 +196,7 @@ pub async fn rerank(
         },
     };
     breaker.succeed(provider, endpoint);
-    let reranked: Vec<Passage> = ordered
+    let scored: Vec<Passage> = ordered
         .into_iter()
         .filter_map(|(index, score)| {
             passages.get(index).map(|passage| Passage {
@@ -205,7 +205,7 @@ pub async fn rerank(
             })
         })
         .collect();
-    if reranked.is_empty() {
+    if scored.is_empty() {
         return (
             passages,
             ScoringTrace::fused_by(provider, FusionReason::EmptyResponse),
@@ -216,5 +216,5 @@ pub async fn rerank(
         provider: Some(provider.to_owned()),
         reason: None,
     };
-    (reranked, trace)
+    (scored, trace)
 }

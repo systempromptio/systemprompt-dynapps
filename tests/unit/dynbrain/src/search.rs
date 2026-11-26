@@ -3,7 +3,7 @@
 //! query and the `where` filter.
 
 use std::collections::BTreeSet;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
@@ -204,7 +204,7 @@ fn refusals_do_not_open_the_breaker_but_failures_on_the_wire_do() {
 
 #[derive(Debug, Default)]
 struct Failing {
-    calls: Mutex<usize>,
+    calls: AtomicUsize,
 }
 
 #[async_trait]
@@ -222,7 +222,7 @@ impl Reranker for Failing {
         _query: &str,
         _documents: &[String],
     ) -> Result<Vec<(usize, f64)>, RerankFailure> {
-        *self.calls.lock().expect("the call count") += 1;
+        self.calls.fetch_add(1, Ordering::SeqCst);
         Err(RerankFailure::Status(503))
     }
 }
@@ -242,7 +242,7 @@ async fn reranking_keeps_the_fused_order_and_says_why() {
     assert_eq!(trace.provider.as_deref(), Some("failing"));
     let (_, trace) = rerank(Some(&failing), &breaker, "q", fused.clone()).await;
     assert_eq!(trace.reason, Some(FusionReason::BreakerOpen));
-    assert_eq!(*failing.calls.lock().expect("the call count"), 1);
+    assert_eq!(failing.calls.load(Ordering::SeqCst), 1);
     let (kept, trace) = rerank(Some(&failing), &breaker, "q", Vec::new()).await;
     assert!(kept.is_empty());
     assert_eq!(trace.reason, Some(FusionReason::NoHits));

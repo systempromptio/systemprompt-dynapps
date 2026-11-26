@@ -1,5 +1,7 @@
-//! What `search` and `answer` answer, with the field names of `docs_search`
-//! and of `docs_answer` with `synthesize: false`.
+//! What `search` and `answer` answer.
+//!
+//! The field names are those of `docs_search` and of `docs_answer` with
+//! `synthesize: false`.
 //!
 //! `answer` hands back the assembled context, never an answer: no model is
 //! called. The caller's model writes it from `context`, cites `[n]` against

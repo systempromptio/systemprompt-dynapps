@@ -1,6 +1,8 @@
-//! The rows behind the results: the fused pool, a document's chunks ranked
-//! for the answer context, the fingerprint check of the vector arm, and the
-//! query-vector cache.
+//! The rows behind the results, the fingerprint check and the query cache.
+//!
+//! They are the fused pool, a document's chunks ranked for the answer
+//! context, the fingerprint check of the vector arm, and the query-vector
+//! cache.
 //!
 //! The pool is read by chunk id after the arms have applied the reader's
 //! access, so it needs no access check of its own. The cache is the engine's:
