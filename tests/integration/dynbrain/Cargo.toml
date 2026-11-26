@@ -9,6 +9,14 @@ workspace = true
 
 [dependencies]
 dynbrain = { workspace = true }
+# The mobile JWT minting and the device table, as the Brain's auth uses them.
+dynwork-relay = { workspace = true }
+systemprompt-security = { workspace = true }
+# The Brain router driven in process, as core mounts it.
+axum = { workspace = true }
+tower = { workspace = true }
+http-body-util = { workspace = true }
+chrono = { workspace = true }
 # The throwaway database with the full extension schema (db_or_skip!).
 dynapps-test-common = { workspace = true }
 systemprompt = { workspace = true }

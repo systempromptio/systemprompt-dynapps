@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use dynapps_test_common::TempDb;
 use dynbrain::BrainRepository;
+use dynbrain::access::{Grant, Level, Subject};
 use dynbrain::ids::{ArticleId, SpaceId};
 use dynbrain::model::{Article, NewArticle, NewSpace, RagMode, Space, VariantWrite};
 use dynbrain::properties::PropertySchema;
@@ -71,6 +72,36 @@ impl Fixture {
 
     pub(crate) fn pool(&self) -> &sqlx::PgPool {
         &self.db.pool
+    }
+
+    pub(crate) fn shared_pool(&self) -> Arc<sqlx::PgPool> {
+        Arc::clone(&self.db.pool)
+    }
+
+    pub(crate) async fn give(
+        &self,
+        space: SpaceId,
+        article: Option<ArticleId>,
+        subject: Subject,
+        level: Level,
+    ) {
+        let grant = Grant {
+            space,
+            article,
+            subject,
+            level,
+        };
+        self.repo
+            .set_grant(&grant, &user("alice"))
+            .await
+            .expect("write the grant");
+    }
+
+    pub(crate) async fn write(&self, article: &Article, lang: &str, title: &str, body: &str) {
+        self.repo
+            .write_variant(article.id, lang, &content(title, body), &user("alice"))
+            .await
+            .expect("write a variant");
     }
 
     pub(crate) async fn space(&self, slug: &str) -> Space {

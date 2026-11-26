@@ -63,3 +63,45 @@ written.
   lock on the space row, never in the background.
 - `BrainRepository::find_level` answers the highest level a user reaches an article at, through a row for them, one of
   their roles or one of their live groups, and only for an active account.
+
+## The Brain trait and the REST API
+
+`brain::Brain` is the contract of the operations. It takes the person it runs as and reads no token. `NativeBrain`
+implements it over this store; `search` and `answer` answer `unavailable` until the retrieval phases. The files of an
+article are a later phase's operations and are not in the trait yet. Input and output types use the field names of the
+`docs_*` tools, and what Governance adds (`slug`, `inherit_access`, `level`, `article_count`) is a new field.
+
+`/api/dynbrain/v1` is mounted as a public router: it authenticates itself. The bearer is the DynWork desktop JWT
+(audience `bridge` or `api`) or the JWT of a live phone; any other credential is `401` before a path, a query or a body
+is read. Errors are `{"error": {"key", "message"}}` with the keys `unauthorized` (401), `not_found` (404), `forbidden`
+(403), `invalid` and `bad_request` (400), `unavailable` (503) and `internal` (500).
+
+A path's id overwrites the same field of the body. `limit` and `offset` page the lists as the `docs_*` tools do.
+
+| Route | What it does | Example |
+|---|---|---|
+| `GET /spaces?query=&lang=&limit=&offset=` | The spaces the person reaches, with their `level` and `article_count`. | `{"spaces":[{"space":1,"slug":"handbook","name":"Handbook","lang":"es","langs":["es","en"],"article_count":2,"level":"manage"}],"total":1,"shown":1,"offset":0}` |
+| `GET /spaces/{id}/outline?node=&depth=2&max_nodes=200&offset=&lang=` | The tree from the space or from `node`, `depth` levels (`-1` is all), at most `max_nodes`. | `{"anchor":{"id":1,"name":"Handbook"},"nodes":[{"id":7,"title":"Guide","lang":"es","depth":1,"parent_id":null,"has_children":true,"child_count":1}],"total":2,"shown":1,"truncated":true,"has_more":true,"offset":0,"hint":"2 nodes match and 1 are shown: pass `node` with one of them to narrow, or `offset` to page"}` |
+| `GET /spaces/{id}/articles?lang=&limit=&offset=` | A flat list with each article's `path`. | `{"documents":[{"article_id":7,"path":"handbook/guide","title":"Guide","lang":"es","parent_id":null}],"total":1,"shown":1,"offset":0}` |
+| `GET /spaces/{id}/export?format=full\|index&lang=` | The space as Markdown, in tree order. | `{"space":1,"format":"index","mimetype":"text/markdown","markdown":"- Guide (`handbook/guide`)\n","size_bytes":29,"article_count":1}` |
+| `GET /spaces/{id}/schema` | The typed properties the space declares. | `{"space":1,"fields":[{"name":"status","type":"selection","selection":[["draft","Draft"]]}]}` |
+| `GET /spaces/{id}/grants` | The grants written on the space; needs `manage`. | `{"grants":[{"kind":"group","id":"team","level":"read"}],"access":[],"inherit_access":null}` |
+| `PUT /spaces/{id}/grants` | Replaces them with `{"grants":[{"kind","id","level"}]}`; `level` is `none`, `read`, `write` or `manage`. | `{"grants":[{"kind":"user","id":"bob","level":"none"}]}` |
+| `GET /articles/{id}?lang=` | The article in that language (or the default one), its `children` and `can_write`. | `{"found":true,"article_id":7,"space":1,"path":"handbook/guide","title":"Guide","description":"","lang":"es","variant":{"lang":"es","is_default":true},"markdown":"...","front_matter":{},"metadata":{},"revision":1,"inherit_access":true,"can_write":true,"children":[]}` |
+| `GET /articles/{id}/metadata?lang=` | Authorship, languages, `can_write` and the typed values. | `{"documents":[{"id":7,"title":"Guide","path":"handbook/guide","lang":"es","space":1,"is_synced":false,"can_write":true,"child_count":0,"variant_langs":["es"],"revision":1}]}` |
+| `POST /articles` | Creates an article (`201`) under `parent_id`, or at the top of `space`: `{"parent_id","space","title","markdown","position":"first\|last","front_matter","metadata","lang"}`. | `{"article_id":8,"space":1,"parent_id":7,"title":"Install","path":"handbook/guide/install","variant":{"lang":"es","is_default":true}}` |
+| `POST /articles/tree` | Creates a nested set (`201`, at most 200 nodes): `{"space","parent_id","nodes":[{"title","markdown","children":[]}],"lang"}`. | `{"parent_id":null,"nodes":[{"title":"A","article_id":9,"path":"handbook/a","children":[]}],"created":1}` |
+| `PATCH /articles/{id}` | Edits one language: `title`, `markdown`, `front_matter` (`description` sets the description), `metadata` (`null` clears a key), `lang`. | `{"article_id":7,"title":"Guide","updated":true,"revision":2,"variant":{"lang":"es","is_default":true}}` |
+| `POST /articles/{id}/move` | `{"new_parent_id","position":"first\|last"}`; no `new_parent_id` moves it to the top of its space. | `{"article_id":7,"new_parent_id":3,"moved":true}` |
+| `POST /articles/{id}/trash` | Trashes the article and its subtree. | `{"article_id":7,"trashed":true}` |
+| `GET /articles/{id}/grants` | Its own `grants` (with `none`), the resolved `access` (never `none`) and `inherit_access`; needs `manage`. | `{"grants":[],"access":[{"kind":"user","id":"alice","level":"manage"}],"inherit_access":true}` |
+| `PUT /articles/{id}/grants` | Replaces its own grants, as the space route does. | `{"grants":[{"kind":"role","id":"editor","level":"write"}]}` |
+| `PUT /articles/{id}/inherit` | `{"inherit","copy_inherited"}`: cut from its parent, optionally keeping what it inherited as its own grants. | `{"article_id":7,"inherit_access":false}` |
+| `POST /search`, `POST /answer` | `503 unavailable` until the retrieval phases. | `{"error":{"key":"unavailable","message":"search is not available on this instance yet"}}` |
+
+An article is also found by `path` (`<space slug>/<article slug>/...`) through the trait, which the MCP server uses.
+
+Who may do what: reading needs `read` on the article (or on its space); `create`, `update`, `move` and `trash` need
+`write` on the article or its parent, and a top-level article needs `write` on the space; grants and the inheritance
+switch need `manage`. A space's level is its owner and the `admin` role (always `manage`), or the space-level grants
+for the person, their roles or their groups; an empty space is listed for them and no one else.

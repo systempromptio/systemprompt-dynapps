@@ -8,6 +8,11 @@
 //! kept), so the article keeps the same access and stops following its
 //! parent; without it the article just cuts.
 //!
+//! [`BrainRepository::find_space_level`] is the same question for a space
+//! itself: its owner and the `admin` role manage it, and every other user
+//! reaches it through the space-level grants for them, their roles or their
+//! groups.
+//!
 //! [`BrainRepository::find_level`] reads only the closure, as retrieval will:
 //! a user reaches an article through a row for them, for one of their roles
 //! or for one of their groups, and only while their account is active.
@@ -189,6 +194,33 @@ impl BrainRepository {
                        OR (x.subject_kind = 'group' AND x.subject_id IN
                                (SELECT g.group_id FROM user_groups g WHERE g.user_id = u.id)))"#,
             article.0,
+            user.as_str()
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+        level
+            .map(|stored| {
+                Level::from_db(stored).ok_or(BrainError::Invalid("a stored level is unknown"))
+            })
+            .transpose()
+    }
+
+    pub async fn find_space_level(
+        &self,
+        space: SpaceId,
+        user: &UserId,
+    ) -> Result<Option<Level>, BrainError> {
+        let level = sqlx::query_scalar!(
+            r#"SELECT MAX(CASE WHEN s.created_by = u.id OR 'admin' = ANY(u.roles) THEN 3::int2 ELSE g.level END) AS "level"
+                 FROM dynbrain_space s
+                 JOIN users u ON u.id = $2 AND u.status = 'active'
+                 LEFT JOIN dynbrain_grant g ON g.space_id = s.id AND g.article_id IS NULL
+                  AND ((g.subject_kind = 'user' AND g.subject_id = u.id)
+                       OR (g.subject_kind = 'role' AND g.subject_id = ANY(u.roles))
+                       OR (g.subject_kind = 'group' AND g.subject_id IN
+                               (SELECT m.group_id FROM user_groups m WHERE m.user_id = u.id)))
+                WHERE s.id = $1"#,
+            space.0,
             user.as_str()
         )
         .fetch_one(&*self.pool)

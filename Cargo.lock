@@ -1669,7 +1669,10 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 name = "dynbrain"
 version = "0.85.0"
 dependencies = [
+ "async-trait",
+ "axum",
  "chrono",
+ "dynwork-relay",
  "hex",
  "serde",
  "serde_json",
@@ -1678,6 +1681,7 @@ dependencies = [
  "systemprompt",
  "systemprompt-extension",
  "thiserror 2.0.21",
+ "tracing",
  "url",
 ]
 

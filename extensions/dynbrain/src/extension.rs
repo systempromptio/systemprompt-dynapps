@@ -1,17 +1,56 @@
-//! The `Extension` registration: the schema and its migrations.
+//! The `Extension` registration: the schema, its migrations and the Brain
+//! router.
 //!
-//! The HTTP API and the MCP server mount on top of this in later phases; for
-//! now the extension only owns its tables.
+//! Core asks an extension for its router more than once (to validate the
+//! path, then to mount it), so the state is built on the first call and kept
+//! in the extension value: one repository and one device check per process.
 
-use systemprompt::extension::prelude::{Extension, ExtensionMetadata, Migration, SchemaDefinition};
+use std::sync::{Arc, OnceLock};
 
+use dynwork_relay::store::postgres::PgRelayStore;
+use systemprompt::database::Database;
+use systemprompt::extension::prelude::{
+    Extension, ExtensionContext, ExtensionMetadata, ExtensionRouter, Migration, SchemaDefinition,
+};
+
+use crate::brain::native::NativeBrain;
+use crate::repository::BrainRepository;
+use crate::router::state::BrainState;
+use crate::router::{EXTENSION_BASE_PATH, brain_router};
 use crate::schema;
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct DynbrainExtension;
+#[derive(Debug, Default)]
+pub struct DynbrainExtension {
+    state: OnceLock<BrainState>,
+}
 
 impl DynbrainExtension {
     pub const ID: &'static str = "dynbrain";
+
+    fn state(&self, ctx: &dyn ExtensionContext) -> Option<BrainState> {
+        if let Some(state) = self.state.get() {
+            return Some(state.clone());
+        }
+        let handle = ctx.database();
+        let Some(database) = handle.as_any().downcast_ref::<Database>() else {
+            tracing::error!("Database handle is not Postgres; the Brain is not mounted");
+            return None;
+        };
+        Some(
+            self.state
+                .get_or_init(|| build_state(ctx, database))
+                .clone(),
+        )
+    }
+}
+
+fn build_state(ctx: &dyn ExtensionContext, database: &Database) -> BrainState {
+    let pool = database.write_pool();
+    BrainState {
+        brain: Arc::new(NativeBrain::new(BrainRepository::new(Arc::clone(&pool)))),
+        authority: ctx.token_authority(),
+        devices: Arc::new(PgRelayStore::new(pool)),
+    }
 }
 
 impl Extension for DynbrainExtension {
@@ -33,5 +72,13 @@ impl Extension for DynbrainExtension {
 
     fn dependencies(&self) -> Vec<&'static str> {
         vec!["users", "web"]
+    }
+
+    fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
+        let state = self.state(ctx)?;
+        Some(ExtensionRouter::public(
+            brain_router(state),
+            EXTENSION_BASE_PATH,
+        ))
     }
 }

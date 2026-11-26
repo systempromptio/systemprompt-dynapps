@@ -13,8 +13,14 @@
 //! This crate holds the schema (Postgres with pgvector, including the
 //! retrieval tables later phases fill) and [`BrainRepository`], the reads
 //! and writes over it. Inheritance itself is the pure [`access::closure`].
+//! On top of it, [`brain::Brain`] is the trait of the operations, with
+//! [`brain::native::NativeBrain`] as its implementation over this store, and
+//! the extension mounts `/api/dynbrain/v1` (see [`router`]) for the desktop
+//! and mobile JWTs.
 
 pub mod access;
+pub mod auth;
+pub mod brain;
 pub mod content;
 pub mod error;
 pub mod extension;
@@ -23,6 +29,7 @@ pub mod language;
 pub mod model;
 pub mod properties;
 pub mod repository;
+pub mod router;
 pub mod schema;
 
 pub use error::BrainError;

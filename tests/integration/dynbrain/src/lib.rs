@@ -17,12 +17,42 @@
 //! - moving: the subtree's closure is rewritten, so what it inherited from its
 //!   old place is gone; moves below itself or into another space fail
 //! - trash: an article goes with its subtree and comes back with it
+//! - space level: the owner and administrators manage a space, and the rest
+//!   reach it through space grants for them, their roles or their groups
+//!
+//! The Brain routes are driven in process, mounted as core mounts them, over a
+//! throwaway database with a real RS256 token authority:
+//!
+//! - auth: the desktop and the mobile JWT of a live phone map to one person;
+//!   every other credential, and a revoked phone, is `401`
+//! - reading: spaces, an article in the language asked for, children, the
+//!   outline (cut at `max_nodes`), the flat list, the export, the metadata and
+//!   the schema show only what the person reaches, and what they do not reach
+//!   is `404`
+//! - writing: create, create a tree, update, move and trash need `write` (`403`
+//!   for a reader, `404` for someone who cannot read), refuse what the space
+//!   does not accept and leave nothing behind
+//! - grants: space and article grants and `inherit_access` need `manage`;
+//!   `none` is written and listed as a grant, never as access
+//! - search and answer answer `503 unavailable` until the retrieval phases
 
 #[cfg(test)]
 mod fixture;
 #[cfg(test)]
+mod http_access;
+#[cfg(test)]
+mod http_auth;
+#[cfg(test)]
+mod http_read;
+#[cfg(test)]
+mod http_support;
+#[cfg(test)]
+mod http_write;
+#[cfg(test)]
 mod moves;
 #[cfg(test)]
 mod permissions;
+#[cfg(test)]
+mod space_level;
 #[cfg(test)]
 mod store;

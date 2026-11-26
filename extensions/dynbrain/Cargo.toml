@@ -33,5 +33,13 @@ hex = { workspace = true }
 # A `link` property must be an absolute http(s) URL.
 url = { workspace = true }
 
+# The desktop and mobile JWT checks and the phone's device row, used as the
+# relay defines them rather than copied.
+dynwork-relay = { workspace = true }
+
+axum = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+
 [build-dependencies]
 systemprompt-extension = { workspace = true }
