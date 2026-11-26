@@ -5,6 +5,8 @@ use serde_json::Value;
 use systemprompt_mcp_brain::tools::{INSTRUCTIONS, TOOLS, list_tools, spec, tool_names};
 use systemprompt_mcp_shared::tool_schema::tool_violations;
 
+type Case = (&'static str, &'static [&'static str], &'static [&'static [&'static str]]);
+
 const EXPECTED: [&str; 18] = [
     "answer",
     "asset_link",
@@ -85,7 +87,7 @@ fn any_of(schema: &Value) -> Vec<Vec<String>> {
 
 #[test]
 fn each_schema_declares_the_arguments_it_requires() {
-    let cases: [(&str, &[&str], &[&[&str]]); 18] = [
+    let cases: [Case; 18] = [
         ("search", &["query"], &[]),
         ("answer", &["question"], &[]),
         ("get", &[], &[&["path"], &["article_id"]]),

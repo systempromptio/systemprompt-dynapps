@@ -127,8 +127,7 @@ impl Brain {
         space: SpaceId,
         parent: Option<ArticleId>,
         slug: &str,
-        title: &str,
-        body: &str,
+        (title, body): (&str, &str),
     ) -> Article {
         let article = self
             .repo

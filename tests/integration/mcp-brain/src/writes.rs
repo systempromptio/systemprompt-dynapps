@@ -10,7 +10,7 @@ async fn writing_needs_write_access_and_a_reader_is_told_so() {
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
     let article = brain
-        .article(space.id, None, "leave", "Vacaciones", "texto")
+        .article(space.id, None, "leave", ("Vacaciones", "texto"))
         .await;
     brain.give(space.id, None, "bob", Level::Read).await;
 
@@ -58,7 +58,7 @@ async fn trash_is_soft_and_takes_the_article_out_of_sight() {
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
     let article = brain
-        .article(space.id, None, "leave", "Vacaciones", "El destino zanzibar.")
+        .article(space.id, None, "leave", ("Vacaciones", "El destino zanzibar."))
         .await;
     brain.give(space.id, None, "bob", Level::Read).await;
 
@@ -134,8 +134,8 @@ async fn move_reorganises_and_metadata_says_who_can_write() {
     let db = dynapps_test_common::db_or_skip!();
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
-    let first = brain.article(space.id, None, "one", "Uno", "uno").await;
-    let second = brain.article(space.id, None, "two", "Dos", "dos").await;
+    let first = brain.article(space.id, None, "one", ("Uno", "uno")).await;
+    let second = brain.article(space.id, None, "two", ("Dos", "dos")).await;
 
     let moved = brain
         .call(

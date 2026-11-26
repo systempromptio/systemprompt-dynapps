@@ -14,7 +14,7 @@ async fn search_answers_as_the_person_and_hides_what_the_grant_does_not_allow() 
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
     brain
-        .article(space.id, None, "leave", "Vacaciones", "El destino zanzibar es el favorito.")
+        .article(space.id, None, "leave", ("Vacaciones", "El destino zanzibar es el favorito."))
         .await;
 
     let own = brain
@@ -59,7 +59,7 @@ async fn get_reads_what_the_grant_allows_and_says_nothing_about_what_it_does_not
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
     let article = brain
-        .article(space.id, None, "leave", "Vacaciones", "Texto del artículo.")
+        .article(space.id, None, "leave", ("Vacaciones", "Texto del artículo."))
         .await;
 
     let hidden = brain
@@ -95,7 +95,7 @@ async fn list_spaces_and_list_show_each_person_only_what_they_reach() {
     let db = dynapps_test_common::db_or_skip!();
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
-    brain.article(space.id, None, "leave", "Vacaciones", "texto").await;
+    brain.article(space.id, None, "leave", ("Vacaciones", "texto")).await;
 
     let alice = brain.call("alice", "list_spaces", json!({})).await.expect("alice");
     assert_eq!(alice["total"], 1, "{alice}");
@@ -120,7 +120,7 @@ async fn a_call_without_a_person_is_refused_before_any_operation_runs() {
     let db = dynapps_test_common::db_or_skip!();
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
-    let article = brain.article(space.id, None, "leave", "Vacaciones", "texto").await;
+    let article = brain.article(space.id, None, "leave", ("Vacaciones", "texto")).await;
 
     for (tool, arguments) in [
         ("search", json!({"query": "texto"})),
@@ -145,7 +145,7 @@ async fn an_unknown_tool_and_bad_arguments_are_refused_and_an_undeclared_filter_
     let db = dynapps_test_common::db_or_skip!();
     let brain = Brain::new(db, false).await;
     let space = brain.space("handbook").await;
-    brain.article(space.id, None, "leave", "Vacaciones", "zanzibar").await;
+    brain.article(space.id, None, "leave", ("Vacaciones", "zanzibar")).await;
     let invalid = ErrorData::invalid_params("x", None).code;
 
     let unknown = brain.call("alice", "delete", json!({})).await.expect_err("unknown");
