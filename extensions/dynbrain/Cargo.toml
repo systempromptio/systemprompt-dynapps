@@ -43,6 +43,10 @@ uuid = { workspace = true }
 sha1 = { workspace = true }
 # The Cohere reranker, called with the instance's key.
 reqwest = { workspace = true }
+# The Brain's config file, `services/config/dynbrain.yaml`.
+serde_yaml = { workspace = true }
+# The protocol errors of a proxy source, read through core's MCP client.
+rmcp = { workspace = true }
 
 # The desktop and mobile JWT checks and the phone's device row, used as the
 # relay defines them rather than copied.

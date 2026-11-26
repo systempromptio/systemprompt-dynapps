@@ -2,7 +2,7 @@
 //! `error` that the `docs_*` search and list give for a filter naming a
 //! property no space declares.
 
-use dynbrain::brain::fault::BrainFault;
+use dynbrain::brain::fault::{BrainFault, SourceFault};
 use dynbrain::properties::PropertyError;
 use rmcp::ErrorData as McpError;
 use serde_json::json;
@@ -17,8 +17,18 @@ pub fn tool_error(fault: &BrainFault) -> McpError {
         BrainFault::Invalid(_)
         | BrainFault::Refused(_)
         | BrainFault::Property(_)
-        | BrainFault::TooLarge(_) => reply::invalid(fault.to_string()),
+        | BrainFault::TooLarge(_)
+        | BrainFault::Arguments(_)
+        | BrainFault::ManagedAtSource
+        | BrainFault::Source(SourceFault::Invalid(_)) => reply::invalid(fault.to_string()),
         BrainFault::Unavailable(message) => reply::failure(*message),
+        BrainFault::Source(SourceFault::Refused(_)) => reply::forbidden(fault.to_string()),
+        BrainFault::Source(SourceFault::NotFound(message)) => reply::not_found(message.clone()),
+        BrainFault::Source(SourceFault::Unavailable(_)) => reply::failure(fault.to_string()),
+        BrainFault::Encode(source) => {
+            tracing::error!(error = %source, "a Brain reply could not be encoded");
+            reply::failure(fault.to_string())
+        },
         BrainFault::Internal(source) => {
             tracing::error!(error = %source, "the Brain's store failed");
             reply::failure(fault.to_string())

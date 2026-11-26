@@ -4,6 +4,9 @@
 # edits. The tools carry no prefix (`search`, `get`, `create`...): the client
 # prefixes them with this server's name.
 #
+# `dynbrain_links` is the key the file links are signed with, the same one the
+# API holds, so a link this server hands out opens the API's download route.
+#
 # `toolsets` is empty on purpose: the core's own `brain` toolset is the
 # organisational memory of the document store, a different thing that shares
 # the name, and this server must never grant it.
@@ -25,3 +28,5 @@ mcp_servers:
       audience: mcp
       client_id: null
     toolsets: []
+    secrets:
+    - custom:dynbrain_links

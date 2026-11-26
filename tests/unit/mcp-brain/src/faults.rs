@@ -1,4 +1,4 @@
-use dynbrain::brain::fault::BrainFault;
+use dynbrain::brain::fault::{BrainFault, SourceFault};
 use dynbrain::properties::PropertyError;
 use rmcp::ErrorData;
 use systemprompt_mcp_brain::tools::fault::{tool_error, undeclared_filter};
@@ -66,4 +66,34 @@ fn any_other_fault_stays_a_tool_error() {
         "results",
     );
     assert!(other.is_err());
+}
+
+#[test]
+fn a_refusal_of_the_source_is_the_tool_error_of_the_native_one() {
+    let forbidden = tool_error(&BrainFault::Source(SourceFault::Refused(
+        "token revoked".to_owned(),
+    )));
+    assert!(forbidden.message.starts_with("Forbidden"), "{forbidden:?}");
+    assert!(forbidden.message.contains("token revoked"), "{forbidden:?}");
+    assert_eq!(
+        tool_error(&BrainFault::Source(SourceFault::NotFound(
+            "gone".to_owned()
+        )))
+        .code,
+        ErrorData::resource_not_found("x", None).code
+    );
+    assert_eq!(
+        tool_error(&BrainFault::Source(SourceFault::Invalid("bad".to_owned()))).code,
+        ErrorData::invalid_params("x", None).code
+    );
+    assert_eq!(
+        tool_error(&BrainFault::ManagedAtSource).code,
+        ErrorData::invalid_params("x", None).code
+    );
+    let arguments = serde_json::from_str::<u32>("x").expect_err("not a number");
+    let invalid = tool_error(&BrainFault::Arguments(arguments));
+    assert!(
+        invalid.message.contains("Invalid tool input"),
+        "{invalid:?}"
+    );
 }

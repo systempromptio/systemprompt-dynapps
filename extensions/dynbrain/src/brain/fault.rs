@@ -6,6 +6,14 @@
 //! never that it is forbidden, so the answer does not reveal what exists.
 //! `Forbidden` is for someone who can read what they ask about but needs more
 //! access to change it.
+//!
+//! In proxy mode a refusal of the source is a [`SourceFault`] with the
+//! source's own message: `Refused` is a `forbidden`, `NotFound` a
+//! `not_found`, `Invalid` a refused argument and `Unavailable` a source that
+//! could not be reached. Permissions are not this instance's to manage there:
+//! `ManagedAtSource`.
+
+use systemprompt::mcp::McpDomainError;
 
 use crate::error::BrainError;
 use crate::properties::PropertyError;
@@ -28,6 +36,27 @@ pub enum BrainFault {
     TooLarge(u64),
     #[error("brain store failure")]
     Internal(#[source] BrainError),
+    #[error("Invalid tool input: {0}")]
+    Arguments(#[source] serde_json::Error),
+    #[error("the reply could not be encoded")]
+    Encode(#[source] serde_json::Error),
+    #[error("the permissions of this instance's documentation are managed at its source")]
+    ManagedAtSource,
+    #[error(transparent)]
+    Source(#[from] SourceFault),
+}
+
+/// How the source of a proxy instance refused a call.
+#[derive(Debug, thiserror::Error)]
+pub enum SourceFault {
+    #[error("the source refused the call: {0}")]
+    Refused(String),
+    #[error("{0}")]
+    NotFound(String),
+    #[error("{0}")]
+    Invalid(String),
+    #[error("the source of this instance is unavailable")]
+    Unavailable(#[source] Box<McpDomainError>),
 }
 
 impl From<BrainError> for BrainFault {

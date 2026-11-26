@@ -8,9 +8,11 @@
 //! access to a core document, not to a Brain article. A Brain file is no core
 //! document, and the token authority an extension holds may only verify. So
 //! a link here is an HMAC-SHA256 (core's `hmac_sha256`) under a key derived
-//! from the instance's manifest signing seed, over the purpose, the target and
-//! the expiry. The expiry is inside what is signed, the link carries nothing
-//! about a person, and a link for one purpose or target never opens another.
+//! from the instance secret `dynbrain_links`, over the purpose, the target and
+//! the expiry. The API and the `brain` MCP server both hold that secret, so a
+//! link signed by either opens the API's download route. The expiry is inside
+//! what is signed, the link carries nothing about a person, and a link for one
+//! purpose or target never opens another.
 
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -19,6 +21,7 @@ use systemprompt::security::hmac_sha256;
 pub const UPLOAD_LINK_TTL: Duration = Duration::minutes(15);
 pub const DOWNLOAD_LINK_TTL: Duration = Duration::minutes(10);
 const KEY_LABEL: &[u8] = b"dynbrain asset links v1";
+pub const LINKS_SECRET: &str = "dynbrain_links";
 
 /// What a link opens.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +68,13 @@ impl std::fmt::Debug for LinkSigner {
 impl LinkSigner {
     pub fn new(seed: &[u8]) -> Option<Self> {
         hmac_sha256(seed, KEY_LABEL).ok().map(|key| Self { key })
+    }
+
+    pub fn from_secret(secret: &str) -> Option<Self> {
+        if secret.trim().is_empty() {
+            return None;
+        }
+        Self::new(secret.as_bytes())
     }
 
     pub fn sign(

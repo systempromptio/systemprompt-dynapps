@@ -8,7 +8,8 @@
 //! the API composes it, and the query embedder of the search, which the
 //! server fills itself from an AI service built on the host's granted
 //! secrets, because core hands that service to the API's routes only.
-//! [`router`] composes the server over a booted host, for the binary.
+//! [`router`] composes the server over a booted host, for the binary. On a
+//! proxy instance the Brain is the source's, as the API composes it too.
 
 pub mod server;
 pub mod tools;
@@ -16,7 +17,7 @@ pub mod tools;
 use std::sync::Arc;
 
 use anyhow::Context;
-use dynbrain::extension::native_brain;
+use dynbrain::extension::compose;
 use dynbrain::ingest::core_ai::{CoreEmbedder, EMBEDDING_MODEL, EMBEDDING_PROVIDER};
 use dynbrain::search::query::EmbedderSlot;
 use systemprompt::identifiers::McpServerId;
@@ -28,8 +29,7 @@ pub const SERVER_NAME: &str = "brain";
 
 pub fn router(ctx: &HostContext, service_id: &McpServerId) -> anyhow::Result<axum::Router> {
     let embedder = EmbedderSlot::default();
-    let brain = native_brain(ctx, embedder.clone())
-        .context("The Brain needs a Postgres database")?;
+    let brain = compose(ctx, embedder.clone()).context("The Brain's config cannot be used")?;
     match AgentHost::compose(ctx.clone()) {
         Ok(host) => {
             let ai = Arc::clone(host.ai_service());
@@ -53,7 +53,7 @@ pub fn router(ctx: &HostContext, service_id: &McpServerId) -> anyhow::Result<axu
             services: ctx.services_state().watch().clone(),
         },
         ctx.artifact_ingest(),
-        Arc::new(brain),
+        brain,
     );
     let requires_oauth = ctx
         .services_state()

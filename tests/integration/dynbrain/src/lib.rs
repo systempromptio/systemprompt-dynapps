@@ -90,6 +90,20 @@
 //!   person, an expired upload link, a file over the limit, a link to a file of
 //!   an unreadable article, a tampered or expired download link, a file in the
 //!   trash; SVG and HTML are served as downloads, never as pages
+//!
+//! Proxy mode, against a fake source served over real MCP (rmcp's streamable
+//! HTTP server) and called through core's MCP client:
+//!
+//! - every operation reaches the tool its mapping names, with the arguments
+//!   renamed and the constants added; the person's token travels with the call
+//!   and another person carries another; a 401 of the source is `forbidden`, a
+//!   call without the person's token never reaches it, an unmapped operation is
+//!   `unavailable`, and grants are `managed_at_source`
+//! - the REST routes and the `brain` tools answer what the source answers
+//! - files: `get` names the source's files `asset://<id>` with the source's
+//!   links in `asset_urls`, `GET assets/{id}` redirects to the source's link
+//!   (`404` where the source refuses), file writes go to the source as the
+//!   person, and no byte is kept here
 
 #[cfg(test)]
 mod asset_support;
@@ -119,6 +133,12 @@ mod ingest_support;
 mod moves;
 #[cfg(test)]
 mod permissions;
+#[cfg(test)]
+mod proxy;
+#[cfg(test)]
+mod proxy_files;
+#[cfg(test)]
+mod proxy_support;
 #[cfg(test)]
 mod search_access;
 #[cfg(test)]

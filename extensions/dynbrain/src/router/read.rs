@@ -1,29 +1,31 @@
-//! The reading routes. Each hands its parameters to the [`Brain`] as the
-//! person the token names; the path's id overwrites any id in the query.
+//! The reading routes. Each hands its parameters to the [`crate::brain::Brain`]
+//! as the person the token names; the path's id overwrites any id in the
+//! query.
 
 use axum::Json;
 use axum::extract::State;
+// JSON: an operation's reply, as the Brain answered it.
+use serde_json::Value;
 
 use super::error::HttpFault;
 use super::extract::{Id, Inference, Params, Payload};
+use super::relay::relay;
 use super::state::BrainState;
 use crate::auth::Caller;
 use crate::brain::args::{
     AnswerArgs, ExportArgs, GetArgs, GrantTarget, ListArgs, ListSpacesArgs, MetadataArgs,
     MetadataSchemaArgs, OutlineArgs, SearchArgs,
 };
-use crate::brain::found::{Answer, SearchResults};
-use crate::brain::views::{
-    ArticleList, ArticleView, Export, Grants, MetadataList, MetadataSchema, Outline, SpaceList,
-};
+use crate::brain::operation::Operation;
+use crate::brain::views::Grants;
 use crate::ids::{ArticleId, SpaceId};
 
 pub async fn spaces(
     caller: Caller,
     State(state): State<BrainState>,
     Params(args): Params<ListSpacesArgs>,
-) -> Result<Json<SpaceList>, HttpFault> {
-    Ok(Json(state.brain.list_spaces(&caller.0, &args).await?))
+) -> Result<Json<Value>, HttpFault> {
+    relay(&state, &caller, Operation::ListSpaces, &args).await
 }
 
 pub async fn articles(
@@ -31,9 +33,9 @@ pub async fn articles(
     State(state): State<BrainState>,
     Id(id): Id,
     Params(mut args): Params<ListArgs>,
-) -> Result<Json<ArticleList>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     args.space = SpaceId(id);
-    Ok(Json(state.brain.list(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::List, &args).await
 }
 
 pub async fn outline(
@@ -41,9 +43,9 @@ pub async fn outline(
     State(state): State<BrainState>,
     Id(id): Id,
     Params(mut args): Params<OutlineArgs>,
-) -> Result<Json<Outline>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     args.space = Some(SpaceId(id));
-    Ok(Json(state.brain.outline(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::Outline, &args).await
 }
 
 pub async fn export(
@@ -51,21 +53,21 @@ pub async fn export(
     State(state): State<BrainState>,
     Id(id): Id,
     Params(mut args): Params<ExportArgs>,
-) -> Result<Json<Export>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     args.space = SpaceId(id);
-    Ok(Json(state.brain.export(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::Export, &args).await
 }
 
 pub async fn schema(
     caller: Caller,
     State(state): State<BrainState>,
     Id(id): Id,
-) -> Result<Json<MetadataSchema>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     let args = MetadataSchemaArgs {
         space: Some(SpaceId(id)),
         ..MetadataSchemaArgs::default()
     };
-    Ok(Json(state.brain.metadata_schema(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::MetadataSchema, &args).await
 }
 
 pub async fn space_grants(
@@ -82,10 +84,10 @@ pub async fn article(
     State(state): State<BrainState>,
     Id(id): Id,
     Params(mut args): Params<GetArgs>,
-) -> Result<Json<ArticleView>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     args.article_id = Some(ArticleId(id));
     args.path = None;
-    Ok(Json(state.brain.get(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::Get, &args).await
 }
 
 pub async fn metadata(
@@ -93,11 +95,11 @@ pub async fn metadata(
     State(state): State<BrainState>,
     Id(id): Id,
     Params(mut args): Params<MetadataArgs>,
-) -> Result<Json<MetadataList>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     args.article_id = Some(ArticleId(id));
     args.path = None;
     args.article_ids = None;
-    Ok(Json(state.brain.metadata(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::Metadata, &args).await
 }
 
 pub async fn article_grants(
@@ -114,9 +116,9 @@ pub async fn search(
     State(state): State<BrainState>,
     Inference(ai): Inference,
     Payload(args): Payload<SearchArgs>,
-) -> Result<Json<SearchResults>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     state.fill_embedder(ai);
-    Ok(Json(state.brain.search(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::Search, &args).await
 }
 
 pub async fn answer(
@@ -124,7 +126,7 @@ pub async fn answer(
     State(state): State<BrainState>,
     Inference(ai): Inference,
     Payload(args): Payload<AnswerArgs>,
-) -> Result<Json<Answer>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     state.fill_embedder(ai);
-    Ok(Json(state.brain.answer(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::Answer, &args).await
 }

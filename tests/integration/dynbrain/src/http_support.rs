@@ -91,6 +91,12 @@ fn mint(
         .expect("mint a token")
 }
 
+// The authority the suite's tokens are signed with, for a router built
+// elsewhere in the suite.
+pub(crate) fn authority() -> Arc<dyn TokenAuthority> {
+    Arc::<DeploymentTokenAuthority>::clone(&AUTHORITY)
+}
+
 // The DynWork desktop's JWT, as core's bridge device link mints it.
 pub(crate) fn desktop_token(name: &str) -> String {
     mint(

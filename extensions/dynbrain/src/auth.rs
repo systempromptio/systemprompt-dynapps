@@ -9,6 +9,9 @@
 //!
 //! A mobile JWT names the phone's device row in the relay, and that row must
 //! still be live: revoking a phone refuses its next request at once.
+//!
+//! The caller keeps the token it came with: a proxy instance hands it to core,
+//! which exchanges it for the person's token at the source.
 
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
@@ -16,13 +19,31 @@ use dynwork_relay::auth::{AuthError, bearer, verify_desktop};
 use dynwork_relay::ids::PeerKind;
 use dynwork_relay::mobile_auth::jwt;
 use dynwork_relay::store::RelayStore;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{
+    Actor, AgentName, ContextId, JwtToken, SessionId, TraceId, UserId,
+};
+use systemprompt::models::execution::context::RequestContext;
 
 use crate::router::error::HttpFault;
 use crate::router::state::BrainState;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Caller(pub UserId);
+const AGENT_NAME: &str = "dynbrain";
+
+#[derive(Debug, Clone)]
+pub struct Caller(pub UserId, pub JwtToken);
+
+impl Caller {
+    pub fn context(&self) -> RequestContext {
+        RequestContext::new(
+            SessionId::generate(),
+            TraceId::new(uuid::Uuid::new_v4().to_string()),
+            ContextId::generate(),
+            AgentName::new(AGENT_NAME),
+            Actor::user(self.0.clone()),
+        )
+        .with_auth_token(self.1.clone())
+    }
+}
 
 impl FromRequestParts<BrainState> for Caller {
     type Rejection = HttpFault;
@@ -31,7 +52,7 @@ impl FromRequestParts<BrainState> for Caller {
         let token = bearer(&parts.headers)?;
         let authority = state.authority.as_ref();
         let desktop = match verify_desktop(authority, token) {
-            Ok(identity) => return Ok(Self(identity.user)),
+            Ok(identity) => return Ok(Self(identity.user, JwtToken::new(token))),
             Err(refused) => refused,
         };
         let phone = jwt::verify(authority, token).inspect_err(|mobile| {
@@ -49,6 +70,6 @@ impl FromRequestParts<BrainState> for Caller {
             tracing::debug!(device = %phone.device, "dynbrain: phone device is not live");
             return Err(AuthError::UnknownDevice.into());
         }
-        Ok(Self(phone.user))
+        Ok(Self(phone.user, JwtToken::new(token)))
     }
 }

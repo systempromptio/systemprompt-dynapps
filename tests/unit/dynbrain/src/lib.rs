@@ -24,7 +24,13 @@
 //!   the `where` filter, and the answer's context (whole documents, best chunks
 //!   in reading order with gaps, marked cuts, numbered blocks)
 //! - the extension registration, its schema, and the vocabulary rule: no file
-//!   of the crate names the source system the proxy mode talks to
+//!   of the crate, of the `brain` server or of the Brain's config names the
+//!   source system the proxy mode talks to
+//! - proxy mode: the config file and what it refuses at startup (an unknown
+//!   mode or key, no source, an empty tool, an undeclared server), arguments
+//!   renamed with constants added, the eighteen operation names, the source's
+//!   answers and refusals as faults, the source's file references turned into
+//!   `asset://`, and the links key the API and the `brain` server share
 //!
 //! The repository runs against Postgres in the integration suite.
 
@@ -44,6 +50,8 @@ mod chunker;
 mod ingest;
 #[cfg(test)]
 mod properties;
+#[cfg(test)]
+mod proxy;
 #[cfg(test)]
 mod search;
 #[cfg(test)]

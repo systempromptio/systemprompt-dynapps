@@ -8,7 +8,7 @@
 //! REST route that names its target in the path overwrites the matching field
 //! with it.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 // JSON: front matter, typed metadata and `where` filters are free JSON objects,
 // as in the `docs_*` tools.
 use serde_json::{Map, Value};
@@ -18,14 +18,14 @@ use crate::ids::{ArticleId, SpaceId};
 
 pub type Object = Map<String, Value>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Position {
     First,
     Last,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SearchArgs {
     pub query: String,
@@ -36,7 +36,7 @@ pub struct SearchArgs {
     pub filter: Option<Object>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AnswerArgs {
     pub question: String,
@@ -45,7 +45,7 @@ pub struct AnswerArgs {
     pub max_sources: Option<u32>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GetArgs {
     pub article_id: Option<ArticleId>,
@@ -53,7 +53,7 @@ pub struct GetArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ListSpacesArgs {
     pub query: Option<String>,
@@ -62,7 +62,7 @@ pub struct ListSpacesArgs {
     pub offset: Option<u32>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ListArgs {
     pub space: SpaceId,
@@ -73,7 +73,7 @@ pub struct ListArgs {
     pub filter: Option<Object>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct OutlineArgs {
     pub node: Option<ArticleId>,
@@ -86,7 +86,7 @@ pub struct OutlineArgs {
     pub offset: Option<u32>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ExportArgs {
     pub space: SpaceId,
@@ -94,7 +94,7 @@ pub struct ExportArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MetadataArgs {
     pub article_id: Option<ArticleId>,
@@ -104,7 +104,7 @@ pub struct MetadataArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MetadataSchemaArgs {
     pub article_id: Option<ArticleId>,
@@ -112,7 +112,7 @@ pub struct MetadataSchemaArgs {
     pub space: Option<SpaceId>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CreateArgs {
     pub parent_id: Option<ArticleId>,
@@ -125,7 +125,7 @@ pub struct CreateArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct NewNode {
     pub title: String,
@@ -135,7 +135,7 @@ pub struct NewNode {
     pub children: Vec<Self>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TreeArgs {
     pub parent_id: Option<ArticleId>,
@@ -144,7 +144,7 @@ pub struct TreeArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UpdateArgs {
     pub article_id: ArticleId,
@@ -155,7 +155,7 @@ pub struct UpdateArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MoveArgs {
     pub article_id: ArticleId,

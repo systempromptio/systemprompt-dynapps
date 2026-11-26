@@ -133,10 +133,12 @@ in either direction.
   and the person may read. `asset_link` (`GET assets/{id}/link`) gives one `download_url`. A signed URL lasts 10
   minutes, carries nothing about the person, and is checked again on use: the file and its article must still exist
   and be out of the trash. `GET assets/{id}` serves the file to its reader with their JWT, for `DynWork` to draw images.
-- **Signing.** An HMAC-SHA256 (core's `hmac_sha256`) under a key derived from the instance's manifest signing seed, over
+- **Signing.** An HMAC-SHA256 (core's `hmac_sha256`) under a key derived from the instance secret `dynbrain_links`
+  (32 random bytes, held by the API and granted to the `brain` server, so a link either signs opens the API's route), over
   the purpose (`upload` or `download`), the target and the expiry. Core's own signed upload and download links open
   only core's document store and check access to a core document, so they cannot serve a Brain file; and an
-  extension's token authority can only verify. Without the seed the file operations answer `unavailable`.
+  extension's token authority can only verify. Without the secret the file operations answer `unavailable`, in the API and
+  in the `brain` server alike.
 - **Serving.** The type comes from the bytes, never from the client; the name only narrows it within its family (a ZIP
   named `.xlsx` is a spreadsheet). Only PNG, JPEG, GIF and WebP are served `inline`. Everything else, SVG and HTML
   included, is an `attachment`. Every file goes out with `X-Content-Type-Options: nosniff` and
@@ -223,3 +225,59 @@ its own chunks most relevant to the question (ranked against the same query vect
 whole, back in reading order, with `[...]` where one was left out. Only the best chunk is ever cut, marked
 `[...truncated...]`. Blocks are `[n] title (path, lang=xx)` (`lang=?` when unknown), numbered by source position and
 separated by `---`; `citations[n-1]` is `{path, title, lang, snippet}`.
+
+## Native mode and proxy mode
+
+An instance answers from one place, set in `services/config/dynbrain.yaml` (read by core as the extension's config
+block, `config_prefix: dynbrain`):
+
+- `mode: native` (the default): this instance's own store, everything above.
+- `mode: proxy`: every one of the eighteen operations is a call to a tool of another MCP server, the *source*, made as
+  the person who asks. The REST routes and the `brain` MCP server go through the same `Brain::run`, so both answer what
+  the source answers, as it came.
+
+Never both. Merging results from Governance's own index and a source's index needs one ranking across two systems that
+score differently, and that is not solved; a customer who needs several sources sends their documentation into
+Governance (an ingestion integration, to be evaluated) instead of using the proxy (D13).
+
+The mapping lives in each customer's repository, never in the product. A generic example:
+
+```yaml
+dynbrain:
+  mode: proxy
+  proxy:
+    server: brain-source        # an external MCP server declared in services/mcp/
+    file_urls:                  # the URL paths the source names its files with
+      - /files/{id}
+    operations:
+      search:
+        tool: docs_search
+        args: { where: filter } # our argument name: the source's; the rest keep their name
+      answer:
+        tool: docs_answer
+        fixed: { synthesize: false }   # constants added to every call
+      get:
+        tool: docs_get
+      # one entry per operation; an operation with no entry answers `503 unavailable`
+```
+
+- **Identity.** Nothing in the Brain signs a token. The source is called with core's MCP client and the person's
+  request context; when its declaration in `services/mcp/` has `external_auth` pointing at the instance's identity
+  accessor (`/api/public/identity/<server>/token`), core asks it for a short-lived RS256 token of that person
+  (`iss` the instance, `aud` the source's endpoint, `sub`, `email`, `name`, `groups`, five minutes) and sends it. The
+  source must therefore trust the instance's JWKS (`/.well-known/jwks.json`) and issuer, accept the token on the
+  endpoint the `aud` names (with the server's slug in it), and find its user by `email`. The process that calls must
+  hold the secret `mcp_credential_broker_secret`; the `brain` server needs it granted in proxy mode.
+- **Errors.** A 401 or 403 of the source, or a refused token, is `403 forbidden`; a protocol "not found" is `404`; other
+  protocol errors `400 invalid`, each with the source's message; a source that cannot be reached is `503
+  unavailable`.
+- **Permissions** are the source's: the grant and inheritance routes answer `409 managed_at_source`.
+- **Files.** `request_upload`, `asset_upload`, `asset_list` and `asset_link` go to the source as the person; the upload
+  URL is the source's, and the client sends the bytes there. `get` leaves the Markdown as a native `get` does: every
+  reference whose URL path matches `file_urls` (`{id}` for the id, host ignored), or whose relative path the source's
+  `asset_list` gives an id for, becomes `asset://<source id>`, and `asset_urls` holds the source's `asset_link` for each
+  one (at most 50). `GET assets/{id}` asks the source for that link as the person and answers `307` to it (`404` when
+  the source refuses). No byte is kept here, and the upload and signed-download routes of this instance find nothing.
+- **Startup.** An unknown mode or key, a proxy with no `server`, an empty `tool`, or a `server` that is not a declared,
+  enabled MCP server leaves the Brain unmounted in the API (logged) and stops the `brain` server from starting.
+

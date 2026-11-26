@@ -13,18 +13,29 @@
 //! take the bytes of an upload and to serve a file, to its reader or to the
 //! holder of a signed link. No operation moves file bytes through a tool
 //! call or through `get`.
+//!
+//! The transports run the eighteen tool operations by name through
+//! [`Brain::run`], with JSON in and out ([`operation`]). The native Brain
+//! answers through the typed methods; [`proxy::ProxyBrain`] passes each one
+//! to a tool of its source as the person who asks and returns the source's
+//! answer as it came, so its typed methods are never the way in.
 
 pub mod args;
 pub mod assets;
 pub mod fault;
 pub mod found;
 pub mod native;
+pub mod operation;
+pub mod proxy;
 pub mod views;
 
 use std::fmt::Debug;
 
 use async_trait::async_trait;
+// JSON: the arguments and replies of `run` are the JSON a tool call carries.
+use serde_json::Value;
 use systemprompt::identifiers::UserId;
+use systemprompt::models::execution::context::RequestContext;
 
 use crate::assets::link::SignedLink;
 use crate::ids::{ArticleId, AssetId, UploadId};
@@ -98,4 +109,24 @@ pub trait Brain: Send + Sync + Debug {
     async fn open_asset(&self, caller: &UserId, asset: AssetId) -> Reply<AssetFile>;
     async fn open_signed(&self, asset: AssetId, link: &SignedLink) -> Reply<AssetFile>;
     fn upload_limit(&self) -> u64;
+
+    // JSON: one operation by name, as the transports run it.
+    async fn run(
+        &self,
+        caller: &UserId,
+        _context: &RequestContext,
+        operation: operation::Operation,
+        args: Value,
+    ) -> Reply<Value> {
+        operation::dispatch(self, caller, operation, args).await
+    }
+
+    async fn asset_redirect(
+        &self,
+        _caller: &UserId,
+        _context: &RequestContext,
+        _asset: AssetId,
+    ) -> Reply<Option<String>> {
+        Ok(None)
+    }
 }

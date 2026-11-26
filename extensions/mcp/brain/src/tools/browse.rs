@@ -140,10 +140,7 @@ fn list_spaces_schema() -> Json {
 fn list_schema() -> Json {
     schema(
         &[
-            (
-                "space",
-                integer("Space id (see list_spaces)."),
-            ),
+            ("space", integer("Space id (see list_spaces).")),
             ("lang", lang()),
             ("limit", integer("Max rows (<=500, default 200).")),
             ("offset", integer("Pagination offset (default 0).")),

@@ -5,9 +5,9 @@
 //! prefixes them with the server's name. Descriptions and input schemas keep
 //! the guidance of the `docs_*` tools of the dynbrain documentation server,
 //! which agents were tested against, minus everything that belongs to that
-//! server's Git sync and its versions. The server has no logic of its own: [`run`]
-//! turns a call into the operation of the [`dynbrain::brain::Brain`] trait and
-//! back into the structured reply.
+//! server's Git sync and its versions. The server has no logic of its own:
+//! [`run`] turns a call into the operation of the [`dynbrain::brain::Brain`]
+//! trait and back into the structured reply.
 
 mod browse;
 pub mod fault;
@@ -78,9 +78,8 @@ pub struct ToolSpec {
     pub schema: fn() -> Json,
 }
 
-pub static TOOLS: LazyLock<Vec<ToolSpec>> = LazyLock::new(|| {
-    [read::SPECS, browse::SPECS, write::SPECS, files::SPECS].concat()
-});
+pub static TOOLS: LazyLock<Vec<ToolSpec>> =
+    LazyLock::new(|| [read::SPECS, browse::SPECS, write::SPECS, files::SPECS].concat());
 
 pub fn spec(name: &str) -> Option<&'static ToolSpec> {
     TOOLS.iter().find(|spec| spec.name == name)

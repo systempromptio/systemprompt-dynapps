@@ -19,9 +19,7 @@ use super::{Json, ToolSpec, run, spec};
 // view's; the tool list declares only that it is an object.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 #[serde(transparent)]
-pub struct BrainReply(
-    #[schemars(with = "serde_json::Map<String, serde_json::Value>")] pub Json,
-);
+pub struct BrainReply(#[schemars(with = "serde_json::Map<String, serde_json::Value>")] pub Json);
 
 impl McpOutputSchema for BrainReply {
     fn artifact_type() -> &'static str {
@@ -90,8 +88,7 @@ pub struct ToolCall<'a> {
 
 pub async fn dispatch(call: &ToolCall<'_>) -> Result<CallToolResult, McpError> {
     let name = call.request.name.as_ref();
-    let spec =
-        spec(name).ok_or_else(|| reply::invalid(format!("Unknown tool: {name}")))?;
+    let spec = spec(name).ok_or_else(|| reply::invalid(format!("Unknown tool: {name}")))?;
     let tool = BrainTool {
         spec,
         brain: Some(call.brain),

@@ -30,3 +30,9 @@ sqlx = { workspace = true }
 # The Cohere reranker's client is built in the suite against a local server;
 # core installs this crypto provider at server start.
 rustls = { workspace = true }
+# Proxy mode: the `brain` server's tools over a proxy Brain, a fake source
+# served with rmcp's streamable HTTP server, and the boot fixture the MCP
+# client's config comes from.
+systemprompt-mcp-brain = { workspace = true }
+rmcp = { workspace = true, features = ["server", "transport-streamable-http-server", "transport-streamable-http-server-session"] }
+tempfile = { workspace = true }

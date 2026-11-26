@@ -122,9 +122,17 @@ fn files_under(dir: &Path) -> Vec<PathBuf> {
 }
 
 #[test]
-fn no_file_of_the_crate_names_the_proxy_source() {
-    let files = files_under(&crate_dir());
-    assert!(files.len() >= 10, "the crate's files were found");
+fn no_file_of_the_brain_names_the_proxy_source() {
+    let crate_dir = crate_dir();
+    let repo = crate_dir
+        .parent()
+        .and_then(Path::parent)
+        .expect("the repository root")
+        .to_path_buf();
+    let mut files = files_under(&crate_dir);
+    files.extend(files_under(&repo.join("extensions/mcp/brain")));
+    files.push(repo.join("services/config/dynbrain.yaml"));
+    assert!(files.len() >= 30, "the Brain's files were found");
     let offending: Vec<&PathBuf> = files
         .iter()
         .filter(|path| {

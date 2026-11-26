@@ -3,8 +3,8 @@
 use serde_json::json;
 
 use super::fragments::{
-    FRONT_MATTER_NEW, MAX_NODES, METADATA_NEW, article_id, integer, lang, object, position,
-    schema, text,
+    FRONT_MATTER_NEW, MAX_NODES, METADATA_NEW, article_id, integer, lang, object, position, schema,
+    text,
 };
 use super::{Json, ToolKind, ToolSpec};
 
@@ -225,7 +225,10 @@ fn move_schema() -> Json {
 
 fn trash_schema() -> Json {
     schema(
-        &[("article_id", integer("Id of the article to send to the trash."))],
+        &[(
+            "article_id",
+            integer("Id of the article to send to the trash."),
+        )],
         &["article_id"],
         &[],
     )

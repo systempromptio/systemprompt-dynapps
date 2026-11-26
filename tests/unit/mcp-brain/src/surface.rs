@@ -5,7 +5,11 @@ use serde_json::Value;
 use systemprompt_mcp_brain::tools::{INSTRUCTIONS, TOOLS, list_tools, spec, tool_names};
 use systemprompt_mcp_shared::tool_schema::tool_violations;
 
-type Case = (&'static str, &'static [&'static str], &'static [&'static [&'static str]]);
+type Case = (
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static [&'static str]],
+);
 
 const EXPECTED: [&str; 18] = [
     "answer",
@@ -123,7 +127,10 @@ fn each_schema_declares_the_arguments_it_requires() {
             .map(|group| group.iter().map(|key| (*key).to_owned()).collect())
             .collect();
         assert_eq!(any_of(&schema), expected, "{name}: anyOf");
-        for key in must.iter().chain(groups.iter().flat_map(|group| group.iter())) {
+        for key in must
+            .iter()
+            .chain(groups.iter().flat_map(|group| group.iter()))
+        {
             assert!(
                 schema["properties"][*key].is_object(),
                 "{name}: `{key}` is required but not a property"
@@ -136,7 +143,10 @@ fn each_schema_declares_the_arguments_it_requires() {
 fn every_listed_schema_passes_meta_validation() {
     for tool in list_tools() {
         let input = Value::Object((*tool.input_schema).clone());
-        let output = tool.output_schema.as_ref().map(|schema| Value::Object((**schema).clone()));
+        let output = tool
+            .output_schema
+            .as_ref()
+            .map(|schema| Value::Object((**schema).clone()));
         let violations = tool_violations("brain", &tool.name, &input, output.as_ref());
         assert!(violations.is_empty(), "{violations:?}");
     }
@@ -147,7 +157,11 @@ fn no_description_names_the_source_system() {
     let mut text = vec![INSTRUCTIONS.to_owned()];
     for tool in list_tools() {
         text.push(tool.name.to_string());
-        text.push(tool.description.map(|description| description.to_string()).unwrap_or_default());
+        text.push(
+            tool.description
+                .map(|description| description.to_string())
+                .unwrap_or_default(),
+        );
         text.push(Value::Object((*tool.input_schema).clone()).to_string());
     }
     for spec in TOOLS.iter() {

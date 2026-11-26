@@ -1,27 +1,42 @@
-//! The `Extension` registration: the schema, its migrations and the Brain
-//! router.
+//! The `Extension` registration: the schema, its migrations, the config block
+//! and the Brain router.
 //!
 //! Core asks an extension for its router more than once (to validate the
 //! path, then to mount it), so the state is built on the first call and kept
-//! in the extension value: one repository and one device check per process.
+//! in the extension value: one Brain and one device check per process.
 //!
-//! The files of articles use core's file storage and a link key derived from
-//! the instance's manifest signing seed; without that seed the Brain still
-//! runs and its file operations answer `unavailable`. The search reranks with
-//! Cohere when the instance has the `cohere` secret, and keeps the fused
-//! order without it.
+//! [`compose`] builds the Brain the instance's config asks for, native or
+//! proxy, for the API and for the `brain` MCP server alike. A config that
+//! cannot be used (an unknown mode, a proxy with no source, a source server
+//! that is not declared) leaves the Brain unmounted in the API and stops the
+//! MCP server from starting.
+//!
+//! The files of articles use core's file storage and links signed with the
+//! instance secret `dynbrain_links`, which the API and the `brain` server
+//! both hold, so a link either signs opens the API's download route; without
+//! it the Brain still runs and its file operations answer `unavailable`. The
+//! search reranks with Cohere when the instance has the `cohere` secret, and
+//! keeps the fused order without it.
 
 use std::sync::{Arc, OnceLock};
 
 use dynwork_relay::store::postgres::PgRelayStore;
 use systemprompt::database::Database;
 use systemprompt::extension::prelude::{
-    Extension, ExtensionContext, ExtensionMetadata, ExtensionRouter, Migration, SchemaDefinition,
+    Extension, ExtensionConfigError, ExtensionContext, ExtensionMetadata, ExtensionRouter,
+    Migration, SchemaDefinition,
 };
+use systemprompt::mcp::RegistryService;
+use systemprompt::mcp::services::client::{McpClient, McpClientLimits};
+use systemprompt::security::credential::TokenCache;
 
 use crate::assets::AssetFiles;
-use crate::assets::link::LinkSigner;
+use crate::assets::link::{LINKS_SECRET, LinkSigner};
+use crate::brain::Brain;
 use crate::brain::native::NativeBrain;
+use crate::brain::proxy::ProxyBrain;
+use crate::brain::proxy::source::{McpSource, StoreSecrets};
+use crate::config::{BrainConfig, CONFIG_PREFIX, ConfigError, Mode, ProxyConfig, check_server};
 use crate::repository::BrainRepository;
 use crate::router::state::BrainState;
 use crate::router::{EXTENSION_BASE_PATH, brain_router};
@@ -48,49 +63,80 @@ impl DynbrainExtension {
             tracing::error!("Database handle is not Postgres; the Brain is not mounted");
             return None;
         };
+        let embedder = EmbedderSlot::default();
+        let brain = compose(ctx, embedder.clone())
+            .inspect_err(|error| {
+                tracing::error!(%error, "the Brain's config cannot be used; it is not mounted");
+            })
+            .ok()?;
         Some(
             self.state
-                .get_or_init(|| build_state(ctx, database))
+                .get_or_init(|| BrainState {
+                    brain,
+                    authority: ctx.token_authority(),
+                    devices: Arc::new(PgRelayStore::new(database.write_pool())),
+                    embedder,
+                })
                 .clone(),
         )
     }
 }
 
-fn build_state(ctx: &dyn ExtensionContext, database: &Database) -> BrainState {
-    let embedder = EmbedderSlot::default();
-    BrainState {
-        brain: Arc::new(compose_brain(ctx, database, embedder.clone())),
-        authority: ctx.token_authority(),
-        devices: Arc::new(PgRelayStore::new(database.write_pool())),
-        embedder,
+pub fn compose(
+    ctx: &dyn ExtensionContext,
+    embedder: EmbedderSlot,
+) -> Result<Arc<dyn Brain>, ConfigError> {
+    let config = BrainConfig::load(&ctx.services_root().path)?;
+    // Why: an instance is either native or proxy, never both. Merging results from
+    // Governance's own index and a source's index needs one ranking across two
+    // systems that score differently, and that is not solved; a customer who
+    // needs several sources must send their documentation into Governance (an
+    // ingestion integration, to be evaluated) instead of using the proxy.
+    // Decided by David, 24-11-2026.
+    match (config.mode, config.proxy) {
+        (Mode::Proxy, Some(proxy)) => Ok(Arc::new(proxy_brain(ctx, proxy)?)),
+        (Mode::Proxy, None) => Err(ConfigError::NoSource),
+        (Mode::Native, _) => Ok(Arc::new(native_brain(ctx, embedder)?)),
     }
 }
 
-// Why: the `brain` MCP server is a process of its own on a host context that
-// holds no AI service, so it composes the same Brain here and fills the
-// embedder slot itself; the routes fill theirs from the service core layers
-// onto them.
-pub fn native_brain(ctx: &dyn ExtensionContext, embedder: EmbedderSlot) -> Option<NativeBrain> {
-    let handle = ctx.database();
-    let Some(database) = handle.as_any().downcast_ref::<Database>() else {
-        tracing::error!("Database handle is not Postgres; the Brain is not composed");
-        return None;
-    };
-    Some(compose_brain(ctx, database, embedder))
-}
-
-fn compose_brain(
+fn native_brain(
     ctx: &dyn ExtensionContext,
-    database: &Database,
     embedder: EmbedderSlot,
-) -> NativeBrain {
+) -> Result<NativeBrain, ConfigError> {
+    let handle = ctx.database();
+    let database = handle
+        .as_any()
+        .downcast_ref::<Database>()
+        .ok_or(ConfigError::NotPostgres)?;
     let repo = BrainRepository::new(database.write_pool());
     let search = Retriever::new(repo.clone())
         .with_embedder(embedder)
         .with_reranker(reranker(ctx));
-    NativeBrain::new(repo)
+    Ok(NativeBrain::new(repo)
         .with_files(asset_files(ctx))
-        .with_search(search)
+        .with_search(search))
+}
+
+fn proxy_brain(ctx: &dyn ExtensionContext, proxy: ProxyConfig) -> Result<ProxyBrain, ConfigError> {
+    let services = ctx.services();
+    check_server(&services.config(), &proxy.server)?;
+    let registry = RegistryService::new(ctx.system_owner_id(), services, ctx.app_config());
+    let server = registry
+        .get_server(&proxy.server)
+        .map_err(|error| ConfigError::Registry(Box::new(error)))?;
+    let client = McpClient::new(
+        Arc::new(TokenCache::new()),
+        registry.deployments(),
+        Arc::clone(registry.config()),
+        Arc::new(StoreSecrets(ctx.secrets())),
+        McpClientLimits::default(),
+    );
+    tracing::info!(server = %proxy.server, "the Brain answers through its source");
+    Ok(ProxyBrain::new(
+        Arc::new(McpSource::new(client, server)),
+        proxy,
+    ))
 }
 
 fn reranker(ctx: &dyn ExtensionContext) -> Option<Arc<dyn Reranker>> {
@@ -107,14 +153,11 @@ fn reranker(ctx: &dyn ExtensionContext) -> Option<Arc<dyn Reranker>> {
 }
 
 fn asset_files(ctx: &dyn ExtensionContext) -> Option<AssetFiles> {
-    let seed = ctx
-        .secrets()
-        .manifest_signing_secret_seed()
-        .inspect_err(|error| {
-            tracing::error!(%error, "no manifest signing seed; the Brain's files are off");
-        })
-        .ok()?;
-    let signer = LinkSigner::new(&seed)?;
+    let Some(secret) = ctx.secrets().secret(LINKS_SECRET) else {
+        tracing::warn!("no dynbrain_links secret; the Brain's files are off");
+        return None;
+    };
+    let signer = LinkSigner::from_secret(secret.expose())?;
     Some(AssetFiles::new(
         ctx.file_storage(),
         signer,
@@ -141,6 +184,19 @@ impl Extension for DynbrainExtension {
 
     fn dependencies(&self) -> Vec<&'static str> {
         vec!["users", "web"]
+    }
+
+    fn config_prefix(&self) -> Option<&str> {
+        Some(CONFIG_PREFIX)
+    }
+
+    // JSON: core hands an extension its config block as a JSON document.
+    fn validate_config(&self, config: &serde_json::Value) -> Result<(), ExtensionConfigError> {
+        BrainConfig::from_json(config).map(|_| ()).map_err(|error| {
+            ExtensionConfigError::ParseError {
+                source: Box::new(error),
+            }
+        })
     }
 
     fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {

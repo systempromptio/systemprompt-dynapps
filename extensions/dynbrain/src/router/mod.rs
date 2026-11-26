@@ -16,6 +16,7 @@ pub mod assets;
 pub mod error;
 pub mod extract;
 pub mod read;
+pub mod relay;
 pub mod state;
 pub mod write;
 

@@ -107,10 +107,7 @@ fn asset_list_schema() -> Json {
 fn asset_link_schema() -> Json {
     schema(
         &[
-            (
-                "attachment_id",
-                integer("Id of the file, from asset_list."),
-            ),
+            ("attachment_id", integer("Id of the file, from asset_list.")),
             (
                 "article_id",
                 integer("Optional: the article the file belongs to."),

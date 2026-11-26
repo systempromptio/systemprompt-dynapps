@@ -13,7 +13,7 @@ use systemprompt::traits::FileByteStream;
 
 use crate::ids::{ArticleId, AssetId, UploadId};
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RequestUploadArgs {
     pub article_id: Option<ArticleId>,
@@ -21,7 +21,7 @@ pub struct RequestUploadArgs {
     pub filename: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AssetUploadArgs {
     pub article_id: Option<ArticleId>,
@@ -31,7 +31,7 @@ pub struct AssetUploadArgs {
     pub lang: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AssetListArgs {
     pub article_id: Option<ArticleId>,
@@ -41,7 +41,7 @@ pub struct AssetListArgs {
     pub limit: Option<u32>,
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AssetLinkArgs {
     pub attachment_id: Option<AssetId>,

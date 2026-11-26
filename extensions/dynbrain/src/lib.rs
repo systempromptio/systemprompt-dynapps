@@ -23,11 +23,15 @@
 //! embeds it, the way dynbrain does. [`search`] runs dynbrain's hybrid
 //! retrieval over that index, with the reader's access inside its SQL, and
 //! assembles the context an answer is written from without calling a model.
+//! An instance in proxy mode ([`config`], [`brain::proxy`]) answers every
+//! operation from the tools of another MCP server instead, as the person who
+//! asks.
 
 pub mod access;
 pub mod assets;
 pub mod auth;
 pub mod brain;
+pub mod config;
 pub mod content;
 pub mod error;
 pub mod extension;

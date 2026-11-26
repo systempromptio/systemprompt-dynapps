@@ -5,24 +5,31 @@
 //! Every file goes out with `X-Content-Type-Options: nosniff` and
 //! `Content-Security-Policy: sandbox`, so a browser never runs what it holds,
 //! and no answer is cached by a shared cache.
+//!
+//! On a proxy instance the file operations go to the source, its upload URL
+//! takes the bytes, and `GET assets/{id}` redirects to the source's own
+//! short-lived link for the person; no byte is kept here.
 
 use axum::Json;
 use axum::body::Body;
 use axum::extract::{Request, State};
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse, Redirect, Response};
+// JSON: an operation's reply, as the Brain answered it.
+use serde_json::Value;
 
 use super::error::HttpFault;
 use super::extract::{Id, Params, Payload, Token};
+use super::relay::relay;
 use super::state::BrainState;
 use crate::assets::link::SignedLink;
 use crate::assets::sniff;
 use crate::auth::Caller;
 use crate::brain::assets::{
-    AssetAttached, AssetFile, AssetLink, AssetLinkArgs, AssetList, AssetListArgs, AssetUploadArgs,
-    Received, RequestUploadArgs, UploadTicket,
+    AssetFile, AssetLinkArgs, AssetListArgs, AssetUploadArgs, Received, RequestUploadArgs,
 };
 use crate::brain::fault::BrainFault;
+use crate::brain::operation::Operation;
 use crate::ids::{ArticleId, AssetId, UploadId};
 
 pub async fn upload_url(
@@ -30,11 +37,11 @@ pub async fn upload_url(
     State(state): State<BrainState>,
     Id(id): Id,
     Payload(mut args): Payload<RequestUploadArgs>,
-) -> Result<(StatusCode, Json<UploadTicket>), HttpFault> {
+) -> Result<(StatusCode, Json<Value>), HttpFault> {
     args.article_id = Some(ArticleId(id));
     args.path = None;
-    let ticket = state.brain.request_upload(&caller.0, &args).await?;
-    Ok((StatusCode::CREATED, Json(ticket)))
+    let ticket = relay(&state, &caller, Operation::RequestUpload, &args).await?;
+    Ok((StatusCode::CREATED, ticket))
 }
 
 pub async fn receive(
@@ -49,6 +56,10 @@ pub async fn receive(
         ));
     }
     let limit = state.brain.upload_limit();
+    // Why: a Brain that keeps no files, a proxy one, has no upload URL here.
+    if limit == 0 {
+        return Err(HttpFault::NotFound);
+    }
     let bytes = axum::body::to_bytes(
         request.into_body(),
         usize::try_from(limit).unwrap_or(usize::MAX),
@@ -70,11 +81,11 @@ pub async fn attach(
     State(state): State<BrainState>,
     Id(id): Id,
     Payload(mut args): Payload<AssetUploadArgs>,
-) -> Result<(StatusCode, Json<AssetAttached>), HttpFault> {
+) -> Result<(StatusCode, Json<Value>), HttpFault> {
     args.article_id = Some(ArticleId(id));
     args.path = None;
-    let attached = state.brain.asset_upload(&caller.0, &args).await?;
-    Ok((StatusCode::CREATED, Json(attached)))
+    let attached = relay(&state, &caller, Operation::AssetUpload, &args).await?;
+    Ok((StatusCode::CREATED, attached))
 }
 
 pub async fn list(
@@ -82,10 +93,10 @@ pub async fn list(
     State(state): State<BrainState>,
     Id(id): Id,
     Params(mut args): Params<AssetListArgs>,
-) -> Result<Json<AssetList>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     args.article_id = Some(ArticleId(id));
     args.path = None;
-    Ok(Json(state.brain.asset_list(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::AssetList, &args).await
 }
 
 pub async fn link(
@@ -93,9 +104,9 @@ pub async fn link(
     State(state): State<BrainState>,
     Id(id): Id,
     Params(mut args): Params<AssetLinkArgs>,
-) -> Result<Json<AssetLink>, HttpFault> {
+) -> Result<Json<Value>, HttpFault> {
     args.attachment_id = Some(AssetId(id));
-    Ok(Json(state.brain.asset_link(&caller.0, &args).await?))
+    relay(&state, &caller, Operation::AssetLink, &args).await
 }
 
 pub async fn content(
@@ -103,6 +114,18 @@ pub async fn content(
     State(state): State<BrainState>,
     Id(id): Id,
 ) -> Result<Response, HttpFault> {
+    if let Some(url) = state
+        .brain
+        .asset_redirect(&caller.0, &caller.context(), AssetId(id))
+        .await?
+    {
+        let mut response = Redirect::temporary(&url).into_response();
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, no-store"),
+        );
+        return Ok(response);
+    }
     let file = state.brain.open_asset(&caller.0, AssetId(id)).await?;
     Ok(served(file))
 }

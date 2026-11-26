@@ -3,7 +3,10 @@
 //! The body is `{ "error": { "key", "message" } }`, with
 //! a stable `key` and the status that goes with it. A server error is logged
 //! and answered with a fixed message, so nothing internal reaches the client.
-//! No answer is cached.
+//! No answer is cached. A refusal of a proxy instance's source answers like
+//! the native one (`forbidden`, `not_found`, `invalid`, `unavailable`) with
+//! the source's message, and a grant operation there is `409
+//! managed_at_source`.
 
 use axum::Json;
 use axum::extract::rejection::{BytesRejection, PathRejection, QueryRejection};
@@ -13,7 +16,7 @@ use dynwork_relay::auth::AuthError;
 use dynwork_relay::store::StoreError;
 use serde::Serialize;
 
-use crate::brain::fault::BrainFault;
+use crate::brain::fault::{BrainFault, SourceFault};
 
 #[derive(Debug, thiserror::Error)]
 pub enum HttpFault {
@@ -35,33 +38,59 @@ impl HttpFault {
     pub const fn key(&self) -> &'static str {
         match self {
             Self::Auth(error) => error.key(),
-            Self::Devices(_) | Self::Brain(BrainFault::Internal(_)) => "internal",
+            Self::Devices(_) | Self::Brain(BrainFault::Internal(_) | BrainFault::Encode(_)) => {
+                "internal"
+            },
             Self::BadRequest(_) | Self::Body(_) => "bad_request",
-            Self::NotFound | Self::Brain(BrainFault::NotFound) => "not_found",
-            Self::Brain(BrainFault::Forbidden) => "forbidden",
+            Self::NotFound
+            | Self::Brain(BrainFault::NotFound | BrainFault::Source(SourceFault::NotFound(_))) => {
+                "not_found"
+            },
+            Self::Brain(BrainFault::Forbidden | BrainFault::Source(SourceFault::Refused(_))) => {
+                "forbidden"
+            },
             Self::Brain(
-                BrainFault::Invalid(_) | BrainFault::Refused(_) | BrainFault::Property(_),
+                BrainFault::Invalid(_)
+                | BrainFault::Refused(_)
+                | BrainFault::Property(_)
+                | BrainFault::Arguments(_)
+                | BrainFault::Source(SourceFault::Invalid(_)),
             ) => "invalid",
-            Self::Brain(BrainFault::Unavailable(_)) => "unavailable",
+            Self::Brain(
+                BrainFault::Unavailable(_) | BrainFault::Source(SourceFault::Unavailable(_)),
+            ) => "unavailable",
             Self::Brain(BrainFault::TooLarge(_)) => "too_large",
+            Self::Brain(BrainFault::ManagedAtSource) => "managed_at_source",
         }
     }
 
     pub const fn status(&self) -> StatusCode {
         match self {
             Self::Auth(error) => error.status(),
-            Self::Devices(_) | Self::Brain(BrainFault::Internal(_)) => {
+            Self::Devices(_) | Self::Brain(BrainFault::Internal(_) | BrainFault::Encode(_)) => {
                 StatusCode::INTERNAL_SERVER_ERROR
             },
             Self::BadRequest(_)
             | Self::Body(_)
             | Self::Brain(
-                BrainFault::Invalid(_) | BrainFault::Refused(_) | BrainFault::Property(_),
+                BrainFault::Invalid(_)
+                | BrainFault::Refused(_)
+                | BrainFault::Property(_)
+                | BrainFault::Arguments(_)
+                | BrainFault::Source(SourceFault::Invalid(_)),
             ) => StatusCode::BAD_REQUEST,
-            Self::NotFound | Self::Brain(BrainFault::NotFound) => StatusCode::NOT_FOUND,
-            Self::Brain(BrainFault::Forbidden) => StatusCode::FORBIDDEN,
-            Self::Brain(BrainFault::Unavailable(_)) => StatusCode::SERVICE_UNAVAILABLE,
+            Self::NotFound
+            | Self::Brain(BrainFault::NotFound | BrainFault::Source(SourceFault::NotFound(_))) => {
+                StatusCode::NOT_FOUND
+            },
+            Self::Brain(BrainFault::Forbidden | BrainFault::Source(SourceFault::Refused(_))) => {
+                StatusCode::FORBIDDEN
+            },
+            Self::Brain(
+                BrainFault::Unavailable(_) | BrainFault::Source(SourceFault::Unavailable(_)),
+            ) => StatusCode::SERVICE_UNAVAILABLE,
             Self::Brain(BrainFault::TooLarge(_)) => StatusCode::PAYLOAD_TOO_LARGE,
+            Self::Brain(BrainFault::ManagedAtSource) => StatusCode::CONFLICT,
         }
     }
 }
