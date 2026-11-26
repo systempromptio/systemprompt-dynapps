@@ -58,9 +58,9 @@ pub struct ExplainRow {
 /// Milliseconds spent on each step of one search.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timings {
-    pub embedding_ms: u64,
-    pub arms_ms: u64,
-    pub rerank_ms: u64,
+    pub embedding: u64,
+    pub arms: u64,
+    pub rerank: u64,
 }
 
 /// A search with its candidates, in ranked order, and what it returns.
@@ -140,20 +140,22 @@ impl Retriever {
     ) -> Result<Explained, BrainError> {
         let started = Instant::now();
         let embedder = self.embedder.get().filter(|_| !request.query.is_empty());
-        let mut cached = false;
-        let mut staged_vector = None;
-        if let Some(embedder) = embedder {
-            let fingerprint = embedder.fingerprint();
-            cached = self
-                .repo
-                .find_cached_query(&cache_key(&fingerprint, request.query).hash)
-                .await?
-                .is_some();
-            staged_vector = self
-                .query_vector(embedder.as_ref(), request.query)
-                .await?
-                .map(|vector| (fingerprint, vector));
-        }
+        let (cached, staged_vector) = match embedder {
+            Some(embedder) => {
+                let fingerprint = embedder.fingerprint();
+                let cached = self
+                    .repo
+                    .find_cached_query(&cache_key(&fingerprint, request.query).hash)
+                    .await?
+                    .is_some();
+                let vector = self
+                    .query_vector(embedder.as_ref(), request.query)
+                    .await?
+                    .map(|vector| (fingerprint, vector));
+                (cached, vector)
+            },
+            None => (false, None),
+        };
         let embedding = started.elapsed();
         let Some((fingerprint, vector)) = staged_vector else {
             let found = self.keywords(request).await?;
@@ -257,9 +259,9 @@ fn rows_of(
 
 fn timings(embedding: Duration, arms: Duration, reranking: Duration) -> Timings {
     Timings {
-        embedding_ms: millis(embedding),
-        arms_ms: millis(arms),
-        rerank_ms: millis(reranking),
+        embedding: millis(embedding),
+        arms: millis(arms),
+        rerank: millis(reranking),
     }
 }
 

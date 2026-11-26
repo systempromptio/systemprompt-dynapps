@@ -10,7 +10,7 @@ use crate::ids::ArticleId;
 use crate::search::query::QueryVector;
 
 /// A chunk's scores in the two arms: cosine similarity and `ts_rank`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ArmRow {
     pub id: i64,
     pub cosine: Option<f64>,

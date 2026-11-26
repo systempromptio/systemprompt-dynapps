@@ -278,9 +278,9 @@ fn timings(explained: &Explained) -> String {
     let cache = if explained.cached { "cache hit" } else { "embedded" };
     format!(
         "query {cache} {} ms · arms {} ms · rerank {} ms · RRF k=60 · {} candidates, {} kept",
-        at.embedding_ms,
-        at.arms_ms,
-        at.rerank_ms,
+        at.embedding,
+        at.arms,
+        at.rerank,
         explained.rows.len(),
         explained.kept.len()
     )
