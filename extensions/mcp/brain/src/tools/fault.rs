@@ -13,7 +13,9 @@ use super::Json;
 pub fn tool_error(fault: &BrainFault) -> McpError {
     match fault {
         BrainFault::NotFound => reply::not_found("not found"),
-        BrainFault::Forbidden => reply::forbidden(fault.to_string()),
+        BrainFault::Forbidden | BrainFault::Source(SourceFault::Refused(_)) => {
+            reply::forbidden(fault.to_string())
+        },
         BrainFault::Invalid(_)
         | BrainFault::Refused(_)
         | BrainFault::Property(_)
@@ -22,7 +24,6 @@ pub fn tool_error(fault: &BrainFault) -> McpError {
         | BrainFault::ManagedAtSource
         | BrainFault::Source(SourceFault::Invalid(_)) => reply::invalid(fault.to_string()),
         BrainFault::Unavailable(message) => reply::failure(*message),
-        BrainFault::Source(SourceFault::Refused(_)) => reply::forbidden(fault.to_string()),
         BrainFault::Source(SourceFault::NotFound(message)) => reply::not_found(message.clone()),
         BrainFault::Source(SourceFault::Unavailable(_)) => reply::failure(fault.to_string()),
         BrainFault::Encode(source) => {
