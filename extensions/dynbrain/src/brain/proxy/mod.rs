@@ -62,8 +62,23 @@ impl ProxyBrain {
         &self.config
     }
 
-    // JSON: our arguments in, the source's answer out.
+    // JSON: our arguments in, the source's answer out; `get` with its file
+    // references as `asset://`.
     pub async fn relay(
+        &self,
+        context: &RequestContext,
+        operation: Operation,
+        args: Value,
+    ) -> Reply<Value> {
+        let answer = self.call(context, operation, args).await?;
+        if operation == Operation::Get {
+            return Ok(files::with_assets(self, context, answer).await);
+        }
+        Ok(answer)
+    }
+
+    // JSON: one tool call of the source, its answer as it came.
+    async fn call(
         &self,
         context: &RequestContext,
         operation: Operation,
@@ -76,13 +91,9 @@ impl ProxyBrain {
             .ok_or(BrainFault::Unavailable(
                 "the source of this instance has no tool for this operation",
             ))?;
-        let answer = self
+        Ok(self
             .source
             .call(context, &mapping.tool, mapping.translate(args))
-            .await?;
-        if operation == Operation::Get {
-            return Ok(files::with_assets(self, context, answer).await);
-        }
-        Ok(answer)
+            .await?)
     }
 }

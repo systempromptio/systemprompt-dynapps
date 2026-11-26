@@ -135,7 +135,7 @@ async fn listed_paths(
     article: &Value,
 ) -> Vec<(String, i64)> {
     let listed = match brain
-        .relay(
+        .call(
             context,
             Operation::AssetList,
             json!({ "article_id": article }),
@@ -176,7 +176,7 @@ async fn links(
     let mut urls = BTreeMap::new();
     for id in ids.iter().take(MAX_LINKED_FILES) {
         let args = json!({ "attachment_id": id, "article_id": article });
-        match brain.relay(context, Operation::AssetLink, args).await {
+        match brain.call(context, Operation::AssetLink, args).await {
             Ok(link) => {
                 if let Some(url) = link.get("download_url").and_then(Value::as_str) {
                     urls.insert(format!("{SCHEME}{id}"), Value::String(url.to_owned()));
