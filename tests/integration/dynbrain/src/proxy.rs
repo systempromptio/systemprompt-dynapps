@@ -349,7 +349,7 @@ async fn this_instance_takes_no_upload_bytes_and_serves_no_signed_file() {
             "{}/uploads/abc?exp=1&sig=00",
             dynbrain::router::EXTENSION_BASE_PATH
         ))
-        .body(axum::body::Body::from(vec![1_u8, 2, 3]))
+        .body(axum::body::Body::from(vec![1u8, 2, 3]))
         .expect("an upload");
     let answer = tower::ServiceExt::oneshot(app.clone(), upload)
         .await

@@ -1,7 +1,8 @@
-//! One of the eighteen operations from a route: the arguments the route read
-//! and checked, with the path's id already in them, go to [`Brain::run`] as
-//! JSON, and the reply goes back as it came, from the native store or from
-//! the source of a proxy instance.
+//! One of the eighteen operations from a route.
+//!
+//! The arguments the route read and checked, with the path's id already in
+//! them, go to [`Brain::run`] as JSON, and the reply goes back as it came,
+//! from the native store or from the source of a proxy instance.
 
 use axum::Json;
 use serde::Serialize;

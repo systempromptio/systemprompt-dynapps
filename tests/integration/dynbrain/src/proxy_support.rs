@@ -8,6 +8,7 @@
 //! person's token travels the way it does in production (`external_auth`).
 
 use std::collections::BTreeMap;
+use std::future::Future;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use axum::Router;
@@ -32,6 +33,7 @@ use rmcp::model::{
     CallToolRequestParams, CallToolResponse, CallToolResult, Implementation, ProtocolVersion,
     ServerCapabilities, ServerConfig,
 };
+use rmcp::service::MaybeSendFuture;
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::{StreamableHttpServerConfig, StreamableHttpService};
 use rmcp::{ErrorData, RoleServer, ServerHandler};
@@ -100,11 +102,11 @@ impl ServerHandler for FakeSource {
             .with_server_info(Implementation::new("fake-source", "1.0.0"))
     }
 
-    async fn call_tool(
+    fn call_tool(
         &self,
         request: CallToolRequestParams,
         context: rmcp::service::RequestContext<RoleServer>,
-    ) -> Result<CallToolResponse, ErrorData> {
+    ) -> impl Future<Output = Result<CallToolResponse, ErrorData>> + MaybeSendFuture + '_ {
         let bearer = context
             .extensions
             .get::<Parts>()
@@ -113,13 +115,15 @@ impl ServerHandler for FakeSource {
             .unwrap_or("")
             .to_owned();
         let tool = request.name.to_string();
-        let arguments = Value::Object(request.arguments.clone().unwrap_or_default());
+        let arguments = Value::Object(request.arguments.unwrap_or_default());
         self.journal.push(Seen {
             tool: tool.clone(),
             arguments: arguments.clone(),
             bearer,
         });
-        Ok(CallToolResult::structured(answer(&tool, &arguments)).into())
+        std::future::ready(Ok(
+            CallToolResult::structured(answer(&tool, &arguments)).into()
+        ))
     }
 }
 
