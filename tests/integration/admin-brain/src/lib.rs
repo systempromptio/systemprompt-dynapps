@@ -22,10 +22,17 @@
 //!   and the technical pages say the index lives at the source while the
 //!   tables they would read are gone
 
+#[cfg(test)]
 mod access;
+#[cfg(test)]
 mod env;
+#[cfg(test)]
 mod lab;
+#[cfg(test)]
 mod pages;
+#[cfg(test)]
 mod proxy;
+#[cfg(test)]
 mod technical;
+#[cfg(test)]
 mod usage;

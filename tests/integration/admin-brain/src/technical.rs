@@ -108,9 +108,10 @@ async fn reindex_queues_the_document_and_leaves_an_audit_row() {
     assert_eq!(page.status, StatusCode::SEE_OTHER);
     assert!(page.location.contains("tab=ingest"));
     let state = env
-        .sql_text(&format!(
-            "SELECT state FROM dynbrain_index_job WHERE article_id = {id} AND lang = 'es'"
-        ))
+        .sql_for(
+            "SELECT state FROM dynbrain_index_job WHERE article_id = $1 AND lang = 'es'",
+            id,
+        )
         .await;
     assert_eq!(state, "pending");
     let action = env
@@ -144,20 +145,23 @@ async fn retry_requeues_a_failed_job() {
     .execute(&*env.db.pool)
     .await
     .expect("fail a job");
-    let job = env
-        .sql_text(&format!(
-            "SELECT id::text FROM dynbrain_index_job WHERE article_id = {} AND lang = 'es'",
-            env.credit.id.0
-        ))
-        .await;
+    let job: i64 = env
+        .sql_for(
+            "SELECT id::text FROM dynbrain_index_job WHERE article_id = $1 AND lang = 'es'",
+            env.credit.id.0,
+        )
+        .await
+        .parse()
+        .expect("a job id");
     let page = env
         .post(&format!("/brain/ingest/{job}/retry"), "", true)
         .await;
     assert_eq!(page.status, StatusCode::SEE_OTHER);
     let row = env
-        .sql_text(&format!(
-            "SELECT state || ':' || attempts || ':' || COALESCE(last_error, '') FROM dynbrain_index_job WHERE id = {job}"
-        ))
+        .sql_for(
+            "SELECT state || ':' || attempts || ':' || COALESCE(last_error, '') FROM dynbrain_index_job WHERE id = $1",
+            job,
+        )
         .await;
     assert_eq!(row, "pending:0:");
     env.finish().await;

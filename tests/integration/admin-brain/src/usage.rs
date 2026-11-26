@@ -26,11 +26,11 @@ async fn usage_counts_the_documents_searches_return_and_answers_cite() {
     let page = env.get("/brain/usage", true).await;
     assert!(page.has("Facturas"), "the article most returned");
     let counts = env
-        .sql_text(&format!(
+        .sql_for(
             "SELECT count(*) FILTER (WHERE kind = 'search') || ':' || count(*) FILTER (WHERE kind = 'answer')
-               FROM dynbrain_search_log WHERE {} = ANY(article_ids)",
-            env.invoicing.id.0
-        ))
+               FROM dynbrain_search_log WHERE $1 = ANY(article_ids)",
+            env.invoicing.id.0,
+        )
         .await;
     assert_eq!(counts, "2:1");
     env.finish().await;

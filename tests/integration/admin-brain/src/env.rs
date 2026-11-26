@@ -148,7 +148,8 @@ impl Env {
         let retriever = Retriever::new(repo.clone())
             .with_embedder(EmbedderSlot::ready(Arc::new(AxisEmbedder)));
         let native = Arc::new(NativeBrain::new(repo.clone()).with_search(retriever.clone()));
-        let brain: Arc<dyn Brain> = Arc::clone(&native);
+        let shared = Arc::clone(&native);
+        let brain: Arc<dyn Brain> = shared;
         let console = Console {
             mode: Mode::Native,
             brain,
@@ -229,8 +230,16 @@ impl Env {
         }
     }
 
-    pub(crate) async fn sql_text(&self, query: &str) -> String {
+    pub(crate) async fn sql_text(&self, query: &'static str) -> String {
         sqlx::query_scalar::<_, String>(query)
+            .fetch_one(&*self.db.pool)
+            .await
+            .expect("read a value")
+    }
+
+    pub(crate) async fn sql_for(&self, query: &'static str, id: i64) -> String {
+        sqlx::query_scalar::<_, String>(query)
+            .bind(id)
             .fetch_one(&*self.db.pool)
             .await
             .expect("read a value")
