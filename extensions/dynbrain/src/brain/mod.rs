@@ -4,8 +4,9 @@
 //! [`Brain`] has the operations of the `docs_*` tools plus the permission
 //! operations, which are not MCP tools. Each takes the person it runs as:
 //! nothing here reads a token. [`native::NativeBrain`] implements all of it
-//! over the repository except `search` and `answer`, which answer
-//! `unavailable` until the retrieval phases.
+//! over the repository; its `search` and `answer` run the hybrid retrieval
+//! of [`crate::search`], and `answer` returns the assembled context with its
+//! citations, never a text written by a model.
 //!
 //! The file operations are the `docs_*` four (`request_upload`,
 //! `asset_upload`, `asset_list`, `asset_link`) plus what the routes need to
@@ -16,6 +17,7 @@
 pub mod args;
 pub mod assets;
 pub mod fault;
+pub mod found;
 pub mod native;
 pub mod views;
 
@@ -36,9 +38,10 @@ use assets::{
     Received, RequestUploadArgs, UploadTicket,
 };
 use fault::BrainFault;
+use found::{Answer, SearchResults};
 use views::{
-    Answer, ArticleList, ArticleView, Created, Export, Grants, InheritChanged, MetadataList,
-    MetadataSchema, Moved, Outline, SearchResults, SpaceList, Trashed, TreeCreated, Updated,
+    ArticleList, ArticleView, Created, Export, Grants, InheritChanged, MetadataList,
+    MetadataSchema, Moved, Outline, SpaceList, Trashed, TreeCreated, Updated,
 };
 
 pub type Reply<T> = Result<T, BrainFault>;

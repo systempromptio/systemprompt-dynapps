@@ -21,7 +21,8 @@ workspace = true
 # database (DbPool), extension (Extension, SchemaDefinition), identifiers
 # (UserId, Actor, LeaseKey), models (RequestContext), system (AppContext),
 # traits (FileStorage, Job, the bytes of article files) and security
-# (hmac_sha256, the signature of file links) - requires `full`.
+# (hmac_sha256, the signature of file links) and models (the outbound URL
+# guard of the reranker) - requires `full`.
 systemprompt = { workspace = true, features = ["full"] }
 # Direct dep so the `extension_migrations!()` expansion resolves.
 systemprompt-extension = { workspace = true }
@@ -38,6 +39,10 @@ hex = { workspace = true }
 url = { workspace = true }
 # The random id of an upload slot.
 uuid = { workspace = true }
+# The query-cache key, sha1(provider:model:query), as dynbrain keys it.
+sha1 = { workspace = true }
+# The Cohere reranker, called with the instance's key.
+reqwest = { workspace = true }
 
 # The desktop and mobile JWT checks and the phone's device row, used as the
 # relay defines them rather than copied.

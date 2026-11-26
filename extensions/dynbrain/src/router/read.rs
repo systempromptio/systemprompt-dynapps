@@ -5,16 +5,16 @@ use axum::Json;
 use axum::extract::State;
 
 use super::error::HttpFault;
-use super::extract::{Id, Params, Payload};
+use super::extract::{Id, Inference, Params, Payload};
 use super::state::BrainState;
 use crate::auth::Caller;
 use crate::brain::args::{
     AnswerArgs, ExportArgs, GetArgs, GrantTarget, ListArgs, ListSpacesArgs, MetadataArgs,
     MetadataSchemaArgs, OutlineArgs, SearchArgs,
 };
+use crate::brain::found::{Answer, SearchResults};
 use crate::brain::views::{
-    Answer, ArticleList, ArticleView, Export, Grants, MetadataList, MetadataSchema, Outline,
-    SearchResults, SpaceList,
+    ArticleList, ArticleView, Export, Grants, MetadataList, MetadataSchema, Outline, SpaceList,
 };
 use crate::ids::{ArticleId, SpaceId};
 
@@ -112,15 +112,19 @@ pub async fn article_grants(
 pub async fn search(
     caller: Caller,
     State(state): State<BrainState>,
+    Inference(ai): Inference,
     Payload(args): Payload<SearchArgs>,
 ) -> Result<Json<SearchResults>, HttpFault> {
+    state.fill_embedder(ai);
     Ok(Json(state.brain.search(&caller.0, &args).await?))
 }
 
 pub async fn answer(
     caller: Caller,
     State(state): State<BrainState>,
+    Inference(ai): Inference,
     Payload(args): Payload<AnswerArgs>,
 ) -> Result<Json<Answer>, HttpFault> {
+    state.fill_embedder(ai);
     Ok(Json(state.brain.answer(&caller.0, &args).await?))
 }

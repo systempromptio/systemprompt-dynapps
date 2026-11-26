@@ -21,6 +21,8 @@ use super::context::SynopsisPrompt;
 use super::provider::{DIMENSIONS, Embedder, Embedding, Failure, Summarizer};
 
 pub const AGENT_NAME: &str = "dynbrain-index";
+pub const EMBEDDING_PROVIDER: &str = "openai";
+pub const EMBEDDING_MODEL: &str = "text-embedding-3-large";
 const SYNOPSIS_MAX_TOKENS: u32 = 120;
 const JOB_CONTEXT: u128 = 0x0d79_6272_6169_6e5f_696e_6465_7800_0001;
 

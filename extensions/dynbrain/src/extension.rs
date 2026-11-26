@@ -7,7 +7,9 @@
 //!
 //! The files of articles use core's file storage and a link key derived from
 //! the instance's manifest signing seed; without that seed the Brain still
-//! runs and its file operations answer `unavailable`.
+//! runs and its file operations answer `unavailable`. The search reranks with
+//! Cohere when the instance has the `cohere` secret, and keeps the fused
+//! order without it.
 
 use std::sync::{Arc, OnceLock};
 
@@ -24,6 +26,10 @@ use crate::repository::BrainRepository;
 use crate::router::state::BrainState;
 use crate::router::{EXTENSION_BASE_PATH, brain_router};
 use crate::schema;
+use crate::search::Retriever;
+use crate::search::cohere::{self, CohereReranker};
+use crate::search::query::EmbedderSlot;
+use crate::search::rerank::Reranker;
 
 #[derive(Debug, Default)]
 pub struct DynbrainExtension {
@@ -52,13 +58,34 @@ impl DynbrainExtension {
 
 fn build_state(ctx: &dyn ExtensionContext, database: &Database) -> BrainState {
     let pool = database.write_pool();
+    let repo = BrainRepository::new(Arc::clone(&pool));
+    let embedder = EmbedderSlot::default();
+    let search = Retriever::new(repo.clone())
+        .with_embedder(embedder.clone())
+        .with_reranker(reranker(ctx));
     BrainState {
         brain: Arc::new(
-            NativeBrain::new(BrainRepository::new(Arc::clone(&pool))).with_files(asset_files(ctx)),
+            NativeBrain::new(repo)
+                .with_files(asset_files(ctx))
+                .with_search(search),
         ),
         authority: ctx.token_authority(),
         devices: Arc::new(PgRelayStore::new(pool)),
+        embedder,
     }
+}
+
+fn reranker(ctx: &dyn ExtensionContext) -> Option<Arc<dyn Reranker>> {
+    let Some(key) = ctx.secrets().secret(cohere::PROVIDER) else {
+        tracing::info!("no cohere key; searches keep the fused order, unrated");
+        return None;
+    };
+    CohereReranker::new(key.expose().to_owned(), cohere::ENDPOINT, cohere::MODEL)
+        .inspect_err(|error| {
+            tracing::error!(%error, "the cohere reranker is off");
+        })
+        .ok()
+        .map(|reranker| -> Arc<dyn Reranker> { Arc::new(reranker) })
 }
 
 fn asset_files(ctx: &dyn ExtensionContext) -> Option<AssetFiles> {

@@ -1,8 +1,12 @@
 //! The access checks and the small helpers every operation shares: reaching
 //! an article or a space as a person, choosing the variant to show, building
 //! a path and a slug, and merging a change into a variant.
+//!
+//! What a person reads in a space is one query (`list_article_levels`), not
+//! one per article, so lists, the outline and the export cost the same
+//! whatever the size of the tree.
 
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use systemprompt::identifiers::UserId;
 
@@ -79,21 +83,40 @@ impl NativeBrain {
         space: SpaceId,
         user: &UserId,
     ) -> Result<Vec<(Article, Level)>, BrainFault> {
-        let mut reached = Vec::new();
-        for article in self.repo.list_articles(space).await? {
-            if article.trashed_at.is_some() {
-                continue;
-            }
-            let level = self
-                .repo
-                .find_level(article.id, user)
-                .await?
-                .filter(|level| *level >= Level::Read);
-            if let Some(level) = level {
-                reached.push((article, level));
-            }
-        }
-        Ok(reached)
+        let levels: HashMap<ArticleId, Level> = self
+            .repo
+            .list_article_levels(user, Some(space))
+            .await?
+            .into_iter()
+            .map(|reached| (reached.article, reached.level))
+            .collect();
+        Ok(self
+            .repo
+            .list_articles(space)
+            .await?
+            .into_iter()
+            .filter(|article| article.trashed_at.is_none())
+            .filter_map(|article| {
+                levels
+                    .get(&article.id)
+                    .copied()
+                    .map(|level| (article, level))
+            })
+            .collect())
+    }
+
+    pub(super) async fn seen(
+        &self,
+        space: SpaceId,
+        user: &UserId,
+    ) -> Result<BTreeSet<ArticleId>, BrainFault> {
+        Ok(self
+            .repo
+            .list_article_levels(user, Some(space))
+            .await?
+            .into_iter()
+            .map(|reached| reached.article)
+            .collect())
     }
 
     pub(super) async fn variant_of(
@@ -110,9 +133,11 @@ impl NativeBrain {
         &self,
         space: &Space,
         article: &Article,
+        user: &UserId,
     ) -> Result<String, BrainFault> {
         let all = self.repo.list_articles(space.id).await?;
-        Ok(path_of(space, article, &all))
+        let seen = self.seen(space.id, user).await?;
+        Ok(path_of(space, article, &all, &seen))
     }
 
     pub(super) async fn resolve(

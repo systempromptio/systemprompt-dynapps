@@ -19,6 +19,13 @@ pub struct SpaceId(pub i64);
 #[serde(transparent)]
 pub struct ArticleId(pub i64);
 
+/// A chunk of the retrieval index.
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+#[serde(transparent)]
+pub struct ChunkId(pub i64);
+
 /// A file of an article, named `asset://<id>` in Markdown.
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,

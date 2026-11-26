@@ -1,13 +1,22 @@
 //! The pure helpers of the operations: the access comparison, choosing the
 //! variant to show, paths and slugs, validating a write against its space
 //! and merging a change into a variant.
+//!
+//! A path names the ancestors the reader can read; each run of ancestors they
+//! cannot read is shown as one `…`, so a path never reveals a title or a slug
+//! of a page its reader has no access to.
+
+use std::collections::BTreeSet;
 
 use crate::access::Level;
 use crate::brain::args::Object;
 use crate::brain::fault::BrainFault;
 use crate::brain::views::VariantInfo;
 use crate::error::BrainError;
+use crate::ids::ArticleId;
 use crate::model::{Article, Space, Variant, VariantWrite};
+
+const HIDDEN_ANCESTOR: &str = "…";
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Change<'a> {
@@ -61,14 +70,26 @@ pub(super) fn variant_info(variant: &Variant, space: &Space) -> VariantInfo {
     }
 }
 
-pub(super) fn path_of(space: &Space, article: &Article, all: &[Article]) -> String {
+pub(super) fn path_of(
+    space: &Space,
+    article: &Article,
+    all: &[Article],
+    seen: &BTreeSet<ArticleId>,
+) -> String {
     let mut parts = vec![article.slug.as_str()];
     let mut parent = article.parent;
     while let Some(id) = parent {
         let Some(up) = all.iter().find(|candidate| candidate.id == id) else {
             break;
         };
-        parts.push(&up.slug);
+        let shown = if seen.contains(&up.id) {
+            up.slug.as_str()
+        } else {
+            HIDDEN_ANCESTOR
+        };
+        if shown != HIDDEN_ANCESTOR || parts.last() != Some(&HIDDEN_ANCESTOR) {
+            parts.push(shown);
+        }
         parent = up.parent;
     }
     parts.push(&space.slug);

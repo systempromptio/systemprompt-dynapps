@@ -17,6 +17,12 @@
 //!   becoming its alt text, eligibility denied by default, the context prefix
 //!   by strategy (none for code), the synopsis prompt, and a batch that the
 //!   provider refuses in part, all or with a rate limit
+//! - the search: Reciprocal Rank Fusion, one passage per document and no
+//!   near-duplicates, the preferred language, the confidence verdict and its
+//!   threshold, reranking that fails open with its trace, the breaker that
+//!   opens, doubles and closes, the query-cache key, the language of a query,
+//!   the `where` filter, and the answer's context (whole documents, best chunks
+//!   in reading order with gaps, marked cuts, numbered blocks)
 //! - the extension registration, its schema, and the vocabulary rule: no file
 //!   of the crate names the source system the proxy mode talks to
 //!
@@ -38,3 +44,7 @@ mod chunker;
 mod ingest;
 #[cfg(test)]
 mod properties;
+#[cfg(test)]
+mod search;
+#[cfg(test)]
+mod search_context;

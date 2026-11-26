@@ -347,21 +347,3 @@ async fn trash_takes_the_subtree_out_and_needs_write() {
     assert_eq!(article_count(&app, space.id).await, 0);
     app.finish().await;
 }
-
-#[tokio::test]
-async fn search_and_answer_are_unavailable_until_the_retrieval_phases() {
-    let db = dynapps_test_common::db_or_skip!();
-    let app = App::new(db).await;
-    let search = app.post("/search", "alice", &json!({"query": "x"})).await;
-    assert_eq!(search.status, StatusCode::SERVICE_UNAVAILABLE);
-    assert_eq!(search.key(), "unavailable");
-    let answer = app
-        .post("/answer", "alice", &json!({"question": "x"}))
-        .await;
-    assert_eq!(answer.status, StatusCode::SERVICE_UNAVAILABLE);
-    let anonymous = app
-        .request(Method::POST, "/search", None, Some(&json!({"query": "x"})))
-        .await;
-    assert_eq!(anonymous.status, StatusCode::UNAUTHORIZED);
-    app.finish().await;
-}

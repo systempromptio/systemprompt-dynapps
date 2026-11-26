@@ -63,7 +63,7 @@ impl NativeBrain {
             space: space.id,
             parent_id: parent,
             title: draft.write.title,
-            path: self.path_for(&space, &article).await?,
+            path: self.path_for(&space, &article, user).await?,
             variant: VariantInfo {
                 is_default: lang == space.default_lang,
                 lang,
@@ -205,7 +205,7 @@ impl NativeBrain {
             return Ok(space.slug.clone());
         };
         let (article, _) = self.reach(id, user).await?;
-        self.path_for(space, &article).await
+        self.path_for(space, &article, user).await
     }
 
     async fn insert_one(&self, user: &UserId, draft: &Draft<'_>) -> Result<Article, BrainFault> {

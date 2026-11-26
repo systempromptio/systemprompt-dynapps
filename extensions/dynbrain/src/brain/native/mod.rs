@@ -4,13 +4,15 @@
 //! it touches before it reads or writes: `read` for anything it shows, `write`
 //! for anything it changes and `manage` for grants. The checks live in
 //! `guard`; reading operations are in `read` and writing ones in `write`.
-//! `search` and `answer` answer `unavailable` until the retrieval phases.
+//! `search` and `answer` (`find`) run the [`Retriever`]: without an embedder
+//! they search by keywords, and `answer` never calls a model.
 //!
 //! Files (`files` and `serve`) need [`AssetFiles`]: core's file storage and
 //! the link signer. Without them the file operations answer `unavailable`
 //! and `get` and `export` give no `asset_urls`.
 
 mod files;
+mod find;
 mod grants;
 mod guard;
 mod outline;
@@ -33,25 +35,40 @@ use super::assets::{
     Received, RequestUploadArgs, UploadTicket,
 };
 use super::fault::BrainFault;
+use super::found::{Answer, SearchResults};
 use super::views::{
-    Answer, ArticleList, ArticleView, Created, Export, Grants, InheritChanged, MetadataList,
-    MetadataSchema, Moved, Outline, SearchResults, SpaceList, Trashed, TreeCreated, Updated,
+    ArticleList, ArticleView, Created, Export, Grants, InheritChanged, MetadataList,
+    MetadataSchema, Moved, Outline, SpaceList, Trashed, TreeCreated, Updated,
 };
 use super::{Brain, Reply};
 use crate::assets::AssetFiles;
 use crate::assets::link::SignedLink;
 use crate::ids::{ArticleId, AssetId, UploadId};
 use crate::repository::BrainRepository;
+use crate::search::Retriever;
 
 #[derive(Debug, Clone)]
 pub struct NativeBrain {
     repo: BrainRepository,
     files: Option<AssetFiles>,
+    search: Retriever,
 }
 
 impl NativeBrain {
-    pub const fn new(repo: BrainRepository) -> Self {
-        Self { repo, files: None }
+    pub fn new(repo: BrainRepository) -> Self {
+        Self {
+            search: Retriever::new(repo.clone()),
+            repo,
+            files: None,
+        }
+    }
+
+    pub fn with_search(self, search: Retriever) -> Self {
+        Self { search, ..self }
+    }
+
+    pub const fn retriever(&self) -> &Retriever {
+        &self.search
     }
 
     pub fn with_files(self, files: Option<AssetFiles>) -> Self {
@@ -67,16 +84,12 @@ impl NativeBrain {
 
 #[async_trait]
 impl Brain for NativeBrain {
-    async fn search(&self, _caller: &UserId, _args: &SearchArgs) -> Reply<SearchResults> {
-        Err(BrainFault::Unavailable(
-            "search is not available on this instance yet",
-        ))
+    async fn search(&self, caller: &UserId, args: &SearchArgs) -> Reply<SearchResults> {
+        self.find(caller, args).await
     }
 
-    async fn answer(&self, _caller: &UserId, _args: &AnswerArgs) -> Reply<Answer> {
-        Err(BrainFault::Unavailable(
-            "answer is not available on this instance yet",
-        ))
+    async fn answer(&self, caller: &UserId, args: &AnswerArgs) -> Reply<Answer> {
+        self.assemble(caller, args).await
     }
 
     async fn get(&self, caller: &UserId, args: &GetArgs) -> Reply<ArticleView> {

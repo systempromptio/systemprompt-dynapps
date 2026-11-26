@@ -7,7 +7,7 @@ tables, `/api/v1/brain` and `brain` toolset are the core's organisational memory
 ## What exists
 
 The schema, the repository, the `Brain` trait with its native implementation, the HTTP API (`/api/dynbrain/v1`), the
-files of articles and the indexing. The search and the `brain` MCP server come in later phases.
+files of articles, the indexing and the search. The `brain` MCP server comes in a later phase.
 
 - `DynbrainExtension` (`dynbrain`, "Brain"), depends on `users` and `web`; registers the schema and its migrations.
 - `BrainRepository` (`repository/`): spaces, articles, variants, revisions, grants and the access closure.
@@ -69,7 +69,7 @@ written.
 ## The Brain trait and the REST API
 
 `brain::Brain` is the contract of the operations. It takes the person it runs as and reads no token. `NativeBrain`
-implements it over this store; `search` and `answer` answer `unavailable` until the retrieval phases. The files of an
+implements it over this store; `search` and `answer` run the hybrid retrieval described under Search. The files of an
 article are in the trait too (see [Files](#files)). Input and output types use the field names of the `docs_*` tools,
 and what Governance adds (`slug`, `inherit_access`, `level`, `article_count`, `asset_urls`) is a new field.
 
@@ -99,7 +99,8 @@ A path's id overwrites the same field of the body. `limit` and `offset` page the
 | `GET /articles/{id}/grants` | Its own `grants` (with `none`), the resolved `access` (never `none`) and `inherit_access`; needs `manage`. | `{"grants":[],"access":[{"kind":"user","id":"alice","level":"manage"}],"inherit_access":true}` |
 | `PUT /articles/{id}/grants` | Replaces its own grants, as the space route does. | `{"grants":[{"kind":"role","id":"editor","level":"write"}]}` |
 | `PUT /articles/{id}/inherit` | `{"inherit","copy_inherited"}`: cut from its parent, optionally keeping what it inherited as its own grants. | `{"article_id":7,"inherit_access":false}` |
-| `POST /search`, `POST /answer` | `503 unavailable` until the retrieval phases. | `{"error":{"key":"unavailable","message":"search is not available on this instance yet"}}` |
+| `POST /search` | `{query, limit?, lang?, space?, where?}`: the hybrid search (see Search). | `{"query":"backups","mode":"hybrid","results":[{"article_id":4,"space":1,"path":"handbook/…/backups","title":"Backups","description":"","lang":"en","snippet":"…","score":0.93}],"total":1,"confidence":"high","top_score":0.93}` |
+| `POST /answer` | `{question, lang?, space?, max_sources?}`: the assembled context, no model called. | `{"context":"[1] Backups (handbook/backups, lang=en)\n…","citations":[{"path":"handbook/backups","title":"Backups","lang":"en","snippet":"…"}],"mode":"context","confidence":"unrated","top_score":null,"confidence_note":"…"}` |
 
 An article is also found by `path` (`<space slug>/<article slug>/...`) through the trait, which the MCP server uses.
 
@@ -180,3 +181,43 @@ and the `anthropic` key it already has for the synopses. Without the OpenAI key 
 unembedded and the search will use only its text arm; without the Anthropic key chunks are embedded with the context
 they have. The job `dynbrain_upload_purge` (04:15 UTC) deletes uploads whose link expired a day ago and that no article
 adopted, with their bytes.
+
+## Search
+
+`search` and `answer` reproduce dynbrain's `docs_search` and `docs_answer` (`synthesize: false`). The service is
+`search::Retriever`; it returns the passages with a `ScoringTrace` (which scoring produced the scores, and why when
+the reranker did not) so the admin's search laboratory can build on it without changing the REST or MCP shapes.
+
+- **Two arms, access inside the SQL.** The vector arm (pgvector HNSW, `hnsw.ef_search` 200 set per transaction) and
+  the text arm (`plainto_tsquery` in each chunk's own language configuration) return 100 candidates each. Both keep
+  only chunks of articles the reader reaches in `dynbrain_access` (a row for them, a role or a group, `read` or more,
+  active account) and out of the trash, in the query itself, so a reader who sees little still gets a full pool.
+  `space`, `lang` (spaces written in that language) and `where` are applied there too.
+- **Fingerprint.** If any stored vector was made by another embedding configuration, the vector arm is switched off
+  and the search runs on text alone.
+- **Fusion.** Reciprocal Rank Fusion with `k = 60`; ties keep the order first seen.
+- **Reranker.** Cohere `rerank-v3.5`, 5 s limit, key = the instance secret `cohere`. Any failure keeps the fused
+  order. A circuit breaker per provider and endpoint writes it off for 60 s after a failure on the wire, doubling up
+  to 900 s; refusals (400, 401, 403, 422) do not open it.
+- **Deduplication.** One passage per article; a passage whose word set overlaps a kept one by Jaccard ≥ 0.85 is
+  dropped; within an article the preferred language (`lang`, or the language the query reads as) represents it.
+- **Confidence.** `high` / `low` split the reranker's best score at 0.70 (`RetrievalSettings::weak_match_threshold`;
+  0 switches it off), with dynbrain's note for `low`. Without reranker scores it is `unrated`, with its own note.
+- **Query cache.** `dynbrain_query_cache`, keyed by `sha1(provider:model:normalised query)`; a miss embeds with a 6 s
+  limit and one retry, and purges entries unused for 30 days. The query embedder is core's `AiService` with the
+  indexer's model (`openai` `text-embedding-3-large`, 1536); core hands it to the routes per request.
+- **Keyword fallback.** Without an embedder, or when the query cannot be embedded, the search matches title and body
+  (`ILIKE`, access in SQL), `mode: "keyword"`, `confidence: "unrated"`.
+- **`where`.** A map of declared properties (any space's); an undeclared key is refused naming the declared ones;
+  `false` or `null` means "not set". Lists (`GET spaces/{id}/articles`) follow the same rule.
+- **Paths.** A path never names an ancestor its reader cannot read: each run of them is one `…`
+  (`handbook/…/holidays`). What a person reads in a space is one query (`list_article_levels`), also for lists, the
+  outline and the export.
+
+### The answer context
+
+`answer` calls no model. Each source document gets 25,000 characters. A document that fits is given whole; otherwise
+its own chunks most relevant to the question (ranked against the same query vector, no second embedding call), each
+whole, back in reading order, with `[...]` where one was left out. Only the best chunk is ever cut, marked
+`[...truncated...]`. Blocks are `[n] title (path, lang=xx)` (`lang=?` when unknown), numbered by source position and
+separated by `---`; `citations[n-1]` is `{path, title, lang, snippet}`.

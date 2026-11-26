@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_query_cache (query_hash, query_text, provider, model, embedding, hits)\n               VALUES ($1, $2, $3, $4, $5::text::vector, 1)\n               ON CONFLICT (query_hash) DO UPDATE\n                  SET hits = dynbrain_query_cache.hits + 1, last_used = CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "390c3f593640b3b7ae34bf9ddb2aeff4295dcccf1bb6920aafabf2a873e56d3d"
+}

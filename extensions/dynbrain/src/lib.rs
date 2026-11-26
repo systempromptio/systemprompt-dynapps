@@ -20,7 +20,9 @@
 //! core's file storage, Markdown names them `asset://<id>`, and readers get
 //! short-lived signed URLs. Writing a variant queues it for indexing, and a
 //! scheduler job ([`ingest`]) cuts it into chunks, situates each one and
-//! embeds it, the way dynbrain does.
+//! embeds it, the way dynbrain does. [`search`] runs dynbrain's hybrid
+//! retrieval over that index, with the reader's access inside its SQL, and
+//! assembles the context an answer is written from without calling a model.
 
 pub mod access;
 pub mod assets;
@@ -37,6 +39,7 @@ pub mod properties;
 pub mod repository;
 pub mod router;
 pub mod schema;
+pub mod search;
 
 pub use error::BrainError;
 pub use extension::DynbrainExtension;

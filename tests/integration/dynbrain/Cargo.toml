@@ -27,3 +27,6 @@ tokio = { workspace = true }
 async-trait = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
+# The Cohere reranker's client is built in the suite against a local server;
+# core installs this crypto provider at server start.
+rustls = { workspace = true }

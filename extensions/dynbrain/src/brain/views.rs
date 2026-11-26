@@ -249,27 +249,3 @@ pub struct InheritChanged {
     pub article_id: ArticleId,
     pub inherit_access: bool,
 }
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct SearchHit {
-    pub article_id: ArticleId,
-    pub path: String,
-    pub title: String,
-    pub lang: String,
-    pub snippet: String,
-    pub score: f64,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct SearchResults {
-    pub results: Vec<SearchHit>,
-    pub confidence: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Answer {
-    pub question: String,
-    pub context: String,
-    pub sources: Vec<SearchHit>,
-    pub confidence: Option<String>,
-}

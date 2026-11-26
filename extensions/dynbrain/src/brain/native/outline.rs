@@ -1,5 +1,7 @@
 //! The outline and the Markdown export: the tree a person sees, bounded.
 
+use std::collections::BTreeSet;
+
 use systemprompt::identifiers::UserId;
 
 use super::NativeBrain;
@@ -9,6 +11,7 @@ use crate::brain::Reply;
 use crate::brain::args::{ExportArgs, OutlineArgs};
 use crate::brain::fault::BrainFault;
 use crate::brain::views::{Anchor, Export, Outline, OutlineNode};
+use crate::ids::ArticleId;
 use crate::model::{Article, Space};
 
 impl NativeBrain {
@@ -104,6 +107,7 @@ impl NativeBrain {
         let (space, _) = self.space_reach(args.space, user).await?;
         let reached = self.readable(space.id, user).await?;
         let all = self.repo.list_articles(space.id).await?;
+        let seen: BTreeSet<ArticleId> = reached.iter().map(|(article, _)| article.id).collect();
         let walked = Tree::new(&reached, None).descend(None, 0);
         let mut markdown = String::new();
         let mut bodies = Vec::new();
@@ -113,7 +117,7 @@ impl NativeBrain {
                 .await?;
             if format == "index" {
                 let indent = "  ".repeat(*depth as usize - 1);
-                let path = path_of(&space, article, &all);
+                let path = path_of(&space, article, &all, &seen);
                 markdown.push_str(&format!("{indent}- {} (`{path}`)\n", variant.title));
             } else {
                 let marks = "#".repeat((*depth as usize).min(6));

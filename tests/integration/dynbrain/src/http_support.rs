@@ -16,6 +16,7 @@ use dynbrain::assets::link::LinkSigner;
 use dynbrain::brain::native::NativeBrain;
 use dynbrain::router::state::BrainState;
 use dynbrain::router::{EXTENSION_BASE_PATH, brain_router};
+use dynbrain::search::query::EmbedderSlot;
 use dynwork_relay::ids::DeviceId;
 use dynwork_relay::mobile_auth::jwt;
 use dynwork_relay::store::Account;
@@ -196,6 +197,7 @@ impl App {
             brain: Arc::new(brain.clone()),
             authority,
             devices: Arc::new(PgRelayStore::new(fixture.shared_pool())),
+            embedder: EmbedderSlot::default(),
         };
         let router = Router::new().nest(EXTENSION_BASE_PATH, brain_router(state));
         Self {

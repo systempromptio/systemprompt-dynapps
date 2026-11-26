@@ -1,7 +1,9 @@
 //! The reading operations: spaces, one article, flat lists, the outline, the
-//! Markdown export and the metadata. They show only what the person reaches.
+//! Markdown export and the metadata. They show only what the person reaches,
+//! and a list's `where` follows the search's rule (declared properties only;
+//! `false` means not set).
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use systemprompt::identifiers::UserId;
 
@@ -9,16 +11,14 @@ use super::NativeBrain;
 use super::shape::{blank, path_of, pick, variant_info};
 use crate::access::Level;
 use crate::brain::Reply;
-use crate::brain::args::{
-    GetArgs, ListArgs, ListSpacesArgs, MetadataArgs, MetadataSchemaArgs, Object,
-};
+use crate::brain::args::{GetArgs, ListArgs, ListSpacesArgs, MetadataArgs, MetadataSchemaArgs};
 use crate::brain::fault::BrainFault;
 use crate::brain::views::{
     ArticleList, ArticleView, ChildSummary, ListedArticle, MetadataItem, MetadataList,
     MetadataSchema, SpaceList, SpaceSummary,
 };
 use crate::ids::ArticleId;
-use crate::model::Variant;
+use crate::search::filter::PropertyFilter;
 
 impl NativeBrain {
     pub(super) async fn fetch_article(&self, user: &UserId, args: &GetArgs) -> Reply<ArticleView> {
@@ -28,10 +28,10 @@ impl NativeBrain {
         let variant = self
             .variant_of(&article, &space, args.lang.as_deref())
             .await?;
+        let seen = self.seen(space.id, user).await?;
         let mut children = Vec::new();
         for child in self.repo.list_children(space.id, Some(id)).await? {
-            let reaches = self.repo.find_level(child.id, user).await?;
-            if reaches.is_none_or(|level| level < Level::Read) {
+            if !seen.contains(&child.id) {
                 continue;
             }
             let shown = self
@@ -49,7 +49,7 @@ impl NativeBrain {
             found: true,
             article_id: id,
             space: space.id,
-            path: self.path_for(&space, &article).await?,
+            path: self.path_for(&space, &article, user).await?,
             title: variant.title,
             description: variant.description,
             lang: variant.lang,
@@ -71,6 +71,7 @@ impl NativeBrain {
         args: &ListSpacesArgs,
     ) -> Reply<SpaceList> {
         let needle = args.query.as_deref().map(str::to_lowercase);
+        let reached = self.repo.list_article_levels(user, None).await?;
         let mut visible = Vec::new();
         for space in self.repo.list_spaces().await? {
             let named = needle
@@ -88,7 +89,10 @@ impl NativeBrain {
                 .find_space_level(space.id, user)
                 .await?
                 .unwrap_or(Level::NoAccess);
-            let count = self.readable(space.id, user).await?.len();
+            let count = reached
+                .iter()
+                .filter(|article| article.space == space.id)
+                .count();
             if own < Level::Read && count == 0 {
                 continue;
             }
@@ -115,18 +119,19 @@ impl NativeBrain {
         let (space, _) = self.space_reach(args.space, user).await?;
         let reached = self.readable(space.id, user).await?;
         let all = self.repo.list_articles(space.id).await?;
-        let present: HashSet<ArticleId> = reached.iter().map(|(article, _)| article.id).collect();
+        let present: BTreeSet<ArticleId> = reached.iter().map(|(article, _)| article.id).collect();
+        let filter = PropertyFilter::parse(args.filter.as_ref(), &space.properties.names())?;
         let mut documents = Vec::new();
         for (article, _) in &reached {
             let variant = self
                 .variant_of(article, &space, args.lang.as_deref())
                 .await?;
-            if !matches_filter(&variant, args.filter.as_ref()) {
+            if !filter.admits(&variant.properties) {
                 continue;
             }
             documents.push(ListedArticle {
                 article_id: article.id,
-                path: path_of(&space, article, &all),
+                path: path_of(&space, article, &all, &present),
                 title: variant.title,
                 lang: variant.lang,
                 parent_id: article.parent.filter(|parent| present.contains(parent)),
@@ -174,6 +179,7 @@ impl NativeBrain {
         let (article, level) = self.reach(id, user).await?;
         let space = self.space_row(article.space).await?;
         let all = self.repo.list_articles(space.id).await?;
+        let seen = self.seen(space.id, user).await?;
         let rows = self.repo.list_variants(id).await?;
         let variant_langs = rows.iter().map(|variant| variant.lang.clone()).collect();
         let variant =
@@ -185,7 +191,7 @@ impl NativeBrain {
         let parent_id = self.visible_parent(user, &article).await?;
         Ok(MetadataItem {
             id,
-            path: path_of(&space, &article, &all),
+            path: path_of(&space, &article, &all, &seen),
             title: variant.title,
             description: variant.description,
             lang: variant.lang,
@@ -243,12 +249,4 @@ pub(super) fn page<T>(
         offset,
         items.into_iter().skip(offset).take(limit).collect(),
     )
-}
-
-fn matches_filter(variant: &Variant, filter: Option<&Object>) -> bool {
-    filter.is_none_or(|wanted| {
-        wanted
-            .iter()
-            .all(|(key, value)| variant.properties.get(key) == Some(value))
-    })
 }

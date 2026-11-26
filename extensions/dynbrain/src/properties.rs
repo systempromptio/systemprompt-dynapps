@@ -7,6 +7,8 @@
 //! key the space does not declare is refused. The free front matter is not
 //! checked: it is kept as written.
 
+use std::collections::BTreeSet;
+
 use chrono::{DateTime, NaiveDate};
 use serde::{Deserialize, Serialize};
 // JSON: definitions and values are the JSON documents the schema stores.
@@ -67,6 +69,8 @@ pub enum PropertyError {
     DuplicateOption { property: String, value: String },
     #[error("property `{0}` is not declared by the space")]
     Unknown(String),
+    #[error("'{name}' is not a metadata field of this documentation. Declared: {declared}.")]
+    NotDeclared { name: String, declared: String },
     #[error("property `{property}` must be a {expected:?} value")]
     WrongType {
         property: String,
@@ -75,6 +79,13 @@ pub enum PropertyError {
 }
 
 impl PropertySchema {
+    pub fn names(&self) -> BTreeSet<String> {
+        self.0
+            .iter()
+            .map(|definition| definition.name.clone())
+            .collect()
+    }
+
     // JSON: the schema is stored and exchanged as the JSON document dynbrain uses.
     pub fn parse(document: &Value) -> Result<Self, PropertyError> {
         let schema = Self(serde_json::from_value(document.clone())?);

@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id AS \"id!\", c.article_id AS \"article_id!\", a.space_id AS \"space_id!\",\n                      c.lang AS \"lang!\", v.title AS \"title!\", v.description AS \"description!\",\n                      c.content AS \"content!\"\n                 FROM dynbrain_chunk c\n                 JOIN dynbrain_article a ON a.id = c.article_id\n                 JOIN dynbrain_article_variant v ON v.article_id = c.article_id AND v.lang = c.lang\n                WHERE c.id = ANY($1::int8[])",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "article_id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "article_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "space_id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article",
+            "name": "space_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "lang!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "lang"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "description!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "content!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "content"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "bcdd26fe8ec144ad65e0056cd308e202ef364e78ce70ffc251161b128e5a2f1f"
+}

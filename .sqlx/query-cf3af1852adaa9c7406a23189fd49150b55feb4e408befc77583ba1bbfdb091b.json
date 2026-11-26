@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM dynbrain_chunk\n                               WHERE embedding IS NOT NULL AND embedding_fingerprint IS NOT NULL\n                                 AND embedding_fingerprint <> $1) AS \"foreign!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "foreign!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cf3af1852adaa9c7406a23189fd49150b55feb4e408befc77583ba1bbfdb091b"
+}
