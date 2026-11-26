@@ -6,6 +6,9 @@
 #
 # `dynbrain_links` is the key the file links are signed with, the same one the
 # API holds, so a link this server hands out opens the API's download route.
+# It is granted by each instance that has the secret, never here: core does not
+# start a server whose granted secret is missing. Without it, the file tools
+# answer that files are not available and everything else works.
 #
 # `toolsets` is empty on purpose: the core's own `brain` toolset is the
 # organisational memory of the document store, a different thing that shares
@@ -28,5 +31,3 @@ mcp_servers:
       audience: mcp
       client_id: null
     toolsets: []
-    secrets:
-    - custom:dynbrain_links
