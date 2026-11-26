@@ -7,7 +7,7 @@ use dynbrain::brain::operation::Operation;
 use dynbrain::console::{self, Console};
 use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{JwtToken, UserId};
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
@@ -52,11 +52,29 @@ pub struct FileItem {
     pub lang: Option<String>,
 }
 
+/// The admin a read runs as, with the session token a proxy instance's
+/// source needs to answer as them.
+#[derive(Debug, Clone, Copy)]
+pub struct Who<'a> {
+    pub id: &'a UserId,
+    pub token: Option<&'a JwtToken>,
+}
+
 /// The Brain and the admin who reads it.
 #[derive(Debug, Clone, Copy)]
 pub struct Reader<'a> {
     pub console: &'a Console,
     pub admin: &'a UserId,
+    pub token: Option<&'a JwtToken>,
+}
+
+impl<'a> Reader<'a> {
+    pub const fn who(&self) -> Who<'a> {
+        Who {
+            id: self.admin,
+            token: self.token,
+        }
+    }
 }
 
 /// A space with the articles of its tree.
@@ -90,24 +108,24 @@ const PAGE: usize = 200;
 // JSON: the Brain's operations take and return JSON, which these reads type.
 pub async fn call<T: DeserializeOwned>(
     console: &Console,
-    admin: &UserId,
+    who: Who<'_>,
     operation: Operation,
     args: serde_json::Value,
 ) -> Result<T, String> {
-    let context = console::admin_context(admin)?;
+    let context = console::admin_context(who.id, who.token)?;
     let reply = console
         .brain
-        .run(admin, &context, operation, args)
+        .run(who.id, &context, operation, args)
         .await
         .map_err(|fault| fault.to_string())?;
     serde_json::from_value(reply).map_err(|error| error.to_string())
 }
 
-pub async fn read_spaces(console: &Console, admin: &UserId) -> Result<Vec<Space>, String> {
-    let listed: SpaceList = call(console, admin, Operation::ListSpaces, serde_json::json!({})).await?;
+pub async fn read_spaces(console: &Console, who: Who<'_>) -> Result<Vec<Space>, String> {
+    let listed: SpaceList = call(console, who, Operation::ListSpaces, serde_json::json!({})).await?;
     let mut spaces = Vec::new();
     for item in listed.spaces {
-        let articles = read_articles(console, admin, item.space).await?;
+        let articles = read_articles(console, who, item.space).await?;
         spaces.push(Space { item, articles });
     }
     Ok(spaces)
@@ -115,13 +133,13 @@ pub async fn read_spaces(console: &Console, admin: &UserId) -> Result<Vec<Space>
 
 async fn read_articles(
     console: &Console,
-    admin: &UserId,
+    who: Who<'_>,
     space: i64,
 ) -> Result<Vec<Listed>, String> {
     let mut all: Vec<Listed> = Vec::new();
     loop {
         let args = serde_json::json!({ "space": space, "limit": PAGE, "offset": all.len() });
-        let page: ArticleList = call(console, admin, Operation::List, args).await?;
+        let page: ArticleList = call(console, who, Operation::List, args).await?;
         let fetched = page.documents.len();
         all.extend(page.documents);
         if fetched == 0 || all.len() >= page.total {
@@ -132,20 +150,20 @@ async fn read_articles(
 
 pub async fn read_document(
     console: &Console,
-    admin: &UserId,
+    who: Who<'_>,
     article: i64,
     lang: Option<&str>,
 ) -> Result<Document, String> {
     let args = serde_json::json!({ "article_id": article, "lang": lang });
-    call(console, admin, Operation::Get, args).await
+    call(console, who, Operation::Get, args).await
 }
 
 pub async fn read_files(
     console: &Console,
-    admin: &UserId,
+    who: Who<'_>,
     article: i64,
 ) -> Result<Vec<FileItem>, String> {
     let args = serde_json::json!({ "article_id": article });
-    let listed: FileList = call(console, admin, Operation::AssetList, args).await?;
+    let listed: FileList = call(console, who, Operation::AssetList, args).await?;
     Ok(listed.files)
 }

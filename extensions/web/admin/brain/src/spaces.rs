@@ -1,6 +1,5 @@
 //! `/admin/brain/spaces`: every space with its articles as a collapsible tree.
 
-use axum::Extension;
 use axum::response::Response;
 use serde::Serialize;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
@@ -9,8 +8,8 @@ use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults}
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
-use crate::read;
-use crate::source::{Source, require_admin};
+use crate::read::{self, Who};
+use crate::source::{Reach, require_admin};
 use crate::tree;
 use crate::views::{NOT_MOUNTED, crumbs};
 
@@ -25,7 +24,7 @@ pub struct SpacesPage {
 
 pub async fn spaces_page(
     shell: Page,
-    Extension(source): Extension<Source>,
+    reach: Reach,
 ) -> AdminHtmlResult<Response> {
     require_admin(&shell)?;
     let mut faults = Faults::new();
@@ -36,11 +35,18 @@ pub async fn spaces_page(
         unavailable: None,
         tree: String::new(),
     };
-    match source.console() {
+    match reach.source.console() {
         Some(console) => {
             let spaces = faults.take(
                 "Spaces",
-                read::read_spaces(&console, &shell.user.user_id).await,
+                read::read_spaces(
+                    &console,
+                    Who {
+                        id: &shell.user.user_id,
+                        token: reach.token.as_ref(),
+                    },
+                )
+                .await,
             );
             page.tree = tree::render(&tree::build(&spaces, None));
         },

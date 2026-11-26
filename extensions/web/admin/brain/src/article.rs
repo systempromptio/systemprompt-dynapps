@@ -4,7 +4,6 @@
 
 use axum::extract::{Path, Query};
 use axum::response::Response;
-use axum::Extension;
 use chrono::{TimeDelta, Utc};
 use dynbrain::ids::ArticleId;
 use serde::{Deserialize, Serialize};
@@ -17,7 +16,7 @@ use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use crate::access::{self, AccessView};
 use crate::chunks::{self, ChunksView, IngestView};
 use crate::read::{self, Document, FileItem, Reader, Space};
-use crate::source::{Source, require_admin};
+use crate::source::{Reach, require_admin};
 use crate::tree;
 use crate::views::{AT_SOURCE, NOT_MOUNTED, crumbs, keep, when};
 
@@ -92,7 +91,7 @@ pub struct ArticlePage {
 
 pub async fn article_page(
     shell: Page,
-    Extension(source): Extension<Source>,
+    reach: Reach,
     Path(id): Path<i64>,
     Query(query): Query<ArticleQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -102,18 +101,23 @@ pub async fn article_page(
         page: "brain-spaces",
         ..ArticlePage::default()
     };
-    let Some(console) = source.console() else {
+    let Some(console) = reach.source.console() else {
         page.unavailable = Some(NOT_MOUNTED);
         page.breadcrumbs = crumbs("Spaces");
         return Ok(render(&shell, &page, &faults));
     };
     let admin = &shell.user.user_id;
-    let spaces = faults.take("Spaces", read::read_spaces(&console, admin).await);
+    let reader = Reader {
+        console: &console,
+        admin,
+        token: reach.token.as_ref(),
+    };
+    let spaces = faults.take("Spaces", read::read_spaces(&console, reader.who()).await);
     let wanted = query.lang.as_deref().filter(|lang| !lang.is_empty());
-    let doc = match read::read_document(&console, admin, id, wanted).await {
+    let doc = match read::read_document(&console, reader.who(), id, wanted).await {
         Ok(doc) if doc.found => doc,
         _ => {
-            read::read_document(&console, admin, id, None)
+            read::read_document(&console, reader.who(), id, None)
                 .await
                 .ok()
                 .filter(|doc| doc.found)
@@ -137,10 +141,6 @@ pub async fn article_page(
             active: *key == tab,
         })
         .collect();
-    let reader = Reader {
-        console: &console,
-        admin,
-    };
     page.show_content = tab == "content";
     tab_body(&mut page, &reader, &doc, tab, &mut faults).await;
     page.doc = Some(doc);
@@ -183,7 +183,7 @@ async fn tab_body(
     let id = doc.article_id;
     match (tab, &console.native) {
         ("files", _) => {
-            let files = faults.take("Files", read::read_files(console, admin, id).await);
+            let files = faults.take("Files", read::read_files(console, reader.who(), id).await);
             page.show_files = true;
             page.files = files.iter().map(file_row).collect();
         },

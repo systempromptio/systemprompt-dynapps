@@ -281,3 +281,17 @@ fn repo_file(path: &str) -> std::path::PathBuf {
         assert!(dir.pop(), "{path} not found above CARGO_MANIFEST_DIR");
     }
 }
+
+#[test]
+fn an_admin_read_carries_the_admins_session_token() {
+    let admin = systemprompt::identifiers::UserId::new("admin-1");
+    let token = systemprompt::identifiers::JwtToken::new("session-of-admin-1");
+    let context = dynbrain::console::admin_context(&admin, Some(&token)).expect("the context");
+    assert_eq!(
+        context.auth_token().map(systemprompt::identifiers::JwtToken::as_str),
+        Some("session-of-admin-1"),
+        "a proxy source answers as the admin only with their token"
+    );
+    let bare = dynbrain::console::admin_context(&admin, None).expect("the context");
+    assert!(bare.auth_token().is_none());
+}

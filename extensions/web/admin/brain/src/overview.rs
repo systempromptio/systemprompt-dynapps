@@ -1,7 +1,6 @@
 //! `/admin/brain`: the mode of the instance, what is indexed, the providers,
 //! the searches that found nothing and what the month cost.
 
-use axum::Extension;
 use axum::response::Response;
 use chrono::{TimeDelta, Utc};
 use dynbrain::config::Mode;
@@ -11,15 +10,14 @@ use dynbrain::ingest::core_ai::EMBEDDING_MODEL;
 use dynbrain::ingest::provider::DIMENSIONS;
 use dynbrain::search::cohere;
 use serde::Serialize;
-use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
-use crate::read::{self, Space};
-use crate::source::{Source, require_admin};
+use crate::read::{self, Space, Who};
+use crate::source::{Reach, require_admin};
 use crate::views::{AT_SOURCE, NONE, NOT_MOUNTED, Tile, keep, tile, usd};
 
 #[derive(Debug, Serialize)]
@@ -69,7 +67,7 @@ pub struct OverviewPage {
 
 pub async fn overview_page(
     shell: Page,
-    Extension(source): Extension<Source>,
+    reach: Reach,
 ) -> AdminHtmlResult<Response> {
     require_admin(&shell)?;
     let mut faults = Faults::new();
@@ -79,8 +77,12 @@ pub async fn overview_page(
         breadcrumbs: vec![BreadcrumbView::current("Brain")],
         ..OverviewPage::default()
     };
-    match source.console() {
-        Some(console) => fill(&mut page, &console, &shell.user.user_id, &mut faults).await,
+    let who = Who {
+        id: &shell.user.user_id,
+        token: reach.token.as_ref(),
+    };
+    match reach.source.console() {
+        Some(console) => fill(&mut page, &console, who, &mut faults).await,
         None => page.unavailable = Some(NOT_MOUNTED),
     }
     Ok(render_page_with_faults(
@@ -92,8 +94,8 @@ pub async fn overview_page(
     ))
 }
 
-async fn fill(page: &mut OverviewPage, console: &Console, admin: &UserId, faults: &mut Faults) {
-    let spaces = faults.take("Spaces", read::read_spaces(console, admin).await);
+async fn fill(page: &mut OverviewPage, console: &Console, who: Who<'_>, faults: &mut Faults) {
+    let spaces = faults.take("Spaces", read::read_spaces(console, who).await);
     let articles: usize = spaces.iter().map(|space| space.articles.len()).sum();
     page.spaces = space_rows(&spaces);
     match (&console.mode, &console.native) {

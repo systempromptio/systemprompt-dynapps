@@ -8,7 +8,7 @@
 
 use std::sync::{Arc, OnceLock};
 
-use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
+use systemprompt::identifiers::{Actor, AgentName, ContextId, JwtToken, SessionId, TraceId, UserId};
 use systemprompt::models::execution::context::RequestContext;
 
 use crate::brain::Brain;
@@ -43,14 +43,21 @@ pub fn current() -> Option<Console> {
     LIVE.get().cloned()
 }
 
-pub fn admin_context(admin: &UserId) -> Result<RequestContext, String> {
+/// The context an admin read runs in. `token` is the admin's own session
+/// token: a proxy instance's source answers as a person, and core asks for
+/// that person's identity with it, so without it the source refuses.
+pub fn admin_context(admin: &UserId, token: Option<&JwtToken>) -> Result<RequestContext, String> {
     let session = SessionId::generate();
     let agent = AgentName::try_new("brain-admin").map_err(|error| error.to_string())?;
-    Ok(RequestContext::new(
+    let context = RequestContext::new(
         session.clone(),
         TraceId::generate(),
         ContextId::derived_from_session(&session),
         agent,
         Actor::job(admin.clone(), "brain-admin"),
-    ))
+    );
+    Ok(match token {
+        Some(token) => context.with_auth_token(token.clone()),
+        None => context,
+    })
 }
