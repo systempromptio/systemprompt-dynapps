@@ -51,7 +51,7 @@ impl SignedLink {
 }
 
 /// Signs and checks links with the instance's key.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct LinkSigner {
     key: [u8; 32],
 }

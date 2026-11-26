@@ -1,4 +1,6 @@
-//! The file operations of the `docs_*` tools: a one-time upload URL, taking
+//! The file operations of the `docs_*` tools.
+//!
+//! A one-time upload URL, taking
 //! the bytes it receives, adopting them as a file of an article, listing an
 //! article's files and a signed download link for one of them.
 //!

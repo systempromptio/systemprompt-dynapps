@@ -1,4 +1,6 @@
-//! What the file routes refuse: uploading without `write`, an upload id used
+//! What the file routes refuse.
+//!
+//! Uploading without `write`, an upload id used
 //! twice or by another person, an expired upload link, a file over the size
 //! limit, a link to a file of an article the person cannot read, a tampered
 //! or expired download link, a file in the trash, and a form instead of the

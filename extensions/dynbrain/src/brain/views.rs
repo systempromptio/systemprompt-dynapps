@@ -1,8 +1,9 @@
 //! What an operation answers. The field names are the ones the `docs_*` tools
 //! answer with; what Governance adds (`slug`, `inherit_access`, `level`,
-//! `asset_urls`) is a new field, never a renamed one. `asset_urls` maps each
-//! `asset://<id>` the Markdown names, and the person may read, to a signed
-//! download URL.
+//! `asset_urls`) is a new field, never a renamed one.
+//!
+//! `asset_urls` maps each `asset://<id>` the Markdown names, and the person
+//! may read, to a signed download URL.
 
 use std::collections::BTreeMap;
 
