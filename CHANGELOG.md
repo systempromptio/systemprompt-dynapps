@@ -6,7 +6,14 @@ Conventions (strict — hold every entry to them):
 
 - Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): an `## Unreleased`
   section at the top, then one `## <version> — <YYYY-MM-DD>` section per release, each with
-  only the categories it needs, in this order: `### Breaking`, `### Added`, `### Changed`,
+  only the categories it needs, in this order: `### Breaking`, `### Fixed
+
+- **The `brain` MCP server's grants are documented.** An instance with S3 file storage must grant `storage` to `brain`
+  (`services/mcp/brain.yaml`), as it does to `documents`: without it the server exits at startup and core aborts the
+  whole boot, which the local-storage smoke boot does not show. Proxy mode also needs
+  `custom:mcp_credential_broker_secret`. See `extensions/mcp/brain/README.md`.
+
+### Added`, `### Changed`,
   `### Fixed`, `### Removed`.
 - Entries are written for the reader who did not make the change: full sentences, what changed
   and **why**, named files/commands/flags where the reader will need them. No bare "updated X".

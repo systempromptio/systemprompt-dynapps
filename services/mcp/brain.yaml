@@ -10,6 +10,14 @@
 # start a server whose granted secret is missing. Without it, the file tools
 # answer that files are not available and everything else works.
 #
+# An instance whose file storage is S3 (or any profile storage with a
+# credential) must also grant `storage` here, as it does to `documents`: the
+# server builds the host's file storage when it starts, a spawned server gets
+# only the secrets it is granted, and core aborts the whole boot when an
+# internal server exits at startup. The smoke boot runs on local storage and
+# does not catch it. In proxy mode grant `custom:mcp_credential_broker_secret`
+# too, for the source's identity token.
+#
 # `toolsets` is empty on purpose: the core's own `brain` toolset is the
 # organisational memory of the document store, a different thing that shares
 # the name, and this server must never grant it.
