@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_index_job (article_id, lang, content_hash) VALUES ($1, $2, $3)\n         ON CONFLICT (article_id, lang, content_hash) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e9b3557345b515c4cd1502995e699bfe8ada0100e3b4eda0e77d21070f6ff038"
+}

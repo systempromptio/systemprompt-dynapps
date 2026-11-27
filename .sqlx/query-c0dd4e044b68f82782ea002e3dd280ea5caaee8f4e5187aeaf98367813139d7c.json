@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH readable AS (\n                   SELECT x.article_id\n                     FROM dynbrain_access x\n                     JOIN users u ON u.id = $1 AND u.status = 'active'\n                    WHERE x.level >= 1\n                      AND ((x.subject_kind = 'user' AND x.subject_id = u.id)\n                           OR (x.subject_kind = 'role' AND x.subject_id = ANY(u.roles))\n                           OR (x.subject_kind = 'group' AND x.subject_id IN\n                                   (SELECT g.group_id FROM user_groups g WHERE g.user_id = u.id)))\n               )\n               SELECT c.id AS \"id!\"\n                 FROM dynbrain_chunk c\n                 JOIN dynbrain_article a ON a.id = c.article_id AND a.trashed_at IS NULL\n                 JOIN dynbrain_space s ON s.id = a.space_id\n                 JOIN dynbrain_article_variant v ON v.article_id = c.article_id AND v.lang = c.lang\n                WHERE c.search_vector @@ plainto_tsquery(c.fts_config, $6::text)\n                  AND c.article_id IN (SELECT r.article_id FROM readable r)\n                  AND ($2::int8 IS NULL OR a.space_id = $2)\n                  AND ($3::text IS NULL OR $3 = ANY(s.langs))\n                  AND NOT EXISTS (SELECT 1 FROM jsonb_each($4::jsonb) AS w(key, value)\n                                   WHERE v.properties -> w.key IS DISTINCT FROM w.value)\n                  AND NOT EXISTS (SELECT 1 FROM UNNEST($5::text[]) AS k(name)\n                                   WHERE COALESCE(v.properties ->> k.name, 'false') NOT IN ('false', ''))\n                ORDER BY ts_rank(c.search_vector, plainto_tsquery(c.fts_config, $6::text)) DESC, c.id\n                LIMIT $7",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Text",
+        "Jsonb",
+        "TextArray",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c0dd4e044b68f82782ea002e3dd280ea5caaee8f4e5187aeaf98367813139d7c"
+}

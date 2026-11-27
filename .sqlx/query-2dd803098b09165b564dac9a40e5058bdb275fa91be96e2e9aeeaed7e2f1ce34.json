@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_chunk\n                    (article_id, lang, sequence, heading_path, content, content_hash,\n                     synopsis, synopsis_hash, fts_config)\n             SELECT $1::int8, $2::text, u.sequence, u.heading_path, u.content, u.content_hash,\n                    NULLIF(u.synopsis, ''),\n                    CASE WHEN u.synopsis = '' THEN NULL ELSE u.content_hash END,\n                    $3::text::regconfig\n               FROM UNNEST($4::int4[], $5::text[], $6::text[], $7::text[], $8::text[])\n                    AS u(sequence, heading_path, content, content_hash, synopsis)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Int4Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2dd803098b09165b564dac9a40e5058bdb275fa91be96e2e9aeeaed7e2f1ce34"
+}

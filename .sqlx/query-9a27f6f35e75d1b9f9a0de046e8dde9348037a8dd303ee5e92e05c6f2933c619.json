@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynbrain_index_job SET state = 'pending', updated_at = CURRENT_TIMESTAMP\n              WHERE id = $1 AND state = 'running'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9a27f6f35e75d1b9f9a0de046e8dde9348037a8dd303ee5e92e05c6f2933c619"
+}

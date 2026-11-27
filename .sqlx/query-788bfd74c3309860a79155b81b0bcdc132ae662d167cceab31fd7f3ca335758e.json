@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id!\", sequence AS \"sequence!\", content AS \"content!\"\n                 FROM dynbrain_chunk\n                WHERE article_id = $1 AND lang = $2 AND embedding IS NOT NULL\n                ORDER BY embedding <=> $3::text::vector, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "sequence!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "sequence"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "content!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "content"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "788bfd74c3309860a79155b81b0bcdc132ae662d167cceab31fd7f3ca335758e"
+}

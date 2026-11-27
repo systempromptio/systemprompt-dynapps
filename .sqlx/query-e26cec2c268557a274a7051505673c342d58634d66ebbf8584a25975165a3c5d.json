@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynbrain_article SET trashed_at = NULL, updated_at = CURRENT_TIMESTAMP\n                  WHERE id = ANY($1::int8[]) AND trashed_at = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e26cec2c268557a274a7051505673c342d58634d66ebbf8584a25975165a3c5d"
+}

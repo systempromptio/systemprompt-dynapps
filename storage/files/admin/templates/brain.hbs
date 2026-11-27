@@ -1,0 +1,60 @@
+{{!--
+  Brain › Overview: the instance's mode, what is indexed, the providers and
+  models, the searches that found nothing and what the embeddings cost.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="Every space and article of this instance, how it is indexed and how it is searched. Read-only, except reindexing, retries and access."}}
+
+    {{#if unavailable}}
+    {{> components/empty-state heading="Brain unavailable" message=unavailable}}
+    {{else}}
+    <section class="sp-section" aria-label="Instance">
+      <p>Instance mode: {{> components/badge tone="accent" text=mode}}</p>
+      {{#if proxy_note}}{{> components/empty-state compact=true message=proxy_note}}{{/if}}
+    </section>
+
+    <section class="sp-section" aria-label="Counters">
+      <div class="sp-kpi-grid">{{#each tiles}}{{> components/kpi this}}{{/each}}</div>
+    </section>
+
+    {{#if providers}}
+    <section class="sp-section" aria-label="Providers">
+      {{#> components/table caption="Providers and models"}}
+        <thead><tr><th scope="col">Step</th><th scope="col">Provider</th><th scope="col">Detail</th></tr></thead>
+        <tbody>
+          {{#each providers}}<tr><td>{{step}}</td><td>{{provider}}</td><td><code class="sp-code-inline">{{detail}}</code></td></tr>{{/each}}
+          <tr><td>Confidence threshold</td><td>—</td><td><code class="sp-code-inline">{{threshold}}</code></td></tr>
+        </tbody>
+      {{/components/table}}
+    </section>
+    <section class="sp-section" aria-label="Searches with no result">
+      {{#if gaps}}
+      {{#> components/table caption="Searches with no result · 7 days"}}
+        <thead><tr><th scope="col">Query</th><th scope="col">Space</th><th scope="col">Times</th></tr></thead>
+        <tbody>{{#each gaps}}<tr><td>{{query}}</td><td>{{space}}</td><td>{{times}}</td></tr>{{/each}}</tbody>
+      {{/components/table}}
+      {{else}}{{> components/empty-state compact=true message="No search came back empty in the last 7 days."}}{{/if}}
+    </section>
+    <section class="sp-section" aria-label="Cost">
+      {{#if spend}}
+      {{#> components/table caption="Embedding cost · 30 days"}}
+        <thead><tr><th scope="col">Configuration</th><th scope="col">Calls</th><th scope="col">USD</th></tr></thead>
+        <tbody>{{#each spend}}<tr><td>{{provider}}</td><td>{{calls}}</td><td>{{usd}}</td></tr>{{/each}}</tbody>
+      {{/components/table}}
+      {{else}}{{> components/empty-state compact=true message="No embeddings were requested in the last 30 days."}}{{/if}}
+    </section>
+    {{/if}}
+
+    <section class="sp-section" aria-label="Spaces">
+      {{#if spaces}}
+      {{#> components/table caption="Spaces"}}
+        <thead><tr><th scope="col">Space</th><th scope="col">Slug</th><th scope="col">Articles</th><th scope="col">Languages</th></tr></thead>
+        <tbody>{{#each spaces}}<tr><td>{{name}}</td><td><code class="sp-code-inline">{{slug}}</code></td><td>{{articles}}</td><td>{{langs}}</td></tr>{{/each}}</tbody>
+      {{/components/table}}
+      {{else}}{{> components/empty-state heading="No spaces" message="This instance has no documentation space yet."}}{{/if}}
+    </section>
+    {{/if}}
+    {{/inline}}
+{{/layout}}

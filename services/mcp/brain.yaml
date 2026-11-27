@@ -1,0 +1,33 @@
+# The Brain: documentation spaces with trees of articles in several languages,
+# stored in this instance (extensions/dynbrain). Every tool acts as the
+# signed-in caller and the Brain's own grants decide what that person reads or
+# edits. The tools carry no prefix (`search`, `get`, `create`...): the client
+# prefixes them with this server's name.
+#
+# `dynbrain_links` is the key the file links are signed with, the same one the
+# API holds, so a link this server hands out opens the API's download route.
+# It is granted by each instance that has the secret, never here: core does not
+# start a server whose granted secret is missing. Without it, the file tools
+# answer that files are not available and everything else works.
+#
+# `toolsets` is empty on purpose: the core's own `brain` toolset is the
+# organisational memory of the document store, a different thing that shares
+# the name, and this server must never grant it.
+mcp_servers:
+  brain:
+    server_type: internal
+    binary: systemprompt-mcp-brain
+    package: brain
+    port: 5014
+    enabled: true
+    tool_policy: allow
+    display_in_web: true
+    removable: false
+    description: The Brain — search, read and author the instance's documentation as the signed-in person
+    oauth:
+      required: true
+      scopes:
+      - user
+      audience: mcp
+      client_id: null
+    toolsets: []

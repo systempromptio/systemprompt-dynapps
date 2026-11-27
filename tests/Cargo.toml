@@ -16,9 +16,12 @@ members = [
     "unit/secrets",
     "unit/dynwork-relay",
     "unit/dynwork-chats",
+    "unit/dynbrain",
+    "unit/mcp-brain",
     "integration/admin-config",
     "integration/mcp",
     "integration/web",
+    "integration/admin-brain",
     "integration/admin-core",
     "integration/secrets",
     "integration/gateway",
@@ -27,6 +30,8 @@ members = [
     "integration/dynwork-relay",
     "integration/dynwork-routines",
     "integration/dynwork-chats",
+    "integration/dynbrain",
+    "integration/mcp-brain",
     "contract/admin",
 ]
 resolver = "2"
@@ -156,12 +161,14 @@ dynapps-test-common = { path = "common" }
 # Local extension crates under test (paths relative to tests/).
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
+systemprompt-mcp-brain = { path = "../extensions/mcp/brain" }
 systemprompt-mcp-documents = { path = "../extensions/mcp/documents" }
 systemprompt-mcp-microsoft-365 = { path = "../extensions/mcp/microsoft-365" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }
 systemprompt-web-admin-core = { path = "../extensions/web/shared/admin-core" }
 systemprompt-web-admin-agent-farm = { path = "../extensions/web/admin/agent-farm" }
 systemprompt-web-admin-analytics = { path = "../extensions/web/admin/analytics" }
+systemprompt-web-admin-brain = { path = "../extensions/web/admin/brain" }
 systemprompt-web-admin-catalog = { path = "../extensions/web/admin/catalog" }
 systemprompt-web-admin-governance = { path = "../extensions/web/admin/governance", features = ["governance-ssr"] }
 systemprompt-web-admin-identity = { path = "../extensions/web/admin/identity" }
@@ -175,6 +182,7 @@ systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
 dynwork-relay = { path = "../extensions/dynwork-relay" }
 dynwork-routines = { path = "../extensions/dynwork-routines" }
 dynwork-chats = { path = "../extensions/dynwork-chats" }
+dynbrain = { path = "../extensions/dynbrain" }
 
 # Core facade — DbPool / Database / identifiers for the integration crate.
 # The contract crate additionally enables `full`, which links the core

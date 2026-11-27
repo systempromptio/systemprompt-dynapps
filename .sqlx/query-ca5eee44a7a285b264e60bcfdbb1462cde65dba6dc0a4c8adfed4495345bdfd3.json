@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_index_job (article_id, lang, content_hash)\n             SELECT v.article_id, v.lang, v.content_hash\n               FROM dynbrain_article_variant v\n              WHERE v.article_id = $1 AND v.lang = $2\n             ON CONFLICT (article_id, lang, content_hash)\n             DO UPDATE SET state = 'pending', attempts = 0, last_error = NULL,\n                           updated_at = CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ca5eee44a7a285b264e60bcfdbb1462cde65dba6dc0a4c8adfed4495345bdfd3"
+}

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT MAX(CASE WHEN s.created_by = u.id OR 'admin' = ANY(u.roles) THEN 3::int2 ELSE g.level END) AS \"level\"\n                 FROM dynbrain_space s\n                 JOIN users u ON u.id = $2 AND u.status = 'active'\n                 LEFT JOIN dynbrain_grant g ON g.space_id = s.id AND g.article_id IS NULL\n                  AND ((g.subject_kind = 'user' AND g.subject_id = u.id)\n                       OR (g.subject_kind = 'role' AND g.subject_id = ANY(u.roles))\n                       OR (g.subject_kind = 'group' AND g.subject_id IN\n                               (SELECT m.group_id FROM user_groups m WHERE m.user_id = u.id)))\n                WHERE s.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "level",
+        "type_info": "Int2",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7314485ebbf1e39fb2f0e8f033fc0d5acb48a0082c1ac3ba62bcf13216b0f4fa"
+}

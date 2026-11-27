@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM dynbrain_index_job\n              WHERE article_id = $1 AND lang = $2 AND content_hash <> $3\n                AND (state IN ('done', 'failed') OR id = $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a65ffbfbb937bc76f430b61982f366dbd444f9a474d64e29337e32bac39275dc"
+}

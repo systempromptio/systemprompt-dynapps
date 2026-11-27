@@ -1,0 +1,31 @@
+{{!-- Brain › Ingest: the global indexing queue, with its errors and Retry. --}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="Every article goes through chunking, synopsis and embeddings before it is searchable. Failed jobs wait here for a retry."}}
+    {{#if unavailable}}
+    {{> components/empty-state heading="Brain unavailable" message=unavailable}}
+    {{else}}{{#if proxy_note}}
+    {{> components/empty-state heading="At the source" message=proxy_note}}
+    {{else}}
+    <form method="get" action="/admin/brain/ingest" class="sp-toolbar">
+      <label class="sp-toolbar__count" for="brain-state">State</label>
+      <select id="brain-state" name="state" class="sp-search-input" data-autosubmit>
+        <option value="">All</option>
+        {{#each states}}<option value="{{label}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+      <noscript><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Show</button></noscript>
+    </form>
+    {{#if has_rows}}
+    {{#> components/table caption="Indexing queue"}}
+      <thead><tr><th scope="col">Article</th><th scope="col">Language</th><th scope="col">State</th><th scope="col">Attempts</th><th scope="col">Last error</th><th scope="col">Updated</th><th scope="col"></th></tr></thead>
+      <tbody>{{#each rows}}<tr><td><a href="/admin/brain/articles/{{article}}?lang={{lang}}&amp;tab=ingest">{{title}}</a></td><td>{{lang}}</td><td>{{> components/badge tone=tone text=state}}</td><td>{{attempts}}</td><td>{{error}}</td><td>{{updated}}</td>
+        <td>{{#if retryable}}<form method="post" action="/admin/brain/ingest/{{id}}/retry"><button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Retry</button></form>{{/if}}</td></tr>{{/each}}</tbody>
+    {{/components/table}}
+    {{else}}{{> components/empty-state heading="Queue empty" message="No indexing job matches."}}{{/if}}
+    {{/if}}{{/if}}
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-brain.js"></script>
+    {{/inline}}
+{{/layout}}

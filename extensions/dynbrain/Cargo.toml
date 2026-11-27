@@ -1,0 +1,63 @@
+[package]
+name = "dynbrain"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Brain for the Dynapps instance: documentation spaces with article trees, a variant per language, revisions, typed properties and inherited permissions, stored in Postgres with pgvector for retrieval."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+# extension_migrations!() expands to ::systemprompt_extension paths; machete
+# cannot see macro-expansion usage.
+[package.metadata.cargo-machete]
+ignored = ["systemprompt-extension"]
+
+[lints]
+workspace = true
+
+[dependencies]
+# Audit: uses ai (AiService, the embeddings and synopses of the indexer),
+# database (DbPool), extension (Extension, SchemaDefinition), identifiers
+# (UserId, Actor, LeaseKey), models (RequestContext), system (AppContext),
+# traits (FileStorage, Job, the bytes of article files) and security
+# (hmac_sha256, the signature of file links) and models (the outbound URL
+# guard of the reranker) - requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+# Direct dep so the `extension_migrations!()` expansion resolves.
+systemprompt-extension = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+# The content hash of a variant.
+sha2 = { workspace = true }
+hex = { workspace = true }
+# A `link` property must be an absolute http(s) URL.
+url = { workspace = true }
+# The random id of an upload slot.
+uuid = { workspace = true }
+# The query-cache key, sha1(provider:model:query), as dynbrain keys it.
+sha1 = { workspace = true }
+# The Cohere reranker, called with the instance's key.
+reqwest = { workspace = true }
+# The Brain's config file, `services/config/dynbrain.yaml`.
+serde_yaml = { workspace = true }
+# The protocol errors of a proxy source, read through core's MCP client.
+rmcp = { workspace = true }
+
+# The desktop and mobile JWT checks and the phone's device row, used as the
+# relay defines them rather than copied.
+dynwork-relay = { workspace = true }
+
+axum = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+# The synopsis requests run eight at a time and back off between retries.
+futures-util = { workspace = true }
+tokio = { workspace = true }
+
+[build-dependencies]
+systemprompt-extension = { workspace = true }

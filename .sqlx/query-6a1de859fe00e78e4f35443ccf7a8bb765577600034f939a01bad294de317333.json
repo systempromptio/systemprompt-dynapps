@@ -1,0 +1,137 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT j.id AS \"id!\", j.article_id, j.lang, v.title AS \"title?\", j.content_hash,\n                      j.state, j.attempts, j.last_error, j.created_at, j.updated_at\n                 FROM dynbrain_index_job j\n                 LEFT JOIN dynbrain_article_variant v ON v.article_id = j.article_id AND v.lang = j.lang\n                WHERE j.article_id = $1 AND j.lang = $2\n                ORDER BY j.updated_at DESC, j.id DESC\n                LIMIT 10",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "article_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "article_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "lang",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "lang"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "content_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "last_error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "last_error"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_index_job",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "6a1de859fe00e78e4f35443ccf7a8bb765577600034f939a01bad294de317333"
+}

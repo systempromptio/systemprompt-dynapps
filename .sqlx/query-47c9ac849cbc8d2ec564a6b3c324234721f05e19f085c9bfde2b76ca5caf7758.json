@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT embedding_fingerprint AS \"fingerprint!\", COUNT(*) AS \"chunks!\"\n                 FROM dynbrain_chunk\n                WHERE embedding_fingerprint IS NOT NULL\n                GROUP BY embedding_fingerprint\n                ORDER BY COUNT(*) DESC, embedding_fingerprint",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fingerprint!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_chunk",
+            "name": "embedding_fingerprint"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "chunks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      null
+    ]
+  },
+  "hash": "47c9ac849cbc8d2ec564a6b3c324234721f05e19f085c9bfde2b76ca5caf7758"
+}

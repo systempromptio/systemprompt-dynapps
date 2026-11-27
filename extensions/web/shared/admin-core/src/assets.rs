@@ -51,6 +51,7 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
         page_js!(&pages, "admin-overview-morph.js"),
         page_js!(&pages, "admin-sync.js"),
         page_js!(&pages, "admin-approvals.js"),
+        page_js!(&pages, "admin-brain.js"),
         page_js!(&pages, "admin-contexts.js"),
         page_js!(&pages, "admin-devices.js"),
         page_js!(&pages, "admin-drive-document.js"),

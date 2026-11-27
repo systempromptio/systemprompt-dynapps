@@ -1,0 +1,15 @@
+{{!-- Brain › Spaces: every space and article as a collapsible tree. --}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="Every space and article of this instance. Open an article to read it, see how it is indexed and manage its access."}}
+    {{#if unavailable}}
+    {{> components/empty-state heading="Brain unavailable" message=unavailable}}
+    {{else}}
+    <section class="sp-section" aria-label="Spaces and articles">
+      {{#if tree}}<ul class="sp-brain-tree">{{{tree}}}</ul>
+      {{else}}{{> components/empty-state heading="No spaces" message="This instance has no documentation space yet."}}{{/if}}
+    </section>
+    {{/if}}
+    {{/inline}}
+{{/layout}}

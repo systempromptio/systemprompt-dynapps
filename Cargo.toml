@@ -4,6 +4,7 @@ members = [
     "extensions/web/shared",
     "extensions/web/shared/admin-core",
     "extensions/web/admin/agent-farm",
+    "extensions/web/admin/brain",
     "extensions/web/admin/analytics",
     "extensions/web/admin/catalog",
     "extensions/web/admin/governance",
@@ -13,6 +14,7 @@ members = [
     "extensions/web/site",
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
+    "extensions/mcp/brain",
     "extensions/mcp/documents",
     "extensions/mcp/microsoft-365",
     "extensions/mcp/shared",
@@ -22,6 +24,7 @@ members = [
     "extensions/dynwork-relay",
     "extensions/dynwork-routines",
     "extensions/dynwork-chats",
+    "extensions/dynbrain",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
 # when these extension crates are consumed as dependencies. Run it explicitly:
@@ -64,6 +67,7 @@ systemprompt-web-extension = { path = "extensions/web" }
 systemprompt-web-shared = { path = "extensions/web/shared" }
 systemprompt-web-admin-core = { path = "extensions/web/shared/admin-core" }
 systemprompt-web-admin-agent-farm = { path = "extensions/web/admin/agent-farm" }
+systemprompt-web-admin-brain = { path = "extensions/web/admin/brain" }
 systemprompt-web-admin-analytics = { path = "extensions/web/admin/analytics" }
 systemprompt-web-admin-catalog = { path = "extensions/web/admin/catalog" }
 systemprompt-web-admin-governance = { path = "extensions/web/admin/governance" }
@@ -77,6 +81,7 @@ systemprompt-secrets-onepassword = { path = "extensions/secrets/onepassword" }
 dynwork-relay = { path = "extensions/dynwork-relay" }
 dynwork-routines = { path = "extensions/dynwork-routines" }
 dynwork-chats = { path = "extensions/dynwork-chats" }
+dynbrain = { path = "extensions/dynbrain" }
 serde_jcs = "0.1"
 
 # Core runtime dependencies
@@ -123,6 +128,7 @@ urlencoding = "2.1"
 # Security
 rand = "0.9"
 sha2 = "0.10"
+sha1 = "0.10"
 flate2 = "1.1"
 futures-util = "0.3"
 hex = "0.4"
@@ -274,6 +280,8 @@ systemprompt-web-extension = { workspace = true }
 dynwork-relay = { workspace = true }
 # DynWork cloud chats; linked for its `register_extension!` entry.
 dynwork-chats = { workspace = true }
+# The Brain's native store; linked for its `register_extension!` entry.
+dynbrain = { workspace = true }
 
 # Runtime
 tokio = { workspace = true }

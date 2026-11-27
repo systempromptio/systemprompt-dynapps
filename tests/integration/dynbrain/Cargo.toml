@@ -1,0 +1,38 @@
+[package]
+name = "dynbrain-integration-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+dynbrain = { workspace = true }
+# The mobile JWT minting and the device table, as the Brain's auth uses them.
+dynwork-relay = { workspace = true }
+systemprompt-security = { workspace = true }
+# The Brain router driven in process, as core mounts it.
+axum = { workspace = true }
+tower = { workspace = true }
+http-body-util = { workspace = true }
+chrono = { workspace = true }
+# The throwaway database with the full extension schema (db_or_skip!).
+dynapps-test-common = { workspace = true }
+# `storage`: core's local-disk file storage, the store the files of articles
+# are kept in during the suite.
+systemprompt = { workspace = true, features = ["storage"] }
+tokio = { workspace = true }
+# The embedding and synopsis provider doubles the indexer runs against.
+async-trait = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+# The Cohere reranker's client is built in the suite against a local server;
+# core installs this crypto provider at server start.
+rustls = { workspace = true }
+# Proxy mode: the `brain` server's tools over a proxy Brain, a fake source
+# served with rmcp's streamable HTTP server, and the boot fixture the MCP
+# client's config comes from.
+systemprompt-mcp-brain = { workspace = true }
+rmcp = { workspace = true, features = ["server", "transport-streamable-http-server", "transport-streamable-http-server-session"] }
+tempfile = { workspace = true }

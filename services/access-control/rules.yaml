@@ -135,6 +135,17 @@ entities:
     allow:
       role: [user, developer, project_manager, admin, platform_admin, super_admin]
 
+  - entity: mcp_server/brain
+    default: closed
+    why: >-
+      The Brain MCP server: every tool runs as the caller and the Brain's own
+      grants (space, article, role and group) decide what each person reads or
+      edits, so this band only decides who sees the server at all. Every
+      signed-in user reaches it; oauth.scopes (user) in services/mcp/brain.yaml
+      gates it a second time.
+    allow:
+      role: [user, developer, project_manager, admin, platform_admin, super_admin]
+
   - entity: mcp_server/microsoft-365
     default: closed
     why: >-

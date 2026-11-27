@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                 (SELECT count(*) FROM dynbrain_article WHERE trashed_at IS NULL) AS \"articles!\",\n                 (SELECT count(*) FROM (SELECT DISTINCT article_id, lang FROM dynbrain_chunk) d) AS \"documents!\",\n                 (SELECT count(*) FROM dynbrain_chunk) AS \"chunks!\",\n                 (SELECT count(*) FROM dynbrain_chunk WHERE embedding IS NULL AND NOT has_error) AS \"pending_embeddings!\",\n                 (SELECT count(*) FROM dynbrain_chunk\n                   WHERE heading_path = '' AND synopsis IS NULL AND NOT synopsis_error) AS \"pending_synopses!\",\n                 (SELECT count(*) FROM dynbrain_chunk WHERE has_error OR synopsis_error) AS \"chunk_errors!\",\n                 (SELECT count(*) FROM dynbrain_index_job WHERE state IN ('pending', 'running')) AS \"queued_jobs!\",\n                 (SELECT count(*) FROM dynbrain_index_job WHERE state = 'failed') AS \"failed_jobs!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "articles!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "documents!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "chunks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "pending_embeddings!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "pending_synopses!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "chunk_errors!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "queued_jobs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "failed_jobs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "7c6ec8a4ec46ded9fed74c808262bc0b53b5e3fa4b773249ded7388d2e92e273"
+}

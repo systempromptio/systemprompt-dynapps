@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_grant (space_id, article_id, subject_kind, subject_id, level, granted_by)\n                 SELECT $1::int8, $2::int8, copied.kind, copied.subject, copied.level, $6::text\n                   FROM UNNEST($3::text[], $4::text[], $5::int2[]) AS copied(kind, subject, level)\n                 ON CONFLICT (space_id, article_id, subject_kind, subject_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "TextArray",
+        "TextArray",
+        "Int2Array",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6ed084eacc2b16b96de9c9a0a6878e06570b03e6ab9acc071d3629de21b8fc98"
+}

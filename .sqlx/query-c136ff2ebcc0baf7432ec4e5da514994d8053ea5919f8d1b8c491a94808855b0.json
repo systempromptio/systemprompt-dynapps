@@ -1,0 +1,168 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_article_variant\n                    (article_id, lang, title, description, body, front_matter, properties, content_hash,\n                     updated_by)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n             ON CONFLICT (article_id, lang) DO UPDATE SET\n                    title = EXCLUDED.title,\n                    description = EXCLUDED.description,\n                    body = EXCLUDED.body,\n                    front_matter = EXCLUDED.front_matter,\n                    properties = EXCLUDED.properties,\n                    content_hash = EXCLUDED.content_hash,\n                    updated_by = EXCLUDED.updated_by,\n                    revision = dynbrain_article_variant.revision + 1,\n                    updated_at = CURRENT_TIMESTAMP\n             RETURNING article_id, lang, title, description, body, front_matter, properties,\n                       content_hash, revision, updated_by, created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "article_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "article_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "lang",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "lang"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "body",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "front_matter",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "front_matter"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "properties",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "properties"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "content_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "updated_by"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Jsonb",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "c136ff2ebcc0baf7432ec4e5da514994d8053ea5919f8d1b8c491a94808855b0"
+}

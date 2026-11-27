@@ -1,0 +1,129 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_space (slug, name, default_lang, langs, property_schema, created_by)\n             VALUES ($1, $2, $3, $4, $5, $6)\n             RETURNING id, slug, name, default_lang, langs, property_schema, created_by, created_at,\n                       updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "default_lang",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "default_lang"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "langs",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "langs"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "property_schema",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "property_schema"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "created_by"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_space",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "TextArray",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "87ed9d93decb4deb9fed269152245437edecea2e354ac0311f315390e21f38b3"
+}

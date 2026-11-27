@@ -1,0 +1,95 @@
+@layer components {
+
+/* Brain section of the admin: the article page puts the tree of spaces
+   beside the article; the tree, the chunk text and the dropped rows of the
+   search lab are the only shapes the shared components do not give. */
+
+.sp-brain-split {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.sp-brain-main {
+  min-width: 0;
+}
+
+.sp-brain-side {
+  border-inline-end: 1px solid var(--sp-border-subtle);
+  padding-inline-end: 1rem;
+}
+
+.sp-brain-tree {
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 1rem;
+}
+
+.sp-brain-node.is-selected > a {
+  font-weight: 600;
+  color: var(--sp-text-primary);
+}
+
+.sp-brain-space {
+  font-weight: 600;
+}
+
+.sp-brain-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-block: 0.5rem;
+  border-block-end: 1px solid var(--sp-border-subtle);
+}
+
+.sp-brain-kv {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+}
+
+.sp-brain-kv dt {
+  color: var(--sp-text-secondary);
+}
+
+.sp-brain-text {
+  font-family: var(--sp-font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--sp-bg-surface-alt);
+  border: 1px solid var(--sp-border-subtle);
+  padding: 0.75rem;
+  max-block-size: 28rem;
+  overflow: auto;
+}
+
+.sp-brain-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+}
+
+.sp-brain-drop td {
+  text-decoration: line-through;
+  color: var(--sp-text-tertiary);
+}
+
+.sp-brain-drop td:last-child {
+  text-decoration: none;
+}
+
+@media (max-width: 48rem) {
+  .sp-brain-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sp-brain-side {
+    border-inline-end: 0;
+    padding-inline-end: 0;
+  }
+}
+
+}

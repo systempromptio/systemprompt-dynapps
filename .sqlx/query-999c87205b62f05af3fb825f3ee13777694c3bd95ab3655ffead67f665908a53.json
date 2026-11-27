@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH readable AS (\n                   SELECT x.article_id\n                     FROM dynbrain_access x\n                     JOIN users u ON u.id = $1 AND u.status = 'active'\n                    WHERE x.level >= 1\n                      AND ((x.subject_kind = 'user' AND x.subject_id = u.id)\n                           OR (x.subject_kind = 'role' AND x.subject_id = ANY(u.roles))\n                           OR (x.subject_kind = 'group' AND x.subject_id IN\n                                   (SELECT g.group_id FROM user_groups g WHERE g.user_id = u.id)))\n               )\n               SELECT DISTINCT ON (a.id)\n                      a.id AS \"article_id!\", a.space_id AS \"space_id!\", v.lang AS \"lang!\",\n                      v.title AS \"title!\", v.description AS \"description!\",\n                      LEFT(v.body, 300) AS \"snippet!\"\n                 FROM dynbrain_article_variant v\n                 JOIN dynbrain_article a ON a.id = v.article_id AND a.trashed_at IS NULL\n                 JOIN dynbrain_space s ON s.id = a.space_id\n                WHERE a.id IN (SELECT r.article_id FROM readable r)\n                  AND ($2::int8 IS NULL OR a.space_id = $2)\n                  AND ($3::text IS NULL OR v.lang = $3)\n                  AND NOT EXISTS (SELECT 1 FROM jsonb_each($4::jsonb) AS w(key, value)\n                                   WHERE v.properties -> w.key IS DISTINCT FROM w.value)\n                  AND NOT EXISTS (SELECT 1 FROM UNNEST($5::text[]) AS k(name)\n                                   WHERE COALESCE(v.properties ->> k.name, 'false') NOT IN ('false', ''))\n                  AND (v.title ILIKE $6::text OR v.body ILIKE $6::text)\n                ORDER BY a.id, v.lang = s.default_lang DESC, v.lang\n                LIMIT $7",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "article_id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "space_id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article",
+            "name": "space_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "lang!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "lang"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "description!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_article_variant",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "snippet!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Text",
+        "Jsonb",
+        "TextArray",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "999c87205b62f05af3fb825f3ee13777694c3bd95ab3655ffead67f665908a53"
+}

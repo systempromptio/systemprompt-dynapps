@@ -1,0 +1,37 @@
+{{!--
+  Brain › Search lab: the search the operations run, with every score, what
+  deduplication dropped and the context `answer` would give an agent.
+--}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="Runs the same search as the Brain's search and answer operations and shows why each chunk lands where it does. Every run is audited, Run as included."}}
+    {{#if unavailable}}
+    {{> components/empty-state heading="Brain unavailable" message=unavailable}}
+    {{else}}{{#if proxy_note}}
+    {{> components/empty-state heading="At the source" message=proxy_note}}
+    {{else}}
+    <form method="get" action="/admin/brain/search" class="sp-toolbar">
+      <input name="q" value="{{q}}" class="sp-search-input" aria-label="Query" placeholder="Query" required>
+      <input name="lang" value="{{lang}}" class="sp-search-input" aria-label="Language" placeholder="Language">
+      <input name="space" value="{{space}}" class="sp-search-input" aria-label="Space id" placeholder="Space id">
+      <input name="run_as" value="{{run_as}}" class="sp-search-input" aria-label="Run as" placeholder="Run as (user id)">
+      <label><input type="checkbox" name="rerank" value="1"{{#if rerank}} checked{{/if}}> Reranker</label>
+      <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Search</button>
+    </form>
+    {{#if ran}}
+    <p class="sp-toolbar__count">{{mode}} search · scoring {{scoring}}{{#if run_as_name}} · as {{run_as_name}}{{/if}}</p>
+    <p class="sp-toolbar__count"><code class="sp-code-inline">{{timings}}</code></p>
+    {{#if rows}}
+    {{#> components/table caption="Candidates"}}
+      <thead><tr><th scope="col">[n]</th><th scope="col">Chunk</th><th scope="col">Vector · rank · cos</th><th scope="col">Keyword · rank · ts_rank</th><th scope="col">RRF</th><th scope="col">Rerank</th><th scope="col">Outcome</th></tr></thead>
+      <tbody>{{#each rows}}<tr class="{{#if dropped}}sp-brain-drop{{/if}}"><td>{{n}}</td><td>{{title}}<br><span class="sp-toolbar__count">{{snippet}}</span></td><td>{{vector}}</td><td>{{text}}</td><td>{{rrf}}</td><td>{{rerank}}</td><td>{{outcome}}{{#if low}} {{> components/badge tone="warn" text="Below threshold"}}{{/if}}</td></tr>{{/each}}</tbody>
+    {{/components/table}}
+    {{else}}{{> components/empty-state heading="No results" message="This search found nothing for that reader."}}{{/if}}
+    <h2 class="sp-section__title">Answer context · what the agent receives</h2>
+    <p class="sp-toolbar__count">{{context_chars}} / {{quota}} characters per document · no model writes it</p>
+    <pre class="sp-brain-text">{{context}}</pre>
+    {{/if}}
+    {{/if}}{{/if}}
+    {{/inline}}
+{{/layout}}

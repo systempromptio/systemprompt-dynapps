@@ -64,6 +64,8 @@
 
 .sp-nav-group--farm .sp-nav-group__title { color: var(--sp-nav-label-6); }
 
+.sp-nav-group--brain .sp-nav-group__title { color: var(--sp-nav-label-7); }
+
 .sp-nav-group--people .sp-nav-group__title { color: var(--sp-nav-label-2); }
 
 .sp-nav-group--analysis .sp-nav-group__title { color: var(--sp-nav-label-3); }

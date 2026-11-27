@@ -1,0 +1,37 @@
+{{!-- Brain › Usage: counts only, never who or where. --}}
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{> components/page-header title=title subtitle="What the agents read and cite, and what people look for and do not find. Counts only, never who or where."}}
+    {{#if unavailable}}
+    {{> components/empty-state heading="Brain unavailable" message=unavailable}}
+    {{else}}{{#if proxy_note}}
+    {{> components/empty-state heading="At the source" message=proxy_note}}
+    {{else}}
+    <section class="sp-section" aria-label="Most retrieved">
+      {{#if used}}
+      {{#> components/table caption="Most retrieved · 30 days"}}
+        <thead><tr><th scope="col">Article</th><th scope="col">Retrieved</th><th scope="col">Cited</th></tr></thead>
+        <tbody>{{#each used}}<tr><td><a href="/admin/brain/articles/{{article}}">{{title}}</a></td><td>{{retrieved}}</td><td>{{cited}}</td></tr>{{/each}}</tbody>
+      {{/components/table}}
+      {{else}}{{> components/empty-state compact=true message="No search has returned an article in the last 30 days."}}{{/if}}
+    </section>
+    <section class="sp-section" aria-label="Searches with no result">
+      {{#if gaps}}
+      {{#> components/table caption="Searches with no result · 30 days"}}
+        <thead><tr><th scope="col">Query</th><th scope="col">Space</th><th scope="col">Times</th></tr></thead>
+        <tbody>{{#each gaps}}<tr><td>{{query}}</td><td>{{space}}</td><td>{{times}}</td></tr>{{/each}}</tbody>
+      {{/components/table}}
+      {{else}}{{> components/empty-state compact=true message="No search came back empty in the last 30 days."}}{{/if}}
+    </section>
+    <section class="sp-section" aria-label="Cost">
+      {{#if spend}}
+      {{#> components/table caption="Embedding cost by configuration · 30 days"}}
+        <thead><tr><th scope="col">Configuration</th><th scope="col">Calls</th><th scope="col">USD</th></tr></thead>
+        <tbody>{{#each spend}}<tr><td>{{provider}}</td><td>{{calls}}</td><td>{{usd}}</td></tr>{{/each}}</tbody>
+      {{/components/table}}
+      {{else}}{{> components/empty-state compact=true message="No embeddings were requested in the last 30 days."}}{{/if}}
+    </section>
+    {{/if}}{{/if}}
+    {{/inline}}
+{{/layout}}

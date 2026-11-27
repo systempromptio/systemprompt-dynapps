@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_admin_audit (actor_id, action, subject_id, detail)\n             VALUES ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "628dd08b5bd07102c65cbfa8aca085cda70833b89bb6198c5d4a3db6a8ee23d4"
+}

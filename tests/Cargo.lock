@@ -34,6 +34,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
+name = "admin-brain-integration-tests"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "dynapps-test-common",
+ "dynbrain",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-web-admin-brain",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-shared",
+ "tokio",
+ "tower",
+]
+
+[[package]]
 name = "admin-contract-tests"
 version = "0.0.0"
 dependencies = [
@@ -2359,6 +2377,68 @@ dependencies = [
  "tokio-rustls",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "dynbrain"
+version = "0.85.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "dynwork-relay",
+ "futures-util",
+ "hex",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-extension 0.86.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "dynbrain-integration-tests"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "dynapps-test-common",
+ "dynbrain",
+ "dynwork-relay",
+ "http-body-util",
+ "rmcp",
+ "rustls",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-mcp-brain",
+ "systemprompt-security 0.86.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tempfile",
+ "tokio",
+ "tower",
+]
+
+[[package]]
+name = "dynbrain-unit-tests"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dynbrain",
+ "serde_json",
+ "systemprompt",
+ "tokio",
 ]
 
 [[package]]
@@ -5048,6 +5128,32 @@ dependencies = [
  "memchr",
  "serde",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "mcp-brain-integration-tests"
+version = "0.0.0"
+dependencies = [
+ "dynapps-test-common",
+ "dynbrain",
+ "rmcp",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-mcp-brain",
+ "tokio",
+]
+
+[[package]]
+name = "mcp-brain-unit-tests"
+version = "0.0.0"
+dependencies = [
+ "dynapps-test-common",
+ "dynbrain",
+ "rmcp",
+ "serde_json",
+ "systemprompt-mcp-brain",
+ "systemprompt-mcp-shared",
 ]
 
 [[package]]
@@ -10373,6 +10479,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-mcp-brain"
+version = "0.85.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "dynbrain",
+ "rmcp",
+ "rustls",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-secrets-onepassword",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "systemprompt-mcp-documents"
 version = "0.85.0"
 dependencies = [
@@ -11224,6 +11353,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-web-admin-brain"
+version = "0.85.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "dynbrain",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-web-admin-core",
+ "tracing",
+]
+
+[[package]]
 name = "systemprompt-web-admin-catalog"
 version = "0.85.0"
 dependencies = [
@@ -11397,6 +11540,7 @@ dependencies = [
  "systemprompt-secrets-onepassword",
  "systemprompt-web-admin-agent-farm",
  "systemprompt-web-admin-analytics",
+ "systemprompt-web-admin-brain",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",

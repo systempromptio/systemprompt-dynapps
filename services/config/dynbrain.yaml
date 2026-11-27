@@ -1,0 +1,26 @@
+# The Brain (extensions/dynbrain). Read directly by core as the extension's
+# config block (`config_prefix: dynbrain`), not through `includes:`.
+#
+# `mode: native` answers from this instance's own store. `mode: proxy` answers
+# every operation from the tools of another MCP server, the source, as the
+# person who asks; the source and its mapping are set in each customer's own
+# repository, never here. An instance is one or the other, never both.
+#
+# Proxy shape (example values; the tool names and URL paths are the source's):
+#
+#   dynbrain:
+#     mode: proxy
+#     proxy:
+#       server: brain-source     # an external MCP server declared in services/mcp/
+#       file_urls:               # the URL paths the source names its files with
+#         - /files/{id}
+#       operations:
+#         search:
+#           tool: docs_search
+#           args: { where: where }   # our argument name: the source's
+#         answer:
+#           tool: docs_answer
+#           fixed: { synthesize: false }
+#         # one entry per operation; a missing one answers `unavailable`
+dynbrain:
+  mode: native

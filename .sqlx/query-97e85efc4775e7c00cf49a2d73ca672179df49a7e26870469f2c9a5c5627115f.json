@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO dynbrain_index_job (article_id, lang, content_hash)\n             SELECT v.article_id, v.lang, v.content_hash\n               FROM dynbrain_article_variant v\n               JOIN dynbrain_article a ON a.id = v.article_id\n              WHERE a.trashed_at IS NULL\n                AND NOT EXISTS (SELECT 1 FROM dynbrain_index_job j\n                                 WHERE j.article_id = v.article_id AND j.lang = v.lang\n                                   AND j.content_hash = v.content_hash)\n              ORDER BY v.updated_at\n              LIMIT $1\n             ON CONFLICT (article_id, lang, content_hash) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97e85efc4775e7c00cf49a2d73ca672179df49a7e26870469f2c9a5c5627115f"
+}

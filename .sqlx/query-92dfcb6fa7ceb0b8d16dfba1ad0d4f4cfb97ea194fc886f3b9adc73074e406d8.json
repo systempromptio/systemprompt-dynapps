@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynbrain_upload SET consumed_at = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2 AND consumed_at IS NULL AND storage_ref IS NOT NULL RETURNING storage_ref, size_bytes, sha256, mimetype",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "storage_ref",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_upload",
+            "name": "storage_ref"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "size_bytes",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_upload",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_upload",
+            "name": "sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "mimetype",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "dynbrain_upload",
+            "name": "mimetype"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "92dfcb6fa7ceb0b8d16dfba1ad0d4f4cfb97ea194fc886f3b9adc73074e406d8"
+}

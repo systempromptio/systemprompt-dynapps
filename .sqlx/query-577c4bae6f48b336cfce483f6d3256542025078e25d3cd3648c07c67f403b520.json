@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dynbrain_chunk SET synopsis_error = true WHERE id = ANY($1::int8[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "577c4bae6f48b336cfce483f6d3256542025078e25d3cd3648c07c67f403b520"
+}
