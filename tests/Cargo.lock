@@ -11363,6 +11363,7 @@ dependencies = [
  "serde_json",
  "systemprompt",
  "systemprompt-web-admin-core",
+ "thiserror 2.0.21",
  "tracing",
 ]
 
