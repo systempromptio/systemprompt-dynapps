@@ -18,14 +18,6 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
-### Fixed
-
-- **The `brain` MCP server's grants are documented.** An instance with S3 file storage must grant `storage` to `brain`
-  (`services/mcp/brain.yaml`), as it does to `documents`: without it the server exits at startup and core aborts the
-  whole boot, which the local-storage smoke boot does not show. Proxy mode also needs
-  `custom:mcp_credential_broker_secret`. See `extensions/mcp/brain/README.md`.
-
-
 ## Unreleased
 
 ### Added
@@ -64,6 +56,10 @@ Conventions (strict — hold every entry to them):
 
 ### Fixed
 
+- **The `brain` MCP server's grants are documented.** An instance with S3 file storage must grant `storage` to `brain`
+  (`services/mcp/brain.yaml`), as it does to `documents`: without it the server exits at startup and core aborts the
+  whole boot, which the local-storage smoke boot does not show. Proxy mode also needs
+  `custom:mcp_credential_broker_secret`. See `extensions/mcp/brain/README.md`.
 - **A refused source is reported as a refusal.** Core 0.87.0 holds a source it cannot fetch or verify back on its previous bundle while the others advance, and an import can then answer `changed: false`. `POST /api/public/admin/sync/sources/refresh` relays core's `refused` and `provenance`, the activity row and the Import dialog name each refused source and its reason, and the Sources table on `/admin/sync` marks the source **refused**. A refusal record that cannot be read shows as **refusal unknown**.
 - **The kit workflow fails on a refused import.** `deploy/kit/.github/workflows/publish-bundle.yml` prints each refused source and reason and fails, also when the whole composition fell back or the call itself failed, instead of printing "unchanged". Copy the workflow into each kit repository to pick it up.
 - **SSO (Entra ID):** the sign-in no longer fails with AADSTS90023 when a re-authentication asks for a
