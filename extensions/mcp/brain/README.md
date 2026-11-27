@@ -46,5 +46,13 @@ Differences from the `docs_*` contract:
 - The process holds no manifest signing seed, so without it the file tools answer that files are not available (see
   `extensions/dynbrain/README.md`).
 
+**Grants an instance must add to this server** (`secrets:` in its `services/mcp/brain.yaml`; the product grants none,
+because core does not start a server whose granted secret is missing):
+- `storage` when the profile's file storage needs a credential (S3): the server builds that storage at startup, and
+  without the grant the process exits and core aborts the whole boot. The smoke boot runs on local storage and passes.
+- `custom:mcp_credential_broker_secret` in proxy mode, for the source's identity token.
+- `custom:dynbrain_links` (native) to serve files; `openai` and `custom:cohere` (native) for the query embedder and the
+  reranker.
+
 The query embedder of `search` is filled by this server from an AI service built on the host's granted secrets. Tests:
 `tests/unit/mcp-brain`, `tests/integration/mcp-brain`.
